@@ -21,9 +21,6 @@
 *.la
 *.a
 *.lib
-# don't ignore CE libs 
-!com.esri.prt.core.lib
-!glutess.lib
 
 # Executables
 *.exe
@@ -78,3 +75,6 @@ DerivedDataCache/*
 !Content/InitialShapes/*.obj
 *.zip
 desktop.ini
+
+# Ignore PRT includes
+**/ThirdParty/PRT/include/**
