@@ -15,7 +15,7 @@ public:
 	static double ParseNumber(FString String);
 	static double ParseNumber(const wchar_t* CString, size_t Size);
 	static bool StringCompare(const wchar_t* CStringA, const wchar_t* CStringB);
-	auto GetAbsolutePath() -> FString;
+	static auto GetAbsolutePath() -> FString;
 
 	// Compares a and b and tests if same, built specifically and only for obj parsing.
 	static TArray<FString> SplitString(FString String, char FindCharacter);
@@ -32,14 +32,14 @@ public:
 	static double GetNowTime();
 	static double GetElapsedTime(double StartTime);
 	static float GetElapsedFloatTime(double StartTime);
+	static int32 GetNowSeconds();
 
 	//Current Working Directory management methods:
 	static FString GOriginalWorkingDirectory; //the original Working directory to return to.
 	static FString GPluginDirectory; //the directory the plugin is in, updated only when SetCurrentWorkingDirectoryToPlugin is called.
 
-private:
 	void StartElapsedTimer();
-	double GetElapsedTime();
+	double GetElapsedTime() const;
 	double TimerStartTime = 0;
 	
 };

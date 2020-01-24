@@ -1,11 +1,14 @@
 ﻿#include "PRTUtilities.h"
 #include "Misc/DateTime.h"
 #include "Interfaces/IPluginManager.h"
+
+#include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/MinWindows.h"
 #include <processenv.h>
 #include "HAL/FileManager.h"
 #include "Misc/Paths.h"
 #include "HAL/PlatformApplicationMisc.h"
+#include "Windows/HideWindowsPlatformTypes.h"
 
 //Current Working Directory management methods:
 FString FPRTUtilities::GOriginalWorkingDirectory; //the original Working directory to return to.
@@ -26,8 +29,6 @@ TArray<FString> FPRTUtilities::SplitString(FString String, const char FindCharac
 	return Output;
 }
 
-
-
 double FPRTUtilities::ParseNumber(FString String)
 {
 	return FCString::Atod(*String);
@@ -35,10 +36,9 @@ double FPRTUtilities::ParseNumber(FString String)
 
 double FPRTUtilities::ParseNumber(const wchar_t* CString, const size_t Size)
 {
-	FString String(Size, CString);
+	const FString String(Size, CString);
 	return FCString::Atod(*String);
 }
-
 
 bool FPRTUtilities::StringCompare(const wchar_t* CStringA, const wchar_t* CStringB)
 {
@@ -81,9 +81,9 @@ auto FPRTUtilities::SetCurrentWorkingDirectoryToPlugin() -> FString
 {
 	GOriginalWorkingDirectory = GetWorkingDirectory();
 
-	FString FCurrentWorkingDirectory = GetPluginBaseDirectory(); // IPluginManager::Get().FindPlugin("PRT")->GetBaseDir();
-	FString cwd(TCHAR_TO_UTF8(*FCurrentWorkingDirectory));
-	SetCurrentDirectoryA(TCHAR_TO_ANSI(*cwd));
+	const FString FCurrentWorkingDirectory = GetPluginBaseDirectory(); // IPluginManager::Get().FindPlugin("PRT")->GetBaseDir();
+	const FString Cwd(TCHAR_TO_UTF8(*FCurrentWorkingDirectory));
+	SetCurrentDirectoryA(TCHAR_TO_ANSI(*Cwd));
 
 	// Log.Message(TEXT(">> Setting Current Working Directory to: %s"), *WorkingDirectory());
 	return GPluginDirectory = GetWorkingDirectory();
@@ -136,8 +136,7 @@ double FPRTUtilities::GetNowTime()
 {
 	int32 Year, Month, DayOfWeek, Day, Hour, Minute, Second, Millisecond;
 	FPlatformTime::SystemTime(Year, Month, DayOfWeek, Day, Hour, Minute, Second, Millisecond);
-	return Hour * 3600 + Minute * 60 + Second + (double)(Millisecond) / (double)1000;
-
+	return Hour * 3600 + Minute * 60 + Second + static_cast<double>(Millisecond) / static_cast<double>(1000);
 }
 
 /**
@@ -151,8 +150,7 @@ double FPRTUtilities::GetElapsedTime(const double StartTime)
 }
 
 /**
- * \brief Calculates elapsed time in milliseconds from StartTime
- * \param StartTime
+ * \brief Calculates elapsed time in milliseconds from Start
  * \return
  */
 void FPRTUtilities::StartElapsedTimer()
@@ -160,7 +158,7 @@ void FPRTUtilities::StartElapsedTimer()
 	TimerStartTime = GetNowTime();
 }
 
-double FPRTUtilities::GetElapsedTime()
+double FPRTUtilities::GetElapsedTime() const
 {
 	return GetElapsedTime(TimerStartTime);
 }
@@ -168,7 +166,20 @@ double FPRTUtilities::GetElapsedTime()
 float FPRTUtilities::GetElapsedFloatTime(const double StartTime)
 {
 	const auto NowTime = GetNowTime();
-	return static_cast<float>(NowTime - StartTime) / (double)1000;
+	return static_cast<float>(NowTime - StartTime) / static_cast<double>(1000);
 }
+
+
+/**
+ * \brief
+ * \return
+ */
+int32 FPRTUtilities::GetNowSeconds()
+{
+	int32 Year, Month, DayOfWeek, Day, Hour, Minute, Second, Millisecond;
+	FPlatformTime::SystemTime(Year, Month, DayOfWeek, Day, Hour, Minute, Second, Millisecond);
+	return Second;
+}
+
 
 #pragma endregion 

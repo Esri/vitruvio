@@ -1,16 +1,14 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "PRTActor.h"
-//#include "Engine/Engine.h"
 #include "HAL/FileManager.h"
 #include <Containers/Array.h>
 #include <Containers/Map.h>
 #include "prt/Status.h"
-// #include "StateMachine.h"
+#include "PRTGenerator.h"
 
+FGenerator* PRTGenerator = nullptr;
 
-// Sets default values
-// This happens five times for some reason and class is init from start
 APRTActor::APRTActor()
 {
 #if WITH_EDITOR
@@ -21,20 +19,52 @@ APRTActor::APRTActor()
 
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	//bind the event to the delegate. This should fire the function call within UE4.
+
+	// Note that Thread is created if bHasEditor, otherwise in BeginPlay();
+	PRTGenerator = new FGenerator(this, &PRT);
 
 	// Elements that are needed in Editor and in-Game, so init here.
 	BuildFileLists();
-	
-	//GetComponents();	// Root is null, doesn't work.
+
+	GenerateCount = 0;
+	GenerateSkipCount = 0;
+	bGenerating = false;
 }
 
-void APRTActor::InitializeStateMachine()
+APRTActor::~APRTActor()
 {
-
-	
+	if(PRTGenerator) PRTGenerator->Shutdown();
+	ClearViewAttributesDataStoreCache();
+	EraseAttributes();
 }
 
+bool APRTActor::IsGenerating()
+{
+	return bGenerating;
+}
+
+
+// Called when the game starts or when spawned
+void APRTActor::BeginPlay()
+{
+	Super::BeginPlay();
+	PRTLog.Message(TEXT("APRTActor::BeginPlay()"));
+
+	GenerateCount = 0;
+	GenerateSkipCount = 0;
+}
+
+// Called every frame
+void APRTActor::Tick(float TickDeltaTime)
+{
+	Super::Tick(TickDeltaTime);
+}
+
+
+/**
+ * \brief If we are operating on the components of the AActor.
+ * Box Collision is currently in C++
+ */
 void APRTActor::GetComponents()
 {
 	// The RootComponent is a nullptr, and other methods don't return pointers, either
@@ -70,30 +100,13 @@ void APRTActor::GetComponents()
 	}
 }
 
-// Called when the game starts or when spawned
-void APRTActor::BeginPlay()
-{
-	Super::BeginPlay();
-	PRTLog.Message(TEXT("APRTActor::BeginPlay()"));
 
-	GenerateCount = 0;
-	GenerateSkipCount = 0;
-}
-
-// Called every frame
-void APRTActor::Tick(float TickDeltaTime)
-{
-	Super::Tick(TickDeltaTime);
-
-	// Ticks only happen in-game, so the Worker Thread handles State Machine and Generation control
-
-}
-
-#pragma region Files
+#pragma region Build File Lists
 
 /**
- * Creates a list of OBJ and RPK files found in the project.
- * Looks recursively at the folders, so they can be placed anywhere.
+ * Creates a list of OBJ and RPK files found in the project at project open.
+ * Looks recursively at the folders, so they can be placed anywhere in the project.
+ * This is used in the Details panel and the file dropdowns. 
  */
 void APRTActor::BuildFileLists(bool bRescan)
 {
@@ -106,6 +119,11 @@ void APRTActor::BuildFileLists(bool bRescan)
 	GetRPKFileList(File_Manager, ContentDir);
 }
 
+/**
+ * \brief Retrieves the list of OBJ files in the project\Content\++
+ * \param FileManager 
+ * \param ContentDir 
+ */
 void APRTActor::GetObjFileList(IFileManager& FileManager, FString ContentDir)
 {
 	TArray<FString> Files;
@@ -130,6 +148,11 @@ void APRTActor::GetObjFileList(IFileManager& FileManager, FString ContentDir)
 	Files.Empty();
 }
 
+/**
+ * \brief Retrieves the list of RPK files in the project\Content\++
+ * \param FileManager 
+ * \param ContentDir 
+ */
 void APRTActor::GetRPKFileList(IFileManager& FileManager, FString ContentDir)
 {
 	TArray<FString> Files;
@@ -159,7 +182,7 @@ void APRTActor::GetRPKFileList(IFileManager& FileManager, FString ContentDir)
 	Files.Empty();
 }
 
-#pragma endregion 
+#pragma endregion
 
 #pragma region Generation
 
@@ -169,16 +192,21 @@ void APRTActor::GetRPKFileList(IFileManager& FileManager, FString ContentDir)
  */
 void APRTActor::InitializeRPKData(bool bCompleteReset)
 {
+	// TODO: This is potentially something to move to a thread since it is blocking and long.
+	// If does have dependencies w/view attributes.
+	
 	if(RPKFile == "(none)")
 	{
 		PRTLog.Message(FString(L">> APRTActor::InitializeRPKData - RPKFile Undefined."), ELogVerbosity::Warning);
 		return;
 	}
 
-	bAttributesUpdated = true; // Allow it to regenerate	
-	auto SetRPKStatus = PRT.SetRPKFile(*RPKPath);
+	bAttributesUpdated = true; // Allow it to regenerate
+	bInitialized = true;
 
-	if(SetRPKStatus != prt::STATUS_OK)
+	const auto SetRPKStatus = PRT.SetRPKFile(*RPKPath);
+
+	if (SetRPKStatus != prt::STATUS_OK)
 	{
 		PRTLog.Message(FString(L">> APRTActor::InitializeRPKData - SetRPKFile Status: "), SetRPKStatus, ELogVerbosity::Warning);
 	}
@@ -189,6 +217,7 @@ void APRTActor::InitializeRPKData(bool bCompleteReset)
 		EraseAttributes();
 	}
 
+	// TODO: Start of potential threaded fn.
 	if (PRT.IsLoaded() == true)
 	{
 		UseFirstRule();
@@ -204,43 +233,29 @@ void APRTActor::InitializeRPKData(bool bCompleteReset)
 	}
 	else
 	{
-
 		PRTLog.Message(FString(L">> APRTActor::InitializeRPKData - PRT Plugin is not loaded."), ELogVerbosity::Warning);
 	}
 
+	// This could be the callback after attributes are refreshed.
+	RefreshDetailPanel();
+}
+
+/**
+ * \brief After the attributes data is updated from RPK/PRT, refresh the Details panel when in-editor
+ */
+void APRTActor::RefreshDetailPanel()
+{
 #if WITH_EDITOR
 	if (PrtDetail != nullptr)
 	{
 		// ReSharper disable once CppExpressionWithoutSideEffects
 		PrtDetail->Refresh();
 		PRTLog.Message(FString(L">> APRTActor::InitializeRPKData Complete."));
-	}
-	else
-	{
-		// Likely that you are in PlayInEditor and the Details panel isn't available	
-		//PRTLog.Message(FString(L">> APRTActor::InitializeRPKData - PrtDetail == nullptr"), ELogVerbosity::Warning);
+		bInitialized = true;
 	}
 #endif
 }
-
-/**
- * \brief Allow control of State Machine Loop
- * \param NewStatus 
- */
-auto APRTActor::SetRPKState(EPRTTaskState NewStatus) -> void
-{
-	APRTActor::State = NewStatus;
-}
-
-/**
- * \brief Returns true is internal state and the Compare are the same
- * \param CompareStatus 
- * \return True if same
- */
-bool APRTActor::CompareRPKState(EPRTTaskState CompareStatus) const
-{
-	return (APRTActor::State == CompareStatus);
-}
+#pragma region PRT Control and Settings
 
 /**
  * \brief RPKs only have one @Start rule - use the first Rule found.
@@ -265,9 +280,11 @@ void APRTActor::UseFirstRule()
 
 
 /**
- * \brief Main fn Call from Blueprints. Modifies input MeshStruct with generated building data.
- * \param MeshStruct
- * \param bForceRegen 
+ * \brief Main fn Call from Blueprints. Fire-and-forget.
+ * Triggers State Machine to launch Generate worker and Status Changed raise event when completed.
+ * BP then uses GetModelData when Status == GenToMesh status change is initiated.
+ * BP then switches Status to Meshing and Idle as needed.
+ * \param bForceRegen - Even if data exists, re-compute it
  */
 void APRTActor::GenerateModelData(bool bForceRegen)
 {
@@ -276,34 +293,30 @@ void APRTActor::GenerateModelData(bool bForceRegen)
 	if (RPKFile == "(none)")
 	{
 		PRTLog.Message(FString(L">> APRTActor::GenerateModelData - RPKFile Undefined."), ELogVerbosity::Warning);
-		State = EPRTTaskState::IDLE;
 		bAttributesUpdated = false;
 		return;
 	}
-
-
-	if (State == EPRTTaskState::GENERATING && !bForceRegen)
+	
+	// Only allow Generate during Idle
+	if (bGenerating)
 	{
-		// Can't call Generate while one is in-process
-		// bAttributesUpdated remains set, so another regen will happen, but
-		// after this Generate and the minimum delay time.
+		PRTLog.Message(FString(L">> APRTActor::GenerateModelData - Gen requested when Generating."));
 		return;
 	}
 	
 	const double StartTime = PRTUtil.GetNowTime();
+	
+	// TODO: Needed?
 	if ((StartTime - LastGenerationTimestamp) < MinimumTimeBetweenRegens && !bForceRegen)
 	{
 		PRTLog.Message(TEXT("Generation Interval too short, using Cache Data."), ELogVerbosity::Warning);
-		//GetModelData(MeshStruct);
-		State = EPRTTaskState::GENTOMESH;	// Allow to just reuse cache data.
 		return;
 	}
 
-	State = EPRTTaskState::GENERATING;
 	// Needed to save initial state as Attribute Copy routines set bool to true
-	const auto bTempAttributesUpdated = bAttributesUpdated;	
+	const auto bGenerateModelNeeded = bAttributesUpdated || bForceRegen;	
 
-	// We have an RPK file but the plugin isn't loaded
+	// We have an RPK file but the plugin isn't loaded or no attributes yet
 	if ((PRT.IsLoaded() == false && RPKFile.Len() > 0) || (Attributes.Num() == 0))
 	{
 		InitializeRPKData(false);
@@ -317,147 +330,115 @@ void APRTActor::GenerateModelData(bool bForceRegen)
 	if (PRT.IsLoaded() == false)
 	{
 		PRTLog.Message(TEXT("APRTActor::GenerateModelData abort: Plugin is not loaded."), ELogVerbosity::Warning);
-		State = EPRTTaskState::IDLE;
 		return;
 	}
 
-	// Transfer View Attributes to Local Attributes, and then pass to the PRT Module for processing.
+	// Transfer View Attributes to Local Attributes, and pass to the PRT Module for processing.
 	CopyViewAttributesToAttributes();
 
-	if (bTempAttributesUpdated)
+	if (bGenerateModelNeeded)
 	{
+		bAttributesUpdated = false;
 		PRT.ApplyAttributesToProceduralRuntime(Attributes);
-		
-		const prt::Status GetModelStatus = PRT.GenerateModel();
-		if (GetModelStatus != prt::STATUS_OK)
+
+		// If InGame, then use the Generator Thread, Else Generate as usual
+		if (!InEditor())
 		{
-			PRTLog.Message(
-				TEXT(">> Generate failed in PRT.GenerateModel - aborting. Status: "), GetModelStatus, ELogVerbosity::Warning);
-			return;
+			// If in normal game, start the State Machine here
+			if (!PRTGenerator->IsRunning())
+			{
+				PRTGenerator->StartStateManagerThread();
+			}
+
+			// StateMachine will handle it from here.
+			PRTGenerator->Generate();
 		}
-
-		ProcessPRTVertexDataIntoMeshStruct(MeshStructureStore);
-		
-		LastGenerationElapsedTime = PRTUtil.GetElapsedTime(StartTime);
-		const FString TheMessage = FString::Printf(TEXT("Generate Count: %d. Elapsed time: %f (s). Array Length: %d."), 
-			++GenerateCount, LastGenerationElapsedTime, static_cast<int32>(MeshStructureStore.Num()));
-		PRTLog.Message(TheMessage);
-		PRTLog.Message(TEXT("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"));
-
-		FPlatformMisc::LowLevelOutputDebugStringf(TEXT("Generate Count : %d.Elapsed time : %f(ms).Array Length : %d."), 
-			GenerateCount, PRTUtil.GetElapsedTime(StartTime), MeshStructureStore.Num());
+		else
+		{
+			GenerateLocally();
+		}
 	}
 	else
 	{
-		PRTLog.Message(TEXT(">>> Generate Skip Count: "), ++GenerateSkipCount);
+		// Attributes didn't change and model exists, so skip Generate and allow to build the model.
+		PRTLog.Message(TEXT(">>> Generate Skipped, Count: "), ++GenerateSkipCount);
+
+		// ToDo: we need to trigger a rebuild of the mesh?
+		//GenerateCompleted(true);
+	}
+}
+
+prt::Status APRTActor::GenerateLocally()
+{
+	bMeshDataReady = false;
+	bGenerating = true;
+	
+	PRTLog.Message(TEXT("GenerateLocally Started."));
+	PRTUtil.StartElapsedTimer();
+	
+	const auto Status = PRT.GenerateModel();
+
+	if (Status != prt::STATUS_OK)
+	{
+		PRTLog.Message(
+			TEXT(">> Generate failed in APRTActor::GenerateLocally - aborting. Status: "),
+			Status, ELogVerbosity::Warning);
+	}
+	else
+	{
+		bMeshDataReady = true;
 	}
 	
-	bAttributesUpdated = false;
-	State = EPRTTaskState::GENTOMESH;
+	LastGenerationElapsedTime = static_cast<float>(PRTUtil.GetElapsedTime());
+	PRTLog.Message(TEXT(">> Generate complete, elapsed time (ms): "), LastGenerationElapsedTime);
+
+	bGenerating = false;
+	return Status;
 }
 
 /**
- * \brief Copies Existing mesh data if it exists skipping Generate, else Generate
+ * \brief Processes the raw PRT data, then
+ * Copies Existing mesh data to MeshStruct Array
  * \param MeshStruct
+ * \param bDataValid Returns whether the MeshStruct is okay to use. False if Generate failed.
  */
-void APRTActor::GetModelData(TArray<FPRTMeshStruct>& MeshStruct)
+void APRTActor::GetModelData(TArray<FPRTMeshStruct>& MeshStruct, bool& bDataValid )
 {
-	static double LastTimeStamp;
-	
-	FPlatformMisc::LowLevelOutputDebugStringf(TEXT("GetModelData called\n"));
+	// BP or c++ enters this function on MeshToGen transition.
+	FPlatformMisc::LowLevelOutputDebugStringf(TEXT("APRTActor::GetModelData called\n"));
 
-	if (RPKFile == "(none)")
-	{
-		PRTLog.Message(FString(L">> APRTActor::GetModelData - RPKFile Undefined."), ELogVerbosity::Warning);
-		State = EPRTTaskState::IDLE;
-		bAttributesUpdated = false;
-		return;
-	}
-
+	// Generate was performed, so we need to process the raw data
+	ProcessPRTVertexDataIntoMeshStruct(MeshStructureStore);
 	
+	// No existing mesh data
 	if(MeshStructureStore.Num() == 0)
 	{
-		bAttributesUpdated = true;
-		GenerateModelData(true);
+		// If Generate failed then no data. User should test the bDataValid boolean
+		bDataValid = false;
 		return;
 	}
 
-	//const double Duration = PRTUtil.GetNowTime() - LastTimeStamp;
-	//if (Duration < MinimumTimeBetweenRegens)
-	//{
-	//	// Interval short, so wait for more State Machine loops or Ticks or GetMesh calls
-	//	PRTLog.Message(TEXT("Cache Interval short. Duration: "), Duration, ELogVerbosity::Warning);
-	//	return;
-	//}
-
-	LastTimeStamp = PRTUtil.GetNowTime();
-/*
-	// We have an RPK file but the plugin isn't loaded
-	if (PRT.IsLoaded() == false && RPKFile.Len() > 0)
-	{
-		InitializeRPKData(false);
-		bAttributesUpdated = true;
-		GenerateModelData();
-		return;
-	}
-	else
-	{
-		CopyViewAttributesIntoDataStore();
-	}
-
-	CopyViewAttributesToAttributes();
-*/
-
+	LogGenerateStatistics();
 	CopyMeshStructures(MeshStructureStore, MeshStruct);
-
-	State = EPRTTaskState::GENTOMESH;
+	bDataValid = true;
+	//bAttributesUpdated = false;
 }
-
-
 
 #pragma endregion
 
-#pragma region MeshCreation
-
-/**
- * \brief Create a Mesh object from the MeshStruct data
- * \param bUseStaticMesh 
- */
-void APRTActor::CreateMesh()
-{
-	// TODO:
-	State = EPRTTaskState::MESHING;
-	
-	if(bUseStaticMesh)
-	{
-		// Static Mesh in UE 4.24 
-	}
-	else
-	{
-		for (auto& CurrentMeshStruct : MeshStructureStore)
-		{
-			// CurrentMeshStruct.Texture
-
-
-		}
-	}
-
-	SetCollisionBox();
-	
-	State = EPRTTaskState::IDLE;
-}
-
-
+#pragma region ToDo: Model Functions
 
 /**
  * \brief Configure the size, position, and rotation of the Collision Box component.
  */
-void APRTActor::SetCollisionBox() const
+void APRTActor::SetCollisionBox(UBoxComponent* InCollisionBox) const
 {
+	if(!InCollisionBox) return;
+	
 	FVector NewLocation(0.0, 0.0, 0.0);
 	FVector BoundingBox(2.0, 2.0, 2.0);
-	PRTCollisionBox->SetBoxExtent(BoundingBox);
-	PRTCollisionBox->SetRelativeLocation(NewLocation);
+	InCollisionBox->SetBoxExtent(BoundingBox);
+	InCollisionBox->SetRelativeLocation(NewLocation);
 	FVector Origin;
 	GetActorBounds(false, Origin, BoundingBox);
 
@@ -465,17 +446,16 @@ void APRTActor::SetCollisionBox() const
 	const FVector TempExtents = BoundingBox * CollisionScale / 100.0;
 	const FVector BoxScaled = TempExtents * ScaleVector;
 	
-	PRTCollisionBox->SetBoxExtent(BoxScaled);
+	InCollisionBox->SetBoxExtent(BoxScaled);
 	NewLocation.Set(0.0, 0.0, BoxScaled.Z);
 	const FRotator NewRotation(0, CollisionRotation, 0.0);
 	
-	PRTCollisionBox->SetRelativeLocationAndRotation(NewLocation, NewRotation);
+	InCollisionBox->SetRelativeLocationAndRotation(NewLocation, NewRotation);
 }
 
 #pragma endregion
 
-
-#pragma region Mesh Data Processing
+#pragma region PRT to MeshStruct Data Processing
 
 /**
  * \brief Deep copy of the MeshStruct nested arrays from one to another.
@@ -545,6 +525,10 @@ void APRTActor::CopyMeshStructures(TArray<FPRTMeshStruct>& SourceMeshStruct,
 	}
 }
 
+/**
+ * \brief Process PRT Vertex Data Into MeshStruct TArray
+ * \param MeshStruct 
+ */
 void APRTActor::ProcessPRTVertexDataIntoMeshStruct(TArray<FPRTMeshStruct>& MeshStruct)
 {
 	double const StartTime = PRTUtil.GetNowTime();
@@ -598,6 +582,12 @@ void APRTActor::ProcessPRTVertexDataIntoMeshStruct(TArray<FPRTMeshStruct>& MeshS
 	PRTLog.Message(TEXT(" > Mesh Processing Time: "), PRTUtil.GetElapsedTime(StartTime));
 }
 
+/**
+ * \brief Set MaterialMesh->Vertices Colors
+ * \param MaterialMesh 
+ * \param Vertices 
+ * \param TempColor 
+ */
 void APRTActor::SetMaterialMeshVertexColors(FPRTMeshStruct* MaterialMesh, TArray<float> Vertices,
                                             FLinearColor TempColor)
 {
@@ -613,6 +603,11 @@ void APRTActor::SetMaterialMeshVertexColors(FPRTMeshStruct* MaterialMesh, TArray
 	}
 }
 
+/**
+ * \brief Set MaterialMesh->Normals
+ * \param MaterialMesh 
+ * \param Normals 
+ */
 void APRTActor::SetMaterialMeshNormals(FPRTMeshStruct* MaterialMesh, TArray<float> Normals)
 {
 	for (int32 j = 0; j < Normals.Num(); j += 3)
@@ -625,6 +620,11 @@ void APRTActor::SetMaterialMeshNormals(FPRTMeshStruct* MaterialMesh, TArray<floa
 	}
 }
 
+/**
+ * \brief Set MaterialMesh->UVs
+ * \param MaterialMesh 
+ * \param UVs 
+ */
 void APRTActor::SetMaterialMeshUVs(FPRTMeshStruct* MaterialMesh, TArray<float> UVs)
 {
 	for (int32 j = 0; j < UVs.Num(); j += 2)
@@ -636,6 +636,11 @@ void APRTActor::SetMaterialMeshUVs(FPRTMeshStruct* MaterialMesh, TArray<float> U
 	}
 }
 
+/**
+ * \brief Set MaterialMesh->Indices
+ * \param MaterialMesh 
+ * \param Indices 
+ */
 void APRTActor::SetMaterialMeshIndices(FPRTMeshStruct* MaterialMesh, TArray<uint32_t>& Indices)
 {
 	for (int32 j = 0; j < Indices.Num(); j++)
@@ -644,18 +649,12 @@ void APRTActor::SetMaterialMeshIndices(FPRTMeshStruct* MaterialMesh, TArray<uint
 	}
 }
 
-
-void CreateStaticMesh()
-{
-}
-
 #pragma endregion
 
-
-#pragma region Attributes
+#pragma region Attribute Management
 
 /**
- * \brief
+ * \brief Walk the ViewAttributesDataStore and Destroy the objects and empty arrays
  */
 void APRTActor::ClearViewAttributesDataStoreCache()
 {
@@ -677,28 +676,30 @@ void APRTActor::ClearViewAttributesDataStoreCache()
 		LocalViewAttributes.Empty();
 	}
 	ViewAttributesDataStore.Empty();
-
-	//PRTLog.Message(TEXT("Cleared attributes cache map."));
 }
 
+
+/**
+ * \brief Transfer ViewAttributes to Attributes array
+ */
 void APRTActor::CopyViewAttributesToAttributes()
 {
-	//if (Attributes.Num() == 0)
+	for (auto i = 0; i < ViewAttributes.Num(); i++)
 	{
-		for (auto i = 0; i < ViewAttributes.Num(); i++)
+		for (auto j = 0; j < ViewAttributes[i].Attributes.Num(); j++)
 		{
-			for (auto j = 0; j < ViewAttributes[i].Attributes.Num(); j++)
-			{
-				FString Name = ViewAttributes[i].Attributes[j].Name;
-				Attributes[Name].KeyName = Name;
-				Attributes[Name].bValue = ViewAttributes[i].Attributes[j].bValue;
-				Attributes[Name].fValue = ViewAttributes[i].Attributes[j].fValue;
-				Attributes[Name].sValue = ViewAttributes[i].Attributes[j].sValue;
-			}
+			FString Name = ViewAttributes[i].Attributes[j].Name;
+			Attributes[Name].KeyName = Name;
+			Attributes[Name].bValue = ViewAttributes[i].Attributes[j].bValue;
+			Attributes[Name].fValue = ViewAttributes[i].Attributes[j].fValue;
+			Attributes[Name].sValue = ViewAttributes[i].Attributes[j].sValue;
 		}
 	}
 }
 
+/**
+ * \brief Walk the Attributes and ViewAttributes arrays and Destroy / Empty elements
+ */
 void APRTActor::EraseAttributes()
 {
 	//The PRTPlugin handles erasing attributes themselves. But let's do it here anyways.
@@ -708,7 +709,6 @@ void APRTActor::EraseAttributes()
 	}
 
 	Attributes.Empty();
-	//empty the array
 
 	for (auto i = 0; i < ViewAttributes.Num(); i++)
 	{
@@ -724,12 +724,18 @@ void APRTActor::EraseAttributes()
 	ViewAttributes.Empty();
 }
 
+/**
+ * \brief Build New Attribute Array and Sort
+ */
 void APRTActor::InitializeViewAttributes()
 {
 	BuildNewViewAttributeArray();
 	SortViewAttributesArray();
 }
 
+/**
+ * \brief Create a new ViewAttributeArray from Attributes
+ */
 void APRTActor::BuildNewViewAttributeArray()
 {
 	FString Group;
@@ -823,6 +829,8 @@ void APRTActor::SetArgumentValues(FCEArgument* Argument, bool bValue, float fVal
 void APRTActor::SetAttributeParametersAndWidgets(FCEArgument* Argument, FCEAttribute* Attribute, FString* Group,
 	int32* GroupOrder, int32* AttributeOrder)
 {
+	// Consider alternates to the if
+	
 	if (Argument->Name.Compare("@Color") == 0)
 	{
 		Attribute->Widget = ERPKWidgetTypes::COLOR;
@@ -948,6 +956,9 @@ void APRTActor::SetAttributeType(FCEAttribute* Attribute, int32 Type)
 	}
 }
 
+/**
+ * \brief Sort the View Attributes Array
+ */
 void APRTActor::SortViewAttributesArray()
 {
 	for (auto i = 0; i < ViewAttributes.Num(); i++)
@@ -1043,8 +1054,7 @@ void APRTActor::AddAttributeToViewAttributes(const FCEAttribute Attribute, const
 }
 #pragma endregion
 
-
-#pragma region Synchronization
+#pragma region Attribute Synchronization
 
 /******************************************************************************
 *		Attribute Synchronization.
@@ -1207,4 +1217,47 @@ bool APRTActor::InPIE()
 	return (World->WorldType == EWorldType::PIE);
 }
 
+bool APRTActor::InEditor()
+{
+	if (!PRTCollisionBox) return false;
+
+	UWorld* const World = GEngine->GetWorldFromContextObject(PRTCollisionBox, EGetWorldErrorMode::ReturnNull);
+	if (!World) return false;
+
+	return (World->WorldType == EWorldType::Editor);
+}
+
+bool APRTActor::InGame()
+{
+	if (!PRTCollisionBox) return false;
+
+	UWorld* const World = GEngine->GetWorldFromContextObject(PRTCollisionBox, EGetWorldErrorMode::ReturnNull);
+	if (!World) return false;
+
+	return (World->WorldType == EWorldType::Game);
+}
+
+bool APRTActor::UsingGeneratorThread()
+{
+	return (InGame() || InPIE());
+}
+
+#pragma endregion
+
+#pragma region Utilities
+/**
+ * \brief Print to Log Elapsed Time, Gen Count, Array Length
+ */
+void APRTActor::LogGenerateStatistics()
+{
+	//LastGenerationElapsedTime = PRTUtil.GetElapsedTime();
+
+	const FString TheMessage = FString::Printf(TEXT("Generate Count: %d. Elapsed time: %f (s). Array Length: %d."),
+		++GenerateCount, LastGenerationElapsedTime, static_cast<int32>(MeshStructureStore.Num()));
+	PRTLog.Message(TheMessage);
+	PRTLog.Message(TEXT("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"));
+
+	FPlatformMisc::LowLevelOutputDebugStringf(TEXT("Generate Count : %d.Elapsed time : %f(ms).Array Length : %d."),
+		GenerateCount, PRTUtil.GetElapsedTime(), MeshStructureStore.Num());
+}
 #pragma endregion

@@ -3,38 +3,26 @@
 #pragma once
 #include <CoreMinimal.h>
 #include <DesktopPlatform/Public/IDesktopPlatform.h>
-//#include "Developer/DesktopPlatform/Public/DesktopPlatformModule.h"
 #include <GameFramework/Actor.h>
-#include <PRTModule.h>
-//#include "InputCoreTypes.h"
-//#include <Slate.h>
-
 #include "ProceduralMeshComponent.h"
 
 #if WITH_EDITOR
 #include <RPKWidget.h>
-//#include "Editor.h"
-//#include "PropertyEditorModule.h"
 #endif
 
+#include <PRTModule.h>
+#include <PRTGenerator.h>
 #include <PrtDetail.h>
-#include "PRTUtilities.h"
-
-//#include "SEditableTextBox.h"
-//#include "SCompoundWidget.h"
-//#include "Widgets/Colors/SColorPicker.h"
-
-//#include <EngineGlobals.h>
-//#include <Runtime/Engine/Classes/Engine/Engine.h>
-//#include <Runtime/Engine/Classes/Engine/StaticMesh.h>
+#include <PRTUtilities.h>
 
 #include "PRTActor.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGenerateDelegate);
+class FGenerator;
+
 
 #pragma region Enums and Structs
 
-UENUM(BlueprintType)
+UENUM(BlueprintType, Category = "PRT|Enum")
 enum class ERPKWidgetTypes : uint8
 {
 	GENERAL_TEXT UMETA(DisplayName="General Text"),
@@ -47,7 +35,7 @@ enum class ERPKWidgetTypes : uint8
 	NUMBER_TEXT UMETA(DisplayName="Number Input")
 };
 
-UENUM(BlueprintType)
+UENUM(BlueprintType, Category = "PRT|Enum")
 enum class EPRTLogVerbosity : uint8
 {
 	LOG_ALL UMETA(DisplayName = "All"),
@@ -56,20 +44,7 @@ enum class EPRTLogVerbosity : uint8
 	LOG_ERROR UMETA(DisplayName = "Only Error messages"),
 };
 
-
-UENUM(BlueprintType)
-enum class EPRTTaskState : uint8
-{
-	IDLE UMETA(DisplayName = "Idle"),
-	IDLETOGEN UMETA(DisplayName = "Idle to Generating"),
-	GENERATING UMETA(DisplayName = "Generating"),
-	GENTOMESH UMETA(DisplayName = "Generating to Meshing"),
-	MESHING UMETA(DisplayName = "Meshing"),
-	MESHINGTOCOMPL UMETA(DisplayName = "Meshing to Complete"),
-	COMPLETE UMETA(DisplayName = "Complete")
-};
-
-UENUM(BlueprintType)
+UENUM(BlueprintType, Category = "PRT|Enum")
 enum class ERPKLogType : uint8
 {
 	DISPLAY UMETA(DisplayName = "Display"),
@@ -78,127 +53,127 @@ enum class ERPKLogType : uint8
 };
 
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, Category = "PRT|Struct")
 struct FRPKFile
 {
 	GENERATED_USTRUCT_BODY();
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="RPK File")
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="PRT|RPK File")
 	FString Name;
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "RPK File")
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|RPK File")
 	FString Path;
 };
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, Category = "PRT|Struct")
 struct FOBJFile
 {
 	GENERATED_USTRUCT_BODY();
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "OBJ File")
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|OBJ File")
 	FString Name;
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "OBJ File")
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|OBJ File")
 	FString Path;
 };
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, Category = "PRT|Struct")
 struct FPRTArgument
 {
 	GENERATED_USTRUCT_BODY();
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT Argument")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT|Argument")
 	FString Keyname;
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT Argument")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT|Argument")
 	int32 Type;
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT Argument")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT|Argument")
 	bool bValue;
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT Argument")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT|Argument")
 	FString sValue;
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT Argument")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT|Argument")
 	float fValue;
 };
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, Category = "PRT|Struct")
 struct FPRTMeshStruct
 {
 	GENERATED_USTRUCT_BODY();
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT Mesh Struct")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT|Mesh Struct")
 	TArray<int32> Indices;
 
 	//the following all need to be the exact same size.
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT Mesh Struct")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT|Mesh Struct")
 	TArray<FVector> Vertices;
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT Mesh Struct")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT|Mesh Struct")
 	TArray<FVector> Normals;
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT Mesh Struct")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT|Mesh Struct")
 	TArray<FVector2D> UVs;
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT Mesh Struct")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT|Mesh Struct")
 	TArray<FLinearColor> Colors;
 
 	//this is the texture for the mesh
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT Mesh Struct")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT|Mesh Struct")
 	TArray<uint8> Texture;
 };
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, Category = "PRT|Struct")
 struct FCEArgument
 {
 	GENERATED_USTRUCT_BODY();
 
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "CE Argument")
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|CE Argument")
 	FString Name;
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "CE Argument")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT|CE Argument")
 	int32 Type;
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "CE Argument")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT|CE Argument")
 	float fValue;
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "CE Argument")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT|CE Argument")
 	FString sValue;
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "CE Argument")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "PRT|CE Argument")
 	bool bValue;
 };
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, Category = "PRT|Struct")
 struct FCEAttribute
 {
 	GENERATED_USTRUCT_BODY();
 
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="CE Attribute")
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="PRT|CE Attribute")
 	FString DisplayName;
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="CE Attribute")
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="PRT|CE Attribute")
 	FString Name;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="CE Attribute")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="PRT|CE Attribute")
 	int32 Type;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="CE Attribute")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="PRT|CE Attribute")
 	float fValue;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="CE Attribute")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="PRT|CE Attribute")
 	FString sValue;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="CE Attribute")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="PRT|CE Attribute")
 	FLinearColor Color;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="CE Attribute")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="PRT|CE Attribute")
 	bool bValue;
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category="CE Attribute")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category="PRT|CE Attribute")
 	TArray<FCEArgument> Arguments;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="CE Attribute")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="PRT|CE Attribute")
 	bool showInVR = false;
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category="CE Attribute")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category="PRT|CE Attribute")
 	TArray<float> Range;
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category="CE Attribute")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category="PRT|CE Attribute")
 	float Step;
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category="CE Attribute")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category="PRT|CE Attribute")
 	float SliderStep;
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category="CE Attribute")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category="PRT|CE Attribute")
 	TArray<FString> SelectValues;
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category="CE Attribute")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category="PRT|CE Attribute")
 	bool bIsPercentage = false;
 	bool bHidden = false;
 	int32 Order = 0;
 
 	//the type of widget to use:
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category="CE Attribute")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category="PRT|CE Attribute")
 	ERPKWidgetTypes Widget = ERPKWidgetTypes::GENERAL_TEXT;
 #if WITH_EDITOR
 	//now we pack a class with all of the slate data and callbacks.
@@ -206,229 +181,219 @@ struct FCEAttribute
 #endif
 };
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, Category = "PRT|Struct")
 struct FCEGroup
 {
 	GENERATED_USTRUCT_BODY();
 
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="CE Group")
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="PRT|Group")
 	FString Name;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="CE Group")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="PRT|Group")
 	TArray<FCEAttribute> Attributes;
 
 	int32 Order;
 };
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, Category = "PRT|Struct")
 struct FCERPKViewAttributes
 {
 	GENERATED_USTRUCT_BODY();
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="CE RPK View Attributes")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="PRT|View Attributes")
 	FString RPKFile;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="CE RPK View Attributes")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="PRT|View Attributes")
 	TArray<FCEGroup> ViewAttributes;
 };
 
-
-USTRUCT(BlueprintType)
-struct FPRTLogMessage
-{
-	GENERATED_USTRUCT_BODY();
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "CE RPK Log")
-	uint8 Type;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "CE RPK Log")
-	FString Message;
-};
-
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, Category = "PRT|Struct")
 struct FPRTReportMessage
 {
 	GENERATED_USTRUCT_BODY();
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "CE RPK Log")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|Log")
 	FString Key;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "CE RPK Log")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|Log")
 	FString Value;
 };
 
 #pragma endregion
 
 
-UCLASS(Blueprintable)
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent), Category = "PRT")
 class PRT_API APRTActor : public AActor
 {
 	GENERATED_BODY()
 
 public:
 	APRTActor();
+	~APRTActor();
 
 	// Sets default values for this actor's properties
 	TMap<FString, FPRTAttribute> Attributes;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RPK Reporting")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|Reporting")
 	TArray<FPRTReportMessage> Reports;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RPK Reporting")
-	TArray<FPRTLogMessage> LogMessages;
-
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "RPK Utility")
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|Attributes")
 	TArray<FRPKFile> RPKFiles;
 
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "RPK Utility")
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|Attributes")
 	TArray<FOBJFile> OBJFiles;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RPK Utility")
+	//UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|Utility")
 	bool bUseHardcodedValues = false;
 
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "RPK Threading")
-	EPRTTaskState State;
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|Status")
+	bool bGenerating = false;
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|Status")
+	bool bMeshDataReady = false;
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "RPK Threading")
-	bool bUseThreading = true;
+	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|Attributes")
+		bool IsGenerating();
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "RPK Threading")
-	bool bGenerate = false;
-
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "RPK Threading")
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|Status")
 	int32 GenerateCount;
 
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "RPK Threading")
-		int32 GenerateSkipCount;
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|Status")
+	int32 GenerateSkipCount;
 
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "RPK Threading")
-	float CurrentGenerationTime;
-
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "RPK Threading")
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|Status")
 	float LastGenerationElapsedTime;
 
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "RPK Threading")
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|Status")
 	float MeshingTime;
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "RPK Threading")
-	float MinimumTimeBetweenRegens = 0.10f;
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|Status")
+	float GenerateIdleTime;
 
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "RPK Threading")
-	float IdleTime;
+	//UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PRT|Status")
+	float MinimumTimeBetweenRegens = 1.0f;
 
-	//		UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RPK Utility")
-	//		  FProceduralMeshComponent	 RPKProceduralMesh;
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "RPK Utility")
-		bool bAutoGenerate = false;
-	
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|Status")
+	int32 SectionCount = 0;
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|Status")
+	float StateManagerRuntime;
+
 	// Read/Write so Actor or Server can set Dirty status, too.
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "RPK Utility")
-	bool bAttributesUpdated = true;	// Allow regen on first run
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|Status")
+		bool bAttributesUpdated = true; // Allow regen on first run
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RPK Utility")
-	FString RPKPath = L"";
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RPK Utility")
-	FString RPKFile = L"(none)";
-	FString PreviousRPKFile = L""; //usable only by CopyViewAttributesIntoDataStore;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RPK Utility")
-	FString OBJPath = L"";
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RPK Utility")
-	FString OBJFile = L"square";
-
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "RPK Utility")
-	TArray<FString> Rules;
-
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "RPK Utility")
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|Status")
 	bool bHasEditor = false;
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "RPK Components")
+	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|Status")
+		bool InPIE();
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|Status")
+		bool InEditor();
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|Status")
+		bool InGame();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|Status")
+	bool UsingGeneratorThread();
+	
+	///////////////////////////////////////////////
+
+
+	//UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|Utility")
+	TArray<FString> Rules;
+
+	///////////////////////////////////////////////
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PRT|Components")
 	UStaticMeshComponent* PRTStaticMesh;
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "RPK Components")
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PRT|Components")
 	UProceduralMeshComponent* PRTProceduralMesh;
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "RPK Components")
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PRT|Components")
 	UBoxComponent* PRTCollisionBox;
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "RPK Utility")
-		EPRTLogVerbosity LogVerbosity = EPRTLogVerbosity::LOG_WARNING;
+	///////////////////////////////////////////////
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|Collision Box")
+	float CollisionX_Scale = 0.5;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|Collision Box")
+	float CollisionY_Scale = 0.5;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|Collision Box")
+	float CollisionZ_Scale = 1.0;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|Collision Box")
+	float CollisionScale = 1.0;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|Collision Box")
+	float CollisionRotation = 0.0;
+
+	UFUNCTION(BlueprintCallable, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|Collision Box")
+	void SetCollisionBox(UBoxComponent* InCollisionBox) const;
+
+	///////////////////////////////////////////////
 
 	// RPK File Attribute arrays
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RPK Utility")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|Attributes")
 	TArray<FCEGroup> ViewAttributes;
 
 	//the permanent Cache for Attributes.
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RPK Utility")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|Attributes")
 	TArray<FCERPKViewAttributes> ViewAttributesDataStore;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RPK Collision Box")
-		float CollisionX_Scale = 0.5;
-	
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RPK Collision Box")
-		float CollisionY_Scale = 0.5;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RPK Collision Box")
-		float CollisionZ_Scale = 1.0;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RPK Collision Box")
-		float CollisionScale = 1.0;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RPK Collision Box")
-		float CollisionRotation = 0.0;
-
-	
-	UFUNCTION(BlueprintCallable, Category = PRT, meta = (HidePin = "Outer", DefaultToSelf = "Outer"))
-	void SetCollisionBox() const;
-
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = PRT, meta = (HidePin = "Outer", DefaultToSelf = "Outer"))
-	bool InPIE();
-
-	UFUNCTION(BlueprintCallable, Category = PRT, meta = (HidePin = "Outer", DefaultToSelf = "Outer"))
-	void InitializeStateMachine();
-
 	/*Copy the ViewAttributes from the current RPK and store them in ViewAttributesDataStore*/
-	UFUNCTION(BlueprintCallable, Category = "RPK Utility", meta = (HidePin = "Outer", DefaultToSelf = "Outer"))
+	UFUNCTION(BlueprintCallable, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|Attributes")
 	void CopyViewAttributesIntoDataStore();
 
 	/*Retrieves the ViewAttributes from ViewAttributesDataStore for the current RPK */
-	UFUNCTION(BlueprintCallable, Category = "RPK Utility", meta = (HidePin = "Outer", DefaultToSelf = "Outer"))
+	UFUNCTION(BlueprintCallable, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|Attributes")
 	void RecallViewAttributes();
 
-	/*Sets the current RPK Path, initial shape and refreshes the building*/
-	UFUNCTION(BlueprintCallable, Category = PRT, meta = (HidePin = "Outer", DefaultToSelf = "Outer"))
-	void InitializeRPKData(bool bCompleteReset);
-
-	/*Sets the current RPK Path, initial shape and refreshes the building*/
-	UFUNCTION(BlueprintCallable, Category = PRT, meta = (HidePin = "Outer", DefaultToSelf = "Outer"))
-		void SetRPKState(EPRTTaskState NewStatus);
-
-	/*Sets the current RPK Path, initial shape and refreshes the building*/
-	UFUNCTION(BlueprintCallable, Category = PRT, meta = (HidePin = "Outer", DefaultToSelf = "Outer"))
-		bool CompareRPKState(EPRTTaskState CompareStatus) const;
-	
-	/*Generate the building and create mesh*/
-	//UFUNCTION(BlueprintCallable, Category = PRT)
-	//void GenerateBuilding();
+	///////////////////////////////////////////////
 
 	/*attempt to load the RPK if we already have a file specified, this is mostly for use on opening a project,
 	 *and restoring	the actor to the previous state.*/
-	UFUNCTION(BlueprintCallable, Category = PRT, meta = (HidePin = "Outer", DefaultToSelf = "Outer"))
-		void GetModelData(TArray<FPRTMeshStruct>& MeshStruct);
-
-	UFUNCTION(BlueprintCallable, Category = PRT, meta = (HidePin = "Outer", DefaultToSelf = "Outer"))
-		void CreateMesh();
-
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = PRT, meta = (HidePin = "Outer", DefaultToSelf = "Outer"))
-		bool bUseStaticMesh = false;
-
+	UFUNCTION(BlueprintCallable, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|Generate")
+	void GetModelData(TArray<FPRTMeshStruct>& MeshStruct, bool& bDataValid);
+	
 	/* attempt to load the RPK if we already have a file specified, this is mostly for use on opening a project,
 	 * and restoring	the actor to the previous state.
 	 * Future: Create the Static Mesh using UE 4.24+ */
-	UFUNCTION(BlueprintCallable, Category = PRT, meta = (HidePin = "Outer", DefaultToSelf = "Outer"))
-		void GenerateModelData(bool bForceRegen = false);
+	UFUNCTION(BlueprintCallable, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|Generate")
+	void GenerateModelData(bool bForceRegen = false);
+
+	/////////////////////////////////////////////
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, CallInEditor, Category = "PRT|Events")
+		void GenerateCompleted(bool Success);
+
+	/////////////////////////////////////////////
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|RPK Settings")
+		FString RPKPath = L"";
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|RPK Settings")
+		FString RPKFile = L"(none)";
+	FString PreviousRPKFile = L""; //usable only by CopyViewAttributesIntoDataStore;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|RPK Settings")
+		FString OBJPath = L"";
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|RPK Settings")
+		FString OBJFile = L"square";
+
+	/*Sets the current RPK Path, initial shape and refreshes the building*/
+	UFUNCTION(BlueprintCallable, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|RPK Settings")
+		void InitializeRPKData(bool bCompleteReset);
+
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|Options")
+	bool bUseStaticMesh = false;
+	
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PRT|Options")
+	EPRTLogVerbosity LogVerbosity = EPRTLogVerbosity::LOG_WARNING;
 	
 #pragma region Sync Data
 	/*
@@ -437,37 +402,37 @@ public:
 	 *@param AttributeIndex - index of Attributes inside of ViewAttributes
 	 *@param Value - The new string value to be used in generating the building
 	 **/
-	UFUNCTION(BlueprintCallable, Category = "RPK Utility")
+	UFUNCTION(BlueprintCallable, Category = "PRT|Sync Data")
 	void SyncAttributeString(int32 GroupIndex, int32 AttributeIndex, FString Value);
-	
+
 	/*
 	 *Store the specific float attribute from the current RPK into the Attributes Map before updating the building
 	 *@param GroupIndex - index of ViewAttributes
 	 *@param AttributeibuteIndex - index of Attributes inside of ViewAttributes
 	 *@param Value - The new float value to be used in generating the building
 	 **/
-	UFUNCTION(BlueprintCallable, Category = "RPK Utility")
+	UFUNCTION(BlueprintCallable, Category = "PRT|Sync Data")
 	void SyncAttributeFloat(int32 GroupIndex, int32 AttributeIndex, float Value);
-	
+
 	/*
 	 *Store the specific bool attribute from the current RPK into the Attributes Map before updating the building
 	 *@param GroupIndex - index of ViewAttributes
 	 *@param AttributeibuteIndex - index of Attributes inside of ViewAttributes
 	 *@param Value - The new bool value to be used in generating the building
 	 **/
-	UFUNCTION(BlueprintCallable, Category = "RPK Utility")
+	UFUNCTION(BlueprintCallable, Category = "PRT|Sync Data")
 	void SyncAttributeBool(int32 GroupIndex, int32 AttributeIndex, bool bValue);
-	
+
 	/*
 	 *Store the specific color attribute from the current RPK into the Attributes Map before updating the building
 	 *@param GroupIndex - index of ViewAttributes
 	 *@param AttributeibuteIndex - index of Attributes inside of ViewAttributes
 	 *@param Value - The new color value to be used in generating the building
 	 **/
-	UFUNCTION(BlueprintCallable, Category = "RPK Utility")
+	UFUNCTION(BlueprintCallable, Category = "PRT|Sync Data")
 	void SyncAttributeColor(int32 GroupIndex, int32 AttributeIndex, FLinearColor Value);
 #pragma endregion
-	
+
 	/*
 	 *Creates the procedural mesh
 	 *@note Full Function implemented in Blueprint RPKDecoderActor
@@ -475,30 +440,13 @@ public:
 	 *@note Which unfortunately "CallInEditor" exposes the button to the editor, which
 	 *@note sometime in the future, we need to mask from the user.
 	*/
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, CallInEditor, Category = "RPK Utility", meta = (HidePin = "Outer", DefaultToSelf = "Outer"))
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, CallInEditor, Category = "PRT|Events", meta = (HidePin =
+		"Outer", DefaultToSelf = "Outer"))
 	void Generate(bool bForceRegen = false);
 
-	/*
-	 *Creates the procedural mesh
-	 *@note Full Function implemented in Blueprint RPKDecoderActor
-	 *@note this only works with the following 3 options "BlueprintImplementableEvent, BlueprintCallable, CallInEditor"
-	 *@note Which unfortunately "CallInEditor" exposes the button to the editor, which
-	 *@note sometime in the future, we need to mask from the user.
-	*/
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, CallInEditor, Category = "RPK Utility", meta = (HidePin = "Outer", DefaultToSelf = "Outer"))
-		void ProcessGeneratedData();
-
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, CallInEditor, Category = "RPK Utility", meta = (HidePin = "Outer", DefaultToSelf = "Outer"))
-	void CreateStaticMesh();
-
-	UFUNCTION(BlueprintCallable, BlueprintCallable, CallInEditor, Category = "RPK Utility", meta = (HidePin = "Outer", DefaultToSelf = "Outer"))
+	UFUNCTION(BlueprintCallable, CallInEditor, Category = "PRT|Attributes", meta = (HidePin = "Outer",
+		DefaultToSelf = "Outer"))
 	void ClearViewAttributesDataStoreCache();
-
-	/*Searches for RPK and OBJ files in the current working directory and populates a list of RPKS for later use*/
-	auto BuildFileLists(bool bRescan = false) -> void;
-
-	void GetObjFileList(IFileManager& FileManager, FString ContentDir);
-	void GetRPKFileList(IFileManager& FileManager, FString ContentDir);
 
 	// Called every frame
 	void Tick(float DeltaTime) override;
@@ -506,33 +454,46 @@ public:
 	FPrtDetail* PrtDetail = nullptr;
 #endif
 
+	FPRTModule PRT;
 
 private:
-	FPRTModule PRT;
+	FGenerator* PRTGenerator = nullptr;
 	FPRTLog PRTLog;
 	FPRTUtilities PRTUtil;
+
 	bool bInitialized = false;
 	double LastGenerationTimestamp = 0;
 	TArray<FMeshDescription*> MeshDescriptions;
+	
+	prt::Status GenerateLocally();
+
+	void LogGenerateStatistics();
+	
+	/*Searches for RPK and OBJ files in the current working directory and populates a list of RPKS for later use*/
+	auto BuildFileLists(bool bRescan = false) -> void;
+
+	void GetObjFileList(IFileManager& FileManager, FString ContentDir);
+	void GetRPKFileList(IFileManager& FileManager, FString ContentDir);
 
 #pragma region Meshing
-	//UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "RPK Utility")
+	//UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|Utility")
 	TArray<FPRTMeshStruct> MeshStructureStore;
-
+	
 	void GetComponents();
 
-	void CreateMaterialInstance(TArray<uint8> Texture);
-	
-	static void CopyMeshStructures(TArray<FPRTMeshStruct>& SourceMeshStruct, TArray<FPRTMeshStruct>& DestinationMeshStruct);
+	static void CopyMeshStructures(TArray<FPRTMeshStruct>& SourceMeshStruct,
+	                               TArray<FPRTMeshStruct>& DestinationMeshStruct);
 	void ProcessPRTVertexDataIntoMeshStruct(TArray<FPRTMeshStruct>& MeshStruct);
-	static void SetMaterialMeshVertexColors(FPRTMeshStruct* MaterialMesh, TArray<float> Vertices, FLinearColor TempColor);
+	static void SetMaterialMeshVertexColors(FPRTMeshStruct* MaterialMesh, TArray<float> Vertices,
+	                                        FLinearColor TempColor);
 	static void SetMaterialMeshNormals(FPRTMeshStruct* MaterialMesh, TArray<float> Normals);
 	static void SetMaterialMeshUVs(FPRTMeshStruct* MaterialMesh, TArray<float> UVs);
 	static void SetMaterialMeshIndices(FPRTMeshStruct* MaterialMesh, TArray<uint32_t>& Indices);
 #pragma endregion
 
 #pragma region Attributes
-	
+
+	void RefreshDetailPanel();
 	void EraseAttributes();
 	void InitializeViewAttributes();
 	void BuildNewViewAttributeArray();
@@ -552,7 +513,7 @@ private:
 	static void SetAlternateWidgetType(FCEAttribute* Attribute);
 	void AddAttributeToViewAttributes(FCEAttribute Attribute, FString Group, int32 GroupOrder);
 #pragma endregion
-	
+
 protected:
 	// Called when the game starts or when spawned
 	void BeginPlay() override;
