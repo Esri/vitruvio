@@ -12,7 +12,7 @@
 
 #include <VitruvioModule.h>
 #include <PRTGenerator.h>
-#include <PrtDetail.h>
+#include <PRTDetail.h>
 #include <PRTUtilities.h>
 
 #include "PRTActor.generated.h"
@@ -451,7 +451,7 @@ public:
 	// Called every frame
 	void Tick(float DeltaTime) override;
 #if WITH_EDITOR
-	FPrtDetail* PrtDetail = nullptr;
+	FPRTDetail* PrtDetail = nullptr;
 #endif
 
 	FVitruvioModule PRT;

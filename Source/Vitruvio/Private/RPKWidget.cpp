@@ -166,7 +166,7 @@ TSharedRef<SCheckBox> FRPKWidget::VRCheckBox()
 	}
 
 	TSharedRef<SCheckBox> VRcheckBox = SNew(SCheckBox)
-	.Style(*FPrtDetail::Style.Get(), "VRCheckBox")
+	.Style(*FPRTDetail::Style.Get(), "VRCheckBox")
 	.IsChecked(vrState)
 	.OnCheckStateChanged_Raw(this, &FRPKWidget::HandleVRCheckboxChanged);
 	WVR = VRcheckBox;

@@ -88,7 +88,7 @@ void FVitruvioModule::InitializeSlateAttributePanel()
 	//This binds it to the PRTActor that exists within the scene.	
 	PropertyModule.RegisterCustomClassLayout(
 		"PRTActor", 
-		FOnGetDetailCustomizationInstance::CreateStatic(&FPrtDetail::MakeInstance));
+		FOnGetDetailCustomizationInstance::CreateStatic(&FPRTDetail::MakeInstance));
 #endif
 }
 
