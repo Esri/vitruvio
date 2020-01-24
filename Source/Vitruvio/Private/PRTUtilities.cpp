@@ -1,14 +1,11 @@
 ﻿#include "PRTUtilities.h"
-#include "Misc/DateTime.h"
 #include "Interfaces/IPluginManager.h"
 
 #include "Windows/AllowWindowsPlatformTypes.h"
-#include "Windows/MinWindows.h"
 #include <processenv.h>
 #include "HAL/FileManager.h"
 #include "Misc/Paths.h"
 #include "HAL/PlatformApplicationMisc.h"
-#include "Windows/HideWindowsPlatformTypes.h"
 
 //Current Working Directory management methods:
 FString FPRTUtilities::GOriginalWorkingDirectory; //the original Working directory to return to.

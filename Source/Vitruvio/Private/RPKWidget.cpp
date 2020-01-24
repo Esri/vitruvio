@@ -8,16 +8,14 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailWidgetRow.h"
-//#include "IDetailChildrenBuilder.h"
 #include "Widgets\Input\SEditableTextBox.h"
-//#include "SCompoundWidget.h"
 
 #define LOCTEXT_NAMESPACE "PrtDetail"
 
 void FRPKWidget::SetAttribute(int32 InGroupIndex, int32 InAttrIndex, FCEAttribute& inAttr, APRTActor* InPRTActor,
                               IDetailLayoutBuilder* InDetailBuilderPtr, FString InGroup)
 {
-	attr = &inAttr;
+	Attribute = &inAttr;
 	GroupIndex = InGroupIndex;
 	AttrIndex = InAttrIndex;
 	PrtActor = InPRTActor;
@@ -29,9 +27,9 @@ void FRPKWidget::Create()
 {
 	Destroy();
 
-	if (!attr->bHidden)
+	if (!Attribute->bHidden)
 	{
-		switch (attr->Widget)
+		switch (Attribute->Widget)
 		{
 		case ERPKWidgetTypes::GENERAL_TEXT: AddTextWidget();
 			break;
@@ -60,48 +58,48 @@ void FRPKWidget::Update()
 {
 	TAttribute<ECheckBoxState> IsChecked;
 
-	if (attr != nullptr)
+	if (Attribute != nullptr)
 	{
-		if (!attr->bHidden)
+		if (!Attribute->bHidden)
 		{
-			switch (attr->Widget)
+			switch (Attribute->Widget)
 			{
 			case ERPKWidgetTypes::GENERAL_TEXT:
 				if (WString.IsValid())
 				{
-					WString->SetText(FText::FromString(attr->sValue));
+					WString->SetText(FText::FromString(Attribute->sValue));
 				}
 				break;
 			case ERPKWidgetTypes::SLIDER:
 				if (WString.IsValid())
 				{
-					WString->SetText(FText::FromString(FString::SanitizeFloat(attr->fValue)));
+					WString->SetText(FText::FromString(FString::SanitizeFloat(Attribute->fValue)));
 				}
 				if (WSlider.IsValid())
 				{
-					float value = attr->fValue;
-					float range = attr->Range[1] - attr->Range[0];
+					float value = Attribute->fValue;
+					float range = Attribute->Range[1] - Attribute->Range[0];
 
 					//constrain by step, to do this we need to emulate round to nearest step.
-					value += attr->Step / 2.0; //add half a step, so a truncate will be between -halfstep/+halfstep.
-					int32 cValue = value / attr->Step; //use an int to truncate it for us.
-					value = cValue * attr->Step;
+					value += Attribute->Step / 2.0; //add half a step, so a truncate will be between -halfstep/+halfstep.
+					int32 cValue = value / Attribute->Step; //use an int to truncate it for us.
+					value = cValue * Attribute->Step;
 
 					//set slider from value
 					float sliderValue = value;
-					sliderValue -= attr->Range[0];
+					sliderValue -= Attribute->Range[0];
 					sliderValue = sliderValue / range;
 
 					//constrain the resulting slider value
 					if (sliderValue < 0.0) sliderValue = 0.0;
 					if (sliderValue > 1.0) sliderValue = 1.0;
 					//constrain float value within min and max.
-					if (value < attr->Range[0]) value = attr->Range[0];
-					if (value > attr->Range[1]) value = attr->Range[1];
+					if (value < Attribute->Range[0]) value = Attribute->Range[0];
+					if (value > Attribute->Range[1]) value = Attribute->Range[1];
 
 					//set the value to the slider and float
 					WSlider->SetValue(sliderValue);
-					attr->fValue = value;
+					Attribute->fValue = value;
 				}
 				break;
 			case ERPKWidgetTypes::COLOR:
@@ -114,19 +112,19 @@ void FRPKWidget::Update()
 			case ERPKWidgetTypes::FILE:
 				if (WString.IsValid())
 				{
-					WString->SetText(FText::FromString(attr->sValue));
+					WString->SetText(FText::FromString(Attribute->sValue));
 				}
 				break;
 			case ERPKWidgetTypes::DIRECTORY:
 				if (WString.IsValid())
 				{
-					WString->SetText(FText::FromString(attr->sValue));
+					WString->SetText(FText::FromString(Attribute->sValue));
 				}
 				break;
 			case ERPKWidgetTypes::CHECKBOX:
 				if (WBool.IsValid())
 				{
-					if (attr->bValue)
+					if (Attribute->bValue)
 					{
 						IsChecked = ECheckBoxState::Checked;
 					}
@@ -140,7 +138,7 @@ void FRPKWidget::Update()
 			case ERPKWidgetTypes::NUMBER_TEXT:
 				if (WString.IsValid())
 				{
-					WString->SetText(FText::FromString(FString::SanitizeFloat(attr->fValue)));
+					WString->SetText(FText::FromString(FString::SanitizeFloat(Attribute->fValue)));
 				}
 				break;
 			}
@@ -156,7 +154,7 @@ void FRPKWidget::Update()
 TSharedRef<SCheckBox> FRPKWidget::VRCheckBox()
 {
 	TAttribute<ECheckBoxState> vrState;
-	if (attr->showInVR)
+	if (Attribute->showInVR)
 	{
 		vrState.Set(ECheckBoxState::Checked);
 	}
@@ -176,17 +174,17 @@ TSharedRef<SCheckBox> FRPKWidget::VRCheckBox()
 
 void FRPKWidget::AddTextWidget()
 {
-	if (DetailBuilderPtr != nullptr && attr != nullptr)
+	if (DetailBuilderPtr != nullptr && Attribute != nullptr)
 	{
 		//For the Slate Attributes Panel, the design is the same for both general numbers and strings.
 		FString strValue;
-		if (attr->Type == 1)
+		if (Attribute->Type == 1)
 		{
-			strValue = FString::SanitizeFloat(attr->fValue);
+			strValue = FString::SanitizeFloat(Attribute->fValue);
 		}
 		else
 		{
-			strValue = attr->sValue;
+			strValue = Attribute->sValue;
 		}
 
 		TSharedRef<SEditableTextBox> value = SNew(SEditableTextBox)
@@ -204,7 +202,7 @@ void FRPKWidget::AddTextWidget()
 			  .AutoWidth()
 			  .Padding(FMargin(1.0f))
 			  .HAlign(HAlign_Left);
-		if (attr->bIsPercentage)
+		if (Attribute->bIsPercentage)
 		{
 			ValueContent->AddSlot()
 				[
@@ -239,10 +237,10 @@ void FRPKWidget::AddTextWidget()
 
 		//build the final row
 		DetailBuilderPtr->EditCategory(*Group, FText::GetEmpty(), ECategoryPriority::Important)
-		                .AddCustomRow(FText::FromString(attr->DisplayName))
+		                .AddCustomRow(FText::FromString(Attribute->DisplayName))
 		                .NameContent()
 			[
-				SNew(STextBlock).Text(FText::FromString(attr->DisplayName))
+				SNew(STextBlock).Text(FText::FromString(Attribute->DisplayName))
 			]
 			.ValueContent()
 			.VAlign(VAlign_Fill)
@@ -257,22 +255,22 @@ void FRPKWidget::AddSliderWidget()
 {
 	//Sliders are always from 0.0 to 1.0
 	float sliderValue = 0.0;
-	if (attr->Range.Num() > 0)
+	if (Attribute->Range.Num() > 0)
 	{
-		sliderValue = attr->fValue;
-		float range = attr->Range[1] - attr->Range[0];
-		sliderValue -= attr->Range[0];
+		sliderValue = Attribute->fValue;
+		float range = Attribute->Range[1] - Attribute->Range[0];
+		sliderValue -= Attribute->Range[0];
 		sliderValue = sliderValue / range;
 	}
 
 	TSharedRef<SEditableTextBox> value = SNew(SEditableTextBox)
-		.Text(FText::FromString(FString::SanitizeFloat(attr->fValue)))
+		.Text(FText::FromString(FString::SanitizeFloat(Attribute->fValue)))
 		.OnTextCommitted_Raw(this, &FRPKWidget::HandleTextChanged);
 	WString = value;
-	if (attr->SliderStep < .01) attr->SliderStep = .01;
+	if (Attribute->SliderStep < .01) Attribute->SliderStep = .01;
 	TSharedRef<SSlider> Slider = SNew(SSlider)
 			.Value(sliderValue)
-			.StepSize(attr->SliderStep)
+			.StepSize(Attribute->SliderStep)
 			.MouseUsesStep(true)
 			.OnValueChanged_Raw(this, &FRPKWidget::HandleSliderChanged);
 	WSlider = Slider;
@@ -288,7 +286,7 @@ void FRPKWidget::AddSliderWidget()
 		.Padding(FMargin(1.0f))
 		.MaxWidth(40.0f)
 		.AutoWidth();
-	if (attr->bIsPercentage)
+	if (Attribute->bIsPercentage)
 	{
 		ValueContent->AddSlot()
 			[
@@ -302,7 +300,7 @@ void FRPKWidget::AddSliderWidget()
 	ValueContent->AddSlot()
 		[
 			SNew(STextBlock)
-			.Text(FText::FromString(FString::SanitizeFloat(attr->Range[0])))
+			.Text(FText::FromString(FString::SanitizeFloat(Attribute->Range[0])))
 		]
 		.VAlign(VAlign_Fill)
 		.HAlign(HAlign_Center)
@@ -319,7 +317,7 @@ void FRPKWidget::AddSliderWidget()
 	ValueContent->AddSlot()
 		[
 			SNew(STextBlock)
-			.Text(FText::FromString(FString::SanitizeFloat(attr->Range[1])))
+			.Text(FText::FromString(FString::SanitizeFloat(Attribute->Range[1])))
 		]
 		.VAlign(VAlign_Fill)
 		.HAlign(HAlign_Center)
@@ -345,10 +343,10 @@ void FRPKWidget::AddSliderWidget()
 
 	//build the final row
 	DetailBuilderPtr->EditCategory(*Group, FText::GetEmpty(), ECategoryPriority::Important)
-	                .AddCustomRow(FText::FromString(attr->DisplayName))
+	                .AddCustomRow(FText::FromString(Attribute->DisplayName))
 	                .NameContent()
 		[
-			SNew(STextBlock).Text(FText::FromString(attr->DisplayName))
+			SNew(STextBlock).Text(FText::FromString(Attribute->DisplayName))
 		]
 		.ValueContent()
 		.VAlign(VAlign_Fill)
@@ -364,7 +362,7 @@ void FRPKWidget::AddColorPickerWidget()
 		.OnColorCommitted_Raw(this, &FRPKWidget::HandleColorPicker)
 		.UseAlpha(false)
 		.DisplayInlineVersion(false)
-		.TargetColorAttribute(attr->Color);
+		.TargetColorAttribute(Attribute->Color);
 	WColor = value;
 
 	TSharedRef<SHorizontalBox> ValueContent = SNew(SHorizontalBox)
@@ -392,10 +390,10 @@ void FRPKWidget::AddColorPickerWidget()
 
 	//build the final row
 	DetailBuilderPtr->EditCategory(*Group, FText::GetEmpty(), ECategoryPriority::Important)
-	                .AddCustomRow(FText::FromString(attr->DisplayName))
+	                .AddCustomRow(FText::FromString(Attribute->DisplayName))
 	                .NameContent()
 		[
-			SNew(STextBlock).Text(FText::FromString(attr->DisplayName))
+			SNew(STextBlock).Text(FText::FromString(Attribute->DisplayName))
 		]
 		.ValueContent()
 		.VAlign(VAlign_Fill)
@@ -424,11 +422,11 @@ void FRPKWidget::AddComboBox()
 {
 	if (WComboOptions.Num() == 0)
 	{
-		for (int32 i = 0; i < attr->SelectValues.Num(); i++)
+		for (int32 i = 0; i < Attribute->SelectValues.Num(); i++)
 		{
-			TSharedPtr<FString> Temp = MakeShareable(new FString(attr->SelectValues[i]));
+			TSharedPtr<FString> Temp = MakeShareable(new FString(Attribute->SelectValues[i]));
 			WComboOptions.Add(Temp);
-			if (attr->sValue.Compare(attr->SelectValues[i]) == 0)
+			if (Attribute->sValue.Compare(Attribute->SelectValues[i]) == 0)
 			{
 				WComboSelected = Temp;
 			}
@@ -479,10 +477,10 @@ void FRPKWidget::AddComboBox()
 
 	//build the final row
 	DetailBuilderPtr->EditCategory(*Group, FText::GetEmpty(), ECategoryPriority::Important)
-	                .AddCustomRow(FText::FromString(attr->DisplayName))
+	                .AddCustomRow(FText::FromString(Attribute->DisplayName))
 	                .NameContent()
 		[
-			SNew(STextBlock).Text(FText::FromString(attr->DisplayName))
+			SNew(STextBlock).Text(FText::FromString(Attribute->DisplayName))
 		]
 		.ValueContent()
 		.VAlign(VAlign_Fill)
@@ -496,7 +494,7 @@ void FRPKWidget::AddCheckBox()
 {
 	//makes the detail panel content
 	TAttribute<ECheckBoxState> state;
-	if (attr->bValue)
+	if (Attribute->bValue)
 	{
 		state.Set(ECheckBoxState::Checked);
 	}
@@ -537,10 +535,10 @@ void FRPKWidget::AddCheckBox()
 
 	//build the final row
 	DetailBuilderPtr->EditCategory(*Group, FText::GetEmpty(), ECategoryPriority::Important)
-	                .AddCustomRow(FText::FromString(attr->DisplayName))
+	                .AddCustomRow(FText::FromString(Attribute->DisplayName))
 	                .NameContent()
 		[
-			SNew(STextBlock).Text(FText::FromString(attr->DisplayName))
+			SNew(STextBlock).Text(FText::FromString(Attribute->DisplayName))
 		]
 		.ValueContent()
 		.VAlign(VAlign_Fill)
@@ -554,7 +552,7 @@ void FRPKWidget::AddFilePicker()
 {
 	//makes the detail panel content
 	TAttribute<ECheckBoxState> State;
-	if (attr->bValue)
+	if (Attribute->bValue)
 	{
 		State.Set(ECheckBoxState::Checked);
 	}
@@ -593,10 +591,10 @@ void FRPKWidget::AddFilePicker()
 
 	//build the final row
 	DetailBuilderPtr->EditCategory(*Group, FText::GetEmpty(), ECategoryPriority::Important)
-	                .AddCustomRow(FText::FromString(attr->DisplayName))
+	                .AddCustomRow(FText::FromString(Attribute->DisplayName))
 	                .NameContent()
 		[
-			SNew(STextBlock).Text(FText::FromString(attr->DisplayName))
+			SNew(STextBlock).Text(FText::FromString(Attribute->DisplayName))
 		]
 		.ValueContent()
 		.VAlign(VAlign_Fill)
@@ -613,11 +611,11 @@ void FRPKWidget::AddFilePicker()
 ****************************************************************************************************************/
 void FRPKWidget::HandleSliderChanged(const float NewFloat) const
 {
-	if (attr != nullptr)
+	if (Attribute != nullptr)
 	{
-		if (attr->Type == 1 && attr->Range.Num() > 0)
+		if (Attribute->Type == 1 && Attribute->Range.Num() > 0)
 		{
-			const double Value = NewFloat * (attr->Range[1] - attr->Range[0]) + attr->Range[0];
+			const double Value = NewFloat * (Attribute->Range[1] - Attribute->Range[0]) + Attribute->Range[0];
 			PrtActor->SyncAttributeFloat(GroupIndex, AttrIndex, Value);
 		}
 	}
@@ -625,14 +623,14 @@ void FRPKWidget::HandleSliderChanged(const float NewFloat) const
 
 void FRPKWidget::HandleTextChanged(const FText& NewText, ETextCommit::Type Type) const
 {
-	if (attr != nullptr)
+	if (Attribute != nullptr)
 	{
-		if (attr->Type == 1)
+		if (Attribute->Type == 1)
 		{
 			const float Value = FCString::Atof(*NewText.ToString());
 			PrtActor->SyncAttributeFloat(GroupIndex, AttrIndex, Value);
 		}
-		if (attr->Type == 2)
+		if (Attribute->Type == 2)
 		{
 			PrtActor->SyncAttributeString(GroupIndex, AttrIndex, NewText.ToString());
 		}
@@ -641,9 +639,9 @@ void FRPKWidget::HandleTextChanged(const FText& NewText, ETextCommit::Type Type)
 
 void FRPKWidget::HandleCheckboxChanged(const ECheckBoxState NewState) const
 {
-	if (attr != nullptr)
+	if (Attribute != nullptr)
 	{
-		switch (attr->Type)
+		switch (Attribute->Type)
 		{
 		case 0: //bool
 			if (NewState == ECheckBoxState::Checked)
@@ -662,15 +660,15 @@ void FRPKWidget::HandleCheckboxChanged(const ECheckBoxState NewState) const
 
 void FRPKWidget::HandleVRCheckboxChanged(const ECheckBoxState NewState) const
 {
-	if (attr != nullptr)
+	if (Attribute != nullptr)
 	{
 		if (NewState == ECheckBoxState::Checked)
 		{
-			attr->showInVR = true;
+			Attribute->showInVR = true;
 		}
 		else
 		{
-			attr->showInVR = false;
+			Attribute->showInVR = false;
 		}
 		PrtActor->CopyViewAttributesIntoDataStore();
 	}
@@ -686,9 +684,9 @@ FReply FRPKWidget::HandleFilePickerClicked()
 
 void FRPKWidget::HandleColorPicker(const FLinearColor NewColor) const
 {
-	if (attr != nullptr)
+	if (Attribute != nullptr)
 	{
-		if (attr->Widget == ERPKWidgetTypes::COLOR)
+		if (Attribute->Widget == ERPKWidgetTypes::COLOR)
 		{
 			PrtActor->SyncAttributeColor(GroupIndex, AttrIndex, NewColor);
 		}
@@ -699,13 +697,13 @@ void FRPKWidget::HandleComboBoxChanged(const TSharedPtr<FString> NewValue, ESele
 {
 	WComboSelected = NewValue;
 	const FString Value = *NewValue;
-	if (attr != nullptr)
+	if (Attribute != nullptr)
 	{
-		if (attr->Type == 1)
+		if (Attribute->Type == 1)
 		{
 			PrtActor->SyncAttributeFloat(GroupIndex, AttrIndex, FCString::Atof(*Value));
 		}
-		if (attr->Type == 2)
+		if (Attribute->Type == 2)
 		{
 			PrtActor->SyncAttributeString(GroupIndex, AttrIndex, *Value);
 		}

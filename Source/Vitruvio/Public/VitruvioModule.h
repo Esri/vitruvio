@@ -8,26 +8,15 @@
 
 #include <Engine.h>
 
-//City Engine
-//#include "prt/prt.h"
 #include "prt/API.h"
-//#include "prt/ContentType.h"
 #include "prt/Callbacks.h"
 #include "prt/MemoryOutputCallbacks.h"
 #include "prt/Cache.h"
 
 #include "prtx/Exception.h"
-//#include "prtx/Log.h"
-//#include "prtx/Geometry.h"
-//#include "prtx/Material.h"
 #include "prtx/Shape.h"
-//#include "prtx/ShapeIterator.h"
 #include "prtx/ExtensionManager.h"
-//#include "prtx/GenerateContext.h"
 
-//UE4 modules
-#include "Windows/MinWindows.h"
-//#include <Shlwapi.h>
 #include "Modules/ModuleManager.h"
 #include "PRTLog.h"
 #include "PRTUtilities.h"
@@ -36,21 +25,11 @@
 #include "PropertyEditorModule.h"
 #endif
 
-//#include "MessageLog.h"
-
 class APRTActor;
 using namespace std;
 
 #pragma region Structure and Enum
 
-/*
-struct PRTOptions {
-	string encoder = "com.esri.prt.codecs.OBJEncoder"; //mEncoderID
-	vector < array <string, 3> > encoderOptions; //convertEncOpts
-	vector< array <string, 3> > attributes; //convertShapeAttrs
-	//possibility: a flag to output to disk or callback.
-};
-*/
 struct FMatData
 {
 	FString FileName = L"";
@@ -133,12 +112,6 @@ public:
 
 #pragma endregion
 
-/*
-#define LOCTEXT_NAMESPACE "EpicWrenNamespace"
-	extern FName GLoggerName;
-	extern FMessageLog GLogger;
-*/
-
 class IVitruvioModule : public IModuleInterface
 {
 public:
@@ -160,14 +133,6 @@ public:
 
 	virtual auto ApplyAttributesToProceduralRuntime(TMap<FString, FPRTAttribute> Attributes) -> void =0;
 	
-	/*static TMap<FString, FPRTAttribute> Attributes;
-	TMap<FString, FVertData> VertexData;
-	TMap<FString, FString> ObjectFiles;
-	TMap<FString, FString> MaterialFiles;
-	TMap<FString, uint8_t*> JpegFiles;
-	TMap<FString, int32> JpegSizes;
-	TMap<FString, FMatData> Materials;*/
-
 
 	/**
 	 * Singleton-like access to this module's interface.  This is just for convenience!
@@ -227,8 +192,6 @@ public:
 
 	auto ApplyAttributesToProceduralRuntime(TMap<FString, FPRTAttribute> Attributes) -> void override;
 private:
-
-
 	//utility methods
 	TArray<void*> Dlls;
 
@@ -236,15 +199,8 @@ private:
 	bool bIsCompleted;
 	
 	FPRTLog PRTLog;
-	////Stuff for the dialog and printing information to the user.
-	//struct FDialog
-	//{
-	//	FText Body;
-	//	FText Title;
-	//	void Box(FString Body, FString Title);
-	//} Dialog;
 
-	/* PRT Plugin */
+	// PRT Plugin
 	static prt::Status PluginStatus; //This tells the rest of the plugin if the plugin is in an okay state and usable.
 	prt::Status RPKStatus = prt::STATUS_UNSPECIFIED_ERROR; //the status of the rpk
 	prt::Status GenerateStatus = prt::STATUS_UNSPECIFIED_ERROR; //the status if a generate has occurred.

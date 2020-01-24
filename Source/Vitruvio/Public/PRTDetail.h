@@ -7,17 +7,12 @@
 #include "IDetailCustomization.h"
 #include "DetailCustomizations.h"
 #include "IPropertyTypeCustomization.h"
-//#include "Slate.h"
-//#include "Styling/SlateStyle.h"
-//#include "InputCoreTypes.h"
 #include "Widgets/Input/SComboBox.h"
 #include "Widgets/Colors/SColorPicker.h"
 #include "PRTUtilities.h"
 
 struct FCEAttribute;
 class APRTActor;
-
-//#define WRITE_TO_DISK_BUTTON
 
 class FPRTDetail : public IDetailCustomization
 {

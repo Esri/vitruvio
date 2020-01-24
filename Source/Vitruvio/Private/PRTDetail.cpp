@@ -7,7 +7,6 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailWidgetRow.h"
-//#include "IDetailChildrenBuilder.h"
 #include "PRTActor.h"
 #include <Styling/SlateStyle.h>
 #include <Styling/SlateStyleRegistry.h>
@@ -25,9 +24,6 @@ FPRTDetail::FPRTDetail()
 {
 	SetStyle(BuildStyle());
 }
-
-//just saving this here as a reminder how to:~A.W.
-//GEngine->AddOnScreenDebugMessage(-1, 30.0f, FColor::Red, FString(L"Slider Changed."));
 
 FReply FPRTDetail::Refresh()
 {

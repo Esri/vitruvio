@@ -3,12 +3,10 @@
 #include "VitruvioModule.h"
 #include "prt/Status.h"
 #include <iostream>
-#include "MessageLog/Public/MessageLogInitializationOptions.h"
 #include "MessageLog/Public/MessageLogModule.h"
 #include "Interfaces/IPluginManager.h"
 #include "PrtDetail.h"
 #include <Logging/LogMacros.h>
-#include "Misc/MessageDialog.h"
 #include "HAL/FileManager.h"
 #include <thread>
 #include <mutex>
