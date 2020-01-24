@@ -2,14 +2,14 @@
 
 using UnrealBuildTool;
 
-public class PRT : ModuleRules
+public class Vitruvio : ModuleRules
 {
-	public PRT(ReadOnlyTargetRules Target) : base(Target)
+	public Vitruvio(ReadOnlyTargetRules Target) : base(Target)
 	{
-        bUseRTTI = true;
-        PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-        PrecompileForTargets = PrecompileTargetsType.Any;
-        bUseUnity = false;
+		bUseRTTI = true;
+		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+		PrecompileForTargets = PrecompileTargetsType.Any;
+		bUseUnity = false;
 
 
 		PublicIncludePaths.AddRange(
@@ -29,19 +29,19 @@ public class PRT : ModuleRules
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
-                "Core",
-                "CoreUObject",
-                "Engine",
-                "RHI",
-                "RenderCore",
-                "PRTLibrary",
-                "Projects",
-                "ProceduralMeshComponent",
-                "SlateCore",
-                "Slate",
-                "AppFramework",
-                "CoreUObject",
-                "InputCore"
+				"Core",
+				"CoreUObject",
+				"Engine",
+				"RHI",
+				"RenderCore",
+				"PRT",
+				"Projects",
+				"ProceduralMeshComponent",
+				"SlateCore",
+				"Slate",
+				"AppFramework",
+				"CoreUObject",
+				"InputCore"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -50,9 +50,9 @@ public class PRT : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
-                "SlateCore",
-                "Slate",
-                "AppFramework",
+				"SlateCore",
+				"Slate",
+				"AppFramework",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

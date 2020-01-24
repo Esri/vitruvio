@@ -2,7 +2,7 @@
 
 #pragma once
 #include "PRTActor.h"
-#include "PRTModule.h"
+#include "VitruvioModule.h"
 #include "PRTUtilities.h"
 #include "PRTLog.h"
 
@@ -17,7 +17,7 @@
 
 // Forward Declarations
 class APRTActor;
-class FPRTModule;
+class FVitruvioModule;
 class FPRTLog;
 struct FPRTMeshStruct;
 struct FPRTAttribute;
@@ -30,9 +30,9 @@ public:
 	/**
 	 * \brief Constructor 
 	 * \param InPRTActor - Ref Pointer to the parent object
-	 * \param InPRTModule
+	 * \param InVitruvioModule
 	 */
-	FGenerator(APRTActor* InPRTActor, FPRTModule* InPRTModule); // , TArray<FPRTMeshStruct>& InMeshStruct, FPRTMeshStruct& InMaterialMesh, TMap<FString, FPRTAttribute> InAttributes);
+	FGenerator(APRTActor* InPRTActor, FVitruvioModule* InVitruvioModule); // , TArray<FPRTMeshStruct>& InMeshStruct, FPRTMeshStruct& InMaterialMesh, TMap<FString, FPRTAttribute> InAttributes);
 	~FGenerator();
 	void SetGenerateState(bool NewState);
 
@@ -74,7 +74,7 @@ public:
 private:
 	/** The Actor Dependency Injection **/
 	APRTActor* PRTActor;
-	FPRTModule* PRTModule;
+	FVitruvioModule* VitruvioModule;
 
 	double ProcessStartTime;
 	double LastProcessTime;
