@@ -6,7 +6,7 @@
 
 class FString;
 
-#define PLUGIN_NAME "PRT"
+#define PLUGIN_NAME "Vitruvio"
 
 class FPRTUtilities
 {
