@@ -29,34 +29,27 @@ void FVitruvioModule::StartupModule()
 	PRTLog.Message(TEXT(">>>> Initializing the PRT Plugin <<<<"));
 #endif
 
-	//load our DLL files:
-	FString Path = PRTUtil.GetPluginBaseDirectory() + L"/Binaries/ThirdParty/glutess.dll";
+	// Load prt
+	const FString PrtLibPath = PRTUtil.GetPluginBaseDirectory() + L"/Binaries/Win64/com.esri.prt.core.dll";
+	Dlls.Add(FPlatformProcess::GetDllHandle(*PrtLibPath));
 
-	Dlls.Add(FPlatformProcess::GetDllHandle(*Path));
-
-	Path = PRTUtil.GetPluginBaseDirectory() + L"/Binaries/ThirdParty/com.esri.prt.core.dll";
-	Dlls.Add(FPlatformProcess::GetDllHandle(*Path));
-
-	const FString LibPath = PRTUtil.GetWorkingDirectory() + TEXT("Binaries\\ThirdParty\\");
+	const FString LibPath = PRTUtil.GetWorkingDirectory() + TEXT("Binaries/Win64/");
 	TArray<wchar_t*> PRTPluginsPaths;
 	PRTPluginsPaths.Add(const_cast<wchar_t*>(*LibPath));
 
 	// Performs global Procedural Runtime initialization. Called once.
 	// TODO: Try/Catch and message - Catch is likely due to missing dlls
-
-		PRTInitializerHandle = init(
-			PRTPluginsPaths.GetData(),
-			PRTPluginsPaths.Num(),
-			static_cast<prt::LogLevel>(3),
-			&FVitruvioModule::PluginStatus);
+	PRTInitializerHandle = init(
+		PRTPluginsPaths.GetData(),
+		PRTPluginsPaths.Num(),
+		static_cast<prt::LogLevel>(3),
+		&FVitruvioModule::PluginStatus);
 	
 	if (PluginStatus != prt::STATUS_OK)
 	{
-		const FString Message = "Failed to init CityEngine PRT plugin. Status: " + 
-			*prt::getStatusDescription(FVitruvioModule::PluginStatus);
+		const FString Message = "Failed to init CityEngine PRT plugin. Status: " + *prt::getStatusDescription(FVitruvioModule::PluginStatus);
 		PRTLog.Message(*Message, ELogVerbosity::Warning);
-		PRTLog.Dialog.Box(Message,
-		             "Plugin Initialize Failure.");
+		PRTLog.Dialog.Box(Message, "Plugin Initialize Failure.");
 	}
 
 #if WITH_EDITOR
