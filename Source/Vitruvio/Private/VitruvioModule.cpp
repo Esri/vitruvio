@@ -33,7 +33,7 @@ void FVitruvioModule::StartupModule()
 	const FString PrtLibPath = PRTUtil.GetPluginBaseDirectory() + L"/Binaries/Win64/com.esri.prt.core.dll";
 	Dlls.Add(FPlatformProcess::GetDllHandle(*PrtLibPath));
 
-	const FString LibPath = PRTUtil.GetWorkingDirectory() + TEXT("Binaries/Win64/");
+	const FString LibPath = PRTUtil.GetWorkingDirectory() + TEXT("Source/ThirdParty/PRT/lib/Win64/Release");
 	TArray<wchar_t*> PRTPluginsPaths;
 	PRTPluginsPaths.Add(const_cast<wchar_t*>(*LibPath));
 
