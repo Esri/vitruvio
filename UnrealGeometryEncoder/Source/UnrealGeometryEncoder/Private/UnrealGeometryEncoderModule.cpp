@@ -8,7 +8,7 @@
 #include "Core.h"
 #include "Interfaces/IPluginManager.h"
 #include "MeshDescription.h"
-#include "ModuleManager.h"
+#include "Modules/ModuleManager.h"
 #include "StaticMeshAttributes.h"
 #include "UObject/UObjectBaseUtility.h"
 #include "UnrealCallbacks.h"

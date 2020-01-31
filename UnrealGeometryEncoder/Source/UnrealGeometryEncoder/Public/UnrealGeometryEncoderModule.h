@@ -3,7 +3,7 @@
 #pragma once
 
 #include "Engine/StaticMesh.h"
-#include "ModuleManager.h"
+#include "Modules/ModuleManager.h"
 #include "RuleAttributes.h"
 #include "RulePackage.h"
 #include "UnrealLogHandler.h"

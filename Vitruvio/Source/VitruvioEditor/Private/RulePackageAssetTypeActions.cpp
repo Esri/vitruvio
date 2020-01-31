@@ -1,4 +1,4 @@
-#include "Public/RulePackageAssetTypeActions.h"
+#include "VitruvioEditor/Public/RulePackageAssetTypeActions.h"
 
 #include "RulePackage.h"
 #include "UnrealEd.h"

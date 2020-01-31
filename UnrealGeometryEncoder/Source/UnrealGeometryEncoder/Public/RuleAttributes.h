@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Array.h"
+#include "Containers/Array.h"
 #include "UObject/Object.h"
 #include "RuleAttributes.generated.h"
 

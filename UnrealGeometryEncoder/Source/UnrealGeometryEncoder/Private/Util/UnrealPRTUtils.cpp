@@ -8,9 +8,9 @@
 #include <vector>
 
 #ifdef PLATFORM_WINDOWS
-#include "AllowWindowsPlatformTypes.h"
-#include "HideWindowsPlatformTypes.h"
+#include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows.h"
+#include "Windows/HideWindowsPlatformTypes.h"
 #endif
 
 namespace prtu

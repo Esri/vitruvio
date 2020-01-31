@@ -38,20 +38,19 @@ void APRTActor::Regenerate()
 {
 	if (Rpk)
 	{
-		UStaticMeshComponent* StaticMeshComponent = GetStaticMeshComponent();
-
+		// TODO check for type
 		// Remove old prt meshes
-		TArray<AActor*> Children;
+		TArray<AActor*> GeneratedMeshes;
 		GetAttachedActors(Children);
-		for (const auto& Child : Children)
+		for (const auto& Child : GeneratedMeshes)
 		{
 			Child->Destroy();
 		}
 
 		// Generate
-		if (StaticMeshComponent)
+		if (GetStaticMeshComponent())
 		{
-			UStaticMesh* InitialShape = StaticMeshComponent->GetStaticMesh();
+			UStaticMesh* InitialShape = GetStaticMeshComponent()->GetStaticMesh();
 
 			if (InitialShape)
 			{

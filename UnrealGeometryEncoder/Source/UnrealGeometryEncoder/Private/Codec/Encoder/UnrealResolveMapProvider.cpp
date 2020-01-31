@@ -4,9 +4,9 @@
 #include "prt/ResolveMap.h"
 #include "prtx/ExtensionManager.h"
 
-#include "GenericPlatformFile.h"
-#include "Paths.h"
-#include "PlatformFilemanager.h"
+#include "GenericPlatform/GenericPlatformFile.h"
+#include "Misc/Paths.h"
+#include "HAL/PlatformFilemanager.h"
 #include "RulePackage.h"
 #include "Util/UnrealPRTUtils.h"
 

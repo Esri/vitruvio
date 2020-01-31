@@ -6,7 +6,7 @@
 #include "RulePackageAssetTypeActions.h"
 
 #include "Core.h"
-#include "ModuleManager.h"
+#include "Modules/ModuleManager.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioEditorModule"
 
