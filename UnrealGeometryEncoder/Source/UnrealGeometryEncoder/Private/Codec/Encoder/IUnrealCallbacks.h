@@ -26,7 +26,7 @@ public:
 	 * @param uvsSizes lengths of uv arrays per uv set
 	 */
 	// clang-format off
-	virtual void addMesh(const wchar_t* name,
+	virtual void setMesh(const wchar_t* name,
 	                     const double* vtx, size_t vtxSize,
 	                     const double* nrm, size_t nrmSize,
 	                     const uint32_t* faceVertexCounts, size_t faceVertexCountsSize,

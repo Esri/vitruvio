@@ -7,6 +7,7 @@
 #include "RuleAttributes.h"
 #include "RulePackage.h"
 #include "UnrealLogHandler.h"
+#include "HierarchicalInstancedStaticMeshComponent.generated.h"
 
 #include "prt/Object.h"
 #include "prt/ResolveMap.h"
@@ -25,9 +26,19 @@ public:
 	void StartupModule() override;
 	void ShutdownModule() override;
 
-	UNREALGEOMETRYENCODER_API TArray<UStaticMesh*> Generate(const UStaticMesh* InitialShape, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const;
+	
+	/**
+	 * \brief Calls prt generate with the given InitialShape, RulePackage and Attributes. The instances are written into OutInstances.
+	 * 
+	 * \param InitialShape 
+	 * \param RulePackage 
+	 * \param Attributes 
+	 * \param OutInstances 
+	 * \return the generated UStaticMesh.
+	 */
+	UNREALGEOMETRYENCODER_API UStaticMesh* Generate(const UStaticMesh* InitialShape, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes, TArray<UInstancedStaticMeshComponent*>& OutInstances) const;
 
-	UNREALGEOMETRYENCODER_API void SetDefaultRuleAttributes(const UStaticMesh* InitialShape, URulePackage* RulePackage, TMap<FString, URuleAttribute*>& OutAttributes) const;
+	UNREALGEOMETRYENCODER_API void LoadDefaultRuleAttributes(const UStaticMesh* InitialShape, URulePackage* RulePackage, TMap<FString, URuleAttribute*>& OutAttributes) const;
 
 	static UnrealGeometryEncoderModule& Get()
 	{

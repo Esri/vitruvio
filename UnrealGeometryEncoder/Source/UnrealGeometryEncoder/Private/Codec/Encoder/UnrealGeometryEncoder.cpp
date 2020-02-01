@@ -379,7 +379,7 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialSha
 	auto puvCounts = toPtrVec(sg.uvCounts);
 	auto puvIndices = toPtrVec(sg.uvIndices);
 
-	cb->addMesh(initialShape.getName(), sg.coords.data(), sg.coords.size(), sg.normals.data(), sg.normals.size(), sg.faceVertexCounts.data(), sg.faceVertexCounts.size(),
+	cb->setMesh(initialShape.getName(), sg.coords.data(), sg.coords.size(), sg.normals.data(), sg.normals.size(), sg.faceVertexCounts.data(), sg.faceVertexCounts.size(),
 				sg.vertexIndices.data(), sg.vertexIndices.size(), sg.normalIndices.data(), sg.normalIndices.size(),
 
 				puvs.first.data(), puvs.second.data(), puvCounts.first.data(), puvCounts.second.data(), puvIndices.first.data(), puvIndices.second.data(), sg.uvs.size());

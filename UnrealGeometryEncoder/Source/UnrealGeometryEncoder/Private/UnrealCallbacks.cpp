@@ -10,13 +10,13 @@
 
 DEFINE_LOG_CATEGORY(LogUnrealCallbacks);
 
-void UnrealCallbacks::addMesh(const wchar_t* name, const double* vtx, size_t vtxSize, const double* nrm, size_t nrmSize, const uint32_t* faceVertexCounts,
+void UnrealCallbacks::setMesh(const wchar_t* name, const double* vtx, size_t vtxSize, const double* nrm, size_t nrmSize, const uint32_t* faceVertexCounts,
 							  size_t faceVertexCountsSize, const uint32_t* vertexIndices, size_t vertexIndicesSize, const uint32_t* normalIndices, size_t normalIndicesSize,
 
 							  double const* const* uvs, size_t const* uvsSizes, uint32_t const* const* uvCounts, size_t const* uvCountsSizes, uint32_t const* const* uvIndices,
 							  size_t const* uvIndicesSizes, size_t uvSets)
 {
-	UStaticMesh* Mesh = NewObject<UStaticMesh>();
+	UStaticMesh* StaticMesh = NewObject<UStaticMesh>();
 
 	UMaterial* Material = NewObject<UMaterial>();
 	UMaterialExpressionConstant* ConstantColor = NewObject<UMaterialExpressionConstant>(Material);
@@ -26,7 +26,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, const double* vtx, size_t vtx
 
 	Material->TwoSided = true;
 
-	FName MaterialSlot = Mesh->AddMaterial(Material);
+	FName MaterialSlot = StaticMesh->AddMaterial(Material);
 
 	FMeshDescription Description;
 	FStaticMeshAttributes Attributes(Description);
@@ -67,8 +67,8 @@ void UnrealCallbacks::addMesh(const wchar_t* name, const double* vtx, size_t vtx
 	TArray<const FMeshDescription*> MeshDescriptionPtrs;
 	MeshDescriptionPtrs.Emplace(&Description);
 
-	Mesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
-	Meshes.Add(Mesh);
+	StaticMesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
+	Mesh = StaticMesh;
 }
 
 prt::Status UnrealCallbacks::attrBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value)

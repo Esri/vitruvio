@@ -166,7 +166,7 @@ ResolveMapSPtr UnrealGeometryEncoderModule::GetResolveMap(const std::wstring& Ur
 	return ResolveMap;
 }
 
-TArray<UStaticMesh*> UnrealGeometryEncoderModule::Generate(const UStaticMesh* InitialShape, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
+UStaticMesh* UnrealGeometryEncoderModule::Generate(const UStaticMesh* InitialShape, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes, TArray<UInstancedStaticMeshComponent*>& OutInstances) const
 {
 	check(InitialShape);
 	check(RulePackage);
@@ -214,10 +214,10 @@ TArray<UStaticMesh*> UnrealGeometryEncoderModule::Generate(const UStaticMesh* In
 		UE_LOG(LogUnrealPrt, Error, TEXT("prt generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
 	}
 
-	return OutputHandler->getMeshes();
+	return OutputHandler->getMesh();
 }
 
-void UnrealGeometryEncoderModule::SetDefaultRuleAttributes(const UStaticMesh* InitialShape, URulePackage* RulePackage, TMap<FString, URuleAttribute*>& OutAttributes) const
+void UnrealGeometryEncoderModule::LoadDefaultRuleAttributes(const UStaticMesh* InitialShape, URulePackage* RulePackage, TMap<FString, URuleAttribute*>& OutAttributes) const
 {
 	check(InitialShape);
 	check(RulePackage);

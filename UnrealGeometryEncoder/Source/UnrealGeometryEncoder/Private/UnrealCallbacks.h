@@ -10,7 +10,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogUnrealCallbacks, Log, All);
 class UnrealCallbacks : public IUnrealCallbacks
 {
 	AttributeMapBuilderUPtr& AttributeMapBuilder;
-	TArray<UStaticMesh*> Meshes;
+	UStaticMesh* Mesh;
 
 public:
 	~UnrealCallbacks() override = default;
@@ -40,7 +40,7 @@ public:
 	 * @param shapeIDs shape ids per face, contains faceRangesSize-1 values
 	 */
 	// clang-format off
-	void addMesh(const wchar_t* name,
+	void setMesh(const wchar_t* name,
 		const double* vtx, size_t vtxSize,
 		const double* nrm, size_t nrmSize,
 		const uint32_t* faceVertexCounts, size_t faceVertexCountsSize,
@@ -54,9 +54,9 @@ public:
 	) override;
 	// clang-format on
 
-	const TArray<UStaticMesh*>& getMeshes() const
+	UStaticMesh* getMesh() const
 	{
-		return Meshes;
+		return Mesh;
 	}
 
 	prt::Status generateError(size_t /*isIndex*/, prt::Status /*status*/, const wchar_t* message) override
