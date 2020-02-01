@@ -54,14 +54,13 @@ void APRTActor::Regenerate()
 
 			if (InitialShape)
 			{
-				TArray<UInstancedStaticMeshComponent*> Instances;
-				UStaticMesh* ShapeMesh = UnrealGeometryEncoderModule::Get().Generate(InitialShape, Rpk, GenerateAttributes, Instances);
+				FGenerateResult GenerateResult = UnrealGeometryEncoderModule::Get().Generate(InitialShape, Rpk, GenerateAttributes);
 
 				FActorSpawnParameters Parameters;
 				Parameters.Owner = this;
 				AStaticMeshActor* StaticMeshActor = GetWorld()->SpawnActor<AStaticMeshActor>(Parameters);
 				StaticMeshActor->SetMobility(EComponentMobility::Movable);
-				StaticMeshActor->GetStaticMeshComponent()->SetStaticMesh(ShapeMesh);
+				StaticMeshActor->GetStaticMeshComponent()->SetStaticMesh(GenerateResult.ShapeMesh);
 				StaticMeshActor->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
 			}
 		}

@@ -7,16 +7,25 @@
 #include "StaticMeshAttributes.h"
 #include "StaticMeshDescription.h"
 #include "StaticMeshOperations.h"
+#include "Components/HierarchicalInstancedStaticMeshComponent.h"
 
 DEFINE_LOG_CATEGORY(LogUnrealCallbacks);
 
-void UnrealCallbacks::setMesh(const wchar_t* name, const double* vtx, size_t vtxSize, const double* nrm, size_t nrmSize, const uint32_t* faceVertexCounts,
+namespace
+{
+	FVector GetColumn(const double* Mat, int32 Column)
+	{
+		return FVector4(Mat[Column + 0], Mat[Column + 4], Mat[Column + 8], Mat[Column + 12]);
+	}
+}
+
+void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const double* vtx, size_t vtxSize, const double* nrm, size_t nrmSize, const uint32_t* faceVertexCounts,
 							  size_t faceVertexCountsSize, const uint32_t* vertexIndices, size_t vertexIndicesSize, const uint32_t* normalIndices, size_t normalIndicesSize,
 
 							  double const* const* uvs, size_t const* uvsSizes, uint32_t const* const* uvCounts, size_t const* uvCountsSizes, uint32_t const* const* uvIndices,
 							  size_t const* uvIndicesSizes, size_t uvSets)
 {
-	UStaticMesh* StaticMesh = NewObject<UStaticMesh>();
+	UStaticMesh* Mesh = NewObject<UStaticMesh>();
 
 	UMaterial* Material = NewObject<UMaterial>();
 	UMaterialExpressionConstant* ConstantColor = NewObject<UMaterialExpressionConstant>(Material);
@@ -26,7 +35,7 @@ void UnrealCallbacks::setMesh(const wchar_t* name, const double* vtx, size_t vtx
 
 	Material->TwoSided = true;
 
-	FName MaterialSlot = StaticMesh->AddMaterial(Material);
+	FName MaterialSlot = Mesh->AddMaterial(Material);
 
 	FMeshDescription Description;
 	FStaticMeshAttributes Attributes(Description);
@@ -63,12 +72,41 @@ void UnrealCallbacks::setMesh(const wchar_t* name, const double* vtx, size_t vtx
 		BaseVertexIndex += FaceVertexCount;
 	}
 
-	// Create and add mesh
+	// Build Mesh
 	TArray<const FMeshDescription*> MeshDescriptionPtrs;
 	MeshDescriptionPtrs.Emplace(&Description);
+	Mesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
 
-	StaticMesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
-	Mesh = StaticMesh;
+	// Not cached so set shape mesh otherwise create instance
+	if (prototypeId == -1)
+	{
+		check(!ShapeMesh)
+		ShapeMesh = Mesh;
+	}
+	else
+	{
+		auto HierarchicalInstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>();
+		HierarchicalInstancedComponent->SetStaticMesh(Mesh);
+		Instances.Add(prototypeId, HierarchicalInstancedComponent);
+	}
+}
+
+void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform)
+{
+	check(Instances[prototypeId])
+	const FMatrix TransformationMat(GetColumn(transform, 0), GetColumn(transform, 1),	GetColumn(transform, 2), GetColumn(transform, 3));
+	const int32 SignumDet = FMath::Sign(TransformationMat.Determinant());
+
+	FMatrix MatWithoutScale = TransformationMat.GetMatrixWithoutScale();
+	MatWithoutScale = MatWithoutScale * SignumDet;
+	MatWithoutScale.M[3][3] = 1;
+
+	const FQuat Rotation = MatWithoutScale.ToQuat();
+	const FVector Scale = TransformationMat.GetScaleVector();
+	const FVector Translation = FVector(TransformationMat.M[3][0], TransformationMat.M[3][1], TransformationMat.M[3][2]);
+
+	const FTransform Transform(Rotation, Translation, Scale);
+	Instances[prototypeId]->AddInstance(Transform);
 }
 
 prt::Status UnrealCallbacks::attrBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value)

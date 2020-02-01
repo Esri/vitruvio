@@ -13,7 +13,8 @@ public:
 	~IUnrealCallbacks() override = default;
 
 	/**
-	 * @param name initial shape (primitive group) name, optionally used to create primitive groups on output
+	 * @param name initial shape name, optionally used to create primitive groups on output
+	 * @param prototypeId the id of the prototype or -1 of not cached
 	 * @param vtx vertex coordinate array
 	 * @param vtxSize of vertex coordinate array
 	 * @param nrm vertex normal array
@@ -26,7 +27,8 @@ public:
 	 * @param uvsSizes lengths of uv arrays per uv set
 	 */
 	// clang-format off
-	virtual void setMesh(const wchar_t* name,
+	virtual void addMesh(const wchar_t* name,
+	                     int32_t prototypeId,
 	                     const double* vtx, size_t vtxSize,
 	                     const double* nrm, size_t nrmSize,
 	                     const uint32_t* faceVertexCounts, size_t faceVertexCountsSize,
@@ -37,7 +39,13 @@ public:
 	                     uint32_t const* const* uvCounts, size_t const* uvCountsSizes,
 	                     uint32_t const* const* uvIndices, size_t const* uvIndicesSizes,
 	                     size_t uvSets
-
 	) = 0;
 	// clang-format on
+	
+	/**
+	 * @param prototypeId
+	 * @param transform
+	 */
+	virtual void addInstance(int32_t prototypeId, const double* transform) = 0;
+	
 };

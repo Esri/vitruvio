@@ -20,6 +20,12 @@ DECLARE_LOG_CATEGORY_EXTERN(LogUnrealPrt, Log, All);
 
 using ResolveMapSPtr = std::shared_ptr<prt::ResolveMap const>;
 
+struct FGenerateResult
+{
+	UStaticMesh* ShapeMesh;
+	TArray<UInstancedStaticMeshComponent*> Instances;
+};
+
 class UnrealGeometryEncoderModule : public IModuleInterface
 {
 public:
@@ -36,7 +42,7 @@ public:
 	 * \param OutInstances 
 	 * \return the generated UStaticMesh.
 	 */
-	UNREALGEOMETRYENCODER_API UStaticMesh* Generate(const UStaticMesh* InitialShape, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes, TArray<UInstancedStaticMeshComponent*>& OutInstances) const;
+	UNREALGEOMETRYENCODER_API FGenerateResult Generate(const UStaticMesh* InitialShape, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const;
 
 	UNREALGEOMETRYENCODER_API void LoadDefaultRuleAttributes(const UStaticMesh* InitialShape, URulePackage* RulePackage, TMap<FString, URuleAttribute*>& OutAttributes) const;
 

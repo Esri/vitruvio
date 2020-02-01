@@ -10,16 +10,18 @@ DECLARE_LOG_CATEGORY_EXTERN(LogUnrealCallbacks, Log, All);
 class UnrealCallbacks : public IUnrealCallbacks
 {
 	AttributeMapBuilderUPtr& AttributeMapBuilder;
-	UStaticMesh* Mesh;
+	
+	UStaticMesh* ShapeMesh;
+	TMap<int32, UInstancedStaticMeshComponent*> Instances;
 
 public:
 	~UnrealCallbacks() override = default;
-	UnrealCallbacks(AttributeMapBuilderUPtr& AttributeMapBuilder) : AttributeMapBuilder(AttributeMapBuilder)
+	UnrealCallbacks(AttributeMapBuilderUPtr& AttributeMapBuilder) : AttributeMapBuilder(AttributeMapBuilder), ShapeMesh(nullptr)
 	{
 	}
 
 	/**
-	 * @param name initial shape (primitive group) name, optionally used to create primitive groups on output
+	 * @param name initial shape name, optionally used to create primitive groups on output
 	 * @param vtx vertex coordinate array
 	 * @param vtxSize of vertex coordinate array
 	 * @param nrm vertex normal array
@@ -40,7 +42,8 @@ public:
 	 * @param shapeIDs shape ids per face, contains faceRangesSize-1 values
 	 */
 	// clang-format off
-	void setMesh(const wchar_t* name,
+	void addMesh(const wchar_t* name,
+		int32_t prototypeId,
 		const double* vtx, size_t vtxSize,
 		const double* nrm, size_t nrmSize,
 		const uint32_t* faceVertexCounts, size_t faceVertexCountsSize,
@@ -52,11 +55,18 @@ public:
 		uint32_t const* const* uvIndices, size_t const* uvIndicesSizes,
 		size_t uvSets
 	) override;
+
+	void addInstance(int32_t prototypeId, const double* transform) override;
 	// clang-format on
 
-	UStaticMesh* getMesh() const
+	UStaticMesh* getShapeMesh() const
 	{
-		return Mesh;
+		return ShapeMesh;
+	}
+
+	const TMap<int32, UInstancedStaticMeshComponent*>& getInstances() const
+	{
+		return Instances;
 	}
 
 	prt::Status generateError(size_t /*isIndex*/, prt::Status /*status*/, const wchar_t* message) override
