@@ -309,7 +309,7 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialSha
 
 	for (const auto& inst : instances)
 	{
-		if (serialized.find(inst.getPrototypeIndex()) != serialized.end())
+		if (serialized.find(inst.getPrototypeIndex()) == serialized.end())
 		{
 			const SerializedGeometry sg = serializeGeometry(inst.getGeometry(), inst.getMaterials());
 
