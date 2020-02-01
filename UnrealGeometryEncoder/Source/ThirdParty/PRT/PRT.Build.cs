@@ -108,13 +108,12 @@ public class PRT : ModuleRules
 				}
 			}
 
-			// 4. Add prt extension libraries to Binaries/lib folder
-			Directory.CreateDirectory(Path.Combine(BinariesFolder, "lib"));
+			// 4. Add prt extension libraries to Binaries folder
 			foreach (string LibFile in Directory.GetFiles(LibFolder))
 			{
 				if (Path.GetExtension(LibFile) == ".dll")
 				{
-					string BinaryDllPath = Path.Combine(BinariesFolder, "lib", Path.GetFileName(LibFile));
+					string BinaryDllPath = Path.Combine(BinariesFolder, Path.GetFileName(LibFile));
 					if (Debug) System.Console.WriteLine("Copy \"" + Path.GetFileName(LibFile) + "\" to " + BinaryDllPath);
 					File.Copy(Path.Combine(LibFolder, LibFile), BinaryDllPath, true);
 				}
