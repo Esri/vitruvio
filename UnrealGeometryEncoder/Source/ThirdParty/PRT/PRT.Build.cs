@@ -22,39 +22,53 @@ public class PRT : ModuleRules
 		if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
 			string LibFolder = Path.Combine(ModuleDirectory, "lib", "Win64", "Release");
+			string BinFolder = Path.Combine(ModuleDirectory, "bin", "Win64", "Release");
 
+			// TODO improve checking if already installed
 			// 1. Check if prt is already available, otherwise download from official github repo
-			if (!Directory.Exists(LibFolder))
+			bool PrtInstalled = Directory.Exists(LibFolder) && Directory.Exists(BinFolder);
+			if (!PrtInstalled)
 			{
-				if (Debug) Console.WriteLine("PRT Build: PRT not found");
-				
-				string PrtBuildUrl = "https://github.com/Esri/esri-cityengine-sdk/releases/download";
-				string Version = string.Format("{0}.{1}.{2}", PrtMajor, PrtMinor, PrtBuild);
-
-				string Platform = "win10-vc141-x86_64-rel-opt";
-				string LibName = string.Format("esri_ce_sdk-{0}-{1}", Version, Platform);
-				string LibZipFile = LibName + ".zip";
-				string PrtLib = Path.Combine(PrtBuildUrl, Version, LibZipFile);
-
-				if (Debug) System.Console.WriteLine("PRT Build: Downloading " + PrtLib + "...");
-
-				using (var Client = new WebClient())
+				try
 				{
-					Client.DownloadFile(PrtLib, Path.Combine(ModuleDirectory, LibZipFile));
+					if (Directory.Exists(LibFolder)) Directory.Delete(LibFolder, true);
+					if (Directory.Exists(BinFolder)) Directory.Delete(BinFolder, true);
+
+					if (Debug) Console.WriteLine("PRT not found");
+
+					string PrtBuildUrl = "https://github.com/Esri/esri-cityengine-sdk/releases/download";
+					string Version = string.Format("{0}.{1}.{2}", PrtMajor, PrtMinor, PrtBuild);
+
+					string Platform = "win10-vc141-x86_64-rel-opt";
+					string LibName = string.Format("esri_ce_sdk-{0}-{1}", Version, Platform);
+					string LibZipFile = LibName + ".zip";
+					string PrtLib = Path.Combine(PrtBuildUrl, Version, LibZipFile);
+
+					if (Debug) System.Console.WriteLine("Downloading " + PrtLib + "...");
+
+					using (var Client = new WebClient())
+					{
+						Client.DownloadFile(PrtLib, Path.Combine(ModuleDirectory, LibZipFile));
+					}
+
+					if (Debug) System.Console.WriteLine("Extracting " + LibZipFile + "...");
+
+					IZipExtractor Extractor = new WindowsZipExtractor();
+					Extractor.Unzip(ModuleDirectory, LibZipFile, LibName);
+
+					Directory.CreateDirectory(LibFolder);
+					Directory.CreateDirectory(BinFolder);
+					Copy(Path.Combine(ModuleDirectory, LibName, "lib"), Path.Combine(ModuleDirectory, LibFolder));
+					Copy(Path.Combine(ModuleDirectory, LibName, "bin"), Path.Combine(ModuleDirectory, BinFolder));
+					Copy(Path.Combine(ModuleDirectory, LibName, "include"), Path.Combine(ModuleDirectory, "include"));
+
+					Directory.Delete(Path.Combine(ModuleDirectory, LibName), true);
+					File.Delete(Path.Combine(ModuleDirectory, LibZipFile));
 				}
-				
-				if (Debug) System.Console.WriteLine("PRT Build: Extracting " + LibZipFile + "...");
-
-				IZipExtractor Extractor = new WindowsZipExtractor();
-				Extractor.Unzip(ModuleDirectory, LibZipFile, LibName);
-
-				Directory.CreateDirectory(LibFolder);
-				Copy(Path.Combine(ModuleDirectory, LibName, "lib"), Path.Combine(ModuleDirectory, LibFolder));
-				Copy(Path.Combine(ModuleDirectory, LibName, "bin"), Path.Combine(ModuleDirectory, LibFolder));
-				Copy(Path.Combine(ModuleDirectory, LibName, "include"), Path.Combine(ModuleDirectory, "include"));
-
-				Directory.Delete(Path.Combine(ModuleDirectory, LibName), true);
-				File.Delete(Path.Combine(ModuleDirectory, LibZipFile));
+				finally
+				{
+					// TODO cleanup
+				}
 			}
 
 			// 2. Add necessary includes
@@ -68,45 +82,41 @@ public class PRT : ModuleRules
 
 			if (Debug)
 			{
-				System.Console.WriteLine("PRT Build: LibFolder: " + LibFolder);
-				System.Console.WriteLine("PRT Build: ThirdPartyBinFolder: " + BinariesFolder);
+				System.Console.WriteLine("LibFolder: " + LibFolder);
+				System.Console.WriteLine("BinFolder: " + BinFolder);
+				System.Console.WriteLine("ThirdPartyBinFolder: " + BinariesFolder);
 			}
 
 			// Add the import library
-			PublicAdditionalLibraries.Add(Path.Combine(LibFolder, "com.esri.prt.core.lib"));
-			PublicAdditionalLibraries.Add(Path.Combine(LibFolder, "glutess.lib"));
+			PublicAdditionalLibraries.Add(Path.Combine(BinFolder, "com.esri.prt.core.lib"));
+			PublicAdditionalLibraries.Add(Path.Combine(BinFolder, "glutess.lib"));
 
 			PublicDelayLoadDLLs.Add("com.esri.prt.core.dll");
 			PublicDelayLoadDLLs.Add("glutess.dll");
 
-			// 3. Add libraries to binary folder (see for example https://github.com/EpicGames/UnrealEngine/blob/release/Engine/Plugins/Runtime/LeapMotion/Source/LeapMotion/LeapMotion.Build.cs)
-			foreach (string LibFolderFile in Directory.GetFiles(LibFolder))
+			// 3. Add libraries to Binaries folder
+			// see for example https://github.com/EpicGames/UnrealEngine/blob/release/Engine/Plugins/Runtime/LeapMotion/Source/LeapMotion/LeapMotion.Build.cs
+			foreach (string BinFile in Directory.GetFiles(BinFolder))
 			{
-				if (Path.GetExtension(LibFolderFile) == ".dll")
+				if (Path.GetExtension(BinFile) == ".dll")
 				{
-					string BinaryDllPath = Path.Combine(BinariesFolder, Path.GetFileName(LibFolderFile));
-
-					bool Copy = true;
-					if (File.Exists(BinaryDllPath))
-					{
-						// Only copy to binaries folder if the files
-						string LibFolderDllHash = HashFile(LibFolderFile);
-						string BinariesDllHash = HashFile(BinaryDllPath);
-
-						Copy = LibFolderDllHash != BinariesDllHash;
-					}
-
-					if (Copy)
-					{
-						if (Debug) System.Console.WriteLine("PRT Build: Copy dll \"" + LibFolderFile + "\" to " + BinaryDllPath);
-						File.Copy(Path.Combine(LibFolder, LibFolderFile), BinaryDllPath, true);
-					}
-					else
-					{
-						if (Debug) System.Console.WriteLine("PRT Build: Not copying to binaries folder \"" + LibFolderFile + "\" because it already exists");
-					}
+					string BinaryDllPath = Path.Combine(BinariesFolder, Path.GetFileName(BinFile));
+					if (Debug) System.Console.WriteLine("Copy \"" + Path.GetFileName(BinFile) + "\" to " + BinaryDllPath);
+					File.Copy(Path.Combine(LibFolder, BinFile), BinaryDllPath, true);
 
 					RuntimeDependencies.Add(BinaryDllPath);
+				}
+			}
+
+			// 4. Add prt extension libraries to Binaries/lib folder
+			Directory.CreateDirectory(Path.Combine(BinariesFolder, "lib"));
+			foreach (string LibFile in Directory.GetFiles(LibFolder))
+			{
+				if (Path.GetExtension(LibFile) == ".dll")
+				{
+					string BinaryDllPath = Path.Combine(BinariesFolder, "lib", Path.GetFileName(LibFile));
+					if (Debug) System.Console.WriteLine("Copy \"" + Path.GetFileName(LibFile) + "\" to " + BinaryDllPath);
+					File.Copy(Path.Combine(LibFolder, LibFile), BinaryDllPath, true);
 				}
 			}
 		}
@@ -124,18 +134,6 @@ public class PRT : ModuleRules
 		foreach (var Dir in Directory.GetDirectories(SourceDir))
 		{
 			Copy(Dir, Path.Combine(TargetDir, Path.GetFileName(Dir)));
-		}
-	}
-
-	private string HashFile(string FilePath)
-	{
-		using (var Md5 = MD5.Create())
-		{
-			using (var Stream = File.OpenRead(FilePath))
-			{
-				var Hash = Md5.ComputeHash(Stream);
-				return BitConverter.ToString(Hash).Replace("-", "").ToLowerInvariant();
-			}
 		}
 	}
 

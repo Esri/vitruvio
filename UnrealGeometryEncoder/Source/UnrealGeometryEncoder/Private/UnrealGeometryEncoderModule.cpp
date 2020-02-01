@@ -120,13 +120,14 @@ namespace
 void UnrealGeometryEncoderModule::StartupModule()
 {
 	const FString BaseDir = FPaths::ConvertRelativePathToFull(IPluginManager::Get().FindPlugin("UnrealGeometryEncoder")->GetBaseDir());
-	const FString BinariesPath = FPaths::Combine(*BaseDir, L"Binaries/Win64");
-	const FString PrtLibPath = FPaths::Combine(*BinariesPath, L"/com.esri.prt.core.dll");
+	const FString BinariesPath = FPaths::Combine(*BaseDir, L"Binaries", L"Win64");
+	const FString ExtensionsFolder = FPaths::Combine(*BaseDir, L"Binaries", L"Win64", L"lib");
+	const FString PrtLibPath = FPaths::Combine(*BinariesPath, L"com.esri.prt.core.dll");
 
 	PrtDllHandle = FPlatformProcess::GetDllHandle(*PrtLibPath);
 
 	TArray<wchar_t*> PRTPluginsPaths;
-	PRTPluginsPaths.Add(const_cast<wchar_t*>(*BinariesPath));
+	PRTPluginsPaths.Add(const_cast<wchar_t*>(*ExtensionsFolder));
 
 	LogHandler = new UnrealLogHandler;
 	prt::addLogHandler(LogHandler);
