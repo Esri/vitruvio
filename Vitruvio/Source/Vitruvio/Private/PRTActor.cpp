@@ -16,6 +16,8 @@ void APRTActor::BeginPlay()
 
 void APRTActor::Tick(float DeltaTime)
 {
+	Super::Tick(DeltaTime);
+	
 	// Note that we also tick in editor for initialization
 	if (!Initialized)
 	{
@@ -39,7 +41,6 @@ void APRTActor::Regenerate()
 {
 	if (Rpk)
 	{
-		// TODO check for type
 		// Remove old prt meshes
 		TArray<AActor*> GeneratedMeshes;
 		GetAttachedActors(GeneratedMeshes);
@@ -83,6 +84,8 @@ void APRTActor::Regenerate()
 #ifdef WITH_EDITOR
 void APRTActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+	
 	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(APRTActor, Rpk))
 	{
 		GenerateAttributes.Empty();
