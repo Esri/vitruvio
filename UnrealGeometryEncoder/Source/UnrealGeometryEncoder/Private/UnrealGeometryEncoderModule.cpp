@@ -134,6 +134,8 @@ void UnrealGeometryEncoderModule::StartupModule()
 	prt::Status Status;
 	PrtLibrary = prt::init(PRTPluginsPaths.GetData(), PRTPluginsPaths.Num(), prt::LogLevel::LOG_TRACE, &Status);
 	Initialized = Status == prt::STATUS_OK;
+
+	PrtCache.reset(prt::CacheObject::create(prt::CacheObject::CACHE_TYPE_DEFAULT));
 }
 
 void UnrealGeometryEncoderModule::ShutdownModule()
@@ -147,6 +149,8 @@ void UnrealGeometryEncoderModule::ShutdownModule()
 	{
 		PrtLibrary->destroy();
 	}
+
+	PrtCache.release();
 
 	delete LogHandler;
 }
@@ -206,16 +210,14 @@ FGenerateResult UnrealGeometryEncoderModule::Generate(const UStaticMesh* Initial
 	InitialShapeNOPtrVector Shapes = {Shape.get()};
 
 	const prt::Status GenerateStatus =
-		prt::generate(Shapes.data(), Shapes.size(), nullptr, EncoderIds.data(), EncoderIds.size(), EncoderOptions.data(), OutputHandler.get(), nullptr, nullptr);
+		prt::generate(Shapes.data(), Shapes.size(), nullptr, EncoderIds.data(), EncoderIds.size(), EncoderOptions.data(), OutputHandler.get(), PrtCache.get(), nullptr);
 
 	if (GenerateStatus != prt::STATUS_OK)
 	{
 		UE_LOG(LogUnrealPrt, Error, TEXT("prt generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
 	}
 
-	TArray<UInstancedStaticMeshComponent*> InstanceComponents;
-	OutputHandler->getInstances().GenerateValueArray(InstanceComponents);
-	return { OutputHandler->getShapeMesh(), InstanceComponents };
+	return { OutputHandler->getShapeMesh(), OutputHandler->getInstances() };
 }
 
 void UnrealGeometryEncoderModule::LoadDefaultRuleAttributes(const UStaticMesh* InitialShape, URulePackage* RulePackage, TMap<FString, URuleAttribute*>& OutAttributes) const

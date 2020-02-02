@@ -2,6 +2,7 @@
 
 #include "PRTActor.h"
 #include "UnrealGeometryEncoderModule.h"
+#include "Components/HierarchicalInstancedStaticMeshComponent.h"
 
 APRTActor::APRTActor()
 {
@@ -41,7 +42,7 @@ void APRTActor::Regenerate()
 		// TODO check for type
 		// Remove old prt meshes
 		TArray<AActor*> GeneratedMeshes;
-		GetAttachedActors(Children);
+		GetAttachedActors(GeneratedMeshes);
 		for (const auto& Child : GeneratedMeshes)
 		{
 			Child->Destroy();
@@ -62,6 +63,18 @@ void APRTActor::Regenerate()
 				StaticMeshActor->SetMobility(EComponentMobility::Movable);
 				StaticMeshActor->GetStaticMeshComponent()->SetStaticMesh(GenerateResult.ShapeMesh);
 				StaticMeshActor->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
+
+				for (const auto Instance : GenerateResult.Instances)
+				{
+					auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(StaticMeshActor);
+					InstancedComponent->SetStaticMesh(Instance.Key);
+					for (FTransform InstanceTransform : Instance.Value)
+					{
+						InstancedComponent->AddInstance(InstanceTransform);
+					}
+					InstancedComponent->RegisterComponent();
+					StaticMeshActor->AddInstanceComponent(InstancedComponent);
+				}
 			}
 		}
 	}

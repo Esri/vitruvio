@@ -7,23 +7,21 @@
 #include "RuleAttributes.h"
 #include "RulePackage.h"
 #include "UnrealLogHandler.h"
-#include "HierarchicalInstancedStaticMeshComponent.generated.h"
+#include "PRTTypes.h"
 
 #include "prt/Object.h"
-#include "prt/ResolveMap.h"
 
 #include <map>
 #include <memory>
 #include <string>
 
-DECLARE_LOG_CATEGORY_EXTERN(LogUnrealPrt, Log, All);
 
-using ResolveMapSPtr = std::shared_ptr<prt::ResolveMap const>;
+DECLARE_LOG_CATEGORY_EXTERN(LogUnrealPrt, Log, All);
 
 struct FGenerateResult
 {
 	UStaticMesh* ShapeMesh;
-	TArray<UInstancedStaticMeshComponent*> Instances;
+	TMap<UStaticMesh*, TArray<FTransform>> Instances;
 };
 
 class UnrealGeometryEncoderModule : public IModuleInterface
@@ -55,6 +53,7 @@ private:
 	void* PrtDllHandle = nullptr;
 	prt::Object const* PrtLibrary = nullptr;
 	bool Initialized = false;
+	CacheObjectUPtr PrtCache;
 
 	UnrealLogHandler* LogHandler = nullptr;
 

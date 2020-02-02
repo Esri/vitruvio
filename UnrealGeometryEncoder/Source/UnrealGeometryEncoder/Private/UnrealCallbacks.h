@@ -12,7 +12,8 @@ class UnrealCallbacks : public IUnrealCallbacks
 	AttributeMapBuilderUPtr& AttributeMapBuilder;
 	
 	UStaticMesh* ShapeMesh;
-	TMap<int32, UInstancedStaticMeshComponent*> Instances;
+	TMap<UStaticMesh*, TArray<FTransform>> Instances;
+	TMap<int32, UStaticMesh*> PrototypeMap;
 
 public:
 	~UnrealCallbacks() override = default;
@@ -64,7 +65,7 @@ public:
 		return ShapeMesh;
 	}
 
-	const TMap<int32, UInstancedStaticMeshComponent*>& getInstances() const
+	const TMap<UStaticMesh*, TArray<FTransform>>& getInstances() const
 	{
 		return Instances;
 	}

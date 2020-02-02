@@ -7,7 +7,6 @@
 #include "StaticMeshAttributes.h"
 #include "StaticMeshDescription.h"
 #include "StaticMeshOperations.h"
-#include "Components/HierarchicalInstancedStaticMeshComponent.h"
 
 DEFINE_LOG_CATEGORY(LogUnrealCallbacks);
 
@@ -85,15 +84,14 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 	}
 	else
 	{
-		auto HierarchicalInstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>();
-		HierarchicalInstancedComponent->SetStaticMesh(Mesh);
-		Instances.Add(prototypeId, HierarchicalInstancedComponent);
+		Instances.Add(Mesh, {});
+		PrototypeMap.Add(prototypeId, Mesh);
 	}
 }
 
 void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform)
 {
-	check(Instances[prototypeId])
+	check(PrototypeMap.Contains(prototypeId))
 	const FMatrix TransformationMat(GetColumn(transform, 0), GetColumn(transform, 1),	GetColumn(transform, 2), GetColumn(transform, 3));
 	const int32 SignumDet = FMath::Sign(TransformationMat.Determinant());
 
@@ -106,7 +104,8 @@ void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform)
 	const FVector Translation = FVector(TransformationMat.M[3][0], TransformationMat.M[3][1], TransformationMat.M[3][2]);
 
 	const FTransform Transform(Rotation, Translation, Scale);
-	Instances[prototypeId]->AddInstance(Transform);
+	UStaticMesh* PrototypeMesh = PrototypeMap[prototypeId];
+	Instances[PrototypeMesh].Add(Transform);
 }
 
 prt::Status UnrealCallbacks::attrBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value)
