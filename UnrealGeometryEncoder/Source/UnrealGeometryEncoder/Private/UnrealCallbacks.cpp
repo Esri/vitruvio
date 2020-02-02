@@ -14,7 +14,7 @@ namespace
 {
 	FVector GetColumn(const double* Mat, int32 Column)
 	{
-		return FVector4(Mat[Column + 0], Mat[Column + 4], Mat[Column + 8], Mat[Column + 12]);
+		return FVector4(Mat[Column * 4 + 0], Mat[Column * 4 + 1], Mat[Column * 4 + 2], Mat[Column * 4 + 3]);
 	}
 }
 
@@ -99,8 +99,12 @@ void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform)
 	MatWithoutScale = MatWithoutScale * SignumDet;
 	MatWithoutScale.M[3][3] = 1;
 
-	const FQuat Rotation = MatWithoutScale.ToQuat();
-	const FVector Scale = TransformationMat.GetScaleVector();
+	const FQuat CERotation = MatWithoutScale.ToQuat();
+	const FVector CEScale = TransformationMat.GetScaleVector();
+	
+	// convert from y-up (CE) to z-up (Unreal) (see https://stackoverflow.com/questions/16099979/can-i-switch-x-y-z-in-a-quaternion)
+	const FQuat Rotation = FQuat(CERotation.X, CERotation.Y, CERotation.Z, CERotation.W);
+	const FVector Scale = FVector(CEScale.X, CEScale.Y, CEScale.Z);
 	const FVector Translation = FVector(TransformationMat.M[3][0], TransformationMat.M[3][1], TransformationMat.M[3][2]);
 
 	const FTransform Transform(Rotation, Translation, Scale);
