@@ -918,7 +918,7 @@ void FVitruvioModule::SetInitialShape(FString InObjFile)
 	{
 		PRTLog.Message(TEXT("FVitruvioModule::SetInitialShape: Using Default Square.obj"));
 		const FString ContentDirectoryPath = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(
-			*(IPluginManager::Get().FindPlugin("PRT")->GetContentDir()));
+			*(IPluginManager::Get().FindPlugin("Vitruvio")->GetContentDir()));
 		InObjFile = *ContentDirectoryPath;
 		InObjFile += L"/InitialShapes/Square.obj";
 	}
