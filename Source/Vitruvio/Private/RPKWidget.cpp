@@ -412,8 +412,8 @@ FText FRPKWidget::GetComboOptionSelected() const
 {
 	if (WCombo.IsValid())
 	{
-		TSharedPtr<FString> current = WCombo->GetSelectedItem();
-		return FText::FromString(*current);
+		TSharedPtr<FString> SelectedItem = WCombo->GetSelectedItem();
+		return FText::FromString(SelectedItem ? *SelectedItem : L"");
 	}
 	return FText::FromString(L"Error");
 }
