@@ -192,7 +192,8 @@ auto FVitruvioModule::GenerateModel() -> prt::Status
 	size_t NumberOfKeys;
 	const wchar_t* const* Keys = EncoderOptions->getKeys(&NumberOfKeys, nullptr);
 	AttributeMapBuilder->setBool(L"triangulateMeshes", true);
-
+	AttributeMapBuilder->setString(L"vertexNormals", L"SET_ALL");
+	
 	EncoderOptions = AttributeMapBuilder->createAttributeMap();
 	AttributeMapBuilder->destroy();
 
