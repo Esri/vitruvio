@@ -31,9 +31,9 @@ namespace
 		std::vector<double> vertexCoords;
 		for (const FVertexID VertexID : MeshDescription->Vertices().GetElementIDs())
 		{
-			vertexCoords.push_back(VertexPositions[VertexID][0]);
-			vertexCoords.push_back(VertexPositions[VertexID][1]);
-			vertexCoords.push_back(VertexPositions[VertexID][2]);
+			vertexCoords.push_back(VertexPositions[VertexID][0] / 100);
+			vertexCoords.push_back(VertexPositions[VertexID][2] / 100);
+			vertexCoords.push_back(VertexPositions[VertexID][1] / 100);
 		}
 
 		std::vector<uint32_t> indices;

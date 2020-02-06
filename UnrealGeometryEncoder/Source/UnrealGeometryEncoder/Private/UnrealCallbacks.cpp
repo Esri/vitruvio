@@ -16,6 +16,10 @@ namespace
 	{
 		return FVector4(Mat[Column * 4 + 0], Mat[Column * 4 + 1], Mat[Column * 4 + 2], Mat[Column * 4 + 3]);
 	}
+	FPlane GetRow(const double* Mat, int32 Index)
+	{
+		return FPlane(Mat[Index + 0 * 4], Mat[Index + 1 * 4], Mat[Index + 2 * 4], Mat[Index + 3 * 4]);
+	}
 }
 
 void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const double* vtx, size_t vtxSize, const double* nrm, size_t nrmSize, const uint32_t* faceVertexCounts,
@@ -45,7 +49,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 	for (size_t VertexIndex = 0; VertexIndex < vtxSize; VertexIndex += 3)
 	{
 		const FVertexID VertexID = Description.CreateVertex();
-		VertexPositions[VertexID] = FVector(vtx[VertexIndex], vtx[VertexIndex + 1], -vtx[VertexIndex + 2]);
+		VertexPositions[VertexID] = FVector(vtx[VertexIndex], vtx[VertexIndex + 2], vtx[VertexIndex + 1]) * 100;
 	}
 
 	// Create Polygons
@@ -61,10 +65,10 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 		for (size_t FaceVertexIndex = 0; FaceVertexIndex < FaceVertexCount; ++FaceVertexIndex)
 		{
 			const uint32_t VertexIndex = vertexIndices[BaseVertexIndex + FaceVertexIndex];
-			const uint32_t NormalIndex = normalIndices[BaseVertexIndex + FaceVertexIndex];
+			const uint32_t NormalIndex = normalIndices[BaseVertexIndex + FaceVertexIndex] * 3;
 			FVertexInstanceID InstanceId = Description.CreateVertexInstance(FVertexID(VertexIndex));
 			PolygonVertexInstances.Add(InstanceId);
-			Normals[InstanceId] = FVector(nrm[NormalIndex * 3], nrm[(NormalIndex * 3) + 1], -nrm[(NormalIndex * 3) + 2]);
+			Normals[InstanceId] = FVector(nrm[NormalIndex], nrm[NormalIndex + 2], nrm[NormalIndex + 1]);
 		}
 
 		Description.CreatePolygon(PolygonGroupId, PolygonVertexInstances);
@@ -92,7 +96,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform)
 {
 	check(PrototypeMap.Contains(prototypeId))
-	const FMatrix TransformationMat(GetColumn(transform, 0), GetColumn(transform, 1),	GetColumn(transform, 2), GetColumn(transform, 3));
+	const FMatrix TransformationMat(GetRow(transform, 0), GetRow(transform, 1), GetRow(transform, 2), GetRow(transform, 3));
 	const int32 SignumDet = FMath::Sign(TransformationMat.Determinant());
 
 	FMatrix MatWithoutScale = TransformationMat.GetMatrixWithoutScale();
@@ -100,14 +104,17 @@ void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform)
 	MatWithoutScale.M[3][3] = 1;
 
 	const FQuat CERotation = MatWithoutScale.ToQuat();
-	const FVector CEScale = TransformationMat.GetScaleVector();
-	
+	const FVector CEScale = TransformationMat.GetScaleVector() * SignumDet;
+
 	// convert from y-up (CE) to z-up (Unreal) (see https://stackoverflow.com/questions/16099979/can-i-switch-x-y-z-in-a-quaternion)
-	const FQuat Rotation = FQuat(CERotation.X, CERotation.Y, CERotation.Z, CERotation.W);
+	const FQuat Rotation = FQuat(CERotation.X, CERotation.Z, CERotation.Y, CERotation.W);
 	const FVector Scale = FVector(CEScale.X, CEScale.Y, CEScale.Z);
-	const FVector Translation = FVector(TransformationMat.M[3][0], TransformationMat.M[3][1], TransformationMat.M[3][2]);
+
+	// TODO this is actually the wrong indices to extract translation? are we setting up the transformation matrix correctly
+	const FVector Translation = FVector(TransformationMat.M[0][3], TransformationMat.M[2][3], TransformationMat.M[1][3]) * 100;
 
 	const FTransform Transform(Rotation, Translation, Scale);
+	
 	UStaticMesh* PrototypeMesh = PrototypeMap[prototypeId];
 	Instances[PrototypeMesh].Add(Transform);
 }
