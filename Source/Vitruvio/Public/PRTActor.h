@@ -305,13 +305,13 @@ public:
 
 	///////////////////////////////////////////////
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PRT|Components")
+	UPROPERTY(BlueprintReadWrite, Category = "PRT|Components")
 	UStaticMeshComponent* PRTStaticMesh;
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PRT|Components")
+	UPROPERTY(BlueprintReadWrite, Category = "PRT|Components")
 	UProceduralMeshComponent* PRTProceduralMesh;
 
-	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "PRT|Components")
+	UPROPERTY(BlueprintReadWrite, Category = "PRT|Components")
 	UBoxComponent* PRTCollisionBox;
 
 	///////////////////////////////////////////////
