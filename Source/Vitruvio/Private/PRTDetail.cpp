@@ -99,7 +99,7 @@ FReply FPRTDetail::HandleGenerateClicked() const
 {
 	APRTActor* PrtActor = PRTActor.Get();
 
-	PrtActor->Generate();
+	PrtActor->Generate(true);
 
 	return FReply::Handled();
 }
