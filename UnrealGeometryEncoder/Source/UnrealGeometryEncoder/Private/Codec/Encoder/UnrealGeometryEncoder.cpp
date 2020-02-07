@@ -109,6 +109,174 @@ namespace
 		else
 			return highestUVSet + 1;
 	}
+
+	std::wstring uriToPath(const prtx::TexturePtr& t) {
+		return t->getURI()->getPath();
+	}
+
+	// we blacklist all CGA-style material attribute keys, see prtx/Material.h
+	const std::set<std::wstring> MATERIAL_ATTRIBUTE_BLACKLIST = {
+	        L"ambient.b",
+	        L"ambient.g",
+	        L"ambient.r",
+	        L"bumpmap.rw",
+	        L"bumpmap.su",
+	        L"bumpmap.sv",
+	        L"bumpmap.tu",
+	        L"bumpmap.tv",
+	        L"color.a",
+	        L"color.b",
+	        L"color.g",
+	        L"color.r",
+	        L"color.rgb",
+	        L"colormap.rw",
+	        L"colormap.su",
+	        L"colormap.sv",
+	        L"colormap.tu",
+	        L"colormap.tv",
+	        L"dirtmap.rw",
+	        L"dirtmap.su",
+	        L"dirtmap.sv",
+	        L"dirtmap.tu",
+	        L"dirtmap.tv",
+	        L"normalmap.rw",
+	        L"normalmap.su",
+	        L"normalmap.sv",
+	        L"normalmap.tu",
+	        L"normalmap.tv",
+	        L"opacitymap.rw",
+	        L"opacitymap.su",
+	        L"opacitymap.sv",
+	        L"opacitymap.tu",
+	        L"opacitymap.tv",
+	        L"specular.b",
+	        L"specular.g",
+	        L"specular.r",
+	        L"specularmap.rw",
+	        L"specularmap.su",
+	        L"specularmap.sv",
+	        L"specularmap.tu",
+	        L"specularmap.tv",
+	        L"bumpmap",
+	        L"colormap",
+	        L"dirtmap",
+	        L"normalmap",
+	        L"opacitymap",
+	        L"opacitymap.mode",
+	        L"specularmap",
+	        L"emissive.b",
+	        L"emissive.g",
+	        L"emissive.r",
+	        L"emissivemap.rw",
+	        L"emissivemap.su",
+	        L"emissivemap.sv",
+	        L"emissivemap.tu",
+	        L"emissivemap.tv",
+	        L"metallicmap.rw",
+	        L"metallicmap.su",
+	        L"metallicmap.sv",
+	        L"metallicmap.tu",
+	        L"metallicmap.tv",
+	        L"occlusionmap.rw",
+	        L"occlusionmap.su",
+	        L"occlusionmap.sv",
+	        L"occlusionmap.tu",
+	        L"occlusionmap.tv",
+	        L"roughnessmap.rw",
+	        L"roughnessmap.su",
+	        L"roughnessmap.sv",
+	        L"roughnessmap.tu",
+	        L"roughnessmap.tv",
+	        L"emissivemap",
+	        L"metallicmap",
+	        L"occlusionmap",
+	        L"roughnessmap"
+	};
+
+
+	void convertMaterialToAttributeMap(prtx::PRTUtils::AttributeMapBuilderPtr& aBuilder, const prtx::Material& prtxAttr, const prtx::WStringVector& keys) {
+	if (DBG)
+		log_debug(L"-- converting material: %1%") % prtxAttr.name();
+	for (const auto& key : keys) {
+		if (MATERIAL_ATTRIBUTE_BLACKLIST.count(key) > 0)
+			continue;
+
+		if (DBG)
+			log_debug(L"   key: %1%") % key;
+
+		switch (prtxAttr.getType(key)) {
+			case prt::Attributable::PT_BOOL:
+				aBuilder->setBool(key.c_str(), prtxAttr.getBool(key) == prtx::PRTX_TRUE);
+				break;
+
+			case prt::Attributable::PT_FLOAT:
+				aBuilder->setFloat(key.c_str(), prtxAttr.getFloat(key));
+				break;
+
+			case prt::Attributable::PT_INT:
+				aBuilder->setInt(key.c_str(), prtxAttr.getInt(key));
+				break;
+
+			case prt::Attributable::PT_STRING: {
+				const std::wstring& v = prtxAttr.getString(key); // explicit copy
+				aBuilder->setString(key.c_str(), v.c_str());     // also passing on empty strings
+				break;
+			}
+
+			case prt::Attributable::PT_BOOL_ARRAY: {
+				const std::vector<uint8_t>& ba = prtxAttr.getBoolArray(key);
+				auto boo = std::unique_ptr<bool[]>(new bool[ba.size()]);
+				for (size_t i = 0; i < ba.size(); i++)
+					boo[i] = (ba[i] == prtx::PRTX_TRUE);
+				aBuilder->setBoolArray(key.c_str(), boo.get(), ba.size());
+				break;
+			}
+
+			case prt::Attributable::PT_INT_ARRAY: {
+				const std::vector<int32_t>& array = prtxAttr.getIntArray(key);
+				aBuilder->setIntArray(key.c_str(), &array[0], array.size());
+				break;
+			}
+
+			case prt::Attributable::PT_FLOAT_ARRAY: {
+				const std::vector<double>& array = prtxAttr.getFloatArray(key);
+				aBuilder->setFloatArray(key.c_str(), array.data(), array.size());
+				break;
+			}
+
+			case prt::Attributable::PT_STRING_ARRAY: {
+				const prtx::WStringVector& a = prtxAttr.getStringArray(key);
+				std::vector<const wchar_t*> pw = toPtrVec(a);
+				aBuilder->setStringArray(key.c_str(), pw.data(), pw.size());
+				break;
+			}
+
+			case prtx::Material::PT_TEXTURE: {
+				const auto& t = prtxAttr.getTexture(key);
+				const std::wstring p = uriToPath(t);
+				aBuilder->setString(key.c_str(), p.c_str());
+				break;
+			}
+
+			case prtx::Material::PT_TEXTURE_ARRAY: {
+				const auto& ta = prtxAttr.getTextureArray(key);
+
+				prtx::WStringVector pa(ta.size());
+				std::transform(ta.begin(), ta.end(), pa.begin(), uriToPath);
+
+				std::vector<const wchar_t*> ppa = toPtrVec(pa);
+				aBuilder->setStringArray(key.c_str(), ppa.data(), ppa.size());
+				break;
+			}
+
+			default:
+				if (DBG)
+					log_debug(L"ignored atttribute '%s' with type %d") % key % prtxAttr.getType(key);
+				break;
+		}
+	}
+}
+	
 	SerializedGeometry serializeGeometry(const prtx::GeometryPtr& geo, const prtx::MaterialPtrVector& materials)
 	{
 		// PASS 1: scan
