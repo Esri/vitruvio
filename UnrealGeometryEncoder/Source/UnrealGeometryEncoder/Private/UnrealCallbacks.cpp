@@ -102,7 +102,7 @@ void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform)
 	const FTransform Transform(Rotation, Translation, Scale);
 	
 	UStaticMesh* PrototypeMesh = PrototypeMap[prototypeId];
-	Instances[PrototypeMesh].Add(Transform);
+	Instances.FindOrAdd(PrototypeMesh).Add(Transform);
 }
 
 prt::Status UnrealCallbacks::attrBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value)
