@@ -11,13 +11,14 @@ class UnrealCallbacks : public IUnrealCallbacks
 {
 	AttributeMapBuilderUPtr& AttributeMapBuilder;
 	
-	UStaticMesh* ShapeMesh;
 	TMap<UStaticMesh*, TArray<FTransform>> Instances;
 	TMap<int32, UStaticMesh*> PrototypeMap;
 
+	static const int32 NO_PROTOTYPE_ID = -1;
+
 public:
 	~UnrealCallbacks() override = default;
-	UnrealCallbacks(AttributeMapBuilderUPtr& AttributeMapBuilder) : AttributeMapBuilder(AttributeMapBuilder), ShapeMesh(nullptr)
+	UnrealCallbacks(AttributeMapBuilderUPtr& AttributeMapBuilder) : AttributeMapBuilder(AttributeMapBuilder)
 	{
 	}
 
@@ -62,7 +63,11 @@ public:
 
 	UStaticMesh* getShapeMesh() const
 	{
-		return ShapeMesh;
+		if (PrototypeMap.Contains(NO_PROTOTYPE_ID))
+		{
+			return PrototypeMap[NO_PROTOTYPE_ID];
+		}
+		return nullptr;
 	}
 
 	const TMap<UStaticMesh*, TArray<FTransform>>& getInstances() const

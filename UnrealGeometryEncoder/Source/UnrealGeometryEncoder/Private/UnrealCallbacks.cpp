@@ -80,17 +80,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 	MeshDescriptionPtrs.Emplace(&Description);
 	Mesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
 
-	// Not cached so set shape mesh otherwise create instance
-	if (prototypeId == -1)
-	{
-		check(!ShapeMesh)
-		ShapeMesh = Mesh;
-	}
-	else
-	{
-		Instances.Add(Mesh, {});
-		PrototypeMap.Add(prototypeId, Mesh);
-	}
+	PrototypeMap.Add(prototypeId, Mesh);
 }
 
 void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform)
