@@ -112,11 +112,11 @@ void APRTActor::BuildFileLists(bool bRescan)
 {
 	if (bRescan == false && OBJFiles.Num() != 0) return;
 
-	const FString ContentDir = FPaths::ProjectContentDir(); // FPaths::GameContentDir();
-	IFileManager& File_Manager = IFileManager::Get();
+	const FString ContentDir = FPaths::Combine(FPaths::ProjectContentDir(), L"Vitruvio");
+	IFileManager& FileManager = IFileManager::Get();
 
-	GetObjFileList(File_Manager, ContentDir);
-	GetRPKFileList(File_Manager, ContentDir);
+	GetObjFileList(FileManager, ContentDir);
+	GetRPKFileList(FileManager, ContentDir);
 }
 
 /**
