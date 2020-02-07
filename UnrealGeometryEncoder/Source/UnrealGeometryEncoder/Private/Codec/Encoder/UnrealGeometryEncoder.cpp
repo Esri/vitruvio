@@ -51,6 +51,18 @@ namespace
 		}
 	};
 
+	using AttributeMapNOPtrVector = std::vector<const prt::AttributeMap*>;
+
+	struct AttributeMapNOPtrVectorOwner {
+		AttributeMapNOPtrVector v;
+		~AttributeMapNOPtrVectorOwner() {
+			for (const auto& m : v) {
+				if (m != nullptr)
+					m->destroy();
+			}
+		}
+	};
+
 	struct TextureUVMapping
 	{
 		std::wstring key;
@@ -479,11 +491,32 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialSha
 	{
 		if (serialized.find(inst.getPrototypeIndex()) == serialized.end())
 		{
-			const SerializedGeometry sg = serializeGeometry(inst.getGeometry(), inst.getMaterials());
+			const prtx::GeometryPtr& geo = inst.getGeometry();
+			const prtx::MaterialPtrVector& materials = inst.getMaterials();
+			const SerializedGeometry sg = serializeGeometry(geo, materials);
 
 			auto puvs = toPtrVec(sg.uvs);
 			auto puvCounts = toPtrVec(sg.uvCounts);
 			auto puvIndices = toPtrVec(sg.uvIndices);
+
+			uint32_t faceCount = 0;
+			std::vector<uint32_t> faceRanges;
+			AttributeMapNOPtrVectorOwner matAttrMaps;
+
+			prtx::PRTUtils::AttributeMapBuilderPtr amb(prt::AttributeMapBuilder::create());
+
+			const prtx::MeshPtrVector& meshes = geo->getMeshes();
+
+			for (size_t mi = 0; mi < meshes.size(); mi++) {
+				const prtx::MeshPtr& m = meshes.at(mi);
+				const prtx::MaterialPtr& mat = materials[mi];
+
+				faceCount += m->getFaceCount();
+				faceRanges.push_back(faceCount);
+
+				convertMaterialToAttributeMap(amb, *(mat.get()), mat->getKeys());
+				matAttrMaps.v.push_back(amb->createAttributeMapAndReset());
+			}
 
 			cb->addMesh(initialShape.getName(), inst.getPrototypeIndex(), sg.coords.data(), sg.coords.size(), sg.normals.data(), sg.normals.size(), sg.faceVertexCounts.data(), sg.faceVertexCounts.size(),
 						sg.vertexIndices.data(), sg.vertexIndices.size(), sg.normalIndices.data(), sg.normalIndices.size(),
