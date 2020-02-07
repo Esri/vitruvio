@@ -12,10 +12,6 @@ DEFINE_LOG_CATEGORY(LogUnrealCallbacks);
 
 namespace
 {
-	FVector GetColumn(const double* Mat, int32 Column)
-	{
-		return FVector4(Mat[Column * 4 + 0], Mat[Column * 4 + 1], Mat[Column * 4 + 2], Mat[Column * 4 + 3]);
-	}
 	FPlane GetRow(const double* Mat, int32 Index)
 	{
 		return FPlane(Mat[Index + 0 * 4], Mat[Index + 1 * 4], Mat[Index + 2 * 4], Mat[Index + 3 * 4]);
