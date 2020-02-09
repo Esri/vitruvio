@@ -520,7 +520,11 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialSha
 
 			cb->addMesh(initialShape.getName(), inst.getPrototypeIndex(), sg.coords.data(), sg.coords.size(), sg.normals.data(), sg.normals.size(), sg.faceVertexCounts.data(), sg.faceVertexCounts.size(),
 						sg.vertexIndices.data(), sg.vertexIndices.size(), sg.normalIndices.data(), sg.normalIndices.size(),
-						puvs.first.data(), puvs.second.data(), puvCounts.first.data(), puvCounts.second.data(), puvIndices.first.data(), puvIndices.second.data(), sg.uvs.size());
+						
+						puvs.first.data(), puvs.second.data(), puvCounts.first.data(), puvCounts.second.data(), puvIndices.first.data(), puvIndices.second.data(), sg.uvs.size(),
+						
+						faceRanges.data(), faceRanges.size(), matAttrMaps.v.empty() ? nullptr : matAttrMaps.v.data()
+			);
 
 			serialized.insert(inst.getPrototypeIndex());
 		}

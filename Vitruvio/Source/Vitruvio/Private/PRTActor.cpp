@@ -56,7 +56,7 @@ void APRTActor::Regenerate()
 
 			if (InitialShape)
 			{
-				FGenerateResult GenerateResult = UnrealGeometryEncoderModule::Get().Generate(InitialShape, Rpk, GenerateAttributes);
+				FGenerateResult GenerateResult = UnrealGeometryEncoderModule::Get().Generate(InitialShape, OpaqueParent, Rpk, GenerateAttributes);
 
 				FActorSpawnParameters Parameters;
 				Parameters.Owner = this;

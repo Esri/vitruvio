@@ -7,6 +7,7 @@
 #include "GameFramework/Actor.h"
 #include "RuleAttributes.h"
 #include "RulePackage.h"
+#include "Materials/Material.h"
 #include "PRTActor.generated.h"
 
 UCLASS()
@@ -24,6 +25,9 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	TMap<FString, URuleAttribute*> GenerateAttributes;
+
+	UPROPERTY(EditAnywhere)
+	UMaterial* OpaqueParent;
 
 	UPROPERTY(EditAnywhere)
 	bool GenerateAutomatically = true;

@@ -34,13 +34,13 @@ public:
 	/**
 	 * \brief Calls prt generate with the given InitialShape, RulePackage and Attributes. The instances are written into OutInstances.
 	 * 
-	 * \param InitialShape 
+	 * \param InitialShape
+	 * \param OpaqueParent 
 	 * \param RulePackage 
 	 * \param Attributes 
-	 * \param OutInstances 
 	 * \return the generated UStaticMesh.
 	 */
-	UNREALGEOMETRYENCODER_API FGenerateResult Generate(const UStaticMesh* InitialShape, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const;
+	UNREALGEOMETRYENCODER_API FGenerateResult Generate(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const;
 
 	UNREALGEOMETRYENCODER_API void LoadDefaultRuleAttributes(const UStaticMesh* InitialShape, URulePackage* RulePackage, TMap<FString, URuleAttribute*>& OutAttributes) const;
 

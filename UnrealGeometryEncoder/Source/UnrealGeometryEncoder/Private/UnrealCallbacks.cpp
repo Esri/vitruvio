@@ -7,6 +7,9 @@
 #include "StaticMeshAttributes.h"
 #include "StaticMeshDescription.h"
 #include "StaticMeshOperations.h"
+#include "IImageWrapper.h"
+#include "IImageWrapperModule.h"
+#include "Materials/MaterialInstanceDynamic.h"
 
 DEFINE_LOG_CATEGORY(LogUnrealCallbacks);
 
@@ -16,25 +19,130 @@ namespace
 	{
 		return FPlane(Mat[Index + 0 * 4], Mat[Index + 1 * 4], Mat[Index + 2 * 4], Mat[Index + 3 * 4]);
 	}
+
+	UTexture2D* CreateTexture(UObject* Outer, const TArray<uint8>& PixelData, int32 InSizeX, int32 InSizeY, EPixelFormat InFormat, FName BaseName)
+	{
+		// Shamelessly copied from UTexture2D::CreateTransient with a few modifications
+		if (InSizeX <= 0 || InSizeY <= 0 ||
+			(InSizeX % GPixelFormats[InFormat].BlockSizeX) != 0 ||
+			(InSizeY % GPixelFormats[InFormat].BlockSizeY) != 0)
+		{
+			UE_LOG(LogUnrealCallbacks, Warning, TEXT("Invalid parameters"));
+			return nullptr;
+		}
+
+		// Most important difference with UTexture2D::CreateTransient: we provide the new texture with a name and an owner
+		const FName TextureName = MakeUniqueObjectName(Outer, UTexture2D::StaticClass(), BaseName);
+		UTexture2D* NewTexture = NewObject<UTexture2D>(Outer, TextureName, RF_Transient);
+
+		NewTexture->PlatformData = new FTexturePlatformData();
+		NewTexture->PlatformData->SizeX = InSizeX;
+		NewTexture->PlatformData->SizeY = InSizeY;
+		NewTexture->PlatformData->PixelFormat = InFormat;
+
+		// Allocate first mipmap and upload the pixel data
+		const int32 NumBlocksX = InSizeX / GPixelFormats[InFormat].BlockSizeX;
+		const int32 NumBlocksY = InSizeY / GPixelFormats[InFormat].BlockSizeY;
+		FTexture2DMipMap* Mip = new(NewTexture->PlatformData->Mips) FTexture2DMipMap();
+		Mip->SizeX = InSizeX;
+		Mip->SizeY = InSizeY;
+		Mip->BulkData.Lock(LOCK_READ_WRITE);
+		void* TextureData = Mip->BulkData.Realloc(NumBlocksX * NumBlocksY * GPixelFormats[InFormat].BlockBytes);
+		FMemory::Memcpy(TextureData, PixelData.GetData(), PixelData.Num());
+		Mip->BulkData.Unlock();
+
+		NewTexture->UpdateResource();
+		return NewTexture;
+	}
+
+	UTexture2D* LoadImageFromDisk(UObject* Outer, const FString& ImagePath)
+	{
+		static IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(TEXT("ImageWrapper"));
+		
+		if (!FPaths::FileExists(ImagePath))
+		{
+			UE_LOG(LogUnrealCallbacks, Error,  TEXT("File not found: %s"), *ImagePath);
+			return nullptr;
+		}
+
+		TArray<uint8> FileData;
+		if (!FFileHelper::LoadFileToArray(FileData, *ImagePath))
+		{
+			UE_LOG(LogUnrealCallbacks, Error, TEXT("Failed to load file: %s"), *ImagePath);
+			return nullptr;
+		}
+		const EImageFormat ImageFormat = ImageWrapperModule.DetectImageFormat(FileData.GetData(), FileData.Num());
+		if (ImageFormat == EImageFormat::Invalid)
+		{
+			UE_LOG(LogUnrealCallbacks, Error, TEXT("Unrecognized image file format: %s"), *ImagePath);
+			return nullptr;
+		}
+
+		TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(ImageFormat);
+		if (!ImageWrapper.IsValid())
+		{
+			UE_LOG(LogUnrealCallbacks, Error, TEXT("Failed to create image wrapper for file: %s"), *ImagePath);
+			return nullptr;
+		}
+
+		// Decompress the image data
+		const TArray<uint8>* RawData = nullptr;
+		ImageWrapper->SetCompressed(FileData.GetData(), FileData.Num());
+		ImageWrapper->GetRaw(ERGBFormat::BGRA, 8, RawData);
+		if (RawData == nullptr)
+		{
+			UE_LOG(LogUnrealCallbacks, Error, TEXT("Failed to decompress image file: %s"), *ImagePath);
+			return nullptr;
+		}
+
+		// Create the texture and upload the uncompressed image data
+		const FString TextureBaseName = TEXT("T_") + FPaths::GetBaseFilename(ImagePath);
+		return CreateTexture(Outer, *RawData, ImageWrapper->GetWidth(), ImageWrapper->GetHeight(), EPixelFormat::PF_B8G8R8A8, FName(*TextureBaseName));
+	}
+
+	UTexture2D* GetTexture(UObject* Outer, const prt::AttributeMap* MaterialAttributes, wchar_t const* Key)
+	{
+		size_t ValuesCount = 0;
+		wchar_t const* const* Values = MaterialAttributes->getStringArray(Key, &ValuesCount);
+		for (int ValueIndex = 0; ValueIndex < ValuesCount; ++ValueIndex)
+		{
+			std::wstring TextureUri(Values[ValueIndex]);
+			if (TextureUri.size() > 0)
+			{
+				return LoadImageFromDisk(Outer, FString(Values[ValueIndex]));
+			}
+		}
+		return nullptr;
+	}
+
+	UMaterialInstanceDynamic* CreateMaterial(UObject* Outer, UMaterialInterface* Parent, const prt::AttributeMap* MaterialAttributes)
+	{
+		UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, Outer);
+
+		// Convert AttributeMap to material
+		size_t KeyCount = 0;
+		wchar_t const* const* Keys = MaterialAttributes->getKeys(&KeyCount);
+		for (int KeyIndex = 0; KeyIndex < KeyCount; KeyIndex++) 
+		{
+			wchar_t const* Key = Keys[KeyIndex];
+			if (std::wstring(Key) == L"diffuseMap") MaterialInstance->SetTextureParameterValue(FName(Key), GetTexture(Outer, MaterialAttributes, Key));
+			// TODO handle all keys
+		}
+
+		return MaterialInstance;
+	}
 }
 
 void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const double* vtx, size_t vtxSize, const double* nrm, size_t nrmSize, const uint32_t* faceVertexCounts,
 							  size_t faceVertexCountsSize, const uint32_t* vertexIndices, size_t vertexIndicesSize, const uint32_t* normalIndices, size_t normalIndicesSize,
 
 							  double const* const* uvs, size_t const* uvsSizes, uint32_t const* const* uvCounts, size_t const* uvCountsSizes, uint32_t const* const* uvIndices,
-							  size_t const* uvIndicesSizes, size_t uvSets)
+							  size_t const* uvIndicesSizes, size_t uvSets,
+
+							  const uint32_t* faceRanges, size_t faceRangesSize,
+							  const prt::AttributeMap** materials)
 {
 	UStaticMesh* Mesh = NewObject<UStaticMesh>();
-
-	UMaterial* Material = NewObject<UMaterial>();
-	UMaterialExpressionConstant* ConstantColor = NewObject<UMaterialExpressionConstant>(Material);
-	ConstantColor->R = 0.2f;
-	Material->Expressions.Add(ConstantColor);
-	Material->BaseColor.Expression = ConstantColor;
-
-	Material->TwoSided = true;
-
-	FName MaterialSlot = Mesh->AddMaterial(Material);
 
 	FMeshDescription Description;
 	FStaticMeshAttributes Attributes(Description);
@@ -47,29 +155,46 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 		const FVertexID VertexID = Description.CreateVertex();
 		VertexPositions[VertexID] = FVector(vtx[VertexIndex], vtx[VertexIndex + 2], vtx[VertexIndex + 1]) * 100;
 	}
-
+	
 	// Create Polygons
 	size_t BaseVertexIndex = 0;
-	const FPolygonGroupID PolygonGroupId = Description.CreatePolygonGroup();
-	Attributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlot;
-	const auto Normals = Attributes.GetVertexInstanceNormals();
-	for (size_t FaceIndex = 0; FaceIndex < faceVertexCountsSize; ++FaceIndex)
+	size_t PolygonGroupStartIndex = 0;
+	for (size_t PolygonGroupIndex = 0; PolygonGroupIndex < faceRangesSize; ++PolygonGroupIndex)
 	{
-		const size_t FaceVertexCount = faceVertexCounts[FaceIndex];
+		const size_t PolygonFaceCount = faceRanges[PolygonGroupIndex];
+		
+		const FPolygonGroupID PolygonGroupId = Description.CreatePolygonGroup();
 
-		TArray<FVertexInstanceID> PolygonVertexInstances;
-		for (size_t FaceVertexIndex = 0; FaceVertexIndex < FaceVertexCount; ++FaceVertexIndex)
+		// Create Material
+		const prt::AttributeMap* MatterialAttributeMap = materials[0];
+		UMaterialInstanceDynamic* MaterialInstance = CreateMaterial(Mesh, OpaqueParent, MatterialAttributeMap);
+		FName MaterialSlot = Mesh->AddMaterial(MaterialInstance);
+		
+		Attributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlot;
+
+		// Create Geometry
+		const auto Normals = Attributes.GetVertexInstanceNormals();
+		for (size_t FaceIndex = 0; FaceIndex < PolygonFaceCount; ++FaceIndex)
 		{
-			const uint32_t VertexIndex = vertexIndices[BaseVertexIndex + FaceVertexIndex];
-			const uint32_t NormalIndex = normalIndices[BaseVertexIndex + FaceVertexIndex] * 3;
-			FVertexInstanceID InstanceId = Description.CreateVertexInstance(FVertexID(VertexIndex));
-			PolygonVertexInstances.Add(InstanceId);
-			Normals[InstanceId] = FVector(nrm[NormalIndex], nrm[NormalIndex + 2], nrm[NormalIndex + 1]);
-		}
+			const size_t FaceVertexCount = faceVertexCounts[PolygonGroupStartIndex + FaceIndex];
 
-		Description.CreatePolygon(PolygonGroupId, PolygonVertexInstances);
-		BaseVertexIndex += FaceVertexCount;
+			TArray<FVertexInstanceID> PolygonVertexInstances;
+			for (size_t FaceVertexIndex = 0; FaceVertexIndex < FaceVertexCount; ++FaceVertexIndex)
+			{
+				const uint32_t VertexIndex = vertexIndices[BaseVertexIndex + FaceVertexIndex];
+				const uint32_t NormalIndex = normalIndices[BaseVertexIndex + FaceVertexIndex] * 3;
+				FVertexInstanceID InstanceId = Description.CreateVertexInstance(FVertexID(VertexIndex));
+				PolygonVertexInstances.Add(InstanceId);
+				Normals[InstanceId] = FVector(nrm[NormalIndex], nrm[NormalIndex + 2], nrm[NormalIndex + 1]);
+			}
+
+			Description.CreatePolygon(PolygonGroupId, PolygonVertexInstances);
+			BaseVertexIndex += FaceVertexCount;
+		}
+		
+		PolygonGroupStartIndex += PolygonFaceCount;
 	}
+
 
 	// Build Mesh
 	TArray<const FMeshDescription*> MeshDescriptionPtrs;

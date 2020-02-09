@@ -27,7 +27,8 @@ public class UnrealGeometryEncoder : ModuleRules
 				"CoreUObject",
 				"InputCore",
 				"MeshDescription",
-				"StaticMeshDescription"
+				"StaticMeshDescription",
+				"ImageWrapper"
 			}
 		);
 			

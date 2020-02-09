@@ -66,7 +66,7 @@ namespace
 	{
 
 		AttributeMapBuilderUPtr UnrealCallbacksAttributeBuilder(prt::AttributeMapBuilder::create());
-		UnrealCallbacks UnrealCallbacks(UnrealCallbacksAttributeBuilder);
+		UnrealCallbacks UnrealCallbacks(UnrealCallbacksAttributeBuilder, nullptr);
 
 		InitialShapeBuilderUPtr InitialShapeBuilder(prt::InitialShapeBuilder::create());
 
@@ -169,7 +169,7 @@ ResolveMapSPtr UnrealGeometryEncoderModule::GetResolveMap(const std::wstring& Ur
 	return ResolveMap;
 }
 
-FGenerateResult UnrealGeometryEncoderModule::Generate(const UStaticMesh* InitialShape, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
+FGenerateResult UnrealGeometryEncoderModule::Generate(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
 {
 	check(InitialShape);
 	check(RulePackage);
@@ -199,7 +199,7 @@ FGenerateResult UnrealGeometryEncoderModule::Generate(const UStaticMesh* Initial
 	InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", AttributeMap.get(), ResolveMap.get());
 
 	AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
-	const std::unique_ptr<UnrealCallbacks> OutputHandler(new UnrealCallbacks(AttributeMapBuilder));
+	const std::unique_ptr<UnrealCallbacks> OutputHandler(new UnrealCallbacks(AttributeMapBuilder, OpaqueParent));
 
 	const InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShapeAndReset());
 

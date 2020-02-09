@@ -4,6 +4,7 @@
 #include "Core.h"
 #include "Engine/StaticMesh.h"
 #include "Util/UnrealPRTUtils.h"
+#include "Modules/ModuleManager.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogUnrealCallbacks, Log, All);
 
@@ -13,17 +14,20 @@ class UnrealCallbacks : public IUnrealCallbacks
 	
 	TMap<UStaticMesh*, TArray<FTransform>> Instances;
 	TMap<int32, UStaticMesh*> PrototypeMap;
+	UMaterial* OpaqueParent;
 
 	static const int32 NO_PROTOTYPE_ID = -1;
 
 public:
+
 	~UnrealCallbacks() override = default;
-	UnrealCallbacks(AttributeMapBuilderUPtr& AttributeMapBuilder) : AttributeMapBuilder(AttributeMapBuilder)
+	UnrealCallbacks(AttributeMapBuilderUPtr& AttributeMapBuilder, UMaterial* OpaqueParent) : AttributeMapBuilder(AttributeMapBuilder), OpaqueParent(OpaqueParent)
 	{
 	}
 
 	/**
 	 * @param name initial shape name, optionally used to create primitive groups on output
+	 * @param prototypeId the id of the prototype or -1 of not cached
 	 * @param vtx vertex coordinate array
 	 * @param vtxSize of vertex coordinate array
 	 * @param nrm vertex normal array
@@ -32,16 +36,11 @@ public:
 	 * @param faceVertexCountsSize number of faces (= size of faceCounts)
 	 * @param vertexIndices vertex attribute index array (grouped by counts)
 	 * @param vertexIndicesSize vertex attribute index array
-	 * @param normalIndices vertex attribute index array (grouped by counts)
-	 * @param normalIndicesSize vertex attribute index array
 	 * @param uvs array of texture coordinate arrays (same indexing as vertices per uv set)
 	 * @param uvsSizes lengths of uv arrays per uv set
-	 * @param uvSetsCount number of uv sets
 	 * @param faceRanges ranges for materials and reports
 	 * @param materials contains faceRangesSize-1 attribute maps (all materials must have an identical set of keys and
 	 * types)
-	 * @param reports contains faceRangesSize-1 attribute maps
-	 * @param shapeIDs shape ids per face, contains faceRangesSize-1 values
 	 */
 	// clang-format off
 	void addMesh(const wchar_t* name,
@@ -55,7 +54,10 @@ public:
 		double const* const* uvs, size_t const* uvsSizes,
 		uint32_t const* const* uvCounts, size_t const* uvCountsSizes,
 		uint32_t const* const* uvIndices, size_t const* uvIndicesSizes,
-		size_t uvSets
+		size_t uvSets,
+
+		const uint32_t* faceRanges, size_t faceRangesSize,
+		const prt::AttributeMap** materials
 	) override;
 
 	void addInstance(int32_t prototypeId, const double* transform) override;

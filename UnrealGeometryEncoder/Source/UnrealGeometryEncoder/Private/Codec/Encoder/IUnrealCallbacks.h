@@ -21,10 +21,13 @@ public:
 	 * @param nrmSize length of vertex normal array
 	 * @param faceVertexCounts vertex counts per face
 	 * @param faceVertexCountsSize number of faces (= size of faceCounts)
-	 * @param indices vertex attribute index array (grouped by counts)
-	 * @param indicesSize vertex attribute index array
+	 * @param vertexIndices vertex attribute index array (grouped by counts)
+	 * @param vertexIndicesSize vertex attribute index array
 	 * @param uvs array of texture coordinate arrays (same indexing as vertices per uv set)
 	 * @param uvsSizes lengths of uv arrays per uv set
+	 * @param faceRanges ranges for materials and reports
+	 * @param materials contains faceRangesSize-1 attribute maps (all materials must have an identical set of keys and
+	 * types)
 	 */
 	// clang-format off
 	virtual void addMesh(const wchar_t* name,
@@ -38,7 +41,10 @@ public:
 	                     double const* const* uvs, size_t const* uvsSizes,
 	                     uint32_t const* const* uvCounts, size_t const* uvCountsSizes,
 	                     uint32_t const* const* uvIndices, size_t const* uvIndicesSizes,
-	                     size_t uvSets
+	                     size_t uvSets,
+
+                         const uint32_t* faceRanges, size_t faceRangesSize,
+	                     const prt::AttributeMap** materials
 	) = 0;
 	// clang-format on
 	
