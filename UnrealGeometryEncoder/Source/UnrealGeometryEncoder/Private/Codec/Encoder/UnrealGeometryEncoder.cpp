@@ -487,6 +487,7 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialSha
 {
 	std::set<int> serialized;
 
+	// TODO we actually need to accumulate all geometries if not instanced and serialize them all together
 	for (const auto& inst : instances)
 	{
 		if (serialized.find(inst.getPrototypeIndex()) == serialized.end())
