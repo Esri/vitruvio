@@ -148,6 +148,9 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 	FStaticMeshAttributes Attributes(Description);
 	Attributes.Register();
 
+	const auto VertexUVs = Attributes.GetVertexInstanceUVs();
+	Attributes.GetVertexInstanceUVs().SetNumIndices(uvSets);
+
 	// Convert vertices and vertex instances
 	const auto VertexPositions = Attributes.GetVertexPositions();
 	for (size_t VertexIndex = 0; VertexIndex < vtxSize; VertexIndex += 3)
@@ -166,9 +169,9 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 		const FPolygonGroupID PolygonGroupId = Description.CreatePolygonGroup();
 
 		// Create Material
-		const prt::AttributeMap* MatterialAttributeMap = materials[0];
-		UMaterialInstanceDynamic* MaterialInstance = CreateMaterial(Mesh, OpaqueParent, MatterialAttributeMap);
-		FName MaterialSlot = Mesh->AddMaterial(MaterialInstance);
+		const prt::AttributeMap* MaterialAttributes = materials[0];
+		UMaterialInstanceDynamic* MaterialInstance = CreateMaterial(Mesh, OpaqueParent, MaterialAttributes);
+		const FName MaterialSlot = Mesh->AddMaterial(MaterialInstance);
 		
 		Attributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlot;
 
@@ -186,6 +189,15 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 				FVertexInstanceID InstanceId = Description.CreateVertexInstance(FVertexID(VertexIndex));
 				PolygonVertexInstances.Add(InstanceId);
 				Normals[InstanceId] = FVector(nrm[NormalIndex], nrm[NormalIndex + 2], nrm[NormalIndex + 1]);
+
+				for (size_t UVSet = 0; UVSet < uvSets; ++UVSet)
+				{
+					if (uvIndicesSizes[UVSet] > 0)
+					{
+						const uint32_t UVIndex = uvIndices[UVSet][BaseVertexIndex + FaceVertexIndex] * 2;
+						VertexUVs.Set(InstanceId, 0, FVector2D(uvs[UVSet][UVIndex], -uvs[UVSet][UVIndex + 1]));
+					}
+				}
 			}
 
 			Description.CreatePolygon(PolygonGroupId, PolygonVertexInstances);
