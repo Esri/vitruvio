@@ -56,6 +56,7 @@ void APRTActor::Regenerate()
 
 			if (InitialShape)
 			{
+				UnrealGeometryEncoderModule::Get().LoadDefaultRuleAttributes(InitialShape, Rpk, GenerateAttributes);
 				FGenerateResult GenerateResult = UnrealGeometryEncoderModule::Get().Generate(InitialShape, OpaqueParent, Rpk, GenerateAttributes);
 
 				FActorSpawnParameters Parameters;
@@ -86,7 +87,7 @@ void APRTActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	
-	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(APRTActor, Rpk))
+	if (PropertyChangedEvent.Property && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(APRTActor, Rpk))
 	{
 		GenerateAttributes.Empty();
 	}
