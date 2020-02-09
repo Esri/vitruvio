@@ -169,7 +169,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 		const FPolygonGroupID PolygonGroupId = Description.CreatePolygonGroup();
 
 		// Create Material
-		const prt::AttributeMap* MaterialAttributes = materials[0];
+		const prt::AttributeMap* MaterialAttributes = materials[PolygonGroupIndex];
 		UMaterialInstanceDynamic* MaterialInstance = CreateMaterial(Mesh, OpaqueParent, MaterialAttributes);
 		const FName MaterialSlot = Mesh->AddMaterial(MaterialInstance);
 		
