@@ -707,8 +707,8 @@ auto FVitruvioModule::SetRPKFile(FString InRPKFile) -> prt::Status
 	//empty everything, because we're changing.
 	DestroyAll();
 
-	const FString FullPath = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(
-		*FPaths::ProjectContentDir());
+	const FString ContentDir = FPaths::Combine(FPaths::ProjectContentDir(), L"Vitruvio");
+	const FString FullPath = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*ContentDir);
 	InRPKFile = *FullPath + InRPKFile;
 
 	PRTLog.Message(L"Path supplied: ", FullPath);
@@ -741,11 +741,8 @@ auto FVitruvioModule::SetRPKFile(FString InRPKFile) -> prt::Status
 	{
 		// TODO: Provide error correction if possible
 		
-		FString Message = Message.Printf(TEXT("RPK File %s Could not be loaded, Status: %hs"), *RPKFile,
-		                                 prt::getStatusDescription(RPKStatus));
+		FString Message = Message.Printf(TEXT("RPK File %s Could not be loaded, Status: %hs"), *RPKFile, prt::getStatusDescription(RPKStatus));
 		
-		// TODO: Not Thread Safe Operation
-		PRTLog.Dialog.Box(Message, "RPK Error");	
 		PRTLog.Message(Message);
 	}
 	else
@@ -925,8 +922,8 @@ void FVitruvioModule::SetInitialShape(FString InObjFile)
 	}
 	else
 	{
-		const FString ProjectContentDirectory = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(
-			*FPaths::ProjectContentDir());
+		const FString ContentDir = FPaths::Combine(FPaths::ProjectContentDir(), L"Vitruvio");
+		const FString ProjectContentDirectory = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*ContentDir);
 		InObjFile = *ProjectContentDirectory + InObjFile;
 	}
 
@@ -1265,11 +1262,11 @@ bool FVitruvioModule::IsLoaded()
 	if (PluginStatus != prt::STATUS_OK)
 	{
 		PRTLog.Message(TEXT("FVitruvioModule::IsLoaded() Plugin Status = "), PluginStatus, ELogVerbosity::Warning);
-
-		if (RPKStatus != prt::STATUS_OK)
-		{
-			PRTLog.Message(TEXT("FVitruvioModule::IsLoaded() RPK Plugin Status = "), RPKStatus, ELogVerbosity::Warning);
-		}
+		return false;
+	}
+	if (RPKStatus != prt::STATUS_OK)
+	{
+		PRTLog.Message(TEXT("FVitruvioModule::IsLoaded() RPK Plugin Status = "), RPKStatus, ELogVerbosity::Warning);
 		return false;
 	}
 	return true;

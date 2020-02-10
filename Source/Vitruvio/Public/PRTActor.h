@@ -252,7 +252,7 @@ public:
 	bool bMeshDataReady = false;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|Attributes")
-		bool IsGenerating();
+	bool IsGenerating();
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|Status")
 	int32 GenerateCount;
@@ -280,19 +280,19 @@ public:
 
 	// Read/Write so Actor or Server can set Dirty status, too.
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|Status")
-		bool bAttributesUpdated = true; // Allow regen on first run
+	bool bAttributesUpdated = true; // Allow regen on first run
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "PRT|Status")
 	bool bHasEditor = false;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|Status")
-		bool InPIE();
+	bool InPIE();
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|Status")
-		bool InEditor();
+	bool InEditor();
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|Status")
-		bool InGame();
+	bool InGame();
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|Status")
 	bool UsingGeneratorThread();
@@ -368,26 +368,26 @@ public:
 	/////////////////////////////////////////////
 
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, CallInEditor, Category = "PRT|Events")
-		void GenerateCompleted(bool Success);
+	void GenerateCompleted(bool Success);
 
 	/////////////////////////////////////////////
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|RPK Settings")
-		FString RPKPath = L"";
+	FString RPKPath = L"";
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|RPK Settings")
-		FString RPKFile = L"(none)";
+	FString RPKFile = L"(none)";
 	FString PreviousRPKFile = L""; //usable only by CopyViewAttributesIntoDataStore;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|RPK Settings")
-		FString OBJPath = L"";
+	FString OBJPath = L"";
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "PRT|RPK Settings")
-		FString OBJFile = L"square";
+	FString OBJFile = L"square";
 
 	/*Sets the current RPK Path, initial shape and refreshes the building*/
 	UFUNCTION(BlueprintCallable, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|RPK Settings")
-		void InitializeRPKData(bool bCompleteReset);
+	void InitializeRPKData(bool bCompleteReset);
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, meta = (HidePin = "Outer", DefaultToSelf = "Outer"), Category = "PRT|Options")
 	bool bUseStaticMesh = false;
