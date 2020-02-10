@@ -364,7 +364,7 @@ void APRTActor::GenerateModelData(bool bForceRegen)
 		PRTLog.Message(TEXT(">>> Generate Skipped, Count: "), ++GenerateSkipCount);
 
 		// ToDo: we need to trigger a rebuild of the mesh?
-		//GenerateCompleted(true);
+		GenerateCompleted(true);
 	}
 }
 
@@ -560,11 +560,11 @@ void APRTActor::ProcessPRTVertexDataIntoMeshStruct(TArray<FPRTMeshStruct>& MeshS
 			SetMaterialMeshNormals(&MaterialMesh, Normals);
 			Normals.Empty();
 
-			TArray<float>& UVs = CurrentVertexData.Value.MaterialUVs[CurrentMaterial.Key];
+			TArray<float> UVs = CurrentVertexData.Value.MaterialUVs[CurrentMaterial.Key];
 			SetMaterialMeshUVs(&MaterialMesh, UVs);
 			UVs.Empty();
 
-			TArray<uint32_t>& Indices = CurrentVertexData.Value.MaterialIndices[CurrentMaterial.Key];
+			TArray<uint32_t> Indices = CurrentVertexData.Value.MaterialIndices[CurrentMaterial.Key];
 			SetMaterialMeshIndices(&MaterialMesh, Indices);
 			Indices.Empty();
 
