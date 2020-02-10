@@ -218,7 +218,7 @@ void APRTActor::InitializeRPKData(bool bCompleteReset)
 	}
 
 	// TODO: Start of potential threaded fn.
-	if (PRT.IsLoaded() == true)
+	if (PRT.IsLoaded())
 	{
 		UseFirstRule();
 
@@ -317,7 +317,7 @@ void APRTActor::GenerateModelData(bool bForceRegen)
 	const auto bGenerateModelNeeded = bAttributesUpdated || bForceRegen;	
 
 	// We have an RPK file but the plugin isn't loaded or no attributes yet
-	if ((PRT.IsLoaded() == false && RPKFile.Len() > 0) || (Attributes.Num() == 0))
+	if (!PRT.IsLoaded()  && RPKFile.Len() > 0 || Attributes.Num() == 0)
 	{
 		InitializeRPKData(false);
 	}
@@ -327,7 +327,7 @@ void APRTActor::GenerateModelData(bool bForceRegen)
 	}
 
 	// Plugin still won't load, abort
-	if (PRT.IsLoaded() == false)
+	if (!PRT.IsLoaded())
 	{
 		PRTLog.Message(TEXT("APRTActor::GenerateModelData abort: Plugin is not loaded."), ELogVerbosity::Warning);
 		return;
