@@ -41,16 +41,12 @@ namespace
 		const auto& Triangles = MeshDescription->Triangles();
 		for (const FPolygonID PolygonID : MeshDescription->Polygons().GetElementIDs())
 		{
-			for (const FTriangleID TriangleID : MeshDescription->GetPolygonTriangleIDs(PolygonID))
+			for (const FVertexInstanceID PolygonVertexInstance : MeshDescription->GetPolygonVertexInstances(PolygonID))
 			{
-				for (int32 CornerIndex = 0; CornerIndex < 3; ++CornerIndex)
-				{
-					const FVertexInstanceID VertexInstanceID = MeshDescription->GetTriangleVertexInstance(TriangleID, CornerIndex);
-					FVertexID VertexID = MeshDescription->GetVertexInstanceVertex(VertexInstanceID);
-					indices.push_back(static_cast<uint32_t>(VertexID.GetValue()));
-				}
-				faceCounts.push_back(3);
+				FVertexID VertexID = MeshDescription->GetVertexInstanceVertex(PolygonVertexInstance);
+				indices.push_back(static_cast<uint32_t>(VertexID.GetValue()));
 			}
+			faceCounts.push_back(MeshDescription->GetPolygonVertexInstances(PolygonID).Num());
 		}
 
 		const prt::Status SetGeometryStatus =
