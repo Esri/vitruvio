@@ -190,6 +190,8 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 				PolygonVertexInstances.Add(InstanceId);
 				Normals[InstanceId] = FVector(nrm[NormalIndex], nrm[NormalIndex + 2], nrm[NormalIndex + 1]);
 
+				// TODO Fix UVs
+				/*
 				for (size_t UVSet = 0; UVSet < uvSets; ++UVSet)
 				{
 					if (uvIndicesSizes[UVSet] > 0)
@@ -198,6 +200,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 						VertexUVs.Set(InstanceId, 0, FVector2D(uvs[UVSet][UVIndex], -uvs[UVSet][UVIndex + 1]));
 					}
 				}
+				*/
 			}
 
 			Description.CreatePolygon(PolygonGroupId, PolygonVertexInstances);
@@ -233,11 +236,10 @@ void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform)
 	const FQuat Rotation = FQuat(CERotation.X, CERotation.Z, CERotation.Y, CERotation.W);
 	const FVector Scale = FVector(CEScale.X, CEScale.Y, CEScale.Z);
 
-	// TODO this is actually the wrong indices to extract translation? are we setting up the transformation matrix correctly
 	const FVector Translation = FVector(TransformationMat.M[0][3], TransformationMat.M[2][3], TransformationMat.M[1][3]) * 100;
 
-	const FTransform Transform(Rotation, Translation, Scale);
-	
+	const FTransform Transform(Rotation.GetNormalized(), Translation, Scale);
+
 	UStaticMesh* PrototypeMesh = PrototypeMap[prototypeId];
 	Instances.FindOrAdd(PrototypeMesh).Add(Transform);
 }
