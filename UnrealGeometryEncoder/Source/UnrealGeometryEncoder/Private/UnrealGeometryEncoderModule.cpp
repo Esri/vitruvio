@@ -111,6 +111,37 @@ namespace
 		return AttributeMapUPtr(AttributeMapBuilder->createAttributeMap(), PRTDestroyer());
 	}
 
+	void CleanupGeometryEncoderDlls(const FString& BinariesPath)
+	{
+		IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+
+		// Find all Unreal dlls
+		TArray<FString> OutFiles;
+		PlatformFile.FindFiles(OutFiles, *BinariesPath, L".dll");
+		TArray<FString> UnrealDlls = OutFiles.FilterByPredicate([](const FString& File) -> auto
+		{
+			return FPaths::GetCleanFilename(File).StartsWith(L"UE4Editor-");
+		});
+
+		// Sort by date and remove newest (don't want to delete)
+		UnrealDlls.Sort([&PlatformFile](const auto& A, const auto& B) -> auto { return PlatformFile.GetTimeStamp(*A) > PlatformFile.GetTimeStamp(*B); });
+		if (UnrealDlls.Num() > 0) 
+		{
+			UnrealDlls.RemoveAt(0);
+		}
+
+		// Delete old dlls
+		for (const auto& OldDll : UnrealDlls)
+		{
+			PlatformFile.DeleteFile(*OldDll);
+			FString PdbFile = FPaths::GetBaseFilename(OldDll, false) + L".pdb";
+			if (PlatformFile.FileExists(*PdbFile))
+			{
+				PlatformFile.DeleteFile(*PdbFile);
+			}
+		}
+	}
+
 } // namespace
 
 void UnrealGeometryEncoderModule::StartupModule()
@@ -123,6 +154,8 @@ void UnrealGeometryEncoderModule::StartupModule()
 
 	TArray<wchar_t*> PRTPluginsPaths;
 	PRTPluginsPaths.Add(const_cast<wchar_t*>(*BinariesPath));
+
+	CleanupGeometryEncoderDlls(BinariesPath);
 
 	LogHandler = new UnrealLogHandler;
 	prt::addLogHandler(LogHandler);
