@@ -161,6 +161,9 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 	
 	// Create Polygons
 	size_t BaseVertexIndex = 0;
+	TArray<size_t> BaseUVIndex;
+	BaseUVIndex.Init(0, uvSets);
+	
 	size_t PolygonGroupStartIndex = 0;
 	for (size_t PolygonGroupIndex = 0; PolygonGroupIndex < faceRangesSize; ++PolygonGroupIndex)
 	{
@@ -180,7 +183,6 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 		for (size_t FaceIndex = 0; FaceIndex < PolygonFaceCount; ++FaceIndex)
 		{
 			const size_t FaceVertexCount = faceVertexCounts[PolygonGroupStartIndex + FaceIndex];
-
 			TArray<FVertexInstanceID> PolygonVertexInstances;
 			for (size_t FaceVertexIndex = 0; FaceVertexIndex < FaceVertexCount; ++FaceVertexIndex)
 			{
@@ -190,21 +192,24 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 				PolygonVertexInstances.Add(InstanceId);
 				Normals[InstanceId] = FVector(nrm[NormalIndex], nrm[NormalIndex + 2], nrm[NormalIndex + 1]);
 
-				// TODO Fix UVs
-				/*
 				for (size_t UVSet = 0; UVSet < uvSets; ++UVSet)
 				{
-					if (uvIndicesSizes[UVSet] > 0)
+					if (uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex] > 0)
 					{
-						const uint32_t UVIndex = uvIndices[UVSet][BaseVertexIndex + FaceVertexIndex] * 2;
-						VertexUVs.Set(InstanceId, 0, FVector2D(uvs[UVSet][UVIndex], -uvs[UVSet][UVIndex + 1]));
+						check(uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex] == FaceVertexCount)
+						const uint32_t UVIndex = uvIndices[UVSet][BaseUVIndex[UVSet] + FaceVertexIndex] * 2;
+						VertexUVs.Set(InstanceId, UVSet, FVector2D(uvs[UVSet][UVIndex], -uvs[UVSet][UVIndex + 1]));
 					}
 				}
-				*/
 			}
 
 			Description.CreatePolygon(PolygonGroupId, PolygonVertexInstances);
+
 			BaseVertexIndex += FaceVertexCount;
+			for (size_t UVSet = 0; UVSet < uvSets; ++UVSet)
+			{
+				BaseUVIndex[UVSet] += uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex];
+			}
 		}
 		
 		PolygonGroupStartIndex += PolygonFaceCount;
