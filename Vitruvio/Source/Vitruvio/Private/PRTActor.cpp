@@ -25,7 +25,9 @@ void APRTActor::Tick(float DeltaTime)
 		if (Rpk)
 		{
 			UStaticMesh* InitialShape = GetStaticMeshComponent()->GetStaticMesh();
-			UnrealGeometryEncoderModule::Get().LoadDefaultRuleAttributes(InitialShape, Rpk, GenerateAttributes);
+			UnrealGeometryEncoderModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk).Then([this](const TFuture<TMap<FString, URuleAttribute*>>& Attributes) {
+				GenerateAttributes = Attributes.Get();
+			});
 		}
 
 		if (GenerateAutomatically)
@@ -56,27 +58,36 @@ void APRTActor::Regenerate()
 
 			if (InitialShape)
 			{
-				UnrealGeometryEncoderModule::Get().LoadDefaultRuleAttributes(InitialShape, Rpk, GenerateAttributes);
-				FGenerateResult GenerateResult = UnrealGeometryEncoderModule::Get().Generate(InitialShape, OpaqueParent, Rpk, GenerateAttributes);
-
-				FActorSpawnParameters Parameters;
-				Parameters.Owner = this;
-				AStaticMeshActor* StaticMeshActor = GetWorld()->SpawnActor<AStaticMeshActor>(Parameters);
-				StaticMeshActor->SetMobility(EComponentMobility::Movable);
-				StaticMeshActor->GetStaticMeshComponent()->SetStaticMesh(GenerateResult.ShapeMesh);
-				StaticMeshActor->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
-
-				for (const auto Instance : GenerateResult.Instances)
+				UnrealGeometryEncoderModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk)
+				.Then([=](const TFuture<TMap<FString, URuleAttribute*>>& Attributes)
 				{
-					auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(StaticMeshActor);
-					InstancedComponent->SetStaticMesh(Instance.Key);
-					for (FTransform InstanceTransform : Instance.Value)
+					return UnrealGeometryEncoderModule::Get().Generate(InitialShape, OpaqueParent, Rpk, Attributes.Get());
+				}).Then([=](const TFuture<FGenerateResult>& Result)
+				{
+					const FGraphEventRef CreateMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this, &Result]()
 					{
-						InstancedComponent->AddInstance(InstanceTransform);
-					}
-					InstancedComponent->RegisterComponent();
-					StaticMeshActor->AddInstanceComponent(InstancedComponent);
-				}
+						FActorSpawnParameters Parameters;
+						Parameters.Owner = this;
+						AStaticMeshActor* StaticMeshActor = GetWorld()->SpawnActor<AStaticMeshActor>(Parameters);
+						StaticMeshActor->SetMobility(EComponentMobility::Movable);
+						StaticMeshActor->GetStaticMeshComponent()->SetStaticMesh(Result.Get().ShapeMesh);
+						StaticMeshActor->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
+
+						for (const auto Instance : Result.Get().Instances)
+						{
+							auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(StaticMeshActor);
+							InstancedComponent->SetStaticMesh(Instance.Key);
+							for (FTransform InstanceTransform : Instance.Value)
+							{
+								InstancedComponent->AddInstance(InstanceTransform);
+							}
+							InstancedComponent->RegisterComponent();
+							StaticMeshActor->AddInstanceComponent(InstancedComponent);
+						}
+					}, TStatId(), nullptr, ENamedThreads::GameThread);
+					
+					FTaskGraphInterface::Get().WaitUntilTaskCompletes(CreateMeshTask);
+				});
 			}
 		}
 	}

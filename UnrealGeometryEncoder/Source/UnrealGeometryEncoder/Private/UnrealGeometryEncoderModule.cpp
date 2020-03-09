@@ -18,9 +18,57 @@
 
 DEFINE_LOG_CATEGORY(LogUnrealPrt);
 
+#define SYNCHRONIZED(C, L) \
+	L.Lock(); \
+	C; \
+	L.Unlock(); \
+	
 namespace
 {
 	constexpr const wchar_t* ENC_ID_ATTR_EVAL = L"com.esri.prt.core.AttributeEvalEncoder";
+
+	class FLoadResolveMapTask
+	{
+		FString ResolveMapUri;
+		TPromise<ResolveMapSPtr> Promise;
+		TMap<FString, ResolveMapSPtr>& ResolveMapCache;
+		FCriticalSection& LoadResolveMapLock;
+		
+	public:
+		FLoadResolveMapTask(TPromise<ResolveMapSPtr>&& InPromise, FString ResolveMapUri, TMap<FString, ResolveMapSPtr>& ResolveMapCache, FCriticalSection& LoadResolveMapLock):
+			Promise(MoveTemp(InPromise)),
+			ResolveMapUri(ResolveMapUri),
+			ResolveMapCache(ResolveMapCache),
+			LoadResolveMapLock(LoadResolveMapLock)
+		{
+		}
+
+		static const TCHAR* GetTaskName()
+		{
+			return TEXT("FLoadResolveMapTask");
+		}
+		FORCEINLINE static TStatId GetStatId()
+		{
+			RETURN_QUICK_DECLARE_CYCLE_STAT(FLoadResolveMapTask, STATGROUP_TaskGraphTasks);
+		}
+			
+		static ENamedThreads::Type GetDesiredThread()
+		{
+			return ENamedThreads::AnyThread;
+		}
+		
+		static ESubsequentsMode::Type GetSubsequentsMode() 
+		{ 
+			return ESubsequentsMode::TrackSubsequents; 
+		}
+		
+		void DoTask(ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
+		{
+			const ResolveMapSPtr ResolveMap(prt::createResolveMap(*ResolveMapUri), PRTDestroyer());
+			SYNCHRONIZED(ResolveMapCache.Add(ResolveMapUri, ResolveMap);, LoadResolveMapLock);
+			Promise.SetValue(ResolveMap);
+		}
+	};
 
 	void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder, const UStaticMesh* InitialShape)
 	{
@@ -111,6 +159,71 @@ namespace
 		return AttributeMapUPtr(AttributeMapBuilder->createAttributeMap(), PRTDestroyer());
 	}
 
+	TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo)
+	{
+		TMap<FString, URuleAttribute*> Attributes;
+		for (size_t AttributeIndex = 0; AttributeIndex < RuleInfo->getNumAttributes(); AttributeIndex++)
+		{
+			const prt::RuleFileInfo::Entry* AttrInfo = RuleInfo->getAttribute(AttributeIndex);
+			const std::wstring Name(AttrInfo->getName());
+
+			if (Attributes.Contains(Name.c_str()))
+			{
+				continue;
+			}
+
+			URuleAttribute* Attribute = nullptr;
+
+			switch (AttrInfo->getReturnType())
+			{
+			// TODO implement all types as well as annotation parsing (see:
+			// https://github.com/Esri/serlio/blob/b293b660034225371101ef1e9a3d9cfafb3c5382/src/serlio/prtModifier/PRTModifierAction.cpp#L358)
+			case prt::AAT_BOOL:
+			{
+				UBoolAttribute* BoolAttribute = NewObject<UBoolAttribute>();
+				BoolAttribute->Value = AttributeMap->getBool(Name.c_str());
+				Attribute = BoolAttribute;
+				break;
+			}
+			case prt::AAT_FLOAT:
+			{
+				UFloatAttribute* FloatAttribute = NewObject<UFloatAttribute>();
+				FloatAttribute->Value = AttributeMap->getFloat(Name.c_str());
+				Attribute = FloatAttribute;
+				break;
+			}
+			case prt::AAT_STR:
+			{
+				UStringAttribute* StringAttribute = NewObject<UStringAttribute>();
+				StringAttribute->Value = AttributeMap->getString(Name.c_str());
+				Attribute = StringAttribute;
+				break;
+			}
+			case prt::AAT_INT:
+				break;
+			case prt::AAT_UNKNOWN:
+				break;
+			case prt::AAT_VOID:
+				break;
+			case prt::AAT_BOOL_ARRAY:
+				break;
+			case prt::AAT_FLOAT_ARRAY:
+				break;
+			case prt::AAT_STR_ARRAY:
+				break;
+			default:;
+			}
+
+			if (Attribute)
+			{
+				FString AttributeName = Name.c_str();
+				Attribute->Name = AttributeName;
+				Attributes.Add(AttributeName, Attribute);
+			}
+		}
+		return Attributes;
+	}
+
 	void CleanupGeometryEncoderDlls(const FString& BinariesPath)
 	{
 		IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
@@ -184,18 +297,49 @@ void UnrealGeometryEncoderModule::ShutdownModule()
 	delete LogHandler;
 }
 
-ResolveMapSPtr UnrealGeometryEncoderModule::GetResolveMap(const std::wstring& Uri) const
+TFuture<ResolveMapSPtr> UnrealGeometryEncoderModule::LoadResolveMapAsync(const std::wstring& InUri) const
 {
-	const auto ResultIter = ResolveMapCache.find(Uri);
-	if (ResultIter != ResolveMapCache.end())
+	TPromise<ResolveMapSPtr> Promise;
+	TFuture<ResolveMapSPtr> Future = Promise.GetFuture();
+	FString Uri = InUri.c_str();
+
+	// Check if has already been cached
+	SYNCHRONIZED(const auto CachedResolveMap = ResolveMapCache.Find(Uri), LoadResolveMapLock)
+	if (CachedResolveMap)
 	{
-		return ResultIter->second;
+		Promise.SetValue(*CachedResolveMap);
+		return Future;
 	}
 
-	// TODO also add timestamp to cache entry (see: https://github.com/Esri/serlio/blob/master/src/serlio/util/ResolveMapCache.cpp)
-	ResolveMapSPtr ResolveMap(prt::createResolveMap(Uri.c_str()), PRTDestroyer());
-	ResolveMapCache.emplace(Uri, ResolveMap);
-	return ResolveMap;
+	// Check if a task is already running for loading the specified resolve map
+	SYNCHRONIZED(const auto ScheduledTaskEvent = ResolveMapEventGraphRefCache.Find(Uri);, LoadResolveMapLock)
+	if (ScheduledTaskEvent)
+	{
+		// Add task which only fetches the result from the cache once the actual loading has finished
+		FGraphEventArray Prerequisites;
+		Prerequisites.Add(*ScheduledTaskEvent);
+		TGraphTask<TAsyncGraphTask<ResolveMapSPtr>>::CreateTask(&Prerequisites).ConstructAndDispatchWhenReady([this, Uri]()
+		{
+			SYNCHRONIZED(const auto Cached = ResolveMapCache[Uri]; , LoadResolveMapLock)
+			return Cached;
+		}, MoveTemp(Promise), ENamedThreads::AnyThread);
+	}
+	else
+	{
+		// Task which does the actual resolve map loading which might take a long time
+		SYNCHRONIZED(
+			const FGraphEventRef LoadTask = TGraphTask<FLoadResolveMapTask>::CreateTask().ConstructAndDispatchWhenReady(MoveTemp(Promise), Uri, ResolveMapCache, LoadResolveMapLock);
+			ResolveMapEventGraphRefCache.Add(Uri, LoadTask);, 
+			LoadResolveMapLock);
+		
+		// Task which removes the event from the cache once finished
+		FFunctionGraphTask::CreateAndDispatchWhenReady([this, Uri]()
+		{
+			SYNCHRONIZED(ResolveMapEventGraphRefCache.Remove(Uri);, LoadResolveMapLock);
+		}, TStatId(), LoadTask, ENamedThreads::AnyThread);
+	}
+
+	return Future;
 }
 
 FGenerateResult UnrealGeometryEncoderModule::Generate(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
@@ -214,7 +358,7 @@ FGenerateResult UnrealGeometryEncoderModule::Generate(const UStaticMesh* Initial
 
 	const FString PathName = RulePackage->GetPathName();
 	const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + *PathName;
-	const ResolveMapSPtr ResolveMap = GetResolveMap(PathUri);
+	const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(PathUri).Get();
 
 	const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
 	const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
@@ -246,93 +390,54 @@ FGenerateResult UnrealGeometryEncoderModule::Generate(const UStaticMesh* Initial
 		UE_LOG(LogUnrealPrt, Error, TEXT("prt generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
 	}
 
-	return { OutputHandler->getShapeMesh(), OutputHandler->getInstances() };
+	return { OutputHandler->GetModel(), OutputHandler->GetInstances() };
 }
 
-void UnrealGeometryEncoderModule::LoadDefaultRuleAttributes(const UStaticMesh* InitialShape, URulePackage* RulePackage, TMap<FString, URuleAttribute*>& OutAttributes) const
+TFuture<FGenerateResult> UnrealGeometryEncoderModule::GenerateAsync(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
 {
 	check(InitialShape);
 	check(RulePackage);
 	
-	const FString PathName = RulePackage->GetPathName();
-	const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + *PathName;
-	const ResolveMapSPtr ResolveMap = GetResolveMap(PathUri);
-
-	const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
-	const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
-
-	const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
-	const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
-
-	prt::Status InfoStatus;
-	const RuleFileInfoUPtr RuleInfo(prt::createRuleFileInfo(RuleFileUri, nullptr, &InfoStatus));
-	if (!RuleInfo || InfoStatus != prt::STATUS_OK)
+	if (!Initialized)
 	{
-		UE_LOG(LogUnrealPrt, Error, TEXT("could not get rule file info from rule file %s"), RuleFileUri)
-		return;
+		UE_LOG(LogUnrealPrt, Error, TEXT("prt not initialized"))
+		return {};
 	}
 
-	const AttributeMapUPtr DefaultAttributeMap(GetDefaultAttributeValues(RuleFile.c_str(), StartRule.c_str(), ResolveMap, InitialShape));
-
-	for (size_t AttributeIndex = 0; AttributeIndex < RuleInfo->getNumAttributes(); AttributeIndex++)
+	return Async(EAsyncExecution::Thread, [=]() -> FGenerateResult
 	{
-		const prt::RuleFileInfo::Entry* AttrInfo = RuleInfo->getAttribute(AttributeIndex);
-		const std::wstring Name(AttrInfo->getName());
+		return Generate(InitialShape, OpaqueParent, RulePackage, Attributes);
+	});
+}
 
-		if (OutAttributes.Contains(Name.c_str()))
-		{
-			continue;
-		}
+TFuture<TMap<FString, URuleAttribute*>> UnrealGeometryEncoderModule::LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage) const
+{
+	check(InitialShape);
+	check(RulePackage);
+	
+	return Async(EAsyncExecution::Thread, [=]() -> TMap<FString, URuleAttribute*>
+	{
+		const FString PathName = RulePackage->GetPathName();
+		const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + *PathName;
+		const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(PathUri).Get();
 
-		URuleAttribute* Attribute = nullptr;
+		const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
+		const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
 
-		switch (AttrInfo->getReturnType())
+		const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
+		const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
+
+		prt::Status InfoStatus;
+		const RuleFileInfoUPtr RuleInfo(prt::createRuleFileInfo(RuleFileUri, nullptr, &InfoStatus));
+		if (!RuleInfo || InfoStatus != prt::STATUS_OK)
 		{
-		// TODO implement all types as well as annotation parsing (see:
-		// https://github.com/Esri/serlio/blob/b293b660034225371101ef1e9a3d9cfafb3c5382/src/serlio/prtModifier/PRTModifierAction.cpp#L358)
-		case prt::AAT_BOOL:
-		{
-			UBoolAttribute* BoolAttribute = NewObject<UBoolAttribute>();
-			BoolAttribute->Value = DefaultAttributeMap->getBool(Name.c_str());
-			Attribute = BoolAttribute;
-			break;
-		}
-		case prt::AAT_FLOAT:
-		{
-			UFloatAttribute* FloatAttribute = NewObject<UFloatAttribute>();
-			FloatAttribute->Value = DefaultAttributeMap->getFloat(Name.c_str());
-			Attribute = FloatAttribute;
-			break;
-		}
-		case prt::AAT_STR:
-		{
-			UStringAttribute* StringAttribute = NewObject<UStringAttribute>();
-			StringAttribute->Value = DefaultAttributeMap->getString(Name.c_str());
-			Attribute = StringAttribute;
-			break;
-		}
-		case prt::AAT_INT:
-			break;
-		case prt::AAT_UNKNOWN:
-			break;
-		case prt::AAT_VOID:
-			break;
-		case prt::AAT_BOOL_ARRAY:
-			break;
-		case prt::AAT_FLOAT_ARRAY:
-			break;
-		case prt::AAT_STR_ARRAY:
-			break;
-		default:;
+			UE_LOG(LogUnrealPrt, Error, TEXT("could not get rule file info from rule file %s"), RuleFileUri)
+			return {};
 		}
 
-		if (Attribute)
-		{
-			FString AttributeName = Name.c_str();
-			Attribute->Name = AttributeName;
-			OutAttributes.Add(AttributeName, Attribute);
-		}
-	}
+		const AttributeMapUPtr DefaultAttributeMap(GetDefaultAttributeValues(RuleFile.c_str(), StartRule.c_str(), ResolveMap, InitialShape));
+		return ConvertAttributeMap(DefaultAttributeMap, RuleInfo);
+	});
 }
 
 #undef LOCTEXT_NAMESPACE

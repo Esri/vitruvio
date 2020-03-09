@@ -32,7 +32,18 @@ public:
 
 	
 	/**
-	 * \brief Calls prt generate with the given InitialShape, RulePackage and Attributes. The instances are written into OutInstances.
+	 * \brief Asynchronously generate the models with the given InitialShape, RulePackage and Attributes.
+	 * 
+	 * \param InitialShape
+	 * \param OpaqueParent 
+	 * \param RulePackage 
+	 * \param Attributes 
+	 * \return the generated UStaticMesh.
+	 */
+	UNREALGEOMETRYENCODER_API TFuture<FGenerateResult> GenerateAsync(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const;
+
+	/**
+	 * \brief Generate the models with the given InitialShape, RulePackage and Attributes.
 	 * 
 	 * \param InitialShape
 	 * \param OpaqueParent 
@@ -42,7 +53,14 @@ public:
 	 */
 	UNREALGEOMETRYENCODER_API FGenerateResult Generate(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const;
 
-	UNREALGEOMETRYENCODER_API void LoadDefaultRuleAttributes(const UStaticMesh* InitialShape, URulePackage* RulePackage, TMap<FString, URuleAttribute*>& OutAttributes) const;
+	/**
+	 * \brief Asynchronously loads the default attribute values for the given initial shape and rule package
+	 * 
+	 * \param InitialShape 
+	 * \param RulePackage 
+	 * \return 
+	 */
+	UNREALGEOMETRYENCODER_API TFuture<TMap<FString, URuleAttribute*>> LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage) const;
 
 	static UnrealGeometryEncoderModule& Get()
 	{
@@ -57,7 +75,10 @@ private:
 
 	UnrealLogHandler* LogHandler = nullptr;
 
-	mutable std::map<std::wstring, ResolveMapSPtr> ResolveMapCache;
+	mutable TMap<FString, ResolveMapSPtr> ResolveMapCache;
+	mutable TMap<FString, FGraphEventRef> ResolveMapEventGraphRefCache;
 
-	ResolveMapSPtr GetResolveMap(const std::wstring& Uri) const;
+	mutable FCriticalSection LoadResolveMapLock;
+	
+	TFuture<ResolveMapSPtr> LoadResolveMapAsync(const std::wstring& InUri) const;
 };

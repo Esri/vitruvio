@@ -13,10 +13,11 @@ class UnrealCallbacks : public IUnrealCallbacks
 	AttributeMapBuilderUPtr& AttributeMapBuilder;
 	
 	TMap<UStaticMesh*, TArray<FTransform>> Instances;
-	TMap<int32, UStaticMesh*> PrototypeMap;
+	TMap<int32, UStaticMesh*> Meshes;
+	
 	UMaterial* OpaqueParent;
 
-	static const int32 NO_PROTOTYPE_ID = -1;
+	static const int32 NO_PROTOTYPE_INDEX = -1;
 
 public:
 
@@ -25,6 +26,16 @@ public:
 	{
 	}
 
+	const TMap<UStaticMesh*, TArray<FTransform>>& GetInstances() const
+	{
+		return Instances;
+	}
+
+	UStaticMesh* GetModel() const
+	{
+		return Meshes.Contains(NO_PROTOTYPE_INDEX) ? Meshes[NO_PROTOTYPE_INDEX] : nullptr;
+	}
+	
 	/**
 	 * @param name initial shape name, optionally used to create primitive groups on output
 	 * @param prototypeId the id of the prototype or -1 of not cached
@@ -60,22 +71,12 @@ public:
 		const prt::AttributeMap** materials
 	) override;
 
+	/**
+	 * @param prototypeId the prototype id of the instance, must be >= 0
+	 * @param transform the transformation matrix of the instance
+	 */
 	void addInstance(int32_t prototypeId, const double* transform) override;
 	// clang-format on
-
-	UStaticMesh* getShapeMesh() const
-	{
-		if (PrototypeMap.Contains(NO_PROTOTYPE_ID))
-		{
-			return PrototypeMap[NO_PROTOTYPE_ID];
-		}
-		return nullptr;
-	}
-
-	const TMap<UStaticMesh*, TArray<FTransform>>& getInstances() const
-	{
-		return Instances;
-	}
 
 	prt::Status generateError(size_t /*isIndex*/, prt::Status /*status*/, const wchar_t* message) override
 	{

@@ -109,6 +109,7 @@ namespace
 			std::wstring TextureUri(Values[ValueIndex]);
 			if (TextureUri.size() > 0)
 			{
+				
 				return LoadImageFromDisk(Outer, FString(Values[ValueIndex]));
 			}
 		}
@@ -127,6 +128,7 @@ namespace
 			wchar_t const* Key = Keys[KeyIndex];
 			if (std::wstring(Key) == L"diffuseMap") MaterialInstance->SetTextureParameterValue(FName(Key), GetTexture(Outer, MaterialAttributes, Key));
 			// TODO handle all keys
+	
 		}
 
 		return MaterialInstance;
@@ -171,12 +173,14 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 		
 		const FPolygonGroupID PolygonGroupId = Description.CreatePolygonGroup();
 
-		// Create Material
-		const prt::AttributeMap* MaterialAttributes = materials[PolygonGroupIndex];
-		UMaterialInstanceDynamic* MaterialInstance = CreateMaterial(Mesh, OpaqueParent, MaterialAttributes);
-		const FName MaterialSlot = Mesh->AddMaterial(MaterialInstance);
-		
-		Attributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlot;
+		// Create material in game thread
+		FGraphEventRef CreateMaterialTask = FFunctionGraphTask::CreateAndDispatchWhenReady([=, &Attributes]()
+		{
+			const prt::AttributeMap* MaterialAttributes = materials[PolygonGroupIndex];
+			UMaterialInstanceDynamic* MaterialInstance = CreateMaterial(Mesh, OpaqueParent, MaterialAttributes);
+			const FName MaterialSlot = Mesh->AddMaterial(MaterialInstance);
+			Attributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlot;
+		}, TStatId(), nullptr, ENamedThreads::GameThread);
 
 		// Create Geometry
 		const auto Normals = Attributes.GetVertexInstanceNormals();
@@ -213,20 +217,24 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 		}
 		
 		PolygonGroupStartIndex += PolygonFaceCount;
+		
+		FTaskGraphInterface::Get().WaitUntilTaskCompletes(CreateMaterialTask);
 	}
 
+	// Build mesh in game thread
+	const FGraphEventRef CreateMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this, prototypeId, Mesh, &Description]()
+	{
+		TArray<const FMeshDescription*> MeshDescriptionPtrs;
+		MeshDescriptionPtrs.Emplace(&Description);
+		Mesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
 
-	// Build Mesh
-	TArray<const FMeshDescription*> MeshDescriptionPtrs;
-	MeshDescriptionPtrs.Emplace(&Description);
-	Mesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
-
-	PrototypeMap.Add(prototypeId, Mesh);
+		Meshes.Add(prototypeId, Mesh);
+	}, TStatId(), nullptr, ENamedThreads::GameThread);
+	FTaskGraphInterface::Get().WaitUntilTaskCompletes(CreateMeshTask);
 }
 
 void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform)
 {
-	check(PrototypeMap.Contains(prototypeId))
 	const FMatrix TransformationMat(GetRow(transform, 0), GetRow(transform, 1), GetRow(transform, 2), GetRow(transform, 3));
 	const int32 SignumDet = FMath::Sign(TransformationMat.Determinant());
 
@@ -245,8 +253,8 @@ void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform)
 
 	const FTransform Transform(Rotation.GetNormalized(), Translation, Scale);
 
-	UStaticMesh* PrototypeMesh = PrototypeMap[prototypeId];
-	Instances.FindOrAdd(PrototypeMesh).Add(Transform);
+	check(Meshes.Contains(prototypeId))
+	Instances.FindOrAdd(Meshes[prototypeId]).Add(Transform);
 }
 
 prt::Status UnrealCallbacks::attrBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value)
