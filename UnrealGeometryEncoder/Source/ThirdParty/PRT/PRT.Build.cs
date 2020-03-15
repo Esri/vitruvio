@@ -103,12 +103,7 @@ public class PRT : ModuleRules
 					string BinaryDllPath = Path.Combine(BinariesFolder, Path.GetFileName(BinFile));
 					if (!File.Exists(BinaryDllPath) || File.GetCreationTime(Path.Combine(LibFolder, BinFile)) > File.GetCreationTime(BinaryDllPath))
 					{
-						if (Debug) System.Console.WriteLine("Copy \"" + Path.GetFileName(BinFile) + "\" to " + BinaryDllPath);
-						File.Copy(Path.Combine(LibFolder, BinFile), BinaryDllPath, true);
-					}
-					
-					
-
+					CopyLibraryFile(BinaryDllPath, LibFolder, BinFile);
 					RuntimeDependencies.Add(BinaryDllPath);
 				}
 			}
@@ -119,13 +114,22 @@ public class PRT : ModuleRules
 				if (Path.GetExtension(LibFile) == ".dll")
 				{
 					string BinaryDllPath = Path.Combine(BinariesFolder, Path.GetFileName(LibFile));
-					if (!File.Exists(BinaryDllPath) || File.GetCreationTime(Path.Combine(LibFolder, LibFile)) > File.GetCreationTime(BinaryDllPath))
-					{
-						if (Debug) System.Console.WriteLine("Copy \"" + Path.GetFileName(LibFile) + "\" to " + BinaryDllPath);
-						File.Copy(Path.Combine(LibFolder, LibFile), BinaryDllPath, true);
-					}
+					CopyLibraryFile(BinaryDllPath, LibFolder, LibFile);
 				}
 			}
+		}
+	}
+
+	private static void CopyLibraryFile(string BinaryDllPath, string LibFolder, string File)
+	{
+		if (!System.IO.File.Exists(BinaryDllPath) || System.IO.File.GetCreationTime(Path.Combine(LibFolder, File)) > System.IO.File.GetCreationTime(BinaryDllPath))
+		{
+			if (Debug) System.Console.WriteLine("Copy \"" + Path.GetFileName(File) + "\" to " + BinaryDllPath);
+			System.IO.File.Copy(Path.Combine(LibFolder, File), BinaryDllPath, true);
+		}
+		else if (Debug)
+		{
+			System.Console.WriteLine("Not copying \"" + Path.GetFileName(File) + "\" to \"" + BinaryDllPath + "\" as it already exists");
 		}
 	}
 
