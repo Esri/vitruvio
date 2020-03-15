@@ -32,6 +32,7 @@ public:
 	UPROPERTY(EditAnywhere)
 	bool GenerateAutomatically = true;
 
+	UFUNCTION(BlueprintCallable)
 	void Regenerate();
 
 protected:
