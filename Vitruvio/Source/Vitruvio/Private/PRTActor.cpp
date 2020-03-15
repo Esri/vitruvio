@@ -68,6 +68,7 @@ void APRTActor::Regenerate()
 				{
 					const FGraphEventRef CreateMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this, &Result]()
 					{
+						QUICK_SCOPE_CYCLE_COUNTER(STAT_PRTActor_CreateActors);
 						FActorSpawnParameters Parameters;
 						Parameters.Owner = this;
 						AStaticMeshActor* StaticMeshActor = GetWorld()->SpawnActor<AStaticMeshActor>(Parameters);

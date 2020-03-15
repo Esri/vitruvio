@@ -178,6 +178,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 		// Create material in game thread
 		FGraphEventRef CreateMaterialTask = FFunctionGraphTask::CreateAndDispatchWhenReady([=, &Attributes]()
 		{
+			QUICK_SCOPE_CYCLE_COUNTER(STAT_UnrealCallbacks_CreateMaterials);
 			const prt::AttributeMap* MaterialAttributes = materials[PolygonGroupIndex];
 			UMaterialInstanceDynamic* MaterialInstance = CreateMaterial(Mesh, OpaqueParent, MaterialAttributes);
 			const FName MaterialSlot = Mesh->AddMaterial(MaterialInstance);
@@ -226,6 +227,8 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 	// Build mesh in game thread
 	const FGraphEventRef CreateMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this, prototypeId, Mesh, &Description]()
 	{
+		QUICK_SCOPE_CYCLE_COUNTER(STAT_UnrealCallbacks_BuildMeshes);
+		
 		TArray<const FMeshDescription*> MeshDescriptionPtrs;
 		MeshDescriptionPtrs.Emplace(&Description);
 		Mesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
