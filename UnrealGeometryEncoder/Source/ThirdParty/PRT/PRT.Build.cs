@@ -69,9 +69,14 @@ public class PRT : ModuleRules
 				{
 					// TODO cleanup
 				}
+			} 
+			else if (Debug)
+			{
+				Console.WriteLine("PRT found");
 			}
 
 			// 2. Add necessary includes
+			if (Debug) Console.WriteLine("Adding necessary include paths");
 			PublicSystemIncludePaths.Add(Path.Combine(ModuleDirectory, "include"));
 
 			string BinariesFolder = Path.GetFullPath(Path.Combine(ModuleDirectory, "../../..", "Binaries", "Win64"));
@@ -96,13 +101,12 @@ public class PRT : ModuleRules
 
 			// 3. Add libraries to Binaries folder
 			// see for example https://github.com/EpicGames/UnrealEngine/blob/release/Engine/Plugins/Runtime/LeapMotion/Source/LeapMotion/LeapMotion.Build.cs
+			if (Debug) Console.WriteLine("Adding libraries to binary folder");
 			foreach (string BinFile in Directory.GetFiles(BinFolder))
 			{
 				if (Path.GetExtension(BinFile) == ".dll")
 				{
 					string BinaryDllPath = Path.Combine(BinariesFolder, Path.GetFileName(BinFile));
-					if (!File.Exists(BinaryDllPath) || File.GetCreationTime(Path.Combine(LibFolder, BinFile)) > File.GetCreationTime(BinaryDllPath))
-					{
 					CopyLibraryFile(BinaryDllPath, LibFolder, BinFile);
 					RuntimeDependencies.Add(BinaryDllPath);
 				}
