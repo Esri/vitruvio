@@ -7,7 +7,7 @@
 using FAttributeGroups = TArray<FString>;
 
 UCLASS()
-class UNREALGEOMETRYENCODER_API URuleAttribute : public UObject
+class VITRUVIO_API URuleAttribute : public UObject
 {
 	GENERATED_BODY()
 
@@ -18,7 +18,7 @@ public:
 };
 
 UCLASS()
-class UNREALGEOMETRYENCODER_API UStringAttribute : public URuleAttribute
+class VITRUVIO_API UStringAttribute : public URuleAttribute
 {
 	GENERATED_BODY()
 
@@ -27,7 +27,7 @@ public:
 };
 
 UCLASS()
-class UNREALGEOMETRYENCODER_API UFloatAttribute : public URuleAttribute
+class VITRUVIO_API UFloatAttribute : public URuleAttribute
 {
 	GENERATED_BODY()
 
@@ -38,7 +38,7 @@ public:
 };
 
 UCLASS()
-class UNREALGEOMETRYENCODER_API UBoolAttribute : public URuleAttribute
+class VITRUVIO_API UBoolAttribute : public URuleAttribute
 {
 	GENERATED_BODY()
 

@@ -1,5 +1,5 @@
 #include "UnrealGeometryEncoder.h"
-#include "IUnrealCallbacks.h"
+#include "Codec/Encoder/IUnrealCallbacks.h"
 
 #include "prtx/Attributable.h"
 #include "prtx/Exception.h"

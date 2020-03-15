@@ -20,7 +20,7 @@ namespace prtu
 	std::string toUTF8FromUTF16(const std::wstring& u16String);
 	std::wstring toFileURI(const std::wstring& p);
 
-	AttributeMapUPtr createValidatedOptions(const wchar_t* encID, const prt::AttributeMap* unvalidatedOptions = nullptr);
+	UNREALGEOMETRYENCODER_API AttributeMapUPtr createValidatedOptions(const wchar_t* encID, const prt::AttributeMap* unvalidatedOptions = nullptr);
 
 	inline std::wstring getRuleFileEntry(const ResolveMapSPtr& resolveMap)
 	{

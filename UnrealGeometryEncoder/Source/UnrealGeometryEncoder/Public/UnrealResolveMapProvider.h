@@ -4,12 +4,12 @@
 #include <string>
 
 #include "RulePackage.h"
-#include "Util/UnrealPRTUtils.h"
+#include "UnrealPRTUtils.h"
 #include "prtx/ResolveMapProvider.h"
 #include "prtx/ResolveMapProviderFactory.h"
 #include "prtx/Singleton.h"
 
-class UnrealResolveMapProvider : public prtx::ResolveMapProvider
+class UNREALGEOMETRYENCODER_API UnrealResolveMapProvider : public prtx::ResolveMapProvider
 {
 public:
 	static const std::wstring ID;

@@ -6,6 +6,7 @@ public class Vitruvio : ModuleRules
 {
 	public Vitruvio(ReadOnlyTargetRules Target) : base(Target)
 	{
+		bUseRTTI = true;
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		PrecompileForTargets = PrecompileTargetsType.Any;
 
@@ -24,6 +25,9 @@ public class Vitruvio : ModuleRules
 				"AppFramework",
 				"CoreUObject",
 				"InputCore",
+				"MeshDescription",
+				"StaticMeshDescription",
+				"ImageWrapper"
 			}
 		);
 			

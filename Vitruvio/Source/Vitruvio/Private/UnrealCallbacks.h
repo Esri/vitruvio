@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Codec/Encoder/IUnrealCallbacks.h"
 #include "Core.h"
 #include "Engine/StaticMesh.h"
-#include "Util/UnrealPRTUtils.h"
 #include "Modules/ModuleManager.h"
+#include "PRTTypes.h"
+#include "Codec/Encoder/IUnrealCallbacks.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogUnrealCallbacks, Log, All);
 

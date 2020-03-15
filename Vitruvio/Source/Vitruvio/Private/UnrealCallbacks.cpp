@@ -11,6 +11,8 @@
 #include "IImageWrapperModule.h"
 #include "Materials/MaterialInstanceDynamic.h"
 
+#include <string>
+
 DEFINE_LOG_CATEGORY(LogUnrealCallbacks);
 
 namespace

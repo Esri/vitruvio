@@ -2,6 +2,7 @@
 
 #include "PRTActor.h"
 #include "UnrealGeometryEncoderModule.h"
+#include "VitruvioModule.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 
 APRTActor::APRTActor()
@@ -25,7 +26,7 @@ void APRTActor::Tick(float DeltaTime)
 		if (Rpk)
 		{
 			UStaticMesh* InitialShape = GetStaticMeshComponent()->GetStaticMesh();
-			UnrealGeometryEncoderModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk).Then([this](const TFuture<TMap<FString, URuleAttribute*>>& Attributes) {
+			VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk).Then([this](const TFuture<TMap<FString, URuleAttribute*>>& Attributes) {
 				GenerateAttributes = Attributes.Get();
 			});
 		}
@@ -58,11 +59,12 @@ void APRTActor::Regenerate()
 
 			if (InitialShape)
 			{
-				UnrealGeometryEncoderModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk)
+				VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk)
 				.Then([=](const TFuture<TMap<FString, URuleAttribute*>>& Attributes)
-				{
-					return UnrealGeometryEncoderModule::Get().Generate(InitialShape, OpaqueParent, Rpk, Attributes.Get());
-				}).Then([=](const TFuture<FGenerateResult>& Result)
+					{
+						return VitruvioModule::Get().Generate(InitialShape, OpaqueParent, Rpk, Attributes.Get());
+					})
+				.Then([=](const TFuture<FGenerateResult>& Result)
 				{
 					const FGraphEventRef CreateMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this, &Result]()
 					{
@@ -81,9 +83,12 @@ void APRTActor::Regenerate()
 							{
 								InstancedComponent->AddInstance(InstanceTransform);
 							}
-							InstancedComponent->RegisterComponent();
 							StaticMeshActor->AddInstanceComponent(InstancedComponent);
+							InstancedComponent->RegisterComponent();
+							InstancedComponent->SetRelativeTransform(StaticMeshActor->GetTransform());
 						}
+						StaticMeshActor->RegisterAllComponents();
+						
 					}, TStatId(), nullptr, ENamedThreads::GameThread);
 					
 					FTaskGraphInterface::Get().WaitUntilTaskCompletes(CreateMeshTask);
