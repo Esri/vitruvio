@@ -9,8 +9,6 @@
 
 namespace prtu
 {
-
-	// TODO this most likely won't work on Android devices
 	std::wstring temp_directory_path();
 
 	// TODO maybe can be replaced with Unreal string conversion
