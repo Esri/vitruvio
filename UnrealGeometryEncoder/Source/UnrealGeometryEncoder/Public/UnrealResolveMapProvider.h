@@ -4,7 +4,7 @@
 #include <string>
 
 #include "RulePackage.h"
-#include "UnrealPRTUtils.h"
+#include "PRTUtils.h"
 #include "prtx/ResolveMapProvider.h"
 #include "prtx/ResolveMapProviderFactory.h"
 #include "prtx/Singleton.h"

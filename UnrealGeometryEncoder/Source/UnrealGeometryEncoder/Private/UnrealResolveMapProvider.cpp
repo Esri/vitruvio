@@ -8,7 +8,7 @@
 #include "Misc/Paths.h"
 #include "HAL/PlatformFilemanager.h"
 #include "RulePackage.h"
-#include "UnrealPRTUtils.h"
+#include "PRTUtils.h"
 
 const std::wstring UnrealResolveMapProvider::ID = L"com.esri.prt.adaptors.UnrealResolveMapProvider";
 const std::wstring UnrealResolveMapProvider::NAME = L"Unreal ResolveMapProvider";

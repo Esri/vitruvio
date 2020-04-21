@@ -12,7 +12,7 @@
 #include "UnrealCallbacks.h"
 #include "PRTTypes.h"
 #include "prtx/EncoderInfoBuilder.h"
-#include "UnrealPRTUtils.h"
+#include "PRTUtils.h"
 #include "UnrealResolveMapProvider.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioModule"
