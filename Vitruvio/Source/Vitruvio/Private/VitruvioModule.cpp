@@ -18,11 +18,6 @@
 #define LOCTEXT_NAMESPACE "VitruvioModule"
 
 DEFINE_LOG_CATEGORY(LogUnrealPrt);
-
-#define SYNCHRONIZED(C, L) \
-	L.Lock(); \
-	C; \
-	L.Unlock(); \
 	
 namespace
 {
@@ -66,8 +61,11 @@ namespace
 		void DoTask(ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
 		{
 			const ResolveMapSPtr ResolveMap(prt::createResolveMap(*ResolveMapUri), PRTDestroyer());
-			SYNCHRONIZED(ResolveMapCache.Add(ResolveMapUri, ResolveMap);, LoadResolveMapLock);
-			Promise.SetValue(ResolveMap);
+			{
+				FScopeLock Lock(&LoadResolveMapLock);
+				ResolveMapCache.Add(ResolveMapUri, ResolveMap);
+				Promise.SetValue(ResolveMap);
+			}
 		}
 	};
 
@@ -305,15 +303,22 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(const std::wstring& 
 	FString Uri = InUri.c_str();
 
 	// Check if has already been cached
-	SYNCHRONIZED(const auto CachedResolveMap = ResolveMapCache.Find(Uri), LoadResolveMapLock)
-	if (CachedResolveMap)
 	{
-		Promise.SetValue(*CachedResolveMap);
-		return Future;
+		FScopeLock Lock(&LoadResolveMapLock);
+		const auto CachedResolveMap = ResolveMapCache.Find(Uri);
+		if (CachedResolveMap)
+		{
+			Promise.SetValue(*CachedResolveMap);
+			return Future;
+		}
 	}
 
 	// Check if a task is already running for loading the specified resolve map
-	SYNCHRONIZED(const auto ScheduledTaskEvent = ResolveMapEventGraphRefCache.Find(Uri);, LoadResolveMapLock)
+	FGraphEventRef* ScheduledTaskEvent;
+	{
+		FScopeLock Lock(&LoadResolveMapLock);
+		ScheduledTaskEvent = ResolveMapEventGraphRefCache.Find(Uri);
+	}
 	if (ScheduledTaskEvent)
 	{
 		// Add task which only fetches the result from the cache once the actual loading has finished
@@ -321,23 +326,25 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(const std::wstring& 
 		Prerequisites.Add(*ScheduledTaskEvent);
 		TGraphTask<TAsyncGraphTask<ResolveMapSPtr>>::CreateTask(&Prerequisites).ConstructAndDispatchWhenReady([this, Uri]()
 		{
-			SYNCHRONIZED(const auto Cached = ResolveMapCache[Uri]; , LoadResolveMapLock)
-			return Cached;
+			FScopeLock Lock(&LoadResolveMapLock);
+			return ResolveMapCache[Uri];
 		}, MoveTemp(Promise), ENamedThreads::AnyThread);
 	}
 	else
 	{
-		
-		// Task which does the actual resolve map loading which might take a long time
-		SYNCHRONIZED(
-			const FGraphEventRef LoadTask = TGraphTask<FLoadResolveMapTask>::CreateTask().ConstructAndDispatchWhenReady(MoveTemp(Promise), Uri, ResolveMapCache, LoadResolveMapLock);
-			ResolveMapEventGraphRefCache.Add(Uri, LoadTask);, 
-			LoadResolveMapLock);
+		FGraphEventRef LoadTask;
+		{
+			FScopeLock Lock(&LoadResolveMapLock);
+			// Task which does the actual resolve map loading which might take a long time
+			LoadTask = TGraphTask<FLoadResolveMapTask>::CreateTask().ConstructAndDispatchWhenReady(MoveTemp(Promise), Uri, ResolveMapCache, LoadResolveMapLock);
+			ResolveMapEventGraphRefCache.Add(Uri, LoadTask);
+		}
 		
 		// Task which removes the event from the cache once finished
 		FFunctionGraphTask::CreateAndDispatchWhenReady([this, Uri]()
 		{
-			SYNCHRONIZED(ResolveMapEventGraphRefCache.Remove(Uri);, LoadResolveMapLock);
+			FScopeLock Lock(&LoadResolveMapLock);
+			ResolveMapEventGraphRefCache.Remove(Uri);
 		}, TStatId(), LoadTask, ENamedThreads::AnyThread);
 		
 	}
