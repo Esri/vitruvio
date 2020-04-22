@@ -152,6 +152,12 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 	FStaticMeshAttributes Attributes(Description);
 	Attributes.Register();
 
+	if (uvSets > 8)
+	{
+		UE_LOG(LogUnrealCallbacks, Error, TEXT("Mesh %s uses %llu UV sets but only 8 are allowed. Clamping UV sets to 8."), name, uvSets);
+		uvSets = 8;
+	}
+
 	const auto VertexUVs = Attributes.GetVertexInstanceUVs();
 	Attributes.GetVertexInstanceUVs().SetNumIndices(uvSets);
 
@@ -187,55 +193,69 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 
 		// Create Geometry
 		const auto Normals = Attributes.GetVertexInstanceNormals();
+		int PolygonFaces = 0;
 		for (size_t FaceIndex = 0; FaceIndex < PolygonFaceCount; ++FaceIndex)
 		{
+			check(PolygonGroupStartIndex + FaceIndex < faceVertexCountsSize)
+			
 			const size_t FaceVertexCount = faceVertexCounts[PolygonGroupStartIndex + FaceIndex];
 			TArray<FVertexInstanceID> PolygonVertexInstances;
-			for (size_t FaceVertexIndex = 0; FaceVertexIndex < FaceVertexCount; ++FaceVertexIndex)
-			{
-				const uint32_t VertexIndex = vertexIndices[BaseVertexIndex + FaceVertexIndex];
-				const uint32_t NormalIndex = normalIndices[BaseVertexIndex + FaceVertexIndex] * 3;
-				FVertexInstanceID InstanceId = Description.CreateVertexInstance(FVertexID(VertexIndex));
-				PolygonVertexInstances.Add(InstanceId);
-				Normals[InstanceId] = FVector(nrm[NormalIndex], nrm[NormalIndex + 2], nrm[NormalIndex + 1]);
 
-				for (size_t UVSet = 0; UVSet < uvSets; ++UVSet)
+			if (FaceVertexCount >= 3)
+			{
+				for (size_t FaceVertexIndex = 0; FaceVertexIndex < FaceVertexCount; ++FaceVertexIndex)
 				{
-					if (uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex] > 0)
+					check(BaseVertexIndex + FaceVertexIndex < vertexIndicesSize)
+					check(BaseVertexIndex + FaceVertexIndex < normalIndicesSize)
+					
+					const uint32_t VertexIndex = vertexIndices[BaseVertexIndex + FaceVertexIndex];
+					const uint32_t NormalIndex = normalIndices[BaseVertexIndex + FaceVertexIndex] * 3;
+					FVertexInstanceID InstanceId = Description.CreateVertexInstance(FVertexID(VertexIndex));
+					PolygonVertexInstances.Add(InstanceId);
+					
+					check(NormalIndex + 2 < nrmSize)
+					Normals[InstanceId] = FVector(nrm[NormalIndex], nrm[NormalIndex + 2], nrm[NormalIndex + 1]);
+
+					for (size_t UVSet = 0; UVSet < uvSets; ++UVSet)
 					{
-						check(uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex] == FaceVertexCount)
-						const uint32_t UVIndex = uvIndices[UVSet][BaseUVIndex[UVSet] + FaceVertexIndex] * 2;
-						VertexUVs.Set(InstanceId, UVSet, FVector2D(uvs[UVSet][UVIndex], -uvs[UVSet][UVIndex + 1]));
+						if (uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex] > 0)
+						{
+							check(uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex] == FaceVertexCount)
+							const uint32_t UVIndex = uvIndices[UVSet][BaseUVIndex[UVSet] + FaceVertexIndex] * 2;
+							VertexUVs.Set(InstanceId, UVSet, FVector2D(uvs[UVSet][UVIndex], -uvs[UVSet][UVIndex + 1]));
+						}
 					}
 				}
-			}
 
-			Description.CreatePolygon(PolygonGroupId, PolygonVertexInstances);
-
-			BaseVertexIndex += FaceVertexCount;
-			for (size_t UVSet = 0; UVSet < uvSets; ++UVSet)
-			{
-				BaseUVIndex[UVSet] += uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex];
+				Description.CreatePolygon(PolygonGroupId, PolygonVertexInstances);
+				PolygonFaces++;
+				BaseVertexIndex += FaceVertexCount;
+				for (size_t UVSet = 0; UVSet < uvSets; ++UVSet)
+				{
+					BaseUVIndex[UVSet] += uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex];
+				}
 			}
 		}
 		
-		PolygonGroupStartIndex += PolygonFaceCount;
+		PolygonGroupStartIndex += PolygonFaces;
 		
 		FTaskGraphInterface::Get().WaitUntilTaskCompletes(CreateMaterialTask);
 	}
 
 	// Build mesh in game thread
-	const FGraphEventRef CreateMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this, prototypeId, Mesh, &Description]()
-	{
-		QUICK_SCOPE_CYCLE_COUNTER(STAT_UnrealCallbacks_BuildMeshes);
-		
-		TArray<const FMeshDescription*> MeshDescriptionPtrs;
-		MeshDescriptionPtrs.Emplace(&Description);
-		Mesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
+	if (BaseVertexIndex > 0) {
+		const FGraphEventRef CreateMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this, prototypeId, Mesh, &Description]()
+		{
+			QUICK_SCOPE_CYCLE_COUNTER(STAT_UnrealCallbacks_BuildMeshes);
+			
+			TArray<const FMeshDescription*> MeshDescriptionPtrs;
+			MeshDescriptionPtrs.Emplace(&Description);
+			Mesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
 
-		Meshes.Add(prototypeId, Mesh);
-	}, TStatId(), nullptr, ENamedThreads::GameThread);
-	FTaskGraphInterface::Get().WaitUntilTaskCompletes(CreateMeshTask);
+			Meshes.Add(prototypeId, Mesh);
+		}, TStatId(), nullptr, ENamedThreads::GameThread);
+		FTaskGraphInterface::Get().WaitUntilTaskCompletes(CreateMeshTask);
+	}
 }
 
 void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform)
