@@ -128,6 +128,7 @@ namespace
 		for (int KeyIndex = 0; KeyIndex < KeyCount; KeyIndex++) 
 		{
 			wchar_t const* Key = Keys[KeyIndex];
+			// TODO loading the texture should probably not happen in the game thread
 			if (std::wstring(Key) == L"diffuseMap") MaterialInstance->SetTextureParameterValue(FName(Key), GetTexture(Outer, MaterialAttributes, Key));
 			// TODO handle all keys
 	

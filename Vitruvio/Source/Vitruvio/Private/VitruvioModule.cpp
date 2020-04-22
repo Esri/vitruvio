@@ -267,6 +267,7 @@ void VitruvioModule::StartupModule()
 	TArray<wchar_t*> PRTPluginsPaths;
 	PRTPluginsPaths.Add(const_cast<wchar_t*>(*BinariesPath));
 
+	// TODO this cleanup should happen in a post build step. See DatasmithExporter Plugin from the Unreal source for more information
 	CleanupGeometryEncoderDlls(BinariesPath);
 
 	LogHandler = new UnrealLogHandler;
