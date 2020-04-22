@@ -18,6 +18,8 @@ void APRTActor::BeginPlay()
 void APRTActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	Regenerated = false;
 	
 	// Note that we also tick in editor for initialization
 	if (!Initialized)
@@ -42,16 +44,10 @@ void APRTActor::Tick(float DeltaTime)
 
 void APRTActor::Regenerate()
 {
-	if (Rpk)
+	if (Rpk && !Regenerated)
 	{
-		// Remove old prt meshes
-		TArray<AActor*> GeneratedMeshes;
-		GetAttachedActors(GeneratedMeshes);
-		for (const auto& Child : GeneratedMeshes)
-		{
-			Child->Destroy();
-		}
-
+		Regenerated = true;
+		
 		// Generate
 		if (GetStaticMeshComponent())
 		{
@@ -68,6 +64,15 @@ void APRTActor::Regenerate()
 				{
 					const FGraphEventRef CreateMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this, &Result]()
 					{
+						// Remove previously generated actors
+						TArray<AActor*> GeneratedMeshes;
+						GetAttachedActors(GeneratedMeshes);
+						for (const auto& Child : GeneratedMeshes)
+						{
+							Child->Destroy();
+						}
+
+						// Create actors for generated meshes
 						QUICK_SCOPE_CYCLE_COUNTER(STAT_PRTActor_CreateActors);
 						FActorSpawnParameters Parameters;
 						Parameters.Owner = this;
