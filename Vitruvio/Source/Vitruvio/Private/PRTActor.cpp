@@ -10,6 +10,8 @@ APRTActor::APRTActor()
 	PrimaryActorTick.bCanEverTick = true;
 	
 	OpaqueParent = LoadObject<UMaterial>(this, TEXT("Material'/Vitruvio/Materials/M_OpaqueParent.M_OpaqueParent'"), nullptr);
+	MaskedParent = LoadObject<UMaterial>(this, TEXT("Material'/Vitruvio/Materials/M_MaskedParent.M_MaskedParent'"), nullptr);
+	TranslucentParent = LoadObject<UMaterial>(this, TEXT("Material'/Vitruvio/Materials/M_TranslucentParent.M_TranslucentParent'"), nullptr);
 }
 
 void APRTActor::BeginPlay()
@@ -60,7 +62,7 @@ void APRTActor::Regenerate()
 				VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk)
 				.Then([=](const TFuture<TMap<FString, URuleAttribute*>>& Attributes)
 					{
-						return VitruvioModule::Get().Generate(InitialShape, OpaqueParent, Rpk, Attributes.Get());
+						return VitruvioModule::Get().Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, Rpk, Attributes.Get());
 					})
 				.Then([=](const TFuture<FGenerateResult>& Result)
 				{

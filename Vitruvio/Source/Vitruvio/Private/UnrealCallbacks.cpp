@@ -112,6 +112,34 @@ namespace
 		return nullptr;
 	}
 
+	EBlendMode GetBlendMode(const prt::AttributeMap* MaterialAttributes)
+	{
+		const wchar_t* OpacityMapMode = MaterialAttributes->getString(L"opacityMap.mode");
+		if (OpacityMapMode)
+		{
+			const std::wstring ModeString(OpacityMapMode);
+			if (ModeString == L"mask")
+			{
+				return EBlendMode::BLEND_Masked;
+			}
+			else if (ModeString == L"blend")
+			{
+				return EBlendMode::BLEND_Translucent;
+			}
+		}
+		return EBlendMode::BLEND_Opaque;
+	}
+
+	UMaterialInterface* GetMaterialByBlendMode(EBlendMode Mode, UMaterialInterface* Opaque, UMaterialInterface* Masked, UMaterialInterface* Translucent)
+	{
+		switch (Mode)
+		{
+			case BLEND_Translucent: return Translucent;
+			case BLEND_Masked: return Masked;
+			default: return Opaque;
+		}
+	}
+
 	FLinearColor GetLinearColor(const prt::AttributeMap* MaterialAttributes, wchar_t const* Key)
 	{
 		size_t count; 
@@ -151,7 +179,7 @@ namespace
 		{L"roughness", 	MaterialPropertyType::SCALAR},
 	};
 
-	UMaterialInstanceDynamic* CreateMaterial(UObject* Outer, UMaterialInterface* Parent, const prt::AttributeMap* MaterialAttributes)
+	UMaterialInstanceDynamic* CreateMaterialInstance(UObject* Outer, UMaterialInterface* Parent, const prt::AttributeMap* MaterialAttributes)
 	{
 		UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, Outer);
 
@@ -236,7 +264,8 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 		{
 			QUICK_SCOPE_CYCLE_COUNTER(STAT_UnrealCallbacks_CreateMaterials);
 			const prt::AttributeMap* MaterialAttributes = materials[PolygonGroupIndex];
-			UMaterialInstanceDynamic* MaterialInstance = CreateMaterial(Mesh, OpaqueParent, MaterialAttributes);
+			const auto BlendMode = GetBlendMode(MaterialAttributes);
+			UMaterialInstanceDynamic* MaterialInstance = CreateMaterialInstance(Mesh, GetMaterialByBlendMode(BlendMode, OpaqueParent, MaskedParent, TranslucentParent), MaterialAttributes);
 			const FName MaterialSlot = Mesh->AddMaterial(MaterialInstance);
 			Attributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlot;
 		}, TStatId(), nullptr, ENamedThreads::GameThread);

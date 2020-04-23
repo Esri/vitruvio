@@ -109,7 +109,7 @@ namespace
 	{
 
 		AttributeMapBuilderUPtr UnrealCallbacksAttributeBuilder(prt::AttributeMapBuilder::create());
-		UnrealCallbacks UnrealCallbacks(UnrealCallbacksAttributeBuilder, nullptr);
+		UnrealCallbacks UnrealCallbacks(UnrealCallbacksAttributeBuilder, nullptr, nullptr, nullptr);
 
 		InitialShapeBuilderUPtr InitialShapeBuilder(prt::InitialShapeBuilder::create());
 
@@ -353,7 +353,7 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(const std::wstring& 
 	return Future;
 }
 
-FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
+FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
 {
 	check(InitialShape);
 	check(RulePackage);
@@ -383,7 +383,7 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 	InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", AttributeMap.get(), ResolveMap.get());
 
 	AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
-	const std::unique_ptr<UnrealCallbacks> OutputHandler(new UnrealCallbacks(AttributeMapBuilder, OpaqueParent));
+	const std::unique_ptr<UnrealCallbacks> OutputHandler(new UnrealCallbacks(AttributeMapBuilder, OpaqueParent, MaskedParent, TranslucentParent));
 
 	const InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShapeAndReset());
 
@@ -404,7 +404,8 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 	return { OutputHandler->GetModel(), OutputHandler->GetInstances() };
 }
 
-TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
+TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
+        URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
 {
 	check(InitialShape);
 	check(RulePackage);
@@ -417,7 +418,7 @@ TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const UStaticMesh* Initia
 
 	return Async(EAsyncExecution::Thread, [=]() -> FGenerateResult
 	{
-		return Generate(InitialShape, OpaqueParent, RulePackage, Attributes);
+		return Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, Attributes);
 	});
 }
 
