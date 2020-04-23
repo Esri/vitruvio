@@ -9,7 +9,7 @@ APRTActor::APRTActor()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	
-	OpaqueParent = LoadObject<UMaterial>(this, TEXT("Material'/Vitruvio/M_OpaqueParent.M_OpaqueParent'"), nullptr);
+	OpaqueParent = LoadObject<UMaterial>(this, TEXT("Material'/Vitruvio/Materials/M_OpaqueParent.M_OpaqueParent'"), nullptr);
 }
 
 void APRTActor::BeginPlay()
