@@ -88,18 +88,13 @@ namespace
 		}
 
 		// Decompress the image data
-		const TArray<uint8>* RawData = nullptr;
+		TArray<uint8> RawData;
 		ImageWrapper->SetCompressed(FileData.GetData(), FileData.Num());
 		ImageWrapper->GetRaw(ERGBFormat::BGRA, 8, RawData);
-		if (RawData == nullptr)
-		{
-			UE_LOG(LogUnrealCallbacks, Error, TEXT("Failed to decompress image file: %s"), *ImagePath);
-			return nullptr;
-		}
 
 		// Create the texture and upload the uncompressed image data
 		const FString TextureBaseName = TEXT("T_") + FPaths::GetBaseFilename(ImagePath);
-		return CreateTexture(Outer, *RawData, ImageWrapper->GetWidth(), ImageWrapper->GetHeight(), EPixelFormat::PF_B8G8R8A8, FName(*TextureBaseName));
+		return CreateTexture(Outer, RawData, ImageWrapper->GetWidth(), ImageWrapper->GetHeight(), EPixelFormat::PF_B8G8R8A8, FName(*TextureBaseName));
 	}
 
 	UTexture2D* GetTexture(UObject* Outer, const prt::AttributeMap* MaterialAttributes, wchar_t const* Key)
