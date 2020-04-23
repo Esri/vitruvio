@@ -2,7 +2,6 @@
 
 #include "UnrealCallbacks.h"
 #include "Engine/StaticMesh.h"
-#include "Materials/Material.h"
 #include "Materials/MaterialExpressionConstant.h"
 #include "StaticMeshAttributes.h"
 #include "StaticMeshDescription.h"
@@ -11,6 +10,7 @@
 #include "IImageWrapperModule.h"
 #include "Materials/MaterialInstanceDynamic.h"
 
+#include <map>
 #include <string>
 
 DEFINE_LOG_CATEGORY(LogUnrealCallbacks);
@@ -106,12 +106,50 @@ namespace
 			std::wstring TextureUri(Values[ValueIndex]);
 			if (TextureUri.size() > 0)
 			{
-				
 				return LoadImageFromDisk(Outer, FString(Values[ValueIndex]));
 			}
 		}
 		return nullptr;
 	}
+
+	FLinearColor GetLinearColor(const prt::AttributeMap* MaterialAttributes, wchar_t const* Key)
+	{
+		size_t count; 
+		const double* values = MaterialAttributes->getFloatArray(Key, &count);
+		if (count < 3)
+		{
+			return FLinearColor();
+		}
+		const FColor Color(values[0] * 255.0, values[1] * 255.0, values[2] * 255.0);
+		return FLinearColor(Color);
+	}
+
+	float GetScalar(const prt::AttributeMap* MaterialAttributes, wchar_t const* Key)
+	{
+		return MaterialAttributes->getFloat(Key);
+	}
+	
+	enum MaterialPropertyType
+	{
+		TEXTURE, LINEAR_COLOR, SCALAR
+	};
+
+	// see prtx/Material.h
+	const std::map<std::wstring, MaterialPropertyType> KeyToTypeMap = {
+		{L"diffuseMap", 	MaterialPropertyType::TEXTURE},
+		{L"opacityMap", 	MaterialPropertyType::TEXTURE},
+		{L"emissiveMap", 	MaterialPropertyType::TEXTURE},
+		{L"metallicMap", 	MaterialPropertyType::TEXTURE},
+		{L"roughnessMap", 	MaterialPropertyType::TEXTURE},
+		{L"normalMap", 		MaterialPropertyType::TEXTURE},
+		
+		{L"diffuseColor", 	MaterialPropertyType::LINEAR_COLOR},
+		{L"emissiveColor", 	MaterialPropertyType::LINEAR_COLOR},
+		
+		{L"metallic", 	MaterialPropertyType::SCALAR},
+		{L"opacity", 	MaterialPropertyType::SCALAR},
+		{L"roughness", 	MaterialPropertyType::SCALAR},
+	};
 
 	UMaterialInstanceDynamic* CreateMaterial(UObject* Outer, UMaterialInterface* Parent, const prt::AttributeMap* MaterialAttributes)
 	{
@@ -122,11 +160,27 @@ namespace
 		wchar_t const* const* Keys = MaterialAttributes->getKeys(&KeyCount);
 		for (int KeyIndex = 0; KeyIndex < KeyCount; KeyIndex++) 
 		{
-			wchar_t const* Key = Keys[KeyIndex];
-			// TODO loading the texture should probably not happen in the game thread
-			if (std::wstring(Key) == L"diffuseMap") MaterialInstance->SetTextureParameterValue(FName(Key), GetTexture(Outer, MaterialAttributes, Key));
-			// TODO handle all keys
-	
+			const wchar_t* Key = Keys[KeyIndex];
+			const std::wstring KeyString(Keys[KeyIndex]);
+			const auto TypeIter = KeyToTypeMap.find(KeyString);
+			if (TypeIter != KeyToTypeMap.end())
+			{
+				const MaterialPropertyType Type = TypeIter->second;
+				switch (Type)
+				{
+				// TODO loading the texture should probably not happen in the game thread
+				case TEXTURE:
+					MaterialInstance->SetTextureParameterValue(FName(Key), GetTexture(Outer, MaterialAttributes, Key));
+					break;
+				case LINEAR_COLOR:
+					MaterialInstance->SetVectorParameterValue(FName(Key), GetLinearColor(MaterialAttributes, Key));
+					break;
+				case SCALAR:
+					MaterialInstance->SetScalarParameterValue(FName(Key), GetScalar(MaterialAttributes, Key));
+					break;
+				default:;
+				}
+			}
 		}
 
 		return MaterialInstance;
