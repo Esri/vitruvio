@@ -16,13 +16,16 @@ class UnrealCallbacks : public IUnrealCallbacks
 	TMap<int32, UStaticMesh*> Meshes;
 	
 	UMaterial* OpaqueParent;
+	UMaterial* MaskedParent;
+	UMaterial* TranslucentParent;
 
 	static const int32 NO_PROTOTYPE_INDEX = -1;
 
 public:
 
 	~UnrealCallbacks() override = default;
-	UnrealCallbacks(AttributeMapBuilderUPtr& AttributeMapBuilder, UMaterial* OpaqueParent) : AttributeMapBuilder(AttributeMapBuilder), OpaqueParent(OpaqueParent)
+	UnrealCallbacks(AttributeMapBuilderUPtr& AttributeMapBuilder, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent)
+		: AttributeMapBuilder(AttributeMapBuilder), OpaqueParent(OpaqueParent), MaskedParent(MaskedParent), TranslucentParent(TranslucentParent)
 	{
 	}
 

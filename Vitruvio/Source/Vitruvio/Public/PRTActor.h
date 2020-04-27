@@ -32,6 +32,12 @@ public:
 	UMaterial* OpaqueParent;
 
 	UPROPERTY(EditAnywhere)
+    UMaterial* MaskedParent;
+
+	UPROPERTY(EditAnywhere)
+	UMaterial* TranslucentParent;
+	
+	UPROPERTY(EditAnywhere)
 	bool GenerateAutomatically = true;
 
 	UFUNCTION(BlueprintCallable)

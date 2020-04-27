@@ -265,8 +265,11 @@ namespace
 
 			case prtx::Material::PT_TEXTURE: {
 				const auto& t = prtxAttr.getTexture(key);
-				const std::wstring p = uriToPath(t);
-				aBuilder->setString(key.c_str(), p.c_str());
+				std::wstring path = uriToPath(t);
+				prtx::WStringVector pw;
+				pw.push_back(path);
+				std::vector<const wchar_t*> ppa = toPtrVec(pw);
+				aBuilder->setStringArray(key.c_str(), ppa.data(), 1);
 				break;
 			}
 

@@ -35,23 +35,29 @@ public:
 	 * \brief Asynchronously generate the models with the given InitialShape, RulePackage and Attributes.
 	 * 
 	 * \param InitialShape
-	 * \param OpaqueParent 
+	 * \param OpaqueParent
+	 * \param MaskedParent
+	 * \param TranslucentParent 
 	 * \param RulePackage 
 	 * \param Attributes 
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API TFuture<FGenerateResult> GenerateAsync(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const;
+	VITRUVIO_API TFuture<FGenerateResult> GenerateAsync(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
+		URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const;
 
 	/**
 	 * \brief Generate the models with the given InitialShape, RulePackage and Attributes.
 	 * 
 	 * \param InitialShape
-	 * \param OpaqueParent 
+	 * \param OpaqueParent
+	 * \param MaskedParent
+	 * \param TranslucentParent 
 	 * \param RulePackage 
 	 * \param Attributes 
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API FGenerateResult Generate(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const;
+	VITRUVIO_API FGenerateResult Generate(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
+		URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const;
 
 	/**
 	 * \brief Asynchronously loads the default attribute values for the given initial shape and rule package
