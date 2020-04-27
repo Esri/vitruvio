@@ -17,6 +17,8 @@ class VITRUVIO_API APRTActor : public AStaticMeshActor
 
 	bool Initialized = false;
 
+	bool Regenerated = false;
+
 public:
 	APRTActor();
 
