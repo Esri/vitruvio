@@ -32,8 +32,8 @@ namespace
 		
 	public:
 		FLoadResolveMapTask(TPromise<ResolveMapSPtr>&& InPromise, FString ResolveMapUri, TMap<FString, ResolveMapSPtr>& ResolveMapCache, FCriticalSection& LoadResolveMapLock):
-			Promise(MoveTemp(InPromise)),
 			ResolveMapUri(ResolveMapUri),
+			Promise(MoveTemp(InPromise)),
 			ResolveMapCache(ResolveMapCache),
 			LoadResolveMapLock(LoadResolveMapLock)
 		{
