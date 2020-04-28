@@ -292,8 +292,6 @@ void VitruvioModule::ShutdownModule()
 		PrtLibrary->destroy();
 	}
 
-	//PrtCache.release();
-
 	delete LogHandler;
 }
 
