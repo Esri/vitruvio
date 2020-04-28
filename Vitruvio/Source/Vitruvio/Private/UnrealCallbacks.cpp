@@ -51,7 +51,8 @@ namespace
 		NewTexture->SRGB = Settings.SRGB;
 
 		// Allocate first mipmap and upload the pixel data
-		FTexture2DMipMap* Mip = new(NewTexture->PlatformData->Mips) FTexture2DMipMap();
+		FTexture2DMipMap* Mip = new FTexture2DMipMap();
+		NewTexture->PlatformData->Mips.Add(Mip);
 		Mip->SizeX = InSizeX;
 		Mip->SizeY = InSizeY;
 		Mip->BulkData.Lock(LOCK_READ_WRITE);
