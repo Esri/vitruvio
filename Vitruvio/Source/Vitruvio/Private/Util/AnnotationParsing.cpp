@@ -10,6 +10,12 @@ namespace
 	constexpr const wchar_t* ANNOT_FILE = L"@File";
 	constexpr const wchar_t* ANNOT_ORDER = L"@Order";
 	constexpr const wchar_t* ANNOT_GROUP = L"@Group";
+
+	constexpr const wchar_t* NULL_KEY = L"#NULL#";
+	constexpr const wchar_t* MIN_KEY = L"min";
+	constexpr const wchar_t* MAX_KEY = L"max";
+	constexpr const wchar_t* STEP_SIZE_KEY = L"stepsize";
+	constexpr const wchar_t* RESTRICTED_KEY = L"restricted";
 	
 	UAttributeAnnotation* ParseEnumAnnotation(const prt::Annotation* Annotation)
 	{
@@ -18,7 +24,34 @@ namespace
 
 	UAttributeAnnotation* ParseRangeAnnotation(const prt::Annotation* Annotation)
 	{
-		return NewObject<URangeAnnotation>();
+		URangeAnnotation* RangeAnnotation = NewObject<URangeAnnotation>();
+		RangeAnnotation->Min = std::numeric_limits<double>::quiet_NaN();
+		RangeAnnotation->Max = std::numeric_limits<double>::quiet_NaN();
+		RangeAnnotation->StepSize = 0.1;
+		
+		for (int ArgIndex = 0; ArgIndex < Annotation->getNumArguments(); ArgIndex++)
+		{
+			const prt::AnnotationArgument* Argument = Annotation->getArgument(ArgIndex);
+			const wchar_t* Key = Argument->getKey();
+			if (std::wcscmp(Key, MIN_KEY) == 0)
+			{
+				RangeAnnotation->Min = Argument->getFloat();
+			}
+			else if (std::wcscmp(Key, MAX_KEY) == 0)
+			{
+				RangeAnnotation->Max = Argument->getFloat();
+			}
+			else if (std::wcscmp(Key, STEP_SIZE_KEY) == 0)
+			{
+				RangeAnnotation->StepSize = Argument->getFloat();
+			}
+			else if (std::wcscmp(Key, RESTRICTED_KEY) == 0)
+			{
+				RangeAnnotation->Restricted = Argument->getBool();
+			}
+		}
+		
+		return RangeAnnotation;
 	}
 
 	UAttributeAnnotation* ParseColorAnnotation(const prt::Annotation* Annotation)

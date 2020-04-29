@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Containers/Array.h"
+#include "prt/Annotation.h"
 #include "UObject/Object.h"
 #include "RuleAttributes.generated.h"
 
@@ -37,9 +38,11 @@ class VITRUVIO_API URangeAnnotation : public UAttributeAnnotation
 	GENERATED_BODY()
 	
 public:
-	float Min;
-	float Max;
+	double Min;
+	double Max;
+	double StepSize; 	
 	bool Restricted;
+
 };
 
 UCLASS()
