@@ -92,19 +92,23 @@ namespace
 		return RangeAnnotation;
 	}
 
-	UAttributeAnnotation* ParseColorAnnotation(const prt::Annotation* Annotation)
-	{
-		return NewObject<UColorAnnotation>();
-	}
-
-	UAttributeAnnotation* ParseDirAnnotation(const prt::Annotation* Annotation)
-	{
-		return NewObject<UFilesystemAnnotation>();
-	}
-
 	UAttributeAnnotation* ParseFileAnnotation(const prt::Annotation* Annotation)
 	{
-		return NewObject<UFilesystemAnnotation>();
+		FString Extensions;
+		for (size_t ArgumentIndex = 0; ArgumentIndex < Annotation->getNumArguments(); ArgumentIndex++) {
+			if (Annotation->getArgument(ArgumentIndex)->getType() == prt::AAT_STR) {
+				Extensions += Annotation->getArgument(ArgumentIndex)->getStr();
+				Extensions += L" (*.";
+				Extensions += Annotation->getArgument(ArgumentIndex)->getStr();
+				Extensions += L");";
+			}
+		}
+		Extensions += L"All Files (*.*)";
+		
+		UFilesystemAnnotation* FilesystemAnnotation = NewObject<UFilesystemAnnotation>();
+		FilesystemAnnotation->Mode = File;
+		FilesystemAnnotation->Extensions = Extensions;
+		return FilesystemAnnotation;
 	}
 
 	int ParseOrder(const prt::Annotation* Annotation)
@@ -142,10 +146,12 @@ UAttributeMetadata* ParseAttributeMetadata(const prt::RuleFileInfo::Entry* Attri
 		}
 		else if (std::wcscmp(Name, ANNOT_COLOR) == 0)
 		{
-			Metadata->Annotation = ParseColorAnnotation(CEAnnotation);
+			Metadata->Annotation = NewObject<UColorAnnotation>();
 		}
 		else if (std::wcscmp(Name, ANNOT_DIR) == 0) {
-			Metadata->Annotation = ParseDirAnnotation(CEAnnotation);
+			UFilesystemAnnotation* FilesystemAnnotation = NewObject<UFilesystemAnnotation>();
+			FilesystemAnnotation->Mode = Directory;
+			Metadata->Annotation = FilesystemAnnotation;
 		}
 		else if (std::wcscmp(Name, ANNOT_FILE) == 0)
 		{

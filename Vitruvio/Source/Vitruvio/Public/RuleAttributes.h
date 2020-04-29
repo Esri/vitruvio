@@ -29,7 +29,7 @@ class VITRUVIO_API UFilesystemAnnotation : public UAttributeAnnotation
 	
 public:
 	EFilesystemMode Mode;
-    TArray<FString> Extensions;
+    FString Extensions;
 };
 
 UCLASS()
