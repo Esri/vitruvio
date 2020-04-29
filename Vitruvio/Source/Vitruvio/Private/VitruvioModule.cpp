@@ -23,6 +23,15 @@ namespace
 {
 	constexpr const wchar_t* ENC_ID_ATTR_EVAL = L"com.esri.prt.core.AttributeEvalEncoder";
 
+	constexpr const wchar_t* ANNOT_RANGE = L"@Range";
+	constexpr const wchar_t* ANNOT_ENUM = L"@Enum";
+	constexpr const wchar_t* ANNOT_HIDDEN = L"@Hidden";
+	constexpr const wchar_t* ANNOT_COLOR = L"@Color";
+	constexpr const wchar_t* ANNOT_DIR = L"@Directory";
+	constexpr const wchar_t* ANNOT_FILE = L"@File";
+	constexpr const wchar_t* ANNOT_ORDER = L"@Order";
+	constexpr const wchar_t* ANNOT_GROUP = L"@Group";
+
 	class FLoadResolveMapTask
 	{
 		FString ResolveMapUri;
@@ -158,6 +167,93 @@ namespace
 		return AttributeMapUPtr(AttributeMapBuilder->createAttributeMap(), PRTDestroyer());
 	}
 
+	UAttributeAnnotation* ParseEnumAnnotation(const prt::Annotation* Annotation)
+	{
+		return NewObject<UEnumAnnotation>();
+	}
+
+	UAttributeAnnotation* ParseRangeAnnotation(const prt::Annotation* Annotation)
+	{
+		return NewObject<URangeAnnotation>();
+	}
+
+	UAttributeAnnotation* ParseColorAnnotation(const prt::Annotation* Annotation)
+	{
+		return NewObject<UColorAnnotation>();
+	}
+
+	UAttributeAnnotation* ParseDirAnnotation(const prt::Annotation* Annotation)
+	{
+		return NewObject<UFilesystemAnnotation>();
+	}
+
+	UAttributeAnnotation* ParseFileAnnotation(const prt::Annotation* Annotation)
+	{
+		return NewObject<UFilesystemAnnotation>();
+	}
+
+	int ParseOrder(const prt::Annotation* Annotation)
+	{
+		return 0;
+	}
+
+	int ParseGroupOrder(const prt::Annotation* Annotation)
+	{
+		return 0;
+	}
+		
+	FAttributeGroups ParseGroups(const prt::Annotation* Annotation)
+	{
+		return {};
+	}
+
+	FAttributeMetadata* ParseAnnotation(const prt::RuleFileInfo::Entry* RuleInfo)
+	{
+		FAttributeMetadata* Metadata = NewObject<FAttributeMetadata>();
+		
+		for (size_t AnnotationIndex = 0; AnnotationIndex < RuleInfo->getNumAnnotations(); ++AnnotationIndex)
+		{
+			const prt::Annotation* CEAnnotation = RuleInfo->getAnnotation(AnnotationIndex);
+			
+			const wchar_t* Name = CEAnnotation->getName();
+			if (std::wcscmp(Name, ANNOT_ENUM) == 0)
+			{
+				Metadata->Annotation = ParseEnumAnnotation(CEAnnotation);
+			}
+			else if (std::wcscmp(Name, ANNOT_RANGE) == 0)
+			{
+				Metadata->Annotation = ParseRangeAnnotation(CEAnnotation);
+			}
+			else if (std::wcscmp(Name, ANNOT_COLOR) == 0)
+			{
+				Metadata->Annotation = ParseColorAnnotation(CEAnnotation);
+			}
+			else if (std::wcscmp(Name, ANNOT_DIR) == 0) {
+				Metadata->Annotation = ParseDirAnnotation(CEAnnotation);
+			}
+			else if (std::wcscmp(Name, ANNOT_FILE) == 0)
+			{
+				Metadata->Annotation = ParseFileAnnotation(CEAnnotation);
+			}
+
+			if (!std::wcscmp(Name, ANNOT_HIDDEN))
+			{
+				Metadata->Hidden = true;
+			}
+			else if (!std::wcscmp(Name, ANNOT_ORDER))
+			{
+				Metadata->Order = ParseOrder(CEAnnotation);
+			}
+			else if (!std::wcscmp(Name, ANNOT_ORDER))
+			{
+				Metadata->Groups = ParseGroups(CEAnnotation);
+				Metadata->GroupOrder = ParseGroupOrder(CEAnnotation);
+			}
+		}
+
+		return Metadata;
+	}
+
 	TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo)
 	{
 		TMap<FString, URuleAttribute*> Attributes;
@@ -165,7 +261,6 @@ namespace
 		{
 			const prt::RuleFileInfo::Entry* AttrInfo = RuleInfo->getAttribute(AttributeIndex);
 			const std::wstring Name(AttrInfo->getName());
-
 			if (Attributes.Contains(Name.c_str()))
 			{
 				continue;
