@@ -269,7 +269,8 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 	}
 
 	const auto VertexUVs = Attributes.GetVertexInstanceUVs();
-	Attributes.GetVertexInstanceUVs().SetNumIndices(uvSets);
+	// Need at least 1 uv set (can be empty) otherwise will crash when building the mesh
+	Attributes.GetVertexInstanceUVs().SetNumIndices(FMath::Max(static_cast<size_t>(1), uvSets));
 
 	// Convert vertices and vertex instances
 	const auto VertexPositions = Attributes.GetVertexPositions();
