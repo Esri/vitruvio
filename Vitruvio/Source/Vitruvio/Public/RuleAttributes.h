@@ -1,17 +1,34 @@
 #pragma once
 
 #include "Containers/Array.h"
-#include "Misc/TVariant.h"
 #include "UObject/Object.h"
 #include "RuleAttributes.generated.h"
 
 using FAttributeGroups = TArray<FString>;
 
+UENUM()
+enum EFilesystemMode { File, Directory };
+
 UCLASS()
 class VITRUVIO_API UAttributeAnnotation : public UObject
 {
 	GENERATED_BODY()
+};
+
+UCLASS()
+class VITRUVIO_API UColorAnnotation : public UAttributeAnnotation
+{
+	GENERATED_BODY()
+};
+
+UCLASS()
+class VITRUVIO_API UFilesystemAnnotation : public UAttributeAnnotation
+{
+	GENERATED_BODY()
 	
+public:
+	EFilesystemMode Mode;
+    TArray<FString> Extensions;
 };
 
 UCLASS()
@@ -21,31 +38,8 @@ class VITRUVIO_API URangeAnnotation : public UAttributeAnnotation
 	
 public:
 	float Min;
-	float Max; 
-};
-
-UCLASS()
-class UAnnotationArgument : public UObject
-{
-	GENERATED_BODY()
-
-	TVariant<FString, bool, double> Value;
-public:
-	
-	float GetFloat() const
-	{
-		return Value.Get<double>();
-	}
-	
-	FString GetString() const
-	{
-		return Value.Get<FString>();
-	}
-
-	bool GetBool() const
-	{
-		return Value.Get<bool>();
-	}
+	float Max;
+	bool Restricted;
 };
 
 UCLASS()
@@ -54,7 +48,26 @@ class VITRUVIO_API UEnumAnnotation : public UAttributeAnnotation
 	GENERATED_BODY()
 
 public:
-	TArray<UAnnotationArgument> Arguments;
+	TArray<bool> BoolValues;
+	TArray<FString> StringValues;
+	TArray<float> FloatValues;
+	bool Restricted;
+};
+
+USTRUCT()
+struct FAttributeMetadata
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	UAttributeAnnotation* Annotation;
+	
+	FString Description;
+	FAttributeGroups Groups;
+	int Order;
+	int GroupOrder;
+
+	bool Hidden;
 };
 
 UCLASS()
@@ -65,9 +78,7 @@ class VITRUVIO_API URuleAttribute : public UObject
 public:
 	FString Name;
 
-	UPROPERTY()
-	UAttributeAnnotation* Annotation;
-	FAttributeGroups Groups;
+	FAttributeMetadata Metadata;
 };
 
 UCLASS()
