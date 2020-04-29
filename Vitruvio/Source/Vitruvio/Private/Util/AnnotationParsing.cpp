@@ -19,7 +19,45 @@ namespace
 	
 	UAttributeAnnotation* ParseEnumAnnotation(const prt::Annotation* Annotation)
 	{
-		return NewObject<UEnumAnnotation>();
+		UEnumAnnotation* EnumAnnotation = NewObject<UEnumAnnotation>();
+		
+		for (size_t ArgumentIndex = 0; ArgumentIndex < Annotation->getNumArguments(); ArgumentIndex++) {
+
+			const wchar_t* Key = Annotation->getArgument(ArgumentIndex)->getKey();
+			if (std::wcscmp(Key, NULL_KEY) != 0) {
+				if (std::wcscmp(Key, RESTRICTED_KEY) == 0) {
+					EnumAnnotation->Restricted = Annotation->getArgument(ArgumentIndex)->getBool();
+				}
+				continue;
+			}
+
+			switch (Annotation->getArgument(ArgumentIndex)->getType()) {
+				case prt::AAT_BOOL: {
+					bool Value = Annotation->getArgument(ArgumentIndex)->getBool();
+					EnumAnnotation->BoolValues.Add(Value);
+					EnumAnnotation->FloatValues.Add(std::numeric_limits<double>::quiet_NaN());
+					EnumAnnotation->StringValues.Add(L"");
+					break;
+				}
+				case prt::AAT_FLOAT: {
+					double Value = Annotation->getArgument(ArgumentIndex)->getFloat();
+					EnumAnnotation->BoolValues.Add(false);
+					EnumAnnotation->FloatValues.Add(Value);
+					EnumAnnotation->StringValues.Add(L"");
+					break;
+				}
+				case prt::AAT_STR: {
+					const wchar_t* Value = Annotation->getArgument(ArgumentIndex)->getStr();
+					EnumAnnotation->BoolValues.Add(false);
+					EnumAnnotation->FloatValues.Add(std::numeric_limits<double>::quiet_NaN());
+					EnumAnnotation->StringValues.Add(Value);
+					break;
+				}
+			default:
+                break;
+			}
+		}
+		return EnumAnnotation;
 	}
 
 	UAttributeAnnotation* ParseRangeAnnotation(const prt::Annotation* Annotation)

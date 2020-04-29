@@ -53,7 +53,7 @@ class VITRUVIO_API UEnumAnnotation : public UAttributeAnnotation
 public:
 	TArray<bool> BoolValues;
 	TArray<FString> StringValues;
-	TArray<float> FloatValues;
+	TArray<double> FloatValues;
 	bool Restricted;
 };
 
