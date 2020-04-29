@@ -54,11 +54,12 @@ public:
 	bool Restricted;
 };
 
-USTRUCT()
-struct FAttributeMetadata
+UCLASS()
+class VITRUVIO_API UAttributeMetadata : public UObject
 {
 	GENERATED_BODY()
 
+public:
 	UPROPERTY()
 	UAttributeAnnotation* Annotation;
 	
@@ -78,7 +79,8 @@ class VITRUVIO_API URuleAttribute : public UObject
 public:
 	FString Name;
 
-	FAttributeMetadata Metadata;
+	UPROPERTY()
+	UAttributeMetadata* Metadata;
 };
 
 UCLASS()

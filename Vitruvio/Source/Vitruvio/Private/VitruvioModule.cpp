@@ -1,8 +1,6 @@
 #include "VitruvioModule.h"
 
 #include "prt/API.h"
-#include "prt/MemoryOutputCallbacks.h"
-
 #include "Core.h"
 #include "Interfaces/IPluginManager.h"
 #include "MeshDescription.h"
@@ -13,6 +11,7 @@
 #include "PRTTypes.h"
 #include "prtx/EncoderInfoBuilder.h"
 #include "PRTUtils.h"
+#include "Util/AnnotationParsing.h"
 #include "UnrealResolveMapProvider.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioModule"
@@ -22,15 +21,6 @@ DEFINE_LOG_CATEGORY(LogUnrealPrt);
 namespace
 {
 	constexpr const wchar_t* ENC_ID_ATTR_EVAL = L"com.esri.prt.core.AttributeEvalEncoder";
-
-	constexpr const wchar_t* ANNOT_RANGE = L"@Range";
-	constexpr const wchar_t* ANNOT_ENUM = L"@Enum";
-	constexpr const wchar_t* ANNOT_HIDDEN = L"@Hidden";
-	constexpr const wchar_t* ANNOT_COLOR = L"@Color";
-	constexpr const wchar_t* ANNOT_DIR = L"@Directory";
-	constexpr const wchar_t* ANNOT_FILE = L"@File";
-	constexpr const wchar_t* ANNOT_ORDER = L"@Order";
-	constexpr const wchar_t* ANNOT_GROUP = L"@Group";
 
 	class FLoadResolveMapTask
 	{
@@ -114,33 +104,6 @@ namespace
 		}
 	}
 
-	AttributeMapUPtr GetDefaultAttributeValues(const std::wstring& RuleFile, const std::wstring& StartRule, const ResolveMapSPtr& ResolveMapPtr, const UStaticMesh* InitialShape)
-	{
-
-		AttributeMapBuilderUPtr UnrealCallbacksAttributeBuilder(prt::AttributeMapBuilder::create());
-		UnrealCallbacks UnrealCallbacks(UnrealCallbacksAttributeBuilder, nullptr, nullptr, nullptr);
-
-		InitialShapeBuilderUPtr InitialShapeBuilder(prt::InitialShapeBuilder::create());
-
-		SetInitialShapeGeometry(InitialShapeBuilder, InitialShape);
-
-		// TODO calculate random seed
-		const int32_t RandomSeed = 0;
-		const AttributeMapUPtr EmptyAttributes(AttributeMapBuilderUPtr(prt::AttributeMapBuilder::create())->createAttributeMap());
-		InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", EmptyAttributes.get(), ResolveMapPtr.get());
-
-		const InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShapeAndReset());
-		const InitialShapeNOPtrVector InitialShapes = {Shape.get()};
-
-		const std::vector<const wchar_t*> EncoderIds = {ENC_ID_ATTR_EVAL};
-		const AttributeMapUPtr AttributeEncodeOptions = prtu::createValidatedOptions(ENC_ID_ATTR_EVAL);
-		const AttributeMapNOPtrVector EncoderOptions = {AttributeEncodeOptions.get()};
-
-		prt::generate(InitialShapes.data(), InitialShapes.size(), nullptr, EncoderIds.data(), EncoderIds.size(), EncoderOptions.data(), &UnrealCallbacks, nullptr, nullptr);
-
-		return AttributeMapUPtr(UnrealCallbacksAttributeBuilder->createAttributeMap());
-	}
-
 	AttributeMapUPtr CreateAttributeMap(const TMap<FString, URuleAttribute*>& Attributes)
 	{
 		AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
@@ -167,91 +130,64 @@ namespace
 		return AttributeMapUPtr(AttributeMapBuilder->createAttributeMap(), PRTDestroyer());
 	}
 
-	UAttributeAnnotation* ParseEnumAnnotation(const prt::Annotation* Annotation)
+	AttributeMapUPtr GetDefaultAttributeValues(const std::wstring& RuleFile, const std::wstring& StartRule, const ResolveMapSPtr& ResolveMapPtr, const UStaticMesh* InitialShape)
 	{
-		return NewObject<UEnumAnnotation>();
+		AttributeMapBuilderUPtr UnrealCallbacksAttributeBuilder(prt::AttributeMapBuilder::create());
+		UnrealCallbacks UnrealCallbacks(UnrealCallbacksAttributeBuilder, nullptr, nullptr, nullptr);
+
+		InitialShapeBuilderUPtr InitialShapeBuilder(prt::InitialShapeBuilder::create());
+
+		SetInitialShapeGeometry(InitialShapeBuilder, InitialShape);
+
+		// TODO calculate random seed
+		const int32_t RandomSeed = 0;
+		const AttributeMapUPtr EmptyAttributes(AttributeMapBuilderUPtr(prt::AttributeMapBuilder::create())->createAttributeMap());
+		InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", EmptyAttributes.get(), ResolveMapPtr.get());
+
+		const InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShapeAndReset());
+		const InitialShapeNOPtrVector InitialShapes = {Shape.get()};
+
+		const std::vector<const wchar_t*> EncoderIds = {ENC_ID_ATTR_EVAL};
+		const AttributeMapUPtr AttributeEncodeOptions = prtu::createValidatedOptions(ENC_ID_ATTR_EVAL);
+		const AttributeMapNOPtrVector EncoderOptions = {AttributeEncodeOptions.get()};
+
+		prt::generate(InitialShapes.data(), InitialShapes.size(), nullptr, EncoderIds.data(), EncoderIds.size(), EncoderOptions.data(), &UnrealCallbacks, nullptr, nullptr);
+
+		return AttributeMapUPtr(UnrealCallbacksAttributeBuilder->createAttributeMap());
 	}
 
-	UAttributeAnnotation* ParseRangeAnnotation(const prt::Annotation* Annotation)
+	URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt::RuleFileInfo::Entry* AttrInfo)
 	{
-		return NewObject<URangeAnnotation>();
-	}
-
-	UAttributeAnnotation* ParseColorAnnotation(const prt::Annotation* Annotation)
-	{
-		return NewObject<UColorAnnotation>();
-	}
-
-	UAttributeAnnotation* ParseDirAnnotation(const prt::Annotation* Annotation)
-	{
-		return NewObject<UFilesystemAnnotation>();
-	}
-
-	UAttributeAnnotation* ParseFileAnnotation(const prt::Annotation* Annotation)
-	{
-		return NewObject<UFilesystemAnnotation>();
-	}
-
-	int ParseOrder(const prt::Annotation* Annotation)
-	{
-		return 0;
-	}
-
-	int ParseGroupOrder(const prt::Annotation* Annotation)
-	{
-		return 0;
-	}
-		
-	FAttributeGroups ParseGroups(const prt::Annotation* Annotation)
-	{
-		return {};
-	}
-
-	FAttributeMetadata* ParseAnnotation(const prt::RuleFileInfo::Entry* RuleInfo)
-	{
-		FAttributeMetadata* Metadata = NewObject<FAttributeMetadata>();
-		
-		for (size_t AnnotationIndex = 0; AnnotationIndex < RuleInfo->getNumAnnotations(); ++AnnotationIndex)
+		const std::wstring Name(AttrInfo->getName());
+		switch (AttrInfo->getReturnType())
 		{
-			const prt::Annotation* CEAnnotation = RuleInfo->getAnnotation(AnnotationIndex);
-			
-			const wchar_t* Name = CEAnnotation->getName();
-			if (std::wcscmp(Name, ANNOT_ENUM) == 0)
-			{
-				Metadata->Annotation = ParseEnumAnnotation(CEAnnotation);
-			}
-			else if (std::wcscmp(Name, ANNOT_RANGE) == 0)
-			{
-				Metadata->Annotation = ParseRangeAnnotation(CEAnnotation);
-			}
-			else if (std::wcscmp(Name, ANNOT_COLOR) == 0)
-			{
-				Metadata->Annotation = ParseColorAnnotation(CEAnnotation);
-			}
-			else if (std::wcscmp(Name, ANNOT_DIR) == 0) {
-				Metadata->Annotation = ParseDirAnnotation(CEAnnotation);
-			}
-			else if (std::wcscmp(Name, ANNOT_FILE) == 0)
-			{
-				Metadata->Annotation = ParseFileAnnotation(CEAnnotation);
-			}
-
-			if (!std::wcscmp(Name, ANNOT_HIDDEN))
-			{
-				Metadata->Hidden = true;
-			}
-			else if (!std::wcscmp(Name, ANNOT_ORDER))
-			{
-				Metadata->Order = ParseOrder(CEAnnotation);
-			}
-			else if (!std::wcscmp(Name, ANNOT_ORDER))
-			{
-				Metadata->Groups = ParseGroups(CEAnnotation);
-				Metadata->GroupOrder = ParseGroupOrder(CEAnnotation);
-			}
+		case prt::AAT_BOOL:
+		{
+			UBoolAttribute* BoolAttribute = NewObject<UBoolAttribute>();
+			BoolAttribute->Value = AttributeMap->getBool(Name.c_str());
+			return BoolAttribute;
 		}
-
-		return Metadata;
+		case prt::AAT_INT:
+		case prt::AAT_FLOAT:
+			{
+				UFloatAttribute* FloatAttribute = NewObject<UFloatAttribute>();
+				FloatAttribute->Value = AttributeMap->getFloat(Name.c_str());
+				return FloatAttribute;
+			}
+		case prt::AAT_STR:
+			{
+				UStringAttribute* StringAttribute = NewObject<UStringAttribute>();
+				StringAttribute->Value = AttributeMap->getString(Name.c_str());
+				return StringAttribute;
+			}
+		case prt::AAT_UNKNOWN:
+		case prt::AAT_VOID:
+		case prt::AAT_BOOL_ARRAY:
+		case prt::AAT_FLOAT_ARRAY:
+		case prt::AAT_STR_ARRAY:
+		default:
+			return nullptr;
+		}
 	}
 
 	TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo)
@@ -266,52 +202,14 @@ namespace
 				continue;
 			}
 
-			URuleAttribute* Attribute = nullptr;
-
-			switch (AttrInfo->getReturnType())
-			{
-			// TODO implement all types as well as annotation parsing (see:
-			// https://github.com/Esri/serlio/blob/b293b660034225371101ef1e9a3d9cfafb3c5382/src/serlio/prtModifier/PRTModifierAction.cpp#L358)
-			case prt::AAT_BOOL:
-			{
-				UBoolAttribute* BoolAttribute = NewObject<UBoolAttribute>();
-				BoolAttribute->Value = AttributeMap->getBool(Name.c_str());
-				Attribute = BoolAttribute;
-				break;
-			}
-			case prt::AAT_FLOAT:
-			{
-				UFloatAttribute* FloatAttribute = NewObject<UFloatAttribute>();
-				FloatAttribute->Value = AttributeMap->getFloat(Name.c_str());
-				Attribute = FloatAttribute;
-				break;
-			}
-			case prt::AAT_STR:
-			{
-				UStringAttribute* StringAttribute = NewObject<UStringAttribute>();
-				StringAttribute->Value = AttributeMap->getString(Name.c_str());
-				Attribute = StringAttribute;
-				break;
-			}
-			case prt::AAT_INT:
-				break;
-			case prt::AAT_UNKNOWN:
-				break;
-			case prt::AAT_VOID:
-				break;
-			case prt::AAT_BOOL_ARRAY:
-				break;
-			case prt::AAT_FLOAT_ARRAY:
-				break;
-			case prt::AAT_STR_ARRAY:
-				break;
-			default:;
-			}
+			URuleAttribute* Attribute = CreateAttribute(AttributeMap, AttrInfo);
 
 			if (Attribute)
 			{
 				FString AttributeName = Name.c_str();
 				Attribute->Name = AttributeName;
+				Attribute->Metadata = ParseAttributeMetadata(AttrInfo);
+				
 				Attributes.Add(AttributeName, Attribute);
 			}
 		}
