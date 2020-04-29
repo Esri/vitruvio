@@ -161,32 +161,32 @@ namespace
 		const std::wstring Name(AttrInfo->getName());
 		switch (AttrInfo->getReturnType())
 		{
-		case prt::AAT_BOOL:
-		{
-			UBoolAttribute* BoolAttribute = NewObject<UBoolAttribute>();
-			BoolAttribute->Value = AttributeMap->getBool(Name.c_str());
-			return BoolAttribute;
-		}
-		case prt::AAT_INT:
-		case prt::AAT_FLOAT:
+			case prt::AAT_BOOL:
+			{
+				UBoolAttribute* BoolAttribute = NewObject<UBoolAttribute>();
+				BoolAttribute->Value = AttributeMap->getBool(Name.c_str());
+				return BoolAttribute;
+			}
+			case prt::AAT_INT:
+			case prt::AAT_FLOAT:
 			{
 				UFloatAttribute* FloatAttribute = NewObject<UFloatAttribute>();
 				FloatAttribute->Value = AttributeMap->getFloat(Name.c_str());
 				return FloatAttribute;
 			}
-		case prt::AAT_STR:
+			case prt::AAT_STR:
 			{
 				UStringAttribute* StringAttribute = NewObject<UStringAttribute>();
 				StringAttribute->Value = AttributeMap->getString(Name.c_str());
 				return StringAttribute;
 			}
-		case prt::AAT_UNKNOWN:
-		case prt::AAT_VOID:
-		case prt::AAT_BOOL_ARRAY:
-		case prt::AAT_FLOAT_ARRAY:
-		case prt::AAT_STR_ARRAY:
-		default:
-			return nullptr;
+			case prt::AAT_UNKNOWN:
+			case prt::AAT_VOID:
+			case prt::AAT_BOOL_ARRAY:
+			case prt::AAT_FLOAT_ARRAY:
+			case prt::AAT_STR_ARRAY:
+			default:
+				return nullptr;
 		}
 	}
 
