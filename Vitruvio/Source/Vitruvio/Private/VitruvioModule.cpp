@@ -344,7 +344,8 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(const std::wstring& 
 	return Future;
 }
 
-FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
+FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
+	URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
 {
 	check(InitialShape);
 	check(RulePackage);
@@ -410,7 +411,7 @@ TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const UStaticMesh* Initia
 	return Async(EAsyncExecution::Thread, [=]() -> FGenerateResult
 	{
 		return Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, Attributes);
-	});
+  	});
 }
 
 TFuture<TMap<FString, URuleAttribute*>> VitruvioModule::LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage) const
