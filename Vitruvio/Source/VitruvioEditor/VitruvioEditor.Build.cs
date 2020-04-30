@@ -24,7 +24,8 @@ public class VitruvioEditor : ModuleRules
 				"AppFramework",
 				"CoreUObject",
 				"InputCore",
-				"UnrealEd"
+				"UnrealEd",
+				"EditorStyle"
 			}
 		);
 			
