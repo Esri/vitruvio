@@ -24,9 +24,12 @@ class VITRUVIO_API APRTActor : public AStaticMeshActor
 public:
 	APRTActor();
 
-	UPROPERTY(EditAnywhere, DisplayName = "Rule Package")
+	UPROPERTY(EditAnywhere, DisplayName = "Rule Package", Category="CGA Rules")
 	URulePackage* Rpk;
 
+	UPROPERTY(EditAnywhere, Category="CGA Rules")
+	int32 RandomSeed;
+	
 	UPROPERTY(EditAnywhere)
 	TMap<FString, URuleAttribute*> Attributes;
 
@@ -51,10 +54,10 @@ protected:
 
 public:
 	void Tick(float DeltaTime) override;
-
-#ifdef WITH_EDITOR
+	
+	
+#if WITH_EDITOR
 	void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-
 	bool ShouldTickIfViewportsOnly() const override;
 #endif
 };

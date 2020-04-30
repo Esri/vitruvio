@@ -1,9 +1,11 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "PRTActor.h"
-#include "UnrealGeometryEncoderModule.h"
+
+#include "ObjectEditorUtils.h"
 #include "VitruvioModule.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
+#include "PropertyEditor/Private/DetailPropertyRow.h"
 
 APRTActor::APRTActor()
 {
@@ -22,12 +24,22 @@ void APRTActor::BeginPlay()
 void APRTActor::LoadDefaultAttributes(UStaticMesh* InitialShape)
 {
 	AttributesReady = false;
-	Attributes.Empty();
+	
 	AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk);
 	AttributesFuture.Next([this](const TMap<FString, URuleAttribute*>& Result) {
+		
 		Attributes = Result;
 		AttributesReady = true;
 
+#if WITH_EDITOR
+		// Notify possible listeners (eg. Details panel) about changes to the Attributes
+		FFunctionGraphTask::CreateAndDispatchWhenReady([this, &Result]()
+		{
+		    FPropertyChangedEvent PropertyEvent(GetClass()->FindPropertyByName(GET_MEMBER_NAME_CHECKED(APRTActor, Attributes)));
+			FCoreUObjectDelegates::OnObjectPropertyChanged.Broadcast(this, PropertyEvent);
+		}, TStatId(), nullptr, ENamedThreads::GameThread);
+#endif
+		
 		if (GenerateAutomatically)
 		{
 			Regenerate();
@@ -118,7 +130,7 @@ void APRTActor::Regenerate()
 	}
 }
 
-#ifdef WITH_EDITOR
+#if WITH_EDITOR
 void APRTActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
