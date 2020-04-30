@@ -148,7 +148,8 @@ UAttributeMetadata* ParseAttributeMetadata(const prt::RuleFileInfo::Entry* Attri
 		{
 			Metadata->Annotation = NewObject<UColorAnnotation>();
 		}
-		else if (std::wcscmp(Name, ANNOT_DIR) == 0) {
+		else if (std::wcscmp(Name, ANNOT_DIR) == 0)
+		{
 			UFilesystemAnnotation* FilesystemAnnotation = NewObject<UFilesystemAnnotation>();
 			FilesystemAnnotation->Mode = Directory;
 			Metadata->Annotation = FilesystemAnnotation;
