@@ -16,8 +16,10 @@ class VITRUVIO_API APRTActor : public AStaticMeshActor
 	GENERATED_BODY()
 
 	bool Initialized = false;
-
 	bool Regenerated = false;
+	bool AttributesReady = false;
+	
+	TFuture<TMap<FString, URuleAttribute*>> AttributesFuture;
 
 public:
 	APRTActor();
@@ -26,7 +28,7 @@ public:
 	URulePackage* Rpk;
 
 	UPROPERTY(EditAnywhere)
-	TMap<FString, URuleAttribute*> GenerateAttributes;
+	TMap<FString, URuleAttribute*> Attributes;
 
 	UPROPERTY(EditAnywhere)
 	UMaterial* OpaqueParent;
@@ -45,6 +47,7 @@ public:
 
 protected:
 	void BeginPlay() override;
+	void LoadDefaultAttributes(UStaticMesh* InitialShape);
 
 public:
 	void Tick(float DeltaTime) override;
