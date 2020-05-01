@@ -56,6 +56,35 @@ namespace prtu
 		return {};
 	}
 
+	constexpr wchar_t STYLE_DELIMITER = L'$';
+	constexpr wchar_t IMPORT_DELIMITER = L'.';
+
+	inline std::wstring getStyle(const std::wstring& fqRuleName) {
+		const auto sepPos = fqRuleName.find(STYLE_DELIMITER);
+		if (sepPos == std::wstring::npos || sepPos == 0)
+			return {};
+		return fqRuleName.substr(0, sepPos);
+	}
+
+	inline std::wstring removePrefix(const std::wstring& fqRuleName, wchar_t delim) {
+		const auto sepPos = fqRuleName.find(delim);
+		if (sepPos == std::wstring::npos)
+			return fqRuleName;
+		if (sepPos == fqRuleName.length() - 1)
+			return {};
+		if (fqRuleName.length() <= 1)
+			return {};
+		return fqRuleName.substr(sepPos + 1);
+	}
+
+	inline std::wstring removeStyle(const std::wstring& fqRuleName) {
+		return removePrefix(fqRuleName, STYLE_DELIMITER);
+	}
+
+	inline std::wstring removeImport(const std::wstring& fqRuleName) {
+		return removePrefix(fqRuleName, IMPORT_DELIMITER);
+	}
+
 	inline AttributeMapUPtr createValidatedOptions(const wchar_t* encID, const prt::AttributeMap* unvalidatedOptions = nullptr)
 	{
 		const EncoderInfoUPtr encInfo(prt::createEncoderInfo(encID));
