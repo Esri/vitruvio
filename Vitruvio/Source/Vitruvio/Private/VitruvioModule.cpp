@@ -207,7 +207,9 @@ namespace
 			if (Attribute)
 			{
 				FString AttributeName = Name.c_str();
+				FString DisplayName = prtu::removeImport(prtu::removeStyle(Name.c_str())).c_str();
 				Attribute->Name = AttributeName;
+				Attribute->DisplayName = DisplayName;
 				Attribute->Metadata = ParseAttributeMetadata(AttrInfo);
 				
 				Attributes.Add(AttributeName, Attribute);

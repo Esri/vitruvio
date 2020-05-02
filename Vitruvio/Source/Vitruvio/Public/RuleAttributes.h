@@ -81,6 +81,7 @@ class VITRUVIO_API URuleAttribute : public UObject
 
 public:
 	FString Name;
+	FString DisplayName;
 
 	UPROPERTY()
 	UAttributeMetadata* Metadata;

@@ -33,7 +33,7 @@ namespace
 		.Content()
            [
                SNew(STextBlock)
-               .Text(FText::FromString(Attribute->Name))
+               .Text(FText::FromString(Attribute->DisplayName))
                .Font(IDetailLayoutBuilder::GetDetailFont())
            ];
 		return NameWidget;
