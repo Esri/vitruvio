@@ -11,19 +11,33 @@
 
 namespace
 {
-	TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(UFloatAttribute* Attribute)
-	{
-		auto ValueWidget = SNew(SSpinBox<double>)
-            .Font(IDetailLayoutBuilder::GetDetailFont());
 
+	TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(UFloatAttribute* Attribute, APRTActor* PrtActor)
+	{
 		URangeAnnotation* RangeAnnotation = Cast<URangeAnnotation>(Attribute->Metadata->Annotation);
+		const TOptional<double> MaxValue = RangeAnnotation ? RangeAnnotation->Max : TOptional<double>();
+		const TOptional<double> MinValue = RangeAnnotation ? RangeAnnotation->Min : TOptional<double>();
+
+		auto OnCommit = [PrtActor, Attribute](double Value, ETextCommit::Type Type) -> void
+		{
+			Attribute->Value = Value;
+			PrtActor->Regenerate();
+		};
+		
+		auto ValueWidget = SNew(SSpinBox<double>)
+            .Font(IDetailLayoutBuilder::GetDetailFont())
+			.MinValue(MinValue)
+			.MaxValue(MaxValue)
+			.OnValueCommitted_Lambda(OnCommit)
+			.SliderExponent(1);
+
 		if (RangeAnnotation)
 		{
-			ValueWidget->SetMinValue(RangeAnnotation->Min);
-			ValueWidget->SetMaxValue(RangeAnnotation->Max);
 			ValueWidget->SetDelta(RangeAnnotation->StepSize);
 		}
-
+		
+		ValueWidget->SetValue(Attribute->Value);
+		
 		return ValueWidget;
 	}
 	
@@ -39,7 +53,7 @@ namespace
 		return NameWidget;
 	}
 	
-	void BuildAttributeEditor(IDetailLayoutBuilder& DetailBuilder, const APRTActor* PrtActor)
+	void BuildAttributeEditor(IDetailLayoutBuilder& DetailBuilder, APRTActor* PrtActor)
 	{
 		if (!PrtActor || !PrtActor->Rpk) return;
 
@@ -52,7 +66,7 @@ namespace
 			Row.NameContent() [ CreateNameWidget(Attribute).ToSharedRef() ];
 			if (UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
 			{
-				Row.ValueContent() [ CreateNumericInputWidget(FloatAttribute).ToSharedRef() ];
+				Row.ValueContent() [ CreateNumericInputWidget(FloatAttribute, PrtActor).ToSharedRef() ];
 			}
 		}
 		
