@@ -102,7 +102,7 @@ class VITRUVIO_API UFloatAttribute : public URuleAttribute
 	GENERATED_BODY()
 
 public:
-	float Value;
+	double Value;
 
 };
 
