@@ -3,4 +3,4 @@
 #include "PRTTypes.h"
 #include "RuleAttributes.h"
 
-UAttributeMetadata* ParseAttributeMetadata(const prt::RuleFileInfo::Entry* AttributeInfo);
+void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, URuleAttribute& InAttribute);

@@ -1,5 +1,6 @@
 #include "AnnotationParsing.h"
 #include "PRTUtils.h"
+
 #include <memory>
 
 namespace
@@ -130,10 +131,8 @@ namespace
 	}
 }
 
-UAttributeMetadata* ParseAttributeMetadata(const prt::RuleFileInfo::Entry* AttributeInfo)
+void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, URuleAttribute& InAttribute)
 {
-	UAttributeMetadata* Metadata = NewObject<UAttributeMetadata>();
-	
 	for (size_t AnnotationIndex = 0; AnnotationIndex < AttributeInfo->getNumAnnotations(); ++AnnotationIndex)
 	{
 		const prt::Annotation* CEAnnotation = AttributeInfo->getAnnotation(AnnotationIndex);
@@ -144,46 +143,44 @@ UAttributeMetadata* ParseAttributeMetadata(const prt::RuleFileInfo::Entry* Attri
 			switch(GetEnumAnnotationType(CEAnnotation))
 			{
 			case prt::AAT_FLOAT:
-				Metadata->Annotation = ParseEnumAnnotation<double>(CEAnnotation);
+				InAttribute.SetAnnotation(ParseEnumAnnotation<double>(CEAnnotation));
 				break;
 			case prt::AAT_STR:
-				Metadata->Annotation = ParseEnumAnnotation<FString>(CEAnnotation);
+				InAttribute.SetAnnotation(ParseEnumAnnotation<FString>(CEAnnotation));
 				break;
 			 default:
-				Metadata->Annotation = nullptr;
+				InAttribute.SetAnnotation({});
 				break;
 			}
 			
 		}
 		else if (std::wcscmp(Name, ANNOT_RANGE) == 0)
 		{
-			Metadata->Annotation = ParseRangeAnnotation(CEAnnotation);
+			InAttribute.SetAnnotation(ParseRangeAnnotation(CEAnnotation));
 		}
 		else if (std::wcscmp(Name, ANNOT_DIR) == 0)
 		{
 			auto Annotation = std::make_shared<FilesystemAnnotation>();
 			Annotation->Mode = Directory;
-			Metadata->Annotation = Annotation;
+			InAttribute.SetAnnotation(Annotation);
 		}
 		else if (std::wcscmp(Name, ANNOT_FILE) == 0)
 		{
-			Metadata->Annotation = ParseFileAnnotation(CEAnnotation);
+			InAttribute.SetAnnotation(ParseFileAnnotation(CEAnnotation));
 		}
 
 		if (!std::wcscmp(Name, ANNOT_HIDDEN))
 		{
-			Metadata->Hidden = true;
+			InAttribute.Hidden = true;
 		}
 		else if (!std::wcscmp(Name, ANNOT_ORDER))
 		{
-			Metadata->Order = ParseOrder(CEAnnotation);
+			InAttribute.Order = ParseOrder(CEAnnotation);
 		}
 		else if (!std::wcscmp(Name, ANNOT_GROUP))
 		{
-			Metadata->Groups = ParseGroups(CEAnnotation);
-			Metadata->GroupOrder = ParseGroupOrder(CEAnnotation);
+			InAttribute.Groups = ParseGroups(CEAnnotation);
+			InAttribute.GroupOrder = ParseGroupOrder(CEAnnotation);
 		}
 	}
-
-	return Metadata;
 }

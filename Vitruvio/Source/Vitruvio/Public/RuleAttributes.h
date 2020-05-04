@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Containers/Array.h"
-#include "prt/Annotation.h"
 #include "UObject/Object.h"
 #include "RuleAttributes.generated.h"
 
@@ -40,12 +39,16 @@ public:
 };
 
 UCLASS()
-class VITRUVIO_API UAttributeMetadata : public UObject
+class VITRUVIO_API URuleAttribute : public UObject
 {
 	GENERATED_BODY()
 	
-public:
+protected:
 	std::shared_ptr<AttributeAnnotation> Annotation;
+	
+public:
+	FString Name;
+	FString DisplayName;
 
 	FString Description;
 	FAttributeGroups Groups;
@@ -53,19 +56,11 @@ public:
 	int GroupOrder;
 
 	bool Hidden;
-};
 
-UCLASS()
-class VITRUVIO_API URuleAttribute : public UObject
-{
-	GENERATED_BODY()
-
-public:
-	FString Name;
-	FString DisplayName;
-
-	UPROPERTY()
-	UAttributeMetadata* Metadata;
+	void SetAnnotation(std::shared_ptr<AttributeAnnotation> InAnnotation)
+	{
+		this->Annotation = std::move(InAnnotation);
+	}
 };
 
 UCLASS()
@@ -78,7 +73,7 @@ public:
 
 	std::shared_ptr<EnumAnnotation<FString>> GetEnumAnnotation() const
 	{
-		return std::dynamic_pointer_cast<EnumAnnotation<FString>>(Metadata->Annotation);
+		return std::dynamic_pointer_cast<EnumAnnotation<FString>>(Annotation);
 	}
 };
 
@@ -92,12 +87,12 @@ public:
 
 	std::shared_ptr<EnumAnnotation<double>> GetEnumAnnotation() const
 	{
-		return std::dynamic_pointer_cast<EnumAnnotation<double>>(Metadata->Annotation);
+		return std::dynamic_pointer_cast<EnumAnnotation<double>>(Annotation);
 	}
 
 	std::shared_ptr<RangeAnnotation> GetRangeAnnotation() const
 	{
-		return std::dynamic_pointer_cast<RangeAnnotation>(Metadata->Annotation);
+		return std::dynamic_pointer_cast<RangeAnnotation>(Annotation);
 	}
 };
 
