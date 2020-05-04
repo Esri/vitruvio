@@ -1,8 +1,6 @@
 #include "AnnotationParsing.h"
 #include "PRTUtils.h"
 
-#include <memory>
-
 namespace
 {
 	constexpr const wchar_t* ANNOT_RANGE = L"@Range";
@@ -44,11 +42,11 @@ namespace
 	}
 
 	template <typename T>
-	std::shared_ptr<EnumAnnotation<T>> ParseEnumAnnotation(const prt::Annotation* Annotation)
+	TSharedPtr<EnumAnnotation<T>> ParseEnumAnnotation(const prt::Annotation* Annotation)
 	{
 		prt::AnnotationArgumentType Type = prt::AAT_UNKNOWN;
 
-		auto Result = std::make_shared<EnumAnnotation<T>>();
+		auto Result = MakeShared<EnumAnnotation<T>>();
 		
 		for (size_t ArgumentIndex = 0; ArgumentIndex < Annotation->getNumArguments(); ArgumentIndex++) {
 			const wchar_t* Key = Annotation->getArgument(ArgumentIndex)->getKey();
@@ -66,9 +64,9 @@ namespace
 		return Result;
 	}
 
-	std::shared_ptr<RangeAnnotation> ParseRangeAnnotation(const prt::Annotation* Annotation)
+	TSharedPtr<RangeAnnotation> ParseRangeAnnotation(const prt::Annotation* Annotation)
 	{
-		auto Result = std::make_shared<RangeAnnotation>();
+		auto Result = MakeShared<RangeAnnotation>();
 		Result->StepSize = 0.1;
 		
 		for (int ArgIndex = 0; ArgIndex < Annotation->getNumArguments(); ArgIndex++)
@@ -96,7 +94,7 @@ namespace
 		return Result;
 	}
 
-	std::shared_ptr<FilesystemAnnotation> ParseFileAnnotation(const prt::Annotation* Annotation)
+	TSharedPtr<FilesystemAnnotation> ParseFileAnnotation(const prt::Annotation* Annotation)
 	{
 		FString Extensions;
 		for (size_t ArgumentIndex = 0; ArgumentIndex < Annotation->getNumArguments(); ArgumentIndex++) {
@@ -109,7 +107,7 @@ namespace
 		}
 		Extensions += L"All Files (*.*)";
 		
-		auto Result = std::make_shared<FilesystemAnnotation>();
+		auto Result = MakeShared<FilesystemAnnotation>();
 		Result->Mode = File;
 		Result->Extensions = Extensions;
 		return Result;
@@ -160,7 +158,7 @@ void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, UR
 		}
 		else if (std::wcscmp(Name, ANNOT_DIR) == 0)
 		{
-			auto Annotation = std::make_shared<FilesystemAnnotation>();
+			auto Annotation = MakeShared<FilesystemAnnotation>();
 			Annotation->Mode = Directory;
 			InAttribute.SetAnnotation(Annotation);
 		}

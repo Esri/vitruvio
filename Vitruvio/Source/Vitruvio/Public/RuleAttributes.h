@@ -44,7 +44,7 @@ class VITRUVIO_API URuleAttribute : public UObject
 	GENERATED_BODY()
 	
 protected:
-	std::shared_ptr<AttributeAnnotation> Annotation;
+	TSharedPtr<AttributeAnnotation> Annotation;
 	
 public:
 	FString Name;
@@ -57,9 +57,9 @@ public:
 
 	bool Hidden;
 
-	void SetAnnotation(std::shared_ptr<AttributeAnnotation> InAnnotation)
+	void SetAnnotation(TSharedPtr<AttributeAnnotation> InAnnotation)
 	{
-		this->Annotation = std::move(InAnnotation);
+		this->Annotation = MoveTemp(InAnnotation);
 	}
 };
 
@@ -71,9 +71,9 @@ class VITRUVIO_API UStringAttribute : public URuleAttribute
 public:
 	FString Value;
 
-	std::shared_ptr<EnumAnnotation<FString>> GetEnumAnnotation() const
+	TSharedPtr<EnumAnnotation<FString>> GetEnumAnnotation() const
 	{
-		return std::dynamic_pointer_cast<EnumAnnotation<FString>>(Annotation);
+		return  StaticCastSharedPtr<EnumAnnotation<FString>>(Annotation);
 	}
 };
 
@@ -85,14 +85,14 @@ class VITRUVIO_API UFloatAttribute : public URuleAttribute
 public:
 	double Value;
 
-	std::shared_ptr<EnumAnnotation<double>> GetEnumAnnotation() const
+	TSharedPtr<EnumAnnotation<double>> GetEnumAnnotation() const
 	{
-		return std::dynamic_pointer_cast<EnumAnnotation<double>>(Annotation);
+		return StaticCastSharedPtr<EnumAnnotation<double>>(Annotation);
 	}
 
-	std::shared_ptr<RangeAnnotation> GetRangeAnnotation() const
+	TSharedPtr<RangeAnnotation> GetRangeAnnotation() const
 	{
-		return std::dynamic_pointer_cast<RangeAnnotation>(Annotation);
+		return StaticCastSharedPtr<RangeAnnotation>(Annotation);
 	}
 };
 

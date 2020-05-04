@@ -29,7 +29,7 @@ namespace
 	}
 	
 	template <typename A, typename V>
-	TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Attribute, std::shared_ptr<EnumAnnotation<V>> Annot, APRTActor* PrtActor)
+	TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Attribute, TSharedPtr<EnumAnnotation<V>> Annot, APRTActor* PrtActor)
 	{
 		TArray<TSharedPtr<V>> SharedPtrValues;
 		Algo::Transform(Annot->Values, SharedPtrValues, [](const V& Value) {return MakeShared<V>(Value); });
