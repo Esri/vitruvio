@@ -11,7 +11,33 @@
 
 namespace
 {
+	TSharedPtr<SHorizontalBox> CreateTextInputWidget(UStringAttribute* Attribute, APRTActor* PrtActor)
+	{
+		auto OnTextChanged = [PrtActor, Attribute](const FText& Text, ETextCommit::Type) -> void
+		{
+			Attribute->Value = Text.ToString();
+			PrtActor->Regenerate();
+		};
 
+		auto ValueWidget = SNew(SEditableTextBox)
+			.Font(IDetailLayoutBuilder::GetDetailFont())
+			.IsReadOnly(false)
+			.SelectAllTextWhenFocused(true)
+			.OnTextCommitted_Lambda(OnTextChanged);
+
+		ValueWidget->SetText(FText::FromString(Attribute->Value));
+
+		
+		return SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Fill)
+			.HAlign(HAlign_Fill)
+			.FillWidth(1)
+			[
+				ValueWidget
+			];
+	}
+	
 	TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(UFloatAttribute* Attribute, APRTActor* PrtActor)
 	{
 		URangeAnnotation* RangeAnnotation = Cast<URangeAnnotation>(Attribute->Metadata->Annotation);
@@ -67,6 +93,10 @@ namespace
 			if (UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
 			{
 				Row.ValueContent() [ CreateNumericInputWidget(FloatAttribute, PrtActor).ToSharedRef() ];
+			}
+			else if (UStringAttribute* StringAttribute = Cast<UStringAttribute>(Attribute))
+			{
+				Row.ValueContent()[CreateTextInputWidget(StringAttribute, PrtActor).ToSharedRef()];
 			}
 		}
 		
