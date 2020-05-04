@@ -4,6 +4,7 @@
 #include "DetailWidgetRow.h"
 #include "DetailCategoryBuilder.h"
 #include "PRTActor.h"
+#include "Algo/Transform.h"
 
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Text/STextBlock.h"
@@ -12,6 +13,36 @@
 
 namespace
 {
+	FString ValueToString(const TSharedPtr<FString>& In)
+	{
+		return *In;
+	}
+
+	FString ValueToString(const TSharedPtr<double>& In)
+	{
+		return(FString::SanitizeFloat(*In));
+	}
+	
+	template <typename A, typename V>
+	TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Attribute, const TArray<V>& Values, APRTActor* PrtActor)
+	{
+		TArray<TSharedPtr<V>> SharedPtrValues;
+		Algo::Transform(Values, SharedPtrValues, [](const V& Value) {return MakeShared<V>(Value); });
+		auto InitialSelectedIndex = Values.IndexOfByPredicate([Attribute](const V& Value) {return Value == Attribute->Value; });
+		auto InitialSelectedValue = InitialSelectedIndex != INDEX_NONE ? SharedPtrValues[InitialSelectedIndex] : nullptr;
+
+		auto ValueWidget = SNew(SPropertyComboBox<V>)
+			.ComboItemList(SharedPtrValues)
+			.OnSelectionChanged_Lambda([PrtActor, Attribute](TSharedPtr<V> Val, ESelectInfo::Type Type)
+			{
+				Attribute->Value = *Val;
+				PrtActor->Regenerate();
+			})
+			.InitialValue(InitialSelectedValue);
+		
+		return ValueWidget;
+	}
+	
 	TSharedPtr<SCheckBox> CreateBoolInputWidget(UBoolAttribute* Attribute, APRTActor* PrtActor)
 	{
 		auto OnCheckStateChanged = [PrtActor, Attribute](ECheckBoxState CheckBoxState) -> void
@@ -58,9 +89,6 @@ namespace
 	TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(UFloatAttribute* Attribute, APRTActor* PrtActor)
 	{
 		URangeAnnotation* RangeAnnotation = Cast<URangeAnnotation>(Attribute->Metadata->Annotation);
-		const TOptional<double> MaxValue = RangeAnnotation ? RangeAnnotation->Max : TOptional<double>();
-		const TOptional<double> MinValue = RangeAnnotation ? RangeAnnotation->Min : TOptional<double>();
-
 		auto OnCommit = [PrtActor, Attribute](double Value, ETextCommit::Type Type) -> void
 		{
 			Attribute->Value = Value;
@@ -69,8 +97,8 @@ namespace
 		
 		auto ValueWidget = SNew(SSpinBox<double>)
             .Font(IDetailLayoutBuilder::GetDetailFont())
-			.MinValue(MinValue)
-			.MaxValue(MaxValue)
+			.MinValue(RangeAnnotation ? RangeAnnotation->Min : TOptional<double>())
+			.MaxValue(RangeAnnotation ? RangeAnnotation->Max : TOptional<double>())
 			.OnValueCommitted_Lambda(OnCommit)
 			.SliderExponent(1);
 
@@ -107,21 +135,62 @@ namespace
 			FDetailWidgetRow& Row = RootCategory.AddCustomRow(FText::FromString(Attribute->Name));
 
 			Row.NameContent() [ CreateNameWidget(Attribute).ToSharedRef() ];
-			if (UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
+
+			if (UEnumAnnotation* EnumAnnotation = Cast<UEnumAnnotation>(Attribute->Metadata->Annotation))
 			{
-				Row.ValueContent() [ CreateNumericInputWidget(FloatAttribute, PrtActor).ToSharedRef() ];
+				if (UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
+				{
+					Row.ValueContent()[CreateEnumWidget(FloatAttribute, EnumAnnotation->FloatValues, PrtActor).ToSharedRef()];
+				}
 			}
-			else if (UStringAttribute* StringAttribute = Cast<UStringAttribute>(Attribute))
+			else
 			{
-				Row.ValueContent() [ CreateTextInputWidget(StringAttribute, PrtActor).ToSharedRef() ];
+				if (UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
+				{
+					Row.ValueContent()[CreateNumericInputWidget(FloatAttribute, PrtActor).ToSharedRef()];
+				}
+				else if (UStringAttribute* StringAttribute = Cast<UStringAttribute>(Attribute))
+				{
+					Row.ValueContent()[CreateTextInputWidget(StringAttribute, PrtActor).ToSharedRef()];
+				}
+				else if (UBoolAttribute* BoolAttribute = Cast<UBoolAttribute>(Attribute))
+				{
+					Row.ValueContent()[CreateBoolInputWidget(BoolAttribute, PrtActor).ToSharedRef()];
+				}
 			}
-			else if (UBoolAttribute* BoolAttribute = Cast<UBoolAttribute>(Attribute))
-			{
-				Row.ValueContent()[ CreateBoolInputWidget(BoolAttribute, PrtActor).ToSharedRef() ];
-			}
+
 		}
 		
 	}
+}
+
+template <typename T>
+void SPropertyComboBox<T>::Construct(const FArguments& InArgs)
+{
+	ComboItemList = InArgs._ComboItemList.Get();
+
+	SComboBox<TSharedPtr<T>>::Construct(SComboBox<TSharedPtr<T>>::FArguments()
+		.InitiallySelectedItem(InArgs._InitialValue.Get())
+		.Content()
+		[
+			SNew(STextBlock)
+			.Text_Lambda([=]
+			{
+				auto SelectedItem = GetSelectedItem();
+				return SelectedItem ? FText::FromString(ValueToString(SelectedItem)) : FText::FromString("");
+			})
+		]
+		.OptionsSource(&ComboItemList)
+		.OnSelectionChanged(InArgs._OnSelectionChanged)
+		.OnGenerateWidget(this, &SPropertyComboBox::OnGenerateComboWidget)
+	);
+}
+
+template <typename T>
+TSharedRef<SWidget> SPropertyComboBox<T>::OnGenerateComboWidget(TSharedPtr<T> InValue) const
+{
+	return SNew(STextBlock)
+		.Text(FText::FromString(ValueToString(InValue)));
 }
 
 FPRTActorDetails::FPRTActorDetails()

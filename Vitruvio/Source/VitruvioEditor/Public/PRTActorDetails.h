@@ -19,3 +19,23 @@ private:
 	TArray<TWeakObjectPtr<>> ObjectsBeingCustomized;
 	TWeakPtr<IDetailLayoutBuilder> CachedDetailBuilder;
 };
+
+template <typename T>
+class SPropertyComboBox : public SComboBox<TSharedPtr<T>>
+{
+public:
+	
+	SLATE_BEGIN_ARGS(SPropertyComboBox)
+	{}
+		SLATE_ATTRIBUTE(TArray<TSharedPtr<T>>, ComboItemList)
+		SLATE_EVENT(SComboBox<TSharedPtr<T>>::FOnSelectionChanged, OnSelectionChanged)
+		SLATE_ATTRIBUTE(TSharedPtr<T>, InitialValue)
+	SLATE_END_ARGS()
+
+	void Construct(const FArguments& InArgs);
+	
+private:
+	TArray<TSharedPtr<T>> ComboItemList;
+
+	TSharedRef<SWidget> OnGenerateComboWidget(TSharedPtr<T> InValue) const;
+};
