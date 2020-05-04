@@ -20,15 +20,20 @@ namespace
 
 	FString ValueToString(const TSharedPtr<double>& In)
 	{
-		return(FString::SanitizeFloat(*In));
+		return FString::SanitizeFloat(*In);
+	}
+
+	FString ValueToString(const TSharedPtr<bool>& In)
+	{
+		return *In ? L"True" : L"False";
 	}
 	
 	template <typename A, typename V>
-	TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Attribute, const TArray<V>& Values, APRTActor* PrtActor)
+	TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Attribute, std::shared_ptr<EnumAnnotation<V>> Annot, APRTActor* PrtActor)
 	{
 		TArray<TSharedPtr<V>> SharedPtrValues;
-		Algo::Transform(Values, SharedPtrValues, [](const V& Value) {return MakeShared<V>(Value); });
-		auto InitialSelectedIndex = Values.IndexOfByPredicate([Attribute](const V& Value) {return Value == Attribute->Value; });
+		Algo::Transform(Annot->Values, SharedPtrValues, [](const V& Value) {return MakeShared<V>(Value); });
+		auto InitialSelectedIndex = Annot->Values.IndexOfByPredicate([Attribute](const V& Value) {return Value == Attribute->Value; });
 		auto InitialSelectedValue = InitialSelectedIndex != INDEX_NONE ? SharedPtrValues[InitialSelectedIndex] : nullptr;
 
 		auto ValueWidget = SNew(SPropertyComboBox<V>)
@@ -88,7 +93,7 @@ namespace
 	
 	TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(UFloatAttribute* Attribute, APRTActor* PrtActor)
 	{
-		URangeAnnotation* RangeAnnotation = Cast<URangeAnnotation>(Attribute->Metadata->Annotation);
+		auto Annotation = Attribute->GetRangeAnnotation();
 		auto OnCommit = [PrtActor, Attribute](double Value, ETextCommit::Type Type) -> void
 		{
 			Attribute->Value = Value;
@@ -97,14 +102,14 @@ namespace
 		
 		auto ValueWidget = SNew(SSpinBox<double>)
             .Font(IDetailLayoutBuilder::GetDetailFont())
-			.MinValue(RangeAnnotation ? RangeAnnotation->Min : TOptional<double>())
-			.MaxValue(RangeAnnotation ? RangeAnnotation->Max : TOptional<double>())
+			.MinValue(Annotation ? Annotation->Min : TOptional<double>())
+			.MaxValue(Annotation ? Annotation->Max : TOptional<double>())
 			.OnValueCommitted_Lambda(OnCommit)
 			.SliderExponent(1);
 
-		if (RangeAnnotation)
+		if (Annotation)
 		{
-			ValueWidget->SetDelta(RangeAnnotation->StepSize);
+			ValueWidget->SetDelta(Annotation->StepSize);
 		}
 		
 		ValueWidget->SetValue(Attribute->Value);
@@ -136,27 +141,31 @@ namespace
 
 			Row.NameContent() [ CreateNameWidget(Attribute).ToSharedRef() ];
 
-			if (UEnumAnnotation* EnumAnnotation = Cast<UEnumAnnotation>(Attribute->Metadata->Annotation))
+			if (UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
 			{
-				if (UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
+				if (FloatAttribute->GetEnumAnnotation())
 				{
-					Row.ValueContent()[CreateEnumWidget(FloatAttribute, EnumAnnotation->FloatValues, PrtActor).ToSharedRef()];
+					Row.ValueContent()[CreateEnumWidget(FloatAttribute, FloatAttribute->GetEnumAnnotation(), PrtActor).ToSharedRef()];
 				}
-			}
-			else
-			{
-				if (UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
+				else
 				{
 					Row.ValueContent()[CreateNumericInputWidget(FloatAttribute, PrtActor).ToSharedRef()];
 				}
-				else if (UStringAttribute* StringAttribute = Cast<UStringAttribute>(Attribute))
+			}
+			else if (UStringAttribute* StringAttribute = Cast<UStringAttribute>(Attribute))
+			{
+				if (StringAttribute->GetEnumAnnotation())
+				{
+					Row.ValueContent()[CreateEnumWidget(StringAttribute, StringAttribute->GetEnumAnnotation(), PrtActor).ToSharedRef()];
+				}
+				else
 				{
 					Row.ValueContent()[CreateTextInputWidget(StringAttribute, PrtActor).ToSharedRef()];
 				}
-				else if (UBoolAttribute* BoolAttribute = Cast<UBoolAttribute>(Attribute))
-				{
-					Row.ValueContent()[CreateBoolInputWidget(BoolAttribute, PrtActor).ToSharedRef()];
-				}
+			}
+			else if (UBoolAttribute* BoolAttribute = Cast<UBoolAttribute>(Attribute))
+			{
+				Row.ValueContent()[CreateBoolInputWidget(BoolAttribute, PrtActor).ToSharedRef()];
 			}
 
 		}

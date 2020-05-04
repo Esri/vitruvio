@@ -6,6 +6,7 @@ public class VitruvioEditor : ModuleRules
 {
 	public VitruvioEditor(ReadOnlyTargetRules Target) : base(Target)
 	{
+		bUseRTTI = true;
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		PrecompileForTargets = PrecompileTargetsType.Any;
 

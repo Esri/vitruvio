@@ -1,5 +1,6 @@
 #include "AnnotationParsing.h"
 #include "PRTUtils.h"
+#include <memory>
 
 namespace
 {
@@ -17,54 +18,57 @@ namespace
 	constexpr const wchar_t* MAX_KEY = L"max";
 	constexpr const wchar_t* STEP_SIZE_KEY = L"stepsize";
 	constexpr const wchar_t* RESTRICTED_KEY = L"restricted";
-	
-	UAttributeAnnotation* ParseEnumAnnotation(const prt::Annotation* Annotation)
+
+	prt::AnnotationArgumentType GetEnumAnnotationType(const prt::Annotation* Annotation)
 	{
-		UEnumAnnotation* EnumAnnotation = NewObject<UEnumAnnotation>();
+		prt::AnnotationArgumentType Type = prt::AAT_UNKNOWN;
+		for (size_t ArgumentIndex = 0; ArgumentIndex < Annotation->getNumArguments(); ArgumentIndex++) {
+			if (Type != prt::AAT_UNKNOWN &&  Type != Annotation->getArgument(ArgumentIndex)->getType())
+			{
+				return prt::AAT_UNKNOWN;
+			}
+			Type = Annotation->getArgument(ArgumentIndex)->getType();
+		}
+		return Type;
+	}
+
+	void ParseValue(const prt::AnnotationArgument* Argument, double& Result)
+	{
+		Result = Argument->getFloat();
+	}
+
+	void ParseValue(const prt::AnnotationArgument* Argument, FString& Result)
+	{
+		Result = FString(Argument->getStr());
+	}
+
+	template <typename T>
+	std::shared_ptr<EnumAnnotation<T>> ParseEnumAnnotation(const prt::Annotation* Annotation)
+	{
+		prt::AnnotationArgumentType Type = prt::AAT_UNKNOWN;
+
+		auto Result = std::make_shared<EnumAnnotation<T>>();
 		
 		for (size_t ArgumentIndex = 0; ArgumentIndex < Annotation->getNumArguments(); ArgumentIndex++) {
-
 			const wchar_t* Key = Annotation->getArgument(ArgumentIndex)->getKey();
 			if (std::wcscmp(Key, NULL_KEY) != 0) {
 				if (std::wcscmp(Key, RESTRICTED_KEY) == 0) {
-					EnumAnnotation->Restricted = Annotation->getArgument(ArgumentIndex)->getBool();
+					Result->Restricted = Annotation->getArgument(ArgumentIndex)->getBool();
 				}
 				continue;
 			}
 
-			switch (Annotation->getArgument(ArgumentIndex)->getType()) {
-				case prt::AAT_BOOL: {
-					bool Value = Annotation->getArgument(ArgumentIndex)->getBool();
-					EnumAnnotation->BoolValues.Add(Value);
-					EnumAnnotation->FloatValues.Add(std::numeric_limits<double>::quiet_NaN());
-					EnumAnnotation->StringValues.Add(L"");
-					break;
-				}
-				case prt::AAT_FLOAT: {
-					double Value = Annotation->getArgument(ArgumentIndex)->getFloat();
-					EnumAnnotation->BoolValues.Add(false);
-					EnumAnnotation->FloatValues.Add(Value);
-					EnumAnnotation->StringValues.Add(L"");
-					break;
-				}
-				case prt::AAT_STR: {
-					const wchar_t* Value = Annotation->getArgument(ArgumentIndex)->getStr();
-					EnumAnnotation->BoolValues.Add(false);
-					EnumAnnotation->FloatValues.Add(std::numeric_limits<double>::quiet_NaN());
-					EnumAnnotation->StringValues.Add(Value);
-					break;
-				}
-			default:
-                break;
-			}
+			T Val;
+			ParseValue(Annotation->getArgument(ArgumentIndex), Val);
+			Result->Values.Add(Val);
 		}
-		return EnumAnnotation;
+		return Result;
 	}
 
-	UAttributeAnnotation* ParseRangeAnnotation(const prt::Annotation* Annotation)
+	std::shared_ptr<RangeAnnotation> ParseRangeAnnotation(const prt::Annotation* Annotation)
 	{
-		URangeAnnotation* RangeAnnotation = NewObject<URangeAnnotation>();
-		RangeAnnotation->StepSize = 0.1;
+		auto Result = std::make_shared<RangeAnnotation>();
+		Result->StepSize = 0.1;
 		
 		for (int ArgIndex = 0; ArgIndex < Annotation->getNumArguments(); ArgIndex++)
 		{
@@ -72,26 +76,26 @@ namespace
 			const wchar_t* Key = Argument->getKey();
 			if (std::wcscmp(Key, MIN_KEY) == 0)
 			{
-				RangeAnnotation->Min = Argument->getFloat();
+				Result->Min = Argument->getFloat();
 			}
 			else if (std::wcscmp(Key, MAX_KEY) == 0)
 			{
-				RangeAnnotation->Max = Argument->getFloat();
+				Result->Max = Argument->getFloat();
 			}
 			else if (std::wcscmp(Key, STEP_SIZE_KEY) == 0)
 			{
-				RangeAnnotation->StepSize = Argument->getFloat();
+				Result->StepSize = Argument->getFloat();
 			}
 			else if (std::wcscmp(Key, RESTRICTED_KEY) == 0)
 			{
-				RangeAnnotation->Restricted = Argument->getBool();
+				Result->Restricted = Argument->getBool();
 			}
 		}
 		
-		return RangeAnnotation;
+		return Result;
 	}
 
-	UAttributeAnnotation* ParseFileAnnotation(const prt::Annotation* Annotation)
+	std::shared_ptr<FilesystemAnnotation> ParseFileAnnotation(const prt::Annotation* Annotation)
 	{
 		FString Extensions;
 		for (size_t ArgumentIndex = 0; ArgumentIndex < Annotation->getNumArguments(); ArgumentIndex++) {
@@ -104,10 +108,10 @@ namespace
 		}
 		Extensions += L"All Files (*.*)";
 		
-		UFilesystemAnnotation* FilesystemAnnotation = NewObject<UFilesystemAnnotation>();
-		FilesystemAnnotation->Mode = File;
-		FilesystemAnnotation->Extensions = Extensions;
-		return FilesystemAnnotation;
+		auto Result = std::make_shared<FilesystemAnnotation>();
+		Result->Mode = File;
+		Result->Extensions = Extensions;
+		return Result;
 	}
 
 	int ParseOrder(const prt::Annotation* Annotation)
@@ -137,21 +141,29 @@ UAttributeMetadata* ParseAttributeMetadata(const prt::RuleFileInfo::Entry* Attri
 		const wchar_t* Name = CEAnnotation->getName();
 		if (std::wcscmp(Name, ANNOT_ENUM) == 0)
 		{
-			Metadata->Annotation = ParseEnumAnnotation(CEAnnotation);
+			switch(GetEnumAnnotationType(CEAnnotation))
+			{
+			case prt::AAT_FLOAT:
+				Metadata->Annotation = ParseEnumAnnotation<double>(CEAnnotation);
+				break;
+			case prt::AAT_STR:
+				Metadata->Annotation = ParseEnumAnnotation<FString>(CEAnnotation);
+				break;
+			 default:
+				Metadata->Annotation = nullptr;
+				break;
+			}
+			
 		}
 		else if (std::wcscmp(Name, ANNOT_RANGE) == 0)
 		{
 			Metadata->Annotation = ParseRangeAnnotation(CEAnnotation);
 		}
-		else if (std::wcscmp(Name, ANNOT_COLOR) == 0)
-		{
-			Metadata->Annotation = NewObject<UColorAnnotation>();
-		}
 		else if (std::wcscmp(Name, ANNOT_DIR) == 0)
 		{
-			UFilesystemAnnotation* FilesystemAnnotation = NewObject<UFilesystemAnnotation>();
-			FilesystemAnnotation->Mode = Directory;
-			Metadata->Annotation = FilesystemAnnotation;
+			auto Annotation = std::make_shared<FilesystemAnnotation>();
+			Annotation->Mode = Directory;
+			Metadata->Annotation = Annotation;
 		}
 		else if (std::wcscmp(Name, ANNOT_FILE) == 0)
 		{

@@ -7,65 +7,46 @@
 
 using FAttributeGroups = TArray<FString>;
 
-UENUM()
-enum EFilesystemMode { File, Directory };
+enum FilesystemMode { File, Directory, None };
 
-UCLASS()
-class VITRUVIO_API UAttributeAnnotation : public UObject
+class AttributeAnnotation
 {
-	GENERATED_BODY()
-};
-
-UCLASS()
-class VITRUVIO_API UColorAnnotation : public UAttributeAnnotation
-{
-	GENERATED_BODY()
-};
-
-UCLASS()
-class VITRUVIO_API UFilesystemAnnotation : public UAttributeAnnotation
-{
-	GENERATED_BODY()
-	
 public:
-	EFilesystemMode Mode;
+	virtual ~AttributeAnnotation() = default;
+};
+
+class FilesystemAnnotation : public AttributeAnnotation
+{
+public:
+	FilesystemMode Mode = None;
     FString Extensions;
 };
 
-UCLASS()
-class VITRUVIO_API URangeAnnotation : public UAttributeAnnotation
+class RangeAnnotation : public AttributeAnnotation
 {
-	GENERATED_BODY()
-	
 public:
 	TOptional<double> Min;
 	TOptional<double> Max;
-	double StepSize;
-	bool Restricted;
-
+	double StepSize = 0.1;
+	bool Restricted = true;
 };
 
-UCLASS()
-class VITRUVIO_API UEnumAnnotation : public UAttributeAnnotation
+template <typename T>
+class EnumAnnotation : public AttributeAnnotation
 {
-	GENERATED_BODY()
-
 public:
-	TArray<bool> BoolValues;
-	TArray<FString> StringValues;
-	TArray<double> FloatValues;
-	bool Restricted;
+	TArray<T> Values;
+	bool Restricted = true;
 };
 
 UCLASS()
 class VITRUVIO_API UAttributeMetadata : public UObject
 {
 	GENERATED_BODY()
-
-public:
-	UPROPERTY()
-	UAttributeAnnotation* Annotation;
 	
+public:
+	std::shared_ptr<AttributeAnnotation> Annotation;
+
 	FString Description;
 	FAttributeGroups Groups;
 	int Order;
@@ -94,6 +75,11 @@ class VITRUVIO_API UStringAttribute : public URuleAttribute
 
 public:
 	FString Value;
+
+	std::shared_ptr<EnumAnnotation<FString>> GetEnumAnnotation() const
+	{
+		return std::dynamic_pointer_cast<EnumAnnotation<FString>>(Metadata->Annotation);
+	}
 };
 
 UCLASS()
@@ -104,6 +90,15 @@ class VITRUVIO_API UFloatAttribute : public URuleAttribute
 public:
 	double Value;
 
+	std::shared_ptr<EnumAnnotation<double>> GetEnumAnnotation() const
+	{
+		return std::dynamic_pointer_cast<EnumAnnotation<double>>(Metadata->Annotation);
+	}
+
+	std::shared_ptr<RangeAnnotation> GetRangeAnnotation() const
+	{
+		return std::dynamic_pointer_cast<RangeAnnotation>(Metadata->Annotation);
+	}
 };
 
 UCLASS()
