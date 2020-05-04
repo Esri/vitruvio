@@ -118,14 +118,18 @@ namespace
 		return 0;
 	}
 
-	int ParseGroupOrder(const prt::Annotation* Annotation)
+	void ParseGroups(const prt::Annotation* Annotation, URuleAttribute& InAttribute)
 	{
-		return 0;
-	}
-	
-	FAttributeGroups ParseGroups(const prt::Annotation* Annotation)
-	{
-		return {};
+		for (int AnnotationIndex = 0; AnnotationIndex < Annotation->getNumArguments(); AnnotationIndex++) {
+			if (Annotation->getArgument(AnnotationIndex)->getType() == prt::AAT_STR)
+			{
+				InAttribute.Groups.Add(Annotation->getArgument(AnnotationIndex)->getStr());
+			}
+			else if (AnnotationIndex == Annotation->getNumArguments() - 1 && Annotation->getArgument(AnnotationIndex)->getType() == prt::AAT_FLOAT) 
+			{
+				InAttribute.GroupOrder = static_cast<int>(Annotation->getArgument(AnnotationIndex)->getFloat());
+			}
+		}
 	}
 }
 
@@ -177,8 +181,7 @@ void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, UR
 		}
 		else if (!std::wcscmp(Name, ANNOT_GROUP))
 		{
-			InAttribute.Groups = ParseGroups(CEAnnotation);
-			InAttribute.GroupOrder = ParseGroupOrder(CEAnnotation);
+			ParseGroups(CEAnnotation, InAttribute);
 		}
 	}
 }
