@@ -8,9 +8,26 @@
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Input/SSpinBox.h"
+#include "Widgets/Input/SCheckBox.h"
 
 namespace
 {
+	TSharedPtr<SCheckBox> CreateBoolInputWidget(UBoolAttribute* Attribute, APRTActor* PrtActor)
+	{
+		auto OnCheckStateChanged = [PrtActor, Attribute](ECheckBoxState CheckBoxState) -> void
+		{
+			Attribute->Value = CheckBoxState == ECheckBoxState::Checked;
+			PrtActor->Regenerate();
+		};
+
+		auto ValueWidget = SNew(SCheckBox)
+			.OnCheckStateChanged_Lambda(OnCheckStateChanged);
+
+		ValueWidget->SetIsChecked(Attribute->Value);
+
+		return ValueWidget;
+	}
+	
 	TSharedPtr<SHorizontalBox> CreateTextInputWidget(UStringAttribute* Attribute, APRTActor* PrtActor)
 	{
 		auto OnTextChanged = [PrtActor, Attribute](const FText& Text, ETextCommit::Type) -> void
@@ -96,7 +113,11 @@ namespace
 			}
 			else if (UStringAttribute* StringAttribute = Cast<UStringAttribute>(Attribute))
 			{
-				Row.ValueContent()[CreateTextInputWidget(StringAttribute, PrtActor).ToSharedRef()];
+				Row.ValueContent() [ CreateTextInputWidget(StringAttribute, PrtActor).ToSharedRef() ];
+			}
+			else if (UBoolAttribute* BoolAttribute = Cast<UBoolAttribute>(Attribute))
+			{
+				Row.ValueContent()[ CreateBoolInputWidget(BoolAttribute, PrtActor).ToSharedRef() ];
 			}
 		}
 		
