@@ -64,8 +64,6 @@ namespace
 	UAttributeAnnotation* ParseRangeAnnotation(const prt::Annotation* Annotation)
 	{
 		URangeAnnotation* RangeAnnotation = NewObject<URangeAnnotation>();
-		RangeAnnotation->Min = std::numeric_limits<double>::quiet_NaN();
-		RangeAnnotation->Max = std::numeric_limits<double>::quiet_NaN();
 		RangeAnnotation->StepSize = 0.1;
 		
 		for (int ArgIndex = 0; ArgIndex < Annotation->getNumArguments(); ArgIndex++)

@@ -38,9 +38,9 @@ class VITRUVIO_API URangeAnnotation : public UAttributeAnnotation
 	GENERATED_BODY()
 	
 public:
-	double Min;
-	double Max;
-	double StepSize; 	
+	TOptional<double> Min;
+	TOptional<double> Max;
+	double StepSize;
 	bool Restricted;
 
 };
