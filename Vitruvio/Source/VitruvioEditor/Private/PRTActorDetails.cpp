@@ -28,6 +28,16 @@ namespace
 	{
 		return *In ? L"True" : L"False";
 	}
+
+	template <typename A, typename V>
+	void UpdateAttributeValue(APRTActor* PrtActor, A* Attribute, const V& Value)
+	{
+		Attribute->Value = Value;
+		if (PrtActor->GenerateAutomatically)
+		{
+			PrtActor->Regenerate();
+		}
+	}
 	
 	template <typename A, typename V>
 	TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Attribute, TSharedPtr<EnumAnnotation<V>> Annot, APRTActor* PrtActor)
@@ -41,8 +51,7 @@ namespace
 			.ComboItemList(SharedPtrValues)
 			.OnSelectionChanged_Lambda([PrtActor, Attribute](TSharedPtr<V> Val, ESelectInfo::Type Type)
 			{
-				Attribute->Value = *Val;
-				PrtActor->Regenerate();
+				UpdateAttributeValue(PrtActor, Attribute, *Val);
 			})
 			.InitialValue(InitialSelectedValue);
 		
@@ -53,8 +62,7 @@ namespace
 	{
 		auto OnCheckStateChanged = [PrtActor, Attribute](ECheckBoxState CheckBoxState) -> void
 		{
-			Attribute->Value = CheckBoxState == ECheckBoxState::Checked;
-			PrtActor->Regenerate();
+			UpdateAttributeValue(PrtActor, Attribute, CheckBoxState == ECheckBoxState::Checked);
 		};
 
 		auto ValueWidget = SNew(SCheckBox)
@@ -69,8 +77,7 @@ namespace
 	{
 		auto OnTextChanged = [PrtActor, Attribute](const FText& Text, ETextCommit::Type) -> void
 		{
-			Attribute->Value = Text.ToString();
-			PrtActor->Regenerate();
+			UpdateAttributeValue(PrtActor, Attribute, Text.ToString());
 		};
 
 		auto ValueWidget = SNew(SEditableTextBox)
@@ -97,8 +104,7 @@ namespace
 		auto Annotation = Attribute->GetRangeAnnotation();
 		auto OnCommit = [PrtActor, Attribute](double Value, ETextCommit::Type Type) -> void
 		{
-			Attribute->Value = Value;
-			PrtActor->Regenerate();
+			UpdateAttributeValue(PrtActor, Attribute, Value);
 		};
 		
 		auto ValueWidget = SNew(SSpinBox<double>)
@@ -229,6 +235,7 @@ void SPropertyComboBox<T>::Construct(const FArguments& InArgs)
 				auto SelectedItem = GetSelectedItem();
 				return SelectedItem ? FText::FromString(ValueToString(SelectedItem)) : FText::FromString("");
 			})
+			.Font(IDetailLayoutBuilder::GetDetailFont())
 		]
 		.OptionsSource(&ComboItemList)
 		.OnSelectionChanged(InArgs._OnSelectionChanged)
