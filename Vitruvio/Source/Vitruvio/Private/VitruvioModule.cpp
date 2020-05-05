@@ -21,6 +21,7 @@ DEFINE_LOG_CATEGORY(LogUnrealPrt);
 namespace
 {
 	constexpr const wchar_t* ENC_ID_ATTR_EVAL = L"com.esri.prt.core.AttributeEvalEncoder";
+	const FString DEFAULT_STYLE = L"Default";
 
 	class FLoadResolveMapTask
 	{
@@ -196,6 +197,18 @@ namespace
 		for (size_t AttributeIndex = 0; AttributeIndex < RuleInfo->getNumAttributes(); AttributeIndex++)
 		{
 			const prt::RuleFileInfo::Entry* AttrInfo = RuleInfo->getAttribute(AttributeIndex);
+			if (AttrInfo->getNumParameters() != 0)
+			{
+				continue;
+			}
+
+			// We only support the default style for the moment
+			FString Style(prtu::getStyle(AttrInfo->getName()).c_str());
+			if (Style != DEFAULT_STYLE)
+			{
+				continue;
+			}
+			
 			const std::wstring Name(AttrInfo->getName());
 			if (Attributes.Contains(Name.c_str()))
 			{
@@ -212,8 +225,11 @@ namespace
 				Attribute->DisplayName = DisplayName;
 
 				ParseAttributeAnnotations(AttrInfo, *Attribute);
-				
-				Attributes.Add(AttributeName, Attribute);
+
+				if (!Attribute->Hidden)
+				{
+					Attributes.Add(AttributeName, Attribute);
+				}
 			}
 		}
 		return Attributes;
