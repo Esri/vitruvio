@@ -7,11 +7,13 @@
 using FAttributeGroups = TArray<FString>;
 
 enum FilesystemMode { File, Directory, None };
+enum AnnotationType { FileSystem, Range, Enum };
 
 class AttributeAnnotation
 {
 public:
 	virtual ~AttributeAnnotation() = default;
+	virtual AnnotationType GetAnnotationType() = 0;
 };
 
 class FilesystemAnnotation : public AttributeAnnotation
@@ -19,6 +21,11 @@ class FilesystemAnnotation : public AttributeAnnotation
 public:
 	FilesystemMode Mode = None;
     FString Extensions;
+
+	AnnotationType GetAnnotationType() override
+	{
+		return FileSystem;
+	}
 };
 
 class RangeAnnotation : public AttributeAnnotation
@@ -28,6 +35,11 @@ public:
 	TOptional<double> Max;
 	double StepSize = 0.1;
 	bool Restricted = true;
+
+	AnnotationType GetAnnotationType() override
+	{
+		return Range;
+	}
 };
 
 template <typename T>
@@ -36,6 +48,11 @@ class EnumAnnotation : public AttributeAnnotation
 public:
 	TArray<T> Values;
 	bool Restricted = true;
+
+	AnnotationType GetAnnotationType() override
+	{
+		return Enum;
+	}
 };
 
 UCLASS()
@@ -73,7 +90,7 @@ public:
 
 	TSharedPtr<EnumAnnotation<FString>> GetEnumAnnotation() const
 	{
-		return  StaticCastSharedPtr<EnumAnnotation<FString>>(Annotation);
+		return Annotation && Annotation->GetAnnotationType() == Enum ? StaticCastSharedPtr<EnumAnnotation<FString>>(Annotation) : TSharedPtr<EnumAnnotation<FString>>();
 	}
 };
 
@@ -87,12 +104,12 @@ public:
 
 	TSharedPtr<EnumAnnotation<double>> GetEnumAnnotation() const
 	{
-		return StaticCastSharedPtr<EnumAnnotation<double>>(Annotation);
+		return Annotation && Annotation->GetAnnotationType() == Enum ? StaticCastSharedPtr<EnumAnnotation<double>>(Annotation) : TSharedPtr<EnumAnnotation<double>>();
 	}
 
 	TSharedPtr<RangeAnnotation> GetRangeAnnotation() const
 	{
-		return StaticCastSharedPtr<RangeAnnotation>(Annotation);
+		return Annotation && Annotation->GetAnnotationType() == Range ? StaticCastSharedPtr<RangeAnnotation>(Annotation) : TSharedPtr<RangeAnnotation>();
 	}
 };
 

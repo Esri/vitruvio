@@ -3,6 +3,7 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
 #include "DetailCategoryBuilder.h"
+#include "IDetailGroup.h"
 #include "PRTActor.h"
 #include "Algo/Transform.h"
 
@@ -128,16 +129,56 @@ namespace
            ];
 		return NameWidget;
 	}
-	
+
+	IDetailGroup* GetOrCreateGroups(IDetailGroup& Root, const FAttributeGroups& Groups, TMap<FString, IDetailGroup*>& GroupCache)
+	{
+		if (Groups.Num() == 0)
+		{
+			return &Root;
+		}
+
+		auto GetOrCreateGroup = [&GroupCache](IDetailGroup& Parent, FString Name) -> IDetailGroup*
+		{
+			const auto CacheResult = GroupCache.Find(Name);
+			if (CacheResult)
+			{
+				return *CacheResult;
+			}
+			IDetailGroup& Group = Parent.AddGroup(*Name, FText::FromString(Name), true);
+			GroupCache.Add(Name, &Group);
+			return &Group;
+		};
+		
+		FString QualifiedIdentifier = Groups[0];
+		IDetailGroup* CurrentGroup = GetOrCreateGroup(Root, QualifiedIdentifier);
+		for (auto GroupIndex = 1; GroupIndex < Groups.Num(); ++GroupIndex)
+		{
+			QualifiedIdentifier += Groups[GroupIndex];
+			CurrentGroup = GetOrCreateGroup(*CurrentGroup, Groups[GroupIndex]);
+		}
+
+		return CurrentGroup;
+	}
+
 	void BuildAttributeEditor(IDetailLayoutBuilder& DetailBuilder, APRTActor* PrtActor)
 	{
-		if (!PrtActor || !PrtActor->Rpk) return;
+		if (!PrtActor || !PrtActor->Rpk)
+		{
+			return;
+		}
 
-		IDetailCategoryBuilder& RootCategory = DetailBuilder.EditCategory("AttributesRoot", FText::FromString(PrtActor->Rpk->GetName()));
+		IDetailCategoryBuilder& RootCategory = DetailBuilder.EditCategory("CGA");
+		RootCategory.SetShowAdvanced(true);
+		
+		IDetailGroup& RootGroup = RootCategory.AddGroup("Attributes", FText::FromString("Attributes"), true, true);
+		TMap<FString, IDetailGroup*> GroupCache;
+		
 		for (const auto& AttributeEntry : PrtActor->Attributes)
 		{
 			URuleAttribute* Attribute = AttributeEntry.Value;
-			FDetailWidgetRow& Row = RootCategory.AddCustomRow(FText::FromString(Attribute->Name));
+
+			IDetailGroup* Group = GetOrCreateGroups(RootGroup, Attribute->Groups, GroupCache);
+			FDetailWidgetRow&  Row = Group->AddWidgetRow();
 
 			Row.NameContent() [ CreateNameWidget(Attribute).ToSharedRef() ];
 
@@ -235,7 +276,7 @@ void FPRTActorDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 	if (!PrtActor) return;
 
 	DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(APRTActor, Attributes))->MarkHiddenByCustomization();
-	
+
 	if (PrtActor)
 	{
 		BuildAttributeEditor(DetailBuilder, PrtActor);

@@ -24,10 +24,10 @@ class VITRUVIO_API APRTActor : public AStaticMeshActor
 public:
 	APRTActor();
 
-	UPROPERTY(EditAnywhere, DisplayName = "Rule Package", Category="CGA Rules")
+	UPROPERTY(EditAnywhere, DisplayName = "Rule Package", Category="CGA")
 	URulePackage* Rpk;
 
-	UPROPERTY(EditAnywhere, Category="CGA Rules")
+	UPROPERTY(EditAnywhere, Category="CGA")
 	int32 RandomSeed;
 	
 	UPROPERTY(EditAnywhere)
@@ -42,7 +42,7 @@ public:
 	UPROPERTY(EditAnywhere)
 	UMaterial* TranslucentParent;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "CGA")
 	bool GenerateAutomatically = true;
 
 	UFUNCTION(BlueprintCallable)
