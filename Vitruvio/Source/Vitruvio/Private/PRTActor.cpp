@@ -5,7 +5,6 @@
 #include "ObjectEditorUtils.h"
 #include "VitruvioModule.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
-#include "PropertyEditor/Private/DetailPropertyRow.h"
 
 APRTActor::APRTActor()
 {
