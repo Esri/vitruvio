@@ -23,6 +23,9 @@ void APRTActor::BeginPlay()
 
 void APRTActor::LoadDefaultAttributes(UStaticMesh* InitialShape)
 {
+	check(InitialShape);
+	check(Rpk);
+	
 	AttributesReady = false;
 	
 	AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk);
@@ -143,6 +146,20 @@ void APRTActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 		if (Rpk && InitialShape)
 		{
 			LoadDefaultAttributes(InitialShape);
+		}
+	}
+
+	if (PropertyChangedEvent.Property && PropertyChangedEvent.Property->GetFName() == L"StaticMeshComponent")
+	{
+		UStaticMesh* InitialShape = GetStaticMeshComponent()->GetStaticMesh();
+		if (InitialShape)
+		{
+			InitialShape->bAllowCPUAccess = true;
+
+			if (Rpk)
+			{
+				LoadDefaultAttributes(InitialShape);
+			}
 		}
 	}
 	
