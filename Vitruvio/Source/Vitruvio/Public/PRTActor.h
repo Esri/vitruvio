@@ -16,17 +16,22 @@ class VITRUVIO_API APRTActor : public AStaticMeshActor
 	GENERATED_BODY()
 
 	bool Initialized = false;
-
 	bool Regenerated = false;
+	bool AttributesReady = false;
+	
+	TFuture<TMap<FString, URuleAttribute*>> AttributesFuture;
 
 public:
 	APRTActor();
 
-	UPROPERTY(EditAnywhere, DisplayName = "Rule Package")
+	UPROPERTY(EditAnywhere, DisplayName = "Rule Package", Category="CGA")
 	URulePackage* Rpk;
 
+	UPROPERTY(EditAnywhere, Category="CGA")
+	int32 RandomSeed;
+	
 	UPROPERTY(EditAnywhere)
-	TMap<FString, URuleAttribute*> GenerateAttributes;
+	TMap<FString, URuleAttribute*> Attributes;
 
 	UPROPERTY(EditAnywhere)
 	UMaterial* OpaqueParent;
@@ -37,7 +42,7 @@ public:
 	UPROPERTY(EditAnywhere)
 	UMaterial* TranslucentParent;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "CGA")
 	bool GenerateAutomatically = true;
 
 	UFUNCTION(BlueprintCallable)
@@ -45,13 +50,14 @@ public:
 
 protected:
 	void BeginPlay() override;
+	void LoadDefaultAttributes(UStaticMesh* InitialShape);
 
 public:
 	void Tick(float DeltaTime) override;
-
-#ifdef WITH_EDITOR
+	
+	
+#if WITH_EDITOR
 	void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-
 	bool ShouldTickIfViewportsOnly() const override;
 #endif
 };

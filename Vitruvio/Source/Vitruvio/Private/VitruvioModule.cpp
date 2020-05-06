@@ -1,8 +1,6 @@
 #include "VitruvioModule.h"
 
 #include "prt/API.h"
-#include "prt/MemoryOutputCallbacks.h"
-
 #include "Core.h"
 #include "Interfaces/IPluginManager.h"
 #include "MeshDescription.h"
@@ -13,6 +11,7 @@
 #include "PRTTypes.h"
 #include "prtx/EncoderInfoBuilder.h"
 #include "PRTUtils.h"
+#include "Util/AnnotationParsing.h"
 #include "UnrealResolveMapProvider.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioModule"
@@ -22,6 +21,7 @@ DEFINE_LOG_CATEGORY(LogUnrealPrt);
 namespace
 {
 	constexpr const wchar_t* ENC_ID_ATTR_EVAL = L"com.esri.prt.core.AttributeEvalEncoder";
+	const FString DEFAULT_STYLE = L"Default";
 
 	class FLoadResolveMapTask
 	{
@@ -105,33 +105,6 @@ namespace
 		}
 	}
 
-	AttributeMapUPtr GetDefaultAttributeValues(const std::wstring& RuleFile, const std::wstring& StartRule, const ResolveMapSPtr& ResolveMapPtr, const UStaticMesh* InitialShape)
-	{
-
-		AttributeMapBuilderUPtr UnrealCallbacksAttributeBuilder(prt::AttributeMapBuilder::create());
-		UnrealCallbacks UnrealCallbacks(UnrealCallbacksAttributeBuilder, nullptr, nullptr, nullptr);
-
-		InitialShapeBuilderUPtr InitialShapeBuilder(prt::InitialShapeBuilder::create());
-
-		SetInitialShapeGeometry(InitialShapeBuilder, InitialShape);
-
-		// TODO calculate random seed
-		const int32_t RandomSeed = 0;
-		const AttributeMapUPtr EmptyAttributes(AttributeMapBuilderUPtr(prt::AttributeMapBuilder::create())->createAttributeMap());
-		InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", EmptyAttributes.get(), ResolveMapPtr.get());
-
-		const InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShapeAndReset());
-		const InitialShapeNOPtrVector InitialShapes = {Shape.get()};
-
-		const std::vector<const wchar_t*> EncoderIds = {ENC_ID_ATTR_EVAL};
-		const AttributeMapUPtr AttributeEncodeOptions = prtu::createValidatedOptions(ENC_ID_ATTR_EVAL);
-		const AttributeMapNOPtrVector EncoderOptions = {AttributeEncodeOptions.get()};
-
-		prt::generate(InitialShapes.data(), InitialShapes.size(), nullptr, EncoderIds.data(), EncoderIds.size(), EncoderOptions.data(), &UnrealCallbacks, nullptr, nullptr);
-
-		return AttributeMapUPtr(UnrealCallbacksAttributeBuilder->createAttributeMap());
-	}
-
 	AttributeMapUPtr CreateAttributeMap(const TMap<FString, URuleAttribute*>& Attributes)
 	{
 		AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
@@ -158,66 +131,105 @@ namespace
 		return AttributeMapUPtr(AttributeMapBuilder->createAttributeMap(), PRTDestroyer());
 	}
 
+	AttributeMapUPtr GetDefaultAttributeValues(const std::wstring& RuleFile, const std::wstring& StartRule, const ResolveMapSPtr& ResolveMapPtr, const UStaticMesh* InitialShape)
+	{
+		AttributeMapBuilderUPtr UnrealCallbacksAttributeBuilder(prt::AttributeMapBuilder::create());
+		UnrealCallbacks UnrealCallbacks(UnrealCallbacksAttributeBuilder, nullptr, nullptr, nullptr);
+
+		InitialShapeBuilderUPtr InitialShapeBuilder(prt::InitialShapeBuilder::create());
+
+		SetInitialShapeGeometry(InitialShapeBuilder, InitialShape);
+
+		// TODO calculate random seed
+		const int32_t RandomSeed = 0;
+		const AttributeMapUPtr EmptyAttributes(AttributeMapBuilderUPtr(prt::AttributeMapBuilder::create())->createAttributeMap());
+		InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", EmptyAttributes.get(), ResolveMapPtr.get());
+
+		const InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShapeAndReset());
+		const InitialShapeNOPtrVector InitialShapes = {Shape.get()};
+
+		const std::vector<const wchar_t*> EncoderIds = {ENC_ID_ATTR_EVAL};
+		const AttributeMapUPtr AttributeEncodeOptions = prtu::createValidatedOptions(ENC_ID_ATTR_EVAL);
+		const AttributeMapNOPtrVector EncoderOptions = {AttributeEncodeOptions.get()};
+
+		prt::generate(InitialShapes.data(), InitialShapes.size(), nullptr, EncoderIds.data(), EncoderIds.size(), EncoderOptions.data(), &UnrealCallbacks, nullptr, nullptr);
+
+		return AttributeMapUPtr(UnrealCallbacksAttributeBuilder->createAttributeMap());
+	}
+
+	URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt::RuleFileInfo::Entry* AttrInfo)
+	{
+		const std::wstring Name(AttrInfo->getName());
+		switch (AttrInfo->getReturnType())
+		{
+			case prt::AAT_BOOL:
+			{
+				UBoolAttribute* BoolAttribute = NewObject<UBoolAttribute>();
+				BoolAttribute->Value = AttributeMap->getBool(Name.c_str());
+				return BoolAttribute;
+			}
+			case prt::AAT_INT:
+			case prt::AAT_FLOAT:
+			{
+				UFloatAttribute* FloatAttribute = NewObject<UFloatAttribute>();
+				FloatAttribute->Value = AttributeMap->getFloat(Name.c_str());
+				return FloatAttribute;
+			}
+			case prt::AAT_STR:
+			{
+				UStringAttribute* StringAttribute = NewObject<UStringAttribute>();
+				StringAttribute->Value = AttributeMap->getString(Name.c_str());
+				return StringAttribute;
+			}
+			case prt::AAT_UNKNOWN:
+			case prt::AAT_VOID:
+			case prt::AAT_BOOL_ARRAY:
+			case prt::AAT_FLOAT_ARRAY:
+			case prt::AAT_STR_ARRAY:
+			default:
+				return nullptr;
+		}
+	}
+
 	TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo)
 	{
 		TMap<FString, URuleAttribute*> Attributes;
 		for (size_t AttributeIndex = 0; AttributeIndex < RuleInfo->getNumAttributes(); AttributeIndex++)
 		{
 			const prt::RuleFileInfo::Entry* AttrInfo = RuleInfo->getAttribute(AttributeIndex);
-			const std::wstring Name(AttrInfo->getName());
+			if (AttrInfo->getNumParameters() != 0)
+			{
+				continue;
+			}
 
+			// We only support the default style for the moment
+			FString Style(prtu::getStyle(AttrInfo->getName()).c_str());
+			if (Style != DEFAULT_STYLE)
+			{
+				continue;
+			}
+			
+			const std::wstring Name(AttrInfo->getName());
 			if (Attributes.Contains(Name.c_str()))
 			{
 				continue;
 			}
 
-			URuleAttribute* Attribute = nullptr;
-
-			switch (AttrInfo->getReturnType())
-			{
-			// TODO implement all types as well as annotation parsing (see:
-			// https://github.com/Esri/serlio/blob/b293b660034225371101ef1e9a3d9cfafb3c5382/src/serlio/prtModifier/PRTModifierAction.cpp#L358)
-			case prt::AAT_BOOL:
-			{
-				UBoolAttribute* BoolAttribute = NewObject<UBoolAttribute>();
-				BoolAttribute->Value = AttributeMap->getBool(Name.c_str());
-				Attribute = BoolAttribute;
-				break;
-			}
-			case prt::AAT_FLOAT:
-			{
-				UFloatAttribute* FloatAttribute = NewObject<UFloatAttribute>();
-				FloatAttribute->Value = AttributeMap->getFloat(Name.c_str());
-				Attribute = FloatAttribute;
-				break;
-			}
-			case prt::AAT_STR:
-			{
-				UStringAttribute* StringAttribute = NewObject<UStringAttribute>();
-				StringAttribute->Value = AttributeMap->getString(Name.c_str());
-				Attribute = StringAttribute;
-				break;
-			}
-			case prt::AAT_INT:
-				break;
-			case prt::AAT_UNKNOWN:
-				break;
-			case prt::AAT_VOID:
-				break;
-			case prt::AAT_BOOL_ARRAY:
-				break;
-			case prt::AAT_FLOAT_ARRAY:
-				break;
-			case prt::AAT_STR_ARRAY:
-				break;
-			default:;
-			}
+			URuleAttribute* Attribute = CreateAttribute(AttributeMap, AttrInfo);
 
 			if (Attribute)
 			{
 				FString AttributeName = Name.c_str();
+				FString DisplayName = prtu::removeImport(prtu::removeStyle(Name.c_str())).c_str();
 				Attribute->Name = AttributeName;
-				Attributes.Add(AttributeName, Attribute);
+				Attribute->DisplayName = DisplayName;
+
+				ParseAttributeAnnotations(AttrInfo, *Attribute);
+
+				if (!Attribute->Hidden)
+				{
+					Attributes.Add(AttributeName, Attribute);
+				}
 			}
 		}
 		return Attributes;
@@ -351,7 +363,8 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(const std::wstring& 
 	return Future;
 }
 
-FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
+FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
+	URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
 {
 	check(InitialShape);
 	check(RulePackage);
@@ -417,7 +430,7 @@ TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const UStaticMesh* Initia
 	return Async(EAsyncExecution::Thread, [=]() -> FGenerateResult
 	{
 		return Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, Attributes);
-	});
+  	});
 }
 
 TFuture<TMap<FString, URuleAttribute*>> VitruvioModule::LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage) const

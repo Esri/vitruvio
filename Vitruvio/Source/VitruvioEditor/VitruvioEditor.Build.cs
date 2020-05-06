@@ -6,6 +6,7 @@ public class VitruvioEditor : ModuleRules
 {
 	public VitruvioEditor(ReadOnlyTargetRules Target) : base(Target)
 	{
+		bUseRTTI = true;
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		PrecompileForTargets = PrecompileTargetsType.Any;
 
@@ -24,7 +25,8 @@ public class VitruvioEditor : ModuleRules
 				"AppFramework",
 				"CoreUObject",
 				"InputCore",
-				"UnrealEd"
+				"UnrealEd",
+				"EditorStyle"
 			}
 		);
 			
