@@ -170,6 +170,10 @@ void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, UR
 		{
 			InAttribute.SetAnnotation(ParseFileAnnotation(CEAnnotation));
 		}
+		else if (std::wcscmp(Name, ANNOT_COLOR) == 0)
+		{
+			InAttribute.SetAnnotation(MakeShared<ColorAnnotation>());
+		}
 
 		if (!std::wcscmp(Name, ANNOT_HIDDEN))
 		{

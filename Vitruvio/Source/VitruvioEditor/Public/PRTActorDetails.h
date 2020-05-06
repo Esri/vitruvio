@@ -10,14 +10,15 @@ public:
 	
     static TSharedRef<IDetailCustomization> MakeInstance();
 
-	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
-	virtual void CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& DetailBuilder) override;
+	void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
+	void CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& DetailBuilder) override;
 	
 	void OnAttributesChanged(UObject* Object, struct FPropertyChangedEvent& Event);
 	
 private:
 	TArray<TWeakObjectPtr<>> ObjectsBeingCustomized;
 	TWeakPtr<IDetailLayoutBuilder> CachedDetailBuilder;
+	TSharedPtr<SWidget> ColorPickerParentWidget;
 };
 
 template <typename T>

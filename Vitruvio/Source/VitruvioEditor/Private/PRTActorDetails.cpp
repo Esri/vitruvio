@@ -6,11 +6,13 @@
 #include "IDetailGroup.h"
 #include "PRTActor.h"
 #include "Algo/Transform.h"
+#include "Widgets/Colors/SColorPicker.h"
 
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Input/SSpinBox.h"
 #include "Widgets/Input/SCheckBox.h"
+#include "Widgets/Colors/SColorBlock.h"
 
 namespace
 {
@@ -57,6 +59,56 @@ namespace
 		
 		return ValueWidget;
 	}
+
+	void CreateColorPicker(UStringAttribute* Attribute, APRTActor* PrtActor)
+	{
+		FColorPickerArgs PickerArgs;
+		{
+			PickerArgs.bUseAlpha = false;
+			PickerArgs.bOnlyRefreshOnOk = true;
+			PickerArgs.sRGBOverride = true;
+			PickerArgs.DisplayGamma = TAttribute<float>::Create(TAttribute<float>::FGetter::CreateUObject(GEngine, &UEngine::GetDisplayGamma));
+			PickerArgs.InitialColorOverride = FLinearColor(FColor::FromHex(Attribute->Value));
+			PickerArgs.OnColorCommitted.BindLambda([Attribute, PrtActor](FLinearColor NewColor)
+				{
+					UpdateAttributeValue(PrtActor, Attribute, L"#" + NewColor.ToFColor(true).ToHex());
+				});
+		}
+
+		OpenColorPicker(PickerArgs);
+	}
+	
+	TSharedPtr<SHorizontalBox> CreateColorInputWidget(UStringAttribute* Attribute, APRTActor* PrtActor)
+	{
+				
+		return SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.Padding(0.0f, 2.0f)
+			[
+				// Displays the color without alpha
+				SNew(SColorBlock)
+				.Color_Lambda([Attribute]()
+				{
+					return FLinearColor(FColor::FromHex(Attribute->Value));
+				})
+				.ShowBackgroundForAlpha(false)
+				.OnMouseButtonDown_Lambda([Attribute, PrtActor](const FGeometry& Geometry, const FPointerEvent& Event) -> FReply
+				{
+						if (Event.GetEffectingButton() != EKeys::LeftMouseButton)
+						{
+							return FReply::Unhandled();
+						}
+
+						CreateColorPicker(Attribute, PrtActor);
+						return FReply::Handled();
+				})
+				.UseSRGB(true)
+				.IgnoreAlpha(true)
+				.Size(FVector2D(35.0f, 12.0f))
+			];
+	}
+	
 	
 	TSharedPtr<SCheckBox> CreateBoolInputWidget(UBoolAttribute* Attribute, APRTActor* PrtActor)
 	{
@@ -154,7 +206,7 @@ namespace
 			GroupCache.Add(Name, &Group);
 			return &Group;
 		};
-		
+
 		FString QualifiedIdentifier = Groups[0];
 		IDetailGroup* CurrentGroup = GetOrCreateGroup(Root, QualifiedIdentifier);
 		for (auto GroupIndex = 1; GroupIndex < Groups.Num(); ++GroupIndex)
@@ -175,18 +227,18 @@ namespace
 
 		IDetailCategoryBuilder& RootCategory = DetailBuilder.EditCategory("CGA");
 		RootCategory.SetShowAdvanced(true);
-		
+
 		IDetailGroup& RootGroup = RootCategory.AddGroup("Attributes", FText::FromString("Attributes"), true, true);
 		TMap<FString, IDetailGroup*> GroupCache;
-		
+
 		for (const auto& AttributeEntry : PrtActor->Attributes)
 		{
 			URuleAttribute* Attribute = AttributeEntry.Value;
 
 			IDetailGroup* Group = GetOrCreateGroups(RootGroup, Attribute->Groups, GroupCache);
-			FDetailWidgetRow&  Row = Group->AddWidgetRow();
+			FDetailWidgetRow& Row = Group->AddWidgetRow();
 
-			Row.NameContent() [ CreateNameWidget(Attribute).ToSharedRef() ];
+			Row.NameContent()[CreateNameWidget(Attribute).ToSharedRef()];
 
 			if (UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
 			{
@@ -205,6 +257,10 @@ namespace
 				{
 					Row.ValueContent()[CreateEnumWidget(StringAttribute, StringAttribute->GetEnumAnnotation(), PrtActor).ToSharedRef()];
 				}
+				else if (StringAttribute->GetColorAnnotation())
+				{
+					Row.ValueContent()[CreateColorInputWidget(StringAttribute, PrtActor).ToSharedRef()];
+				}
 				else
 				{
 					Row.ValueContent()[CreateTextInputWidget(StringAttribute, PrtActor).ToSharedRef()];
@@ -214,9 +270,7 @@ namespace
 			{
 				Row.ValueContent()[CreateBoolInputWidget(BoolAttribute, PrtActor).ToSharedRef()];
 			}
-
 		}
-		
 	}
 }
 

@@ -7,13 +7,21 @@
 using FAttributeGroups = TArray<FString>;
 
 enum FilesystemMode { File, Directory, None };
-enum AnnotationType { FileSystem, Range, Enum };
+enum AnnotationType { FileSystem, Range, Enum, Color };
 
 class AttributeAnnotation
 {
 public:
 	virtual ~AttributeAnnotation() = default;
 	virtual AnnotationType GetAnnotationType() = 0;
+};
+
+class ColorAnnotation : public AttributeAnnotation
+{
+	AnnotationType GetAnnotationType() override
+	{
+		return Color;
+	}
 };
 
 class FilesystemAnnotation : public AttributeAnnotation
@@ -92,6 +100,11 @@ public:
 	{
 		return Annotation && Annotation->GetAnnotationType() == Enum ? StaticCastSharedPtr<EnumAnnotation<FString>>(Annotation) : TSharedPtr<EnumAnnotation<FString>>();
 	}
+
+	TSharedPtr<ColorAnnotation> GetColorAnnotation() const
+	{
+		return Annotation && Annotation->GetAnnotationType() == Color ? StaticCastSharedPtr<ColorAnnotation>(Annotation) : TSharedPtr<ColorAnnotation>();
+	}
 };
 
 UCLASS()
@@ -120,13 +133,4 @@ class VITRUVIO_API UBoolAttribute : public URuleAttribute
 
 public:
 	bool Value;
-};
-
-UCLASS()
-class VITRUVIO_API UColorAttribute : public URuleAttribute
-{
-	GENERATED_BODY()
-
-public:
-    FColor Color;
 };
