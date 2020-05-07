@@ -65,11 +65,6 @@ void APRTActor::Tick(float DeltaTime)
 			LoadDefaultAttributes(InitialShape);
 		}
 
-		if (GenerateAutomatically)
-		{
-			Regenerate();
-		}
-
 		Initialized = true;
 	}
 }
