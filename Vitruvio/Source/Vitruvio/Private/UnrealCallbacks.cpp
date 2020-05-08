@@ -9,7 +9,6 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Util/MaterialConversion.h"
 
-
 DEFINE_LOG_CATEGORY(LogUnrealCallbacks);
 
 namespace
@@ -18,8 +17,6 @@ namespace
 	{
 		return FPlane(Mat[Index + 0 * 4], Mat[Index + 1 * 4], Mat[Index + 2 * 4], Mat[Index + 3 * 4]);
 	}
-
-	
 }
 
 void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const double* vtx, size_t vtxSize, const double* nrm, size_t nrmSize, const uint32_t* faceVertexCounts,
