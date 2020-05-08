@@ -130,7 +130,6 @@ namespace
 		{
 			const URuleAttribute* Attribute = AttributeEntry.Value;
 
-			// TODO implement all types (see: https://github.com/Esri/serlio/blob/b293b660034225371101ef1e9a3d9cfafb3c5382/src/serlio/prtModifier/PRTModifierAction.cpp#L144)
 			if (const UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
 			{
 				AttributeMapBuilder->setFloat(*Attribute->Name, FloatAttribute->Value);
