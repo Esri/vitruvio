@@ -19,8 +19,6 @@ class VITRUVIO_API APRTActor : public AStaticMeshActor
 	bool Regenerated = false;
 	bool AttributesReady = false;
 	
-	TFuture<TMap<FString, URuleAttribute*>> AttributesFuture;
-
 public:
 	APRTActor();
 

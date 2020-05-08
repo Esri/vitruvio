@@ -27,7 +27,7 @@ void APRTActor::LoadDefaultAttributes(UStaticMesh* InitialShape)
 	
 	AttributesReady = false;
 	
-	AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk);
+	TFuture<TMap<FString, URuleAttribute*>> AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk);
 	AttributesFuture.Next([this](const TMap<FString, URuleAttribute*>& Result) {
 		
 		Attributes = Result;
