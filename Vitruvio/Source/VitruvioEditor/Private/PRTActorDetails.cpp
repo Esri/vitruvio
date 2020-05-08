@@ -238,6 +238,8 @@ namespace
 			IDetailGroup* Group = GetOrCreateGroups(RootGroup, Attribute->Groups, GroupCache);
 			FDetailWidgetRow& Row = Group->AddWidgetRow();
 
+			Row.FilterTextString = FText::FromString(Attribute->DisplayName);
+
 			Row.NameContent()[CreateNameWidget(Attribute).ToSharedRef()];
 
 			if (UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
@@ -334,7 +336,10 @@ void FPRTActorDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 		}
 	}
 
-	if (!PrtActor) return;
+	if (!PrtActor)
+	{
+		return;
+	}
 
 	DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(APRTActor, Attributes))->MarkHiddenByCustomization();
 
