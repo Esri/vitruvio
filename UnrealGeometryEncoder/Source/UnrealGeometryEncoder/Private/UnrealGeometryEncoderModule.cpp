@@ -15,11 +15,6 @@ void UnrealGeometryEncoderModule::ShutdownModule()
 // We don't want to overwrite new/delete for the module but setting FORCE_ANSI_ALLOCATOR to 1 does not work so we change
 // macros defined in ModuleBoilerplate.h to just not overwrite them.
 
-// in DLL builds, these are done per-module, otherwise we just need one in the application
-// visual studio cannot find cross dll data for visualizers, so these provide access
-#define PER_MODULE_BOILERPLATE_UNREAL \
-	UE4_VISUALIZERS_HELPERS \
-
 #define IMPLEMENT_MODULE_UNREAL(ModuleImplClass, ModuleName)                                                                                                                       \
                                                                                                                                                                                    \
 	/**/                                                                                                                                                                           \
@@ -35,7 +30,6 @@ void UnrealGeometryEncoderModule::ShutdownModule()
 	extern "C" void IMPLEMENT_MODULE_##ModuleName()                                                                                                                                \
 	{                                                                                                                                                                              \
 	}                                                                                                                                                                              \
-	PER_MODULE_BOILERPLATE_UNREAL                                                                                                                                                  \
 	PER_MODULE_BOILERPLATE_ANYLINK(ModuleImplClass, ModuleName)
 
 IMPLEMENT_MODULE_UNREAL(UnrealGeometryEncoderModule, UnrealGeometryEncoder)

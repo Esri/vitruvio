@@ -71,29 +71,46 @@ namespace
 
 	void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder, const UStaticMesh* InitialShape)
 	{
-		const FMeshDescription* MeshDescription = InitialShape->GetMeshDescription(0);
-		const FStaticMeshConstAttributes Attributes(*MeshDescription);
-		const auto& VertexPositions = Attributes.GetVertexPositions();
-
-		std::vector<double> vertexCoords;
-		for (const FVertexID VertexID : MeshDescription->Vertices().GetElementIDs())
+		check(InitialShape);
+		
+		if (!InitialShape->bAllowCPUAccess)
 		{
-			vertexCoords.push_back(VertexPositions[VertexID][0] / 100);
-			vertexCoords.push_back(VertexPositions[VertexID][2] / 100);
-			vertexCoords.push_back(VertexPositions[VertexID][1] / 100);
+			UE_LOG(LogUnrealPrt, Error, TEXT("Can not access static mesh geometry because bAllowCPUAccess is false"));
+			return;
 		}
 
+		std::vector<double> vertexCoords;
 		std::vector<uint32_t> indices;
 		std::vector<uint32_t> faceCounts;
-		const auto& Triangles = MeshDescription->Triangles();
-		for (const FPolygonID PolygonID : MeshDescription->Polygons().GetElementIDs())
+		if (InitialShape->RenderData != nullptr && InitialShape->RenderData->LODResources.IsValidIndex(0))
 		{
-			for (const FVertexInstanceID PolygonVertexInstance : MeshDescription->GetPolygonVertexInstances(PolygonID))
+			const FStaticMeshLODResources& LOD = InitialShape->RenderData->LODResources[0];
+
+			for (auto SectionIndex = 0; SectionIndex < LOD.Sections.Num(); ++SectionIndex)
 			{
-				FVertexID VertexID = MeshDescription->GetVertexInstanceVertex(PolygonVertexInstance);
-				indices.push_back(static_cast<uint32_t>(VertexID.GetValue()));
+				for (uint32 VertexIndex = 0; VertexIndex < LOD.VertexBuffers.PositionVertexBuffer.GetNumVertices(); ++VertexIndex)
+				{
+					FVector Vertex = LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(VertexIndex);
+
+					vertexCoords.push_back(Vertex[0] / 100);
+					vertexCoords.push_back(Vertex[2] / 100);
+					vertexCoords.push_back(Vertex[1] / 100);
+				}
+				
+				const FStaticMeshSection& Section = LOD.Sections[SectionIndex];
+				FIndexArrayView Indices = LOD.IndexBuffer.GetArrayView();
+				
+				for (uint32 Triangle = 0; Triangle < Section.NumTriangles; ++Triangle)
+				{
+					for (uint32 TriangleVertexIndex = 0; TriangleVertexIndex < 3; ++TriangleVertexIndex)
+					{
+						const uint32 MeshVertIndex = Indices[Section.FirstIndex + Triangle * 3 + TriangleVertexIndex];
+						indices.push_back(MeshVertIndex);
+					}
+
+					faceCounts.push_back(3);
+				}
 			}
-			faceCounts.push_back(MeshDescription->GetPolygonVertexInstances(PolygonID).Num());
 		}
 
 		const prt::Status SetGeometryStatus =
@@ -113,7 +130,6 @@ namespace
 		{
 			const URuleAttribute* Attribute = AttributeEntry.Value;
 
-			// TODO implement all types (see: https://github.com/Esri/serlio/blob/b293b660034225371101ef1e9a3d9cfafb3c5382/src/serlio/prtModifier/PRTModifierAction.cpp#L144)
 			if (const UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
 			{
 				AttributeMapBuilder->setFloat(*Attribute->Name, FloatAttribute->Value);

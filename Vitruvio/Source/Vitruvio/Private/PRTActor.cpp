@@ -5,7 +5,6 @@
 #include "ObjectEditorUtils.h"
 #include "VitruvioModule.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
-#include "PropertyEditor/Private/DetailPropertyRow.h"
 
 APRTActor::APRTActor()
 {
@@ -23,6 +22,9 @@ void APRTActor::BeginPlay()
 
 void APRTActor::LoadDefaultAttributes(UStaticMesh* InitialShape)
 {
+	check(InitialShape);
+	check(Rpk);
+	
 	AttributesReady = false;
 	
 	AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk);
@@ -61,11 +63,6 @@ void APRTActor::Tick(float DeltaTime)
 		if (Rpk && InitialShape)
 		{
 			LoadDefaultAttributes(InitialShape);
-		}
-
-		if (GenerateAutomatically)
-		{
-			Regenerate();
 		}
 
 		Initialized = true;
@@ -143,6 +140,20 @@ void APRTActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 		if (Rpk && InitialShape)
 		{
 			LoadDefaultAttributes(InitialShape);
+		}
+	}
+
+	if (PropertyChangedEvent.Property && PropertyChangedEvent.Property->GetFName() == L"StaticMeshComponent")
+	{
+		UStaticMesh* InitialShape = GetStaticMeshComponent()->GetStaticMesh();
+		if (InitialShape)
+		{
+			InitialShape->bAllowCPUAccess = true;
+
+			if (Rpk)
+			{
+				LoadDefaultAttributes(InitialShape);
+			}
 		}
 	}
 	

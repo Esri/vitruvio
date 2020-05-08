@@ -95,13 +95,13 @@ namespace
 				.ShowBackgroundForAlpha(false)
 				.OnMouseButtonDown_Lambda([Attribute, PrtActor](const FGeometry& Geometry, const FPointerEvent& Event) -> FReply
 				{
-						if (Event.GetEffectingButton() != EKeys::LeftMouseButton)
-						{
-							return FReply::Unhandled();
-						}
+					if (Event.GetEffectingButton() != EKeys::LeftMouseButton)
+					{
+						return FReply::Unhandled();
+					}
 
-						CreateColorPicker(Attribute, PrtActor);
-						return FReply::Handled();
+					CreateColorPicker(Attribute, PrtActor);
+					return FReply::Handled();
 				})
 				.UseSRGB(true)
 				.IgnoreAlpha(true)
