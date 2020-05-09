@@ -1,20 +1,22 @@
 #pragma once
 
+#include "PRTTypes.h"
+
+#include "Codec/Encoder/IUnrealCallbacks.h"
+
 #include "Core.h"
 #include "Engine/StaticMesh.h"
 #include "Modules/ModuleManager.h"
-#include "PRTTypes.h"
-#include "Codec/Encoder/IUnrealCallbacks.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogUnrealCallbacks, Log, All);
 
 class UnrealCallbacks : public IUnrealCallbacks
 {
 	AttributeMapBuilderUPtr& AttributeMapBuilder;
-	
+
 	TMap<UStaticMesh*, TArray<FTransform>> Instances;
 	TMap<int32, UStaticMesh*> Meshes;
-	
+
 	UMaterial* OpaqueParent;
 	UMaterial* MaskedParent;
 	UMaterial* TranslucentParent;
@@ -22,7 +24,6 @@ class UnrealCallbacks : public IUnrealCallbacks
 	static const int32 NO_PROTOTYPE_INDEX = -1;
 
 public:
-
 	~UnrealCallbacks() override = default;
 	UnrealCallbacks(AttributeMapBuilderUPtr& AttributeMapBuilder, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent)
 		: AttributeMapBuilder(AttributeMapBuilder), OpaqueParent(OpaqueParent), MaskedParent(MaskedParent), TranslucentParent(TranslucentParent)
@@ -38,7 +39,7 @@ public:
 	{
 		return Meshes.Contains(NO_PROTOTYPE_INDEX) ? Meshes[NO_PROTOTYPE_INDEX] : nullptr;
 	}
-	
+
 	/**
 	 * @param name initial shape name, optionally used to create primitive groups on output
 	 * @param prototypeId the id of the prototype or -1 of not cached

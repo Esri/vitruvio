@@ -1,13 +1,13 @@
 #pragma once
 
-#include <istream>
-#include <string>
-
-#include "RulePackage.h"
 #include "PRTUtils.h"
+#include "RulePackage.h"
 #include "prtx/ResolveMapProvider.h"
 #include "prtx/ResolveMapProviderFactory.h"
 #include "prtx/Singleton.h"
+
+#include <istream>
+#include <string>
 
 class UNREALGEOMETRYENCODER_API UnrealResolveMapProvider : public prtx::ResolveMapProvider
 {

@@ -1,23 +1,26 @@
 #include "VitruvioModule.h"
 
+#include "PRTTypes.h"
+#include "PRTUtils.h"
+#include "UnrealCallbacks.h"
+#include "UnrealResolveMapProvider.h"
+
+#include "Util/AnnotationParsing.h"
+
 #include "prt/API.h"
+#include "prtx/EncoderInfoBuilder.h"
+
 #include "Core.h"
 #include "Interfaces/IPluginManager.h"
 #include "MeshDescription.h"
 #include "Modules/ModuleManager.h"
 #include "StaticMeshAttributes.h"
 #include "UObject/UObjectBaseUtility.h"
-#include "UnrealCallbacks.h"
-#include "PRTTypes.h"
-#include "prtx/EncoderInfoBuilder.h"
-#include "PRTUtils.h"
-#include "Util/AnnotationParsing.h"
-#include "UnrealResolveMapProvider.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioModule"
 
 DEFINE_LOG_CATEGORY(LogUnrealPrt);
-	
+
 namespace
 {
 	constexpr const wchar_t* ENC_ID_ATTR_EVAL = L"com.esri.prt.core.AttributeEvalEncoder";
@@ -29,13 +32,10 @@ namespace
 		TPromise<ResolveMapSPtr> Promise;
 		TMap<FString, ResolveMapSPtr>& ResolveMapCache;
 		FCriticalSection& LoadResolveMapLock;
-		
+
 	public:
-		FLoadResolveMapTask(TPromise<ResolveMapSPtr>&& InPromise, FString ResolveMapUri, TMap<FString, ResolveMapSPtr>& ResolveMapCache, FCriticalSection& LoadResolveMapLock):
-			ResolveMapUri(ResolveMapUri),
-			Promise(MoveTemp(InPromise)),
-			ResolveMapCache(ResolveMapCache),
-			LoadResolveMapLock(LoadResolveMapLock)
+		FLoadResolveMapTask(TPromise<ResolveMapSPtr>&& InPromise, FString ResolveMapUri, TMap<FString, ResolveMapSPtr>& ResolveMapCache, FCriticalSection& LoadResolveMapLock)
+			: ResolveMapUri(ResolveMapUri), Promise(MoveTemp(InPromise)), ResolveMapCache(ResolveMapCache), LoadResolveMapLock(LoadResolveMapLock)
 		{
 		}
 
@@ -47,17 +47,17 @@ namespace
 		{
 			RETURN_QUICK_DECLARE_CYCLE_STAT(FLoadResolveMapTask, STATGROUP_TaskGraphTasks);
 		}
-			
+
 		static ENamedThreads::Type GetDesiredThread()
 		{
 			return ENamedThreads::AnyThread;
 		}
-		
-		static ESubsequentsMode::Type GetSubsequentsMode() 
-		{ 
-			return ESubsequentsMode::TrackSubsequents; 
+
+		static ESubsequentsMode::Type GetSubsequentsMode()
+		{
+			return ESubsequentsMode::TrackSubsequents;
 		}
-		
+
 		void DoTask(ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
 		{
 			const ResolveMapSPtr ResolveMap(prt::createResolveMap(*ResolveMapUri), PRTDestroyer());
@@ -72,7 +72,7 @@ namespace
 	void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder, const UStaticMesh* InitialShape)
 	{
 		check(InitialShape);
-		
+
 		if (!InitialShape->bAllowCPUAccess)
 		{
 			UE_LOG(LogUnrealPrt, Error, TEXT("Can not access static mesh geometry because bAllowCPUAccess is false"));
@@ -96,10 +96,10 @@ namespace
 					vertexCoords.push_back(Vertex[2] / 100);
 					vertexCoords.push_back(Vertex[1] / 100);
 				}
-				
+
 				const FStaticMeshSection& Section = LOD.Sections[SectionIndex];
 				FIndexArrayView Indices = LOD.IndexBuffer.GetArrayView();
-				
+
 				for (uint32 Triangle = 0; Triangle < Section.NumTriangles; ++Triangle)
 				{
 					for (uint32 TriangleVertexIndex = 0; TriangleVertexIndex < 3; ++TriangleVertexIndex)
@@ -178,32 +178,32 @@ namespace
 		const std::wstring Name(AttrInfo->getName());
 		switch (AttrInfo->getReturnType())
 		{
-			case prt::AAT_BOOL:
-			{
-				UBoolAttribute* BoolAttribute = NewObject<UBoolAttribute>();
-				BoolAttribute->Value = AttributeMap->getBool(Name.c_str());
-				return BoolAttribute;
-			}
-			case prt::AAT_INT:
-			case prt::AAT_FLOAT:
-			{
-				UFloatAttribute* FloatAttribute = NewObject<UFloatAttribute>();
-				FloatAttribute->Value = AttributeMap->getFloat(Name.c_str());
-				return FloatAttribute;
-			}
-			case prt::AAT_STR:
-			{
-				UStringAttribute* StringAttribute = NewObject<UStringAttribute>();
-				StringAttribute->Value = AttributeMap->getString(Name.c_str());
-				return StringAttribute;
-			}
-			case prt::AAT_UNKNOWN:
-			case prt::AAT_VOID:
-			case prt::AAT_BOOL_ARRAY:
-			case prt::AAT_FLOAT_ARRAY:
-			case prt::AAT_STR_ARRAY:
-			default:
-				return nullptr;
+		case prt::AAT_BOOL:
+		{
+			UBoolAttribute* BoolAttribute = NewObject<UBoolAttribute>();
+			BoolAttribute->Value = AttributeMap->getBool(Name.c_str());
+			return BoolAttribute;
+		}
+		case prt::AAT_INT:
+		case prt::AAT_FLOAT:
+		{
+			UFloatAttribute* FloatAttribute = NewObject<UFloatAttribute>();
+			FloatAttribute->Value = AttributeMap->getFloat(Name.c_str());
+			return FloatAttribute;
+		}
+		case prt::AAT_STR:
+		{
+			UStringAttribute* StringAttribute = NewObject<UStringAttribute>();
+			StringAttribute->Value = AttributeMap->getString(Name.c_str());
+			return StringAttribute;
+		}
+		case prt::AAT_UNKNOWN:
+		case prt::AAT_VOID:
+		case prt::AAT_BOOL_ARRAY:
+		case prt::AAT_FLOAT_ARRAY:
+		case prt::AAT_STR_ARRAY:
+		default:
+			return nullptr;
 		}
 	}
 
@@ -224,7 +224,7 @@ namespace
 			{
 				continue;
 			}
-			
+
 			const std::wstring Name(AttrInfo->getName());
 			if (Attributes.Contains(Name.c_str()))
 			{
@@ -258,14 +258,11 @@ namespace
 		// Find all Unreal dlls
 		TArray<FString> OutFiles;
 		PlatformFile.FindFiles(OutFiles, *BinariesPath, L".dll");
-		TArray<FString> UnrealDlls = OutFiles.FilterByPredicate([](const FString& File) -> auto
-		{
-			return FPaths::GetCleanFilename(File).StartsWith(L"UE4Editor-");
-		});
+		TArray<FString> UnrealDlls = OutFiles.FilterByPredicate([](const FString& File) -> auto { return FPaths::GetCleanFilename(File).StartsWith(L"UE4Editor-"); });
 
 		// Sort by date and remove newest (don't want to delete)
 		UnrealDlls.Sort([&PlatformFile](const auto& A, const auto& B) -> auto { return PlatformFile.GetTimeStamp(*A) > PlatformFile.GetTimeStamp(*B); });
-		if (UnrealDlls.Num() > 0) 
+		if (UnrealDlls.Num() > 0)
 		{
 			UnrealDlls.RemoveAt(0);
 		}
@@ -351,11 +348,13 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(const std::wstring& 
 		// Add task which only fetches the result from the cache once the actual loading has finished
 		FGraphEventArray Prerequisites;
 		Prerequisites.Add(*ScheduledTaskEvent);
-		TGraphTask<TAsyncGraphTask<ResolveMapSPtr>>::CreateTask(&Prerequisites).ConstructAndDispatchWhenReady([this, Uri]()
-		{
-			FScopeLock Lock(&LoadResolveMapLock);
-			return ResolveMapCache[Uri];
-		}, MoveTemp(Promise), ENamedThreads::AnyThread);
+		TGraphTask<TAsyncGraphTask<ResolveMapSPtr>>::CreateTask(&Prerequisites)
+			.ConstructAndDispatchWhenReady(
+				[this, Uri]() {
+					FScopeLock Lock(&LoadResolveMapLock);
+					return ResolveMapCache[Uri];
+				},
+				MoveTemp(Promise), ENamedThreads::AnyThread);
 	}
 	else
 	{
@@ -366,25 +365,25 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(const std::wstring& 
 			LoadTask = TGraphTask<FLoadResolveMapTask>::CreateTask().ConstructAndDispatchWhenReady(MoveTemp(Promise), Uri, ResolveMapCache, LoadResolveMapLock);
 			ResolveMapEventGraphRefCache.Add(Uri, LoadTask);
 		}
-		
+
 		// Task which removes the event from the cache once finished
-		FFunctionGraphTask::CreateAndDispatchWhenReady([this, Uri]()
-		{
-			FScopeLock Lock(&LoadResolveMapLock);
-			ResolveMapEventGraphRefCache.Remove(Uri);
-		}, TStatId(), LoadTask, ENamedThreads::AnyThread);
-		
+		FFunctionGraphTask::CreateAndDispatchWhenReady(
+			[this, Uri]() {
+				FScopeLock Lock(&LoadResolveMapLock);
+				ResolveMapEventGraphRefCache.Remove(Uri);
+			},
+			TStatId(), LoadTask, ENamedThreads::AnyThread);
 	}
 
 	return Future;
 }
 
-FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
-	URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
+FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent, URulePackage* RulePackage,
+										 const TMap<FString, URuleAttribute*>& Attributes) const
 {
 	check(InitialShape);
 	check(RulePackage);
-	
+
 	if (!Initialized)
 	{
 		UE_LOG(LogUnrealPrt, Error, TEXT("prt not initialized"))
@@ -428,34 +427,30 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 		UE_LOG(LogUnrealPrt, Error, TEXT("prt generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
 	}
 
-	return { OutputHandler->GetModel(), OutputHandler->GetInstances() };
+	return {OutputHandler->GetModel(), OutputHandler->GetInstances()};
 }
 
 TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
-        URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
+													   URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
 {
 	check(InitialShape);
 	check(RulePackage);
-	
+
 	if (!Initialized)
 	{
 		UE_LOG(LogUnrealPrt, Error, TEXT("prt not initialized"))
 		return {};
 	}
 
-	return Async(EAsyncExecution::Thread, [=]() -> FGenerateResult
-	{
-		return Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, Attributes);
-  	});
+	return Async(EAsyncExecution::Thread, [=]() -> FGenerateResult { return Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, Attributes); });
 }
 
 TFuture<TMap<FString, URuleAttribute*>> VitruvioModule::LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage) const
 {
 	check(InitialShape);
 	check(RulePackage);
-	
-	return Async(EAsyncExecution::Thread, [=]() -> TMap<FString, URuleAttribute*>
-	{
+
+	return Async(EAsyncExecution::Thread, [=]() -> TMap<FString, URuleAttribute*> {
 		const FString PathName = RulePackage->GetPathName();
 		const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + *PathName;
 		const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(PathUri).Get();

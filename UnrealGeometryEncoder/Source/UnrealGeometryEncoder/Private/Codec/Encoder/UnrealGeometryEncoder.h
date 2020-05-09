@@ -1,8 +1,5 @@
 #pragma once
 
-#include "Codec/CodecMain.h"
-#include "HAL/MemoryBase.h"
-
 #include "prtx/EncodePreparator.h"
 #include "prtx/Encoder.h"
 #include "prtx/EncoderFactory.h"
@@ -15,6 +12,9 @@
 
 #include "prt/ContentType.h"
 #include "prt/InitialShape.h"
+
+#include "Codec/CodecMain.h"
+#include "HAL/MemoryBase.h"
 
 #include <iostream>
 #include <stdexcept>

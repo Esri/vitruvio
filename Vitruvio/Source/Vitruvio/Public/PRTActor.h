@@ -2,12 +2,14 @@
 
 #pragma once
 
+#include "RuleAttributes.h"
+#include "RulePackage.h"
+
 #include "CoreMinimal.h"
 #include "Engine/StaticMeshActor.h"
 #include "GameFramework/Actor.h"
-#include "RuleAttributes.h"
-#include "RulePackage.h"
 #include "Materials/Material.h"
+
 #include "PRTActor.generated.h"
 
 UCLASS()
@@ -18,16 +20,16 @@ class VITRUVIO_API APRTActor : public AStaticMeshActor
 	bool Initialized = false;
 	bool Regenerated = false;
 	bool AttributesReady = false;
-	
+
 public:
 	APRTActor();
 
-	UPROPERTY(EditAnywhere, DisplayName = "Rule Package", Category="CGA")
+	UPROPERTY(EditAnywhere, DisplayName = "Rule Package", Category = "CGA")
 	URulePackage* Rpk;
 
-	UPROPERTY(EditAnywhere, Category="CGA")
+	UPROPERTY(EditAnywhere, Category = "CGA")
 	int32 RandomSeed;
-	
+
 	UPROPERTY(EditAnywhere)
 	TMap<FString, URuleAttribute*> Attributes;
 
@@ -35,11 +37,11 @@ public:
 	UMaterial* OpaqueParent;
 
 	UPROPERTY(EditAnywhere)
-    UMaterial* MaskedParent;
+	UMaterial* MaskedParent;
 
 	UPROPERTY(EditAnywhere)
 	UMaterial* TranslucentParent;
-	
+
 	UPROPERTY(EditAnywhere, Category = "CGA")
 	bool GenerateAutomatically = true;
 
@@ -52,8 +54,7 @@ protected:
 
 public:
 	void Tick(float DeltaTime) override;
-	
-	
+
 #if WITH_EDITOR
 	void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	bool ShouldTickIfViewportsOnly() const override;

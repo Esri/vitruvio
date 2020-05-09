@@ -47,11 +47,10 @@ public:
 	                     const prt::AttributeMap** materials
 	) = 0;
 	// clang-format on
-	
+
 	/**
 	 * @param prototypeId
 	 * @param transform
 	 */
 	virtual void addInstance(int32_t prototypeId, const double* transform) = 0;
-	
 };

@@ -2,12 +2,24 @@
 
 #include "Containers/Array.h"
 #include "UObject/Object.h"
+
 #include "RuleAttributes.generated.h"
 
 using FAttributeGroups = TArray<FString>;
 
-enum FilesystemMode { File, Directory, None };
-enum AnnotationType { FileSystem, Range, Enum, Color };
+enum FilesystemMode
+{
+	File,
+	Directory,
+	None
+};
+enum AnnotationType
+{
+	FileSystem,
+	Range,
+	Enum,
+	Color
+};
 
 class AttributeAnnotation
 {
@@ -28,7 +40,7 @@ class FilesystemAnnotation : public AttributeAnnotation
 {
 public:
 	FilesystemMode Mode = None;
-    FString Extensions;
+	FString Extensions;
 
 	AnnotationType GetAnnotationType() override
 	{
@@ -50,8 +62,7 @@ public:
 	}
 };
 
-template <typename T>
-class EnumAnnotation : public AttributeAnnotation
+template <typename T> class EnumAnnotation : public AttributeAnnotation
 {
 public:
 	TArray<T> Values;
@@ -67,10 +78,10 @@ UCLASS()
 class VITRUVIO_API URuleAttribute : public UObject
 {
 	GENERATED_BODY()
-	
+
 protected:
 	TSharedPtr<AttributeAnnotation> Annotation;
-	
+
 public:
 	FString Name;
 	FString DisplayName;

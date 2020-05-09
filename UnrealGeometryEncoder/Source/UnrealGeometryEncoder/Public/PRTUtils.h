@@ -1,18 +1,22 @@
 #pragma once
 
-#include "prt/API.h"
 #include "PRTTypes.h"
 
+#include "prt/API.h"
+
 #include <memory>
-#include <string>
-#include <vector>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #ifdef PLATFORM_WINDOWS
+
 #include "Windows/AllowWindowsPlatformTypes.h"
+
 #include "Windows.h"
+
 #include "Windows/HideWindowsPlatformTypes.h"
+
 #endif
 
 namespace prtu
@@ -59,14 +63,16 @@ namespace prtu
 	constexpr wchar_t STYLE_DELIMITER = L'$';
 	constexpr wchar_t IMPORT_DELIMITER = L'.';
 
-	inline std::wstring getStyle(const std::wstring& fqRuleName) {
+	inline std::wstring getStyle(const std::wstring& fqRuleName)
+	{
 		const auto sepPos = fqRuleName.find(STYLE_DELIMITER);
 		if (sepPos == std::wstring::npos || sepPos == 0)
 			return {};
 		return fqRuleName.substr(0, sepPos);
 	}
 
-	inline std::wstring removePrefix(const std::wstring& fqRuleName, wchar_t delim) {
+	inline std::wstring removePrefix(const std::wstring& fqRuleName, wchar_t delim)
+	{
 		const auto sepPos = fqRuleName.find(delim);
 		if (sepPos == std::wstring::npos)
 			return fqRuleName;
@@ -77,11 +83,13 @@ namespace prtu
 		return fqRuleName.substr(sepPos + 1);
 	}
 
-	inline std::wstring removeStyle(const std::wstring& fqRuleName) {
+	inline std::wstring removeStyle(const std::wstring& fqRuleName)
+	{
 		return removePrefix(fqRuleName, STYLE_DELIMITER);
 	}
 
-	inline std::wstring removeImport(const std::wstring& fqRuleName) {
+	inline std::wstring removeImport(const std::wstring& fqRuleName)
+	{
 		return removePrefix(fqRuleName, IMPORT_DELIMITER);
 	}
 
