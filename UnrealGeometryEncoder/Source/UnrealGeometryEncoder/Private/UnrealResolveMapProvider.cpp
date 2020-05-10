@@ -1,14 +1,17 @@
+// Copyright 2019 - 2020 Esri. All Rights Reserved.
+
 #include "UnrealResolveMapProvider.h"
+
+#include "PRTUtils.h"
+#include "RulePackage.h"
 
 #include "prt/API.h"
 #include "prt/ResolveMap.h"
 #include "prtx/ExtensionManager.h"
 
 #include "GenericPlatform/GenericPlatformFile.h"
-#include "Misc/Paths.h"
 #include "HAL/PlatformFilemanager.h"
-#include "RulePackage.h"
-#include "PRTUtils.h"
+#include "Misc/Paths.h"
 
 const std::wstring UnrealResolveMapProvider::ID = L"com.esri.prt.adaptors.UnrealResolveMapProvider";
 const std::wstring UnrealResolveMapProvider::NAME = L"Unreal ResolveMapProvider";

@@ -1,7 +1,6 @@
-#pragma once
+// Copyright 2019 - 2020 Esri. All Rights Reserved.
 
-#include "Codec/CodecMain.h"
-#include "HAL/MemoryBase.h"
+#pragma once
 
 #include "prtx/EncodePreparator.h"
 #include "prtx/Encoder.h"
@@ -15,6 +14,9 @@
 
 #include "prt/ContentType.h"
 #include "prt/InitialShape.h"
+
+#include "Codec/CodecMain.h"
+#include "HAL/MemoryBase.h"
 
 #include <iostream>
 #include <stdexcept>

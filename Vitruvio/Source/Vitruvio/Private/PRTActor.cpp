@@ -1,15 +1,16 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2019 - 2020 Esri. All Rights Reserved.
 
 #include "PRTActor.h"
 
-#include "ObjectEditorUtils.h"
 #include "VitruvioModule.h"
+
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
+#include "ObjectEditorUtils.h"
 
 APRTActor::APRTActor()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	
+
 	OpaqueParent = LoadObject<UMaterial>(this, TEXT("Material'/Vitruvio/Materials/M_OpaqueParent.M_OpaqueParent'"), nullptr);
 	MaskedParent = LoadObject<UMaterial>(this, TEXT("Material'/Vitruvio/Materials/M_MaskedParent.M_MaskedParent'"), nullptr);
 	TranslucentParent = LoadObject<UMaterial>(this, TEXT("Material'/Vitruvio/Materials/M_TranslucentParent.M_TranslucentParent'"), nullptr);
@@ -24,24 +25,24 @@ void APRTActor::LoadDefaultAttributes(UStaticMesh* InitialShape)
 {
 	check(InitialShape);
 	check(Rpk);
-	
+
 	AttributesReady = false;
-	
+
 	TFuture<TMap<FString, URuleAttribute*>> AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk);
 	AttributesFuture.Next([this](const TMap<FString, URuleAttribute*>& Result) {
-		
 		Attributes = Result;
 		AttributesReady = true;
 
 #if WITH_EDITOR
 		// Notify possible listeners (eg. Details panel) about changes to the Attributes
-		FFunctionGraphTask::CreateAndDispatchWhenReady([this, &Result]()
-		{
-		    FPropertyChangedEvent PropertyEvent(GetClass()->FindPropertyByName(GET_MEMBER_NAME_CHECKED(APRTActor, Attributes)));
-			FCoreUObjectDelegates::OnObjectPropertyChanged.Broadcast(this, PropertyEvent);
-		}, TStatId(), nullptr, ENamedThreads::GameThread);
+		FFunctionGraphTask::CreateAndDispatchWhenReady(
+			[this, &Result]() {
+				FPropertyChangedEvent PropertyEvent(GetClass()->FindPropertyByName(GET_MEMBER_NAME_CHECKED(APRTActor, Attributes)));
+				FCoreUObjectDelegates::OnObjectPropertyChanged.Broadcast(this, PropertyEvent);
+			},
+			TStatId(), nullptr, ENamedThreads::GameThread);
 #endif
-		
+
 		if (GenerateAutomatically)
 		{
 			Regenerate();
@@ -53,8 +54,8 @@ void APRTActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	Regenerated = false; 
-	
+	Regenerated = false;
+
 	// Note that we also tick in editor for initialization
 	if (!Initialized)
 	{
@@ -74,7 +75,7 @@ void APRTActor::Regenerate()
 	if (Rpk && AttributesReady && !Regenerated)
 	{
 		Regenerated = true;
-		
+
 		// Generate
 		if (GetStaticMeshComponent())
 		{
@@ -82,44 +83,42 @@ void APRTActor::Regenerate()
 
 			if (InitialShape)
 			{
-				VitruvioModule::Get().GenerateAsync(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, Rpk, Attributes)
-				.Next([=](const FGenerateResult& Result)
-				{
-					const FGraphEventRef CreateMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this, &Result]()
-					{
-						// Remove previously generated actors
-						TArray<AActor*> GeneratedMeshes;
-						GetAttachedActors(GeneratedMeshes);
-						for (const auto& Child : GeneratedMeshes)
-						{
-							Child->Destroy();
-						}
-
-						// Create actors for generated meshes
-						QUICK_SCOPE_CYCLE_COUNTER(STAT_PRTActor_CreateActors);
-						FActorSpawnParameters Parameters;
-						Parameters.Owner = this;
-						AStaticMeshActor* StaticMeshActor = GetWorld()->SpawnActor<AStaticMeshActor>(Parameters);
-						StaticMeshActor->SetMobility(EComponentMobility::Movable);
-						StaticMeshActor->GetStaticMeshComponent()->SetStaticMesh(Result.ShapeMesh);
-						StaticMeshActor->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
-
-						for (const auto Instance : Result.Instances)
-						{
-							auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(StaticMeshActor);
-							InstancedComponent->SetStaticMesh(Instance.Key);
-							for (FTransform InstanceTransform : Instance.Value)
+				VitruvioModule::Get().GenerateAsync(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, Rpk, Attributes).Next([=](const FGenerateResult& Result) {
+					const FGraphEventRef CreateMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady(
+						[this, &Result]() {
+							// Remove previously generated actors
+							TArray<AActor*> GeneratedMeshes;
+							GetAttachedActors(GeneratedMeshes);
+							for (const auto& Child : GeneratedMeshes)
 							{
-								InstancedComponent->AddInstance(InstanceTransform);
+								Child->Destroy();
 							}
-							StaticMeshActor->AddInstanceComponent(InstancedComponent);
-							InstancedComponent->RegisterComponent();
-							InstancedComponent->SetRelativeTransform(StaticMeshActor->GetTransform());
-						}
-						StaticMeshActor->RegisterAllComponents();
-						
-					}, TStatId(), nullptr, ENamedThreads::GameThread);
-					
+
+							// Create actors for generated meshes
+							QUICK_SCOPE_CYCLE_COUNTER(STAT_PRTActor_CreateActors);
+							FActorSpawnParameters Parameters;
+							Parameters.Owner = this;
+							AStaticMeshActor* StaticMeshActor = GetWorld()->SpawnActor<AStaticMeshActor>(Parameters);
+							StaticMeshActor->SetMobility(EComponentMobility::Movable);
+							StaticMeshActor->GetStaticMeshComponent()->SetStaticMesh(Result.ShapeMesh);
+							StaticMeshActor->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
+
+							for (const auto Instance : Result.Instances)
+							{
+								auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(StaticMeshActor);
+								InstancedComponent->SetStaticMesh(Instance.Key);
+								for (FTransform InstanceTransform : Instance.Value)
+								{
+									InstancedComponent->AddInstance(InstanceTransform);
+								}
+								StaticMeshActor->AddInstanceComponent(InstancedComponent);
+								InstancedComponent->RegisterComponent();
+								InstancedComponent->SetRelativeTransform(StaticMeshActor->GetTransform());
+							}
+							StaticMeshActor->RegisterAllComponents();
+						},
+						TStatId(), nullptr, ENamedThreads::GameThread);
+
 					FTaskGraphInterface::Get().WaitUntilTaskCompletes(CreateMeshTask);
 				});
 			}
@@ -131,7 +130,7 @@ void APRTActor::Regenerate()
 void APRTActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
-	
+
 	if (PropertyChangedEvent.Property && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(APRTActor, Rpk))
 	{
 		Attributes.Empty();
@@ -156,7 +155,7 @@ void APRTActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 			}
 		}
 	}
-	
+
 	if (GenerateAutomatically)
 	{
 		Regenerate();

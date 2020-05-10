@@ -1,12 +1,12 @@
-// Copyright 1998-2019 Epic Games, Inc. All Rights Reserved.
+// Copyright 2019 - 2020 Esri. All Rights Reserved.
 
 #include "VitruvioEditorModule.h"
-#include "AssetToolsModule.h"
-#include "IAssetTools.h"
+#include "PRTActorDetails.h"
 #include "RulePackageAssetTypeActions.h"
 
+#include "AssetToolsModule.h"
 #include "Core.h"
-#include "PRTActorDetails.h"
+#include "IAssetTools.h"
 #include "Modules/ModuleManager.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioEditorModule"

@@ -1,3 +1,5 @@
+// Copyright 2019 - 2020 Esri. All Rights Reserved.
+
 #include "UnrealLogHandler.h"
 
 DEFINE_LOG_CATEGORY(UnrealPrtLog)

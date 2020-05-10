@@ -1,9 +1,12 @@
+// Copyright 2019 - 2020 Esri. All Rights Reserved.
+
 #include "CodecMain.h"
+
+#include "UnrealResolveMapProvider.h"
 
 #include "Encoder/UnrealGeometryEncoder.h"
 
 #include "prtx/ExtensionManager.h"
-#include "UnrealResolveMapProvider.h"
 
 // TODO get version when we automatically download PRT from github and set in build script
 namespace

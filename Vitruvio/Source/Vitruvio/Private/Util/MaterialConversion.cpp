@@ -1,11 +1,15 @@
-﻿#pragma once
+﻿// Copyright 2019 - 2020 Esri. All Rights Reserved.
+
+#pragma once
 
 #include "MaterialConversion.h"
 
-#include "IImageWrapper.h"
-#include "IImageWrapperModule.h"
 #include "PRTTypes.h"
 #include "RuleAttributes.h"
+
+#include "IImageWrapper.h"
+#include "IImageWrapperModule.h"
+
 #include <map>
 
 DEFINE_LOG_CATEGORY(LogMaterialConversion);
@@ -21,9 +25,7 @@ namespace
 	UTexture2D* CreateTexture(UObject* Outer, const TArray<uint8>& PixelData, int32 InSizeX, int32 InSizeY, const TextureSettings& Settings, EPixelFormat Format, FName BaseName)
 	{
 		// Shamelessly copied from UTexture2D::CreateTransient with a few modifications
-		if (InSizeX <= 0 || InSizeY <= 0 ||
-			(InSizeX % GPixelFormats[Format].BlockSizeX) != 0 ||
-			(InSizeY % GPixelFormats[Format].BlockSizeY) != 0)
+		if (InSizeX <= 0 || InSizeY <= 0 || (InSizeX % GPixelFormats[Format].BlockSizeX) != 0 || (InSizeY % GPixelFormats[Format].BlockSizeY) != 0)
 		{
 			UE_LOG(LogMaterialConversion, Warning, TEXT("Invalid parameters"));
 			return nullptr;
@@ -58,10 +60,14 @@ namespace
 	{
 		switch (Format)
 		{
-		case ERGBFormat::RGBA: return PF_R8G8B8A8;
-		case ERGBFormat::BGRA: return PF_B8G8R8A8;
-		case ERGBFormat::Gray: return PF_G8;
-		default: return PF_Unknown;
+		case ERGBFormat::RGBA:
+			return PF_R8G8B8A8;
+		case ERGBFormat::BGRA:
+			return PF_B8G8R8A8;
+		case ERGBFormat::Gray:
+			return PF_G8;
+		default:
+			return PF_Unknown;
 		}
 	}
 
@@ -103,7 +109,8 @@ namespace
 
 		// Create the texture and upload the uncompressed image data
 		const FString TextureBaseName = TEXT("T_") + FPaths::GetBaseFilename(ImagePath);
-		return CreateTexture(Outer, RawData, ImageWrapper->GetWidth(), ImageWrapper->GetHeight(), Settings, GetPixelFormatFromRGBFormat(ImageWrapper->GetFormat()), FName(*TextureBaseName));
+		return CreateTexture(Outer, RawData, ImageWrapper->GetWidth(), ImageWrapper->GetHeight(), Settings, GetPixelFormatFromRGBFormat(ImageWrapper->GetFormat()),
+							 FName(*TextureBaseName));
 	}
 
 	UTexture2D* GetTexture(UObject* Outer, const prt::AttributeMap* MaterialAttributes, const TextureSettings& Settings, wchar_t const* Key)
@@ -143,9 +150,12 @@ namespace
 	{
 		switch (Mode)
 		{
-		case BLEND_Translucent: return Translucent;
-		case BLEND_Masked: return Masked;
-		default: return Opaque;
+		case BLEND_Translucent:
+			return Translucent;
+		case BLEND_Masked:
+			return Masked;
+		default:
+			return Opaque;
 		}
 	}
 
@@ -170,21 +180,24 @@ namespace
 	{
 		if (Key == L"normalMap")
 		{
-			return { false, TC_Normalmap };
+			return {false, TC_Normalmap};
 		}
 		else if (Key == L"roughnessMap" || Key == L"metallicMap")
 		{
-			return { false, TC_Masks };
+			return {false, TC_Masks};
 		}
-		return { true, TC_Default };
+		return {true, TC_Default};
 	}
 
 	enum MaterialPropertyType
 	{
-		TEXTURE, LINEAR_COLOR, SCALAR
+		TEXTURE,
+		LINEAR_COLOR,
+		SCALAR
 	};
 
 	// see prtx/Material.h
+	// clang-format off
 	const std::map<std::wstring, MaterialPropertyType> KeyToTypeMap = {
 		{L"diffuseMap", 	TEXTURE},
 		{L"opacityMap", 	TEXTURE},
@@ -196,13 +209,15 @@ namespace
 		{L"diffuseColor", 	LINEAR_COLOR},
 		{L"emissiveColor", 	LINEAR_COLOR},
 
-		{L"metallic", 	SCALAR},
-		{L"opacity", 	SCALAR},
-		{L"roughness", 	SCALAR},
+		{L"metallic", 		SCALAR},
+		{L"opacity", 		SCALAR},
+		{L"roughness", 		SCALAR},
 	};
-}
+	// clang-format on
+} // namespace
 
-UMaterialInstanceDynamic* CreateMaterialInstance(UObject* Outer, UMaterialInterface* OpaqueParent, UMaterialInterface* MaskedParent, UMaterialInterface* TranslucentParent, const prt::AttributeMap* MaterialAttributes)
+UMaterialInstanceDynamic* CreateMaterialInstance(UObject* Outer, UMaterialInterface* OpaqueParent, UMaterialInterface* MaskedParent, UMaterialInterface* TranslucentParent,
+												 const prt::AttributeMap* MaterialAttributes)
 {
 	const auto BlendMode = GetBlendMode(MaterialAttributes);
 	const auto Parent = GetMaterialByBlendMode(BlendMode, OpaqueParent, MaskedParent, TranslucentParent);

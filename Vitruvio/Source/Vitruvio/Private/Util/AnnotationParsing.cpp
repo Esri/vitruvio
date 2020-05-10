@@ -1,4 +1,7 @@
+// Copyright 2019 - 2020 Esri. All Rights Reserved.
+
 #include "AnnotationParsing.h"
+
 #include "PRTUtils.h"
 
 namespace
@@ -21,8 +24,9 @@ namespace
 	prt::AnnotationArgumentType GetEnumAnnotationType(const prt::Annotation* Annotation)
 	{
 		prt::AnnotationArgumentType Type = prt::AAT_UNKNOWN;
-		for (size_t ArgumentIndex = 0; ArgumentIndex < Annotation->getNumArguments(); ArgumentIndex++) {
-			if (Type != prt::AAT_UNKNOWN &&  Type != Annotation->getArgument(ArgumentIndex)->getType())
+		for (size_t ArgumentIndex = 0; ArgumentIndex < Annotation->getNumArguments(); ArgumentIndex++)
+		{
+			if (Type != prt::AAT_UNKNOWN && Type != Annotation->getArgument(ArgumentIndex)->getType())
 			{
 				return prt::AAT_UNKNOWN;
 			}
@@ -41,17 +45,19 @@ namespace
 		Result = FString(Argument->getStr());
 	}
 
-	template <typename T>
-	TSharedPtr<EnumAnnotation<T>> ParseEnumAnnotation(const prt::Annotation* Annotation)
+	template <typename T> TSharedPtr<EnumAnnotation<T>> ParseEnumAnnotation(const prt::Annotation* Annotation)
 	{
 		prt::AnnotationArgumentType Type = prt::AAT_UNKNOWN;
 
 		auto Result = MakeShared<EnumAnnotation<T>>();
-		
-		for (size_t ArgumentIndex = 0; ArgumentIndex < Annotation->getNumArguments(); ArgumentIndex++) {
+
+		for (size_t ArgumentIndex = 0; ArgumentIndex < Annotation->getNumArguments(); ArgumentIndex++)
+		{
 			const wchar_t* Key = Annotation->getArgument(ArgumentIndex)->getKey();
-			if (std::wcscmp(Key, NULL_KEY) != 0) {
-				if (std::wcscmp(Key, RESTRICTED_KEY) == 0) {
+			if (std::wcscmp(Key, NULL_KEY) != 0)
+			{
+				if (std::wcscmp(Key, RESTRICTED_KEY) == 0)
+				{
 					Result->Restricted = Annotation->getArgument(ArgumentIndex)->getBool();
 				}
 				continue;
@@ -68,7 +74,7 @@ namespace
 	{
 		auto Result = MakeShared<RangeAnnotation>();
 		Result->StepSize = 0.1;
-		
+
 		for (int ArgIndex = 0; ArgIndex < Annotation->getNumArguments(); ArgIndex++)
 		{
 			const prt::AnnotationArgument* Argument = Annotation->getArgument(ArgIndex);
@@ -90,15 +96,17 @@ namespace
 				Result->Restricted = Argument->getBool();
 			}
 		}
-		
+
 		return Result;
 	}
 
 	TSharedPtr<FilesystemAnnotation> ParseFileAnnotation(const prt::Annotation* Annotation)
 	{
 		FString Extensions;
-		for (size_t ArgumentIndex = 0; ArgumentIndex < Annotation->getNumArguments(); ArgumentIndex++) {
-			if (Annotation->getArgument(ArgumentIndex)->getType() == prt::AAT_STR) {
+		for (size_t ArgumentIndex = 0; ArgumentIndex < Annotation->getNumArguments(); ArgumentIndex++)
+		{
+			if (Annotation->getArgument(ArgumentIndex)->getType() == prt::AAT_STR)
+			{
 				Extensions += Annotation->getArgument(ArgumentIndex)->getStr();
 				Extensions += L" (*.";
 				Extensions += Annotation->getArgument(ArgumentIndex)->getStr();
@@ -106,7 +114,7 @@ namespace
 			}
 		}
 		Extensions += L"All Files (*.*)";
-		
+
 		auto Result = MakeShared<FilesystemAnnotation>();
 		Result->Mode = File;
 		Result->Extensions = Extensions;
@@ -120,29 +128,30 @@ namespace
 
 	void ParseGroups(const prt::Annotation* Annotation, URuleAttribute& InAttribute)
 	{
-		for (int AnnotationIndex = 0; AnnotationIndex < Annotation->getNumArguments(); AnnotationIndex++) {
+		for (int AnnotationIndex = 0; AnnotationIndex < Annotation->getNumArguments(); AnnotationIndex++)
+		{
 			if (Annotation->getArgument(AnnotationIndex)->getType() == prt::AAT_STR)
 			{
 				InAttribute.Groups.Add(Annotation->getArgument(AnnotationIndex)->getStr());
 			}
-			else if (AnnotationIndex == Annotation->getNumArguments() - 1 && Annotation->getArgument(AnnotationIndex)->getType() == prt::AAT_FLOAT) 
+			else if (AnnotationIndex == Annotation->getNumArguments() - 1 && Annotation->getArgument(AnnotationIndex)->getType() == prt::AAT_FLOAT)
 			{
 				InAttribute.GroupOrder = static_cast<int>(Annotation->getArgument(AnnotationIndex)->getFloat());
 			}
 		}
 	}
-}
+} // namespace
 
 void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, URuleAttribute& InAttribute)
 {
 	for (size_t AnnotationIndex = 0; AnnotationIndex < AttributeInfo->getNumAnnotations(); ++AnnotationIndex)
 	{
 		const prt::Annotation* CEAnnotation = AttributeInfo->getAnnotation(AnnotationIndex);
-		
+
 		const wchar_t* Name = CEAnnotation->getName();
 		if (std::wcscmp(Name, ANNOT_ENUM) == 0)
 		{
-			switch(GetEnumAnnotationType(CEAnnotation))
+			switch (GetEnumAnnotationType(CEAnnotation))
 			{
 			case prt::AAT_FLOAT:
 				InAttribute.SetAnnotation(ParseEnumAnnotation<double>(CEAnnotation));
@@ -150,11 +159,10 @@ void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, UR
 			case prt::AAT_STR:
 				InAttribute.SetAnnotation(ParseEnumAnnotation<FString>(CEAnnotation));
 				break;
-			 default:
+			default:
 				InAttribute.SetAnnotation({});
 				break;
 			}
-			
 		}
 		else if (std::wcscmp(Name, ANNOT_RANGE) == 0)
 		{

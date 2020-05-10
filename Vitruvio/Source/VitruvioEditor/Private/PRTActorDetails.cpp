@@ -1,18 +1,20 @@
-﻿#include "PRTActorDetails.h"
+﻿// Copyright 2019 - 2020 Esri. All Rights Reserved.
 
+#include "PRTActorDetails.h"
+
+#include "PRTActor.h"
+
+#include "Algo/Transform.h"
+#include "DetailCategoryBuilder.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
-#include "DetailCategoryBuilder.h"
 #include "IDetailGroup.h"
-#include "PRTActor.h"
-#include "Algo/Transform.h"
+#include "Widgets/Colors/SColorBlock.h"
 #include "Widgets/Colors/SColorPicker.h"
-
+#include "Widgets/Input/SCheckBox.h"
+#include "Widgets/Input/SSpinBox.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Text/STextBlock.h"
-#include "Widgets/Input/SSpinBox.h"
-#include "Widgets/Input/SCheckBox.h"
-#include "Widgets/Colors/SColorBlock.h"
 
 namespace
 {
@@ -31,8 +33,7 @@ namespace
 		return *In ? L"True" : L"False";
 	}
 
-	template <typename A, typename V>
-	void UpdateAttributeValue(APRTActor* PrtActor, A* Attribute, const V& Value)
+	template <typename A, typename V> void UpdateAttributeValue(APRTActor* PrtActor, A* Attribute, const V& Value)
 	{
 		Attribute->Value = Value;
 		if (PrtActor->GenerateAutomatically)
@@ -40,23 +41,19 @@ namespace
 			PrtActor->Regenerate();
 		}
 	}
-	
-	template <typename A, typename V>
-	TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Attribute, TSharedPtr<EnumAnnotation<V>> Annot, APRTActor* PrtActor)
+
+	template <typename A, typename V> TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Attribute, TSharedPtr<EnumAnnotation<V>> Annot, APRTActor* PrtActor)
 	{
 		TArray<TSharedPtr<V>> SharedPtrValues;
-		Algo::Transform(Annot->Values, SharedPtrValues, [](const V& Value) {return MakeShared<V>(Value); });
-		auto InitialSelectedIndex = Annot->Values.IndexOfByPredicate([Attribute](const V& Value) {return Value == Attribute->Value; });
+		Algo::Transform(Annot->Values, SharedPtrValues, [](const V& Value) { return MakeShared<V>(Value); });
+		auto InitialSelectedIndex = Annot->Values.IndexOfByPredicate([Attribute](const V& Value) { return Value == Attribute->Value; });
 		auto InitialSelectedValue = InitialSelectedIndex != INDEX_NONE ? SharedPtrValues[InitialSelectedIndex] : nullptr;
 
 		auto ValueWidget = SNew(SPropertyComboBox<V>)
-			.ComboItemList(SharedPtrValues)
-			.OnSelectionChanged_Lambda([PrtActor, Attribute](TSharedPtr<V> Val, ESelectInfo::Type Type)
-			{
-				UpdateAttributeValue(PrtActor, Attribute, *Val);
-			})
-			.InitialValue(InitialSelectedValue);
-		
+							   .ComboItemList(SharedPtrValues)
+							   .OnSelectionChanged_Lambda([PrtActor, Attribute](TSharedPtr<V> Val, ESelectInfo::Type Type) { UpdateAttributeValue(PrtActor, Attribute, *Val); })
+							   .InitialValue(InitialSelectedValue);
+
 		return ValueWidget;
 	}
 
@@ -69,122 +66,87 @@ namespace
 			PickerArgs.sRGBOverride = true;
 			PickerArgs.DisplayGamma = TAttribute<float>::Create(TAttribute<float>::FGetter::CreateUObject(GEngine, &UEngine::GetDisplayGamma));
 			PickerArgs.InitialColorOverride = FLinearColor(FColor::FromHex(Attribute->Value));
-			PickerArgs.OnColorCommitted.BindLambda([Attribute, PrtActor](FLinearColor NewColor)
-				{
-					UpdateAttributeValue(PrtActor, Attribute, L"#" + NewColor.ToFColor(true).ToHex());
-				});
+			PickerArgs.OnColorCommitted.BindLambda(
+				[Attribute, PrtActor](FLinearColor NewColor) { UpdateAttributeValue(PrtActor, Attribute, L"#" + NewColor.ToFColor(true).ToHex()); });
 		}
 
 		OpenColorPicker(PickerArgs);
 	}
-	
+
 	TSharedPtr<SHorizontalBox> CreateColorInputWidget(UStringAttribute* Attribute, APRTActor* PrtActor)
 	{
-				
-		return SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot()
-			.VAlign(VAlign_Center)
-			.Padding(0.0f, 2.0f)
-			[
-				// Displays the color without alpha
-				SNew(SColorBlock)
-				.Color_Lambda([Attribute]()
-				{
-					return FLinearColor(FColor::FromHex(Attribute->Value));
-				})
-				.ShowBackgroundForAlpha(false)
-				.OnMouseButtonDown_Lambda([Attribute, PrtActor](const FGeometry& Geometry, const FPointerEvent& Event) -> FReply
-				{
-					if (Event.GetEffectingButton() != EKeys::LeftMouseButton)
-					{
-						return FReply::Unhandled();
-					}
 
-					CreateColorPicker(Attribute, PrtActor);
-					return FReply::Handled();
-				})
-				.UseSRGB(true)
-				.IgnoreAlpha(true)
-				.Size(FVector2D(35.0f, 12.0f))
-			];
+		return SNew(SHorizontalBox) + SHorizontalBox::Slot()
+										  .VAlign(VAlign_Center)
+										  .Padding(0.0f, 2.0f)[
+											  // Displays the color without alpha
+											  SNew(SColorBlock)
+												  .Color_Lambda([Attribute]() { return FLinearColor(FColor::FromHex(Attribute->Value)); })
+												  .ShowBackgroundForAlpha(false)
+												  .OnMouseButtonDown_Lambda([Attribute, PrtActor](const FGeometry& Geometry, const FPointerEvent& Event) -> FReply {
+													  if (Event.GetEffectingButton() != EKeys::LeftMouseButton)
+													  {
+														  return FReply::Unhandled();
+													  }
+
+													  CreateColorPicker(Attribute, PrtActor);
+													  return FReply::Handled();
+												  })
+												  .UseSRGB(true)
+												  .IgnoreAlpha(true)
+												  .Size(FVector2D(35.0f, 12.0f))];
 	}
-	
-	
+
 	TSharedPtr<SCheckBox> CreateBoolInputWidget(UBoolAttribute* Attribute, APRTActor* PrtActor)
 	{
-		auto OnCheckStateChanged = [PrtActor, Attribute](ECheckBoxState CheckBoxState) -> void
-		{
+		auto OnCheckStateChanged = [PrtActor, Attribute](ECheckBoxState CheckBoxState) -> void {
 			UpdateAttributeValue(PrtActor, Attribute, CheckBoxState == ECheckBoxState::Checked);
 		};
 
-		auto ValueWidget = SNew(SCheckBox)
-			.OnCheckStateChanged_Lambda(OnCheckStateChanged);
+		auto ValueWidget = SNew(SCheckBox).OnCheckStateChanged_Lambda(OnCheckStateChanged);
 
 		ValueWidget->SetIsChecked(Attribute->Value);
 
 		return ValueWidget;
 	}
-	
+
 	TSharedPtr<SHorizontalBox> CreateTextInputWidget(UStringAttribute* Attribute, APRTActor* PrtActor)
 	{
-		auto OnTextChanged = [PrtActor, Attribute](const FText& Text, ETextCommit::Type) -> void
-		{
-			UpdateAttributeValue(PrtActor, Attribute, Text.ToString());
-		};
+		auto OnTextChanged = [PrtActor, Attribute](const FText& Text, ETextCommit::Type) -> void { UpdateAttributeValue(PrtActor, Attribute, Text.ToString()); };
 
-		auto ValueWidget = SNew(SEditableTextBox)
-			.Font(IDetailLayoutBuilder::GetDetailFont())
-			.IsReadOnly(false)
-			.SelectAllTextWhenFocused(true)
-			.OnTextCommitted_Lambda(OnTextChanged);
+		auto ValueWidget =
+			SNew(SEditableTextBox).Font(IDetailLayoutBuilder::GetDetailFont()).IsReadOnly(false).SelectAllTextWhenFocused(true).OnTextCommitted_Lambda(OnTextChanged);
 
 		ValueWidget->SetText(FText::FromString(Attribute->Value));
 
-		
-		return SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot()
-			.VAlign(VAlign_Fill)
-			.HAlign(HAlign_Fill)
-			.FillWidth(1)
-			[
-				ValueWidget
-			];
+		return SNew(SHorizontalBox) + SHorizontalBox::Slot().VAlign(VAlign_Fill).HAlign(HAlign_Fill).FillWidth(1)[ValueWidget];
 	}
-	
+
 	TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(UFloatAttribute* Attribute, APRTActor* PrtActor)
 	{
 		auto Annotation = Attribute->GetRangeAnnotation();
-		auto OnCommit = [PrtActor, Attribute](double Value, ETextCommit::Type Type) -> void
-		{
-			UpdateAttributeValue(PrtActor, Attribute, Value);
-		};
-		
+		auto OnCommit = [PrtActor, Attribute](double Value, ETextCommit::Type Type) -> void { UpdateAttributeValue(PrtActor, Attribute, Value); };
+
 		auto ValueWidget = SNew(SSpinBox<double>)
-            .Font(IDetailLayoutBuilder::GetDetailFont())
-			.MinValue(Annotation ? Annotation->Min : TOptional<double>())
-			.MaxValue(Annotation ? Annotation->Max : TOptional<double>())
-			.OnValueCommitted_Lambda(OnCommit)
-			.SliderExponent(1);
+							   .Font(IDetailLayoutBuilder::GetDetailFont())
+							   .MinValue(Annotation ? Annotation->Min : TOptional<double>())
+							   .MaxValue(Annotation ? Annotation->Max : TOptional<double>())
+							   .OnValueCommitted_Lambda(OnCommit)
+							   .SliderExponent(1);
 
 		if (Annotation)
 		{
 			ValueWidget->SetDelta(Annotation->StepSize);
 		}
-		
+
 		ValueWidget->SetValue(Attribute->Value);
-		
+
 		return ValueWidget;
 	}
-	
+
 	TSharedPtr<SBox> CreateNameWidget(URuleAttribute* Attribute)
 	{
-		auto NameWidget = SNew(SBox)
-		.Content()
-           [
-               SNew(STextBlock)
-               .Text(FText::FromString(Attribute->DisplayName))
-               .Font(IDetailLayoutBuilder::GetDetailFont())
-           ];
+		auto NameWidget = SNew(SBox).Content()[SNew(STextBlock).Text(FText::FromString(Attribute->DisplayName)).Font(IDetailLayoutBuilder::GetDetailFont())];
 		return NameWidget;
 	}
 
@@ -195,8 +157,7 @@ namespace
 			return &Root;
 		}
 
-		auto GetOrCreateGroup = [&GroupCache](IDetailGroup& Parent, FString Name) -> IDetailGroup*
-		{
+		auto GetOrCreateGroup = [&GroupCache](IDetailGroup& Parent, FString Name) -> IDetailGroup* {
 			const auto CacheResult = GroupCache.Find(Name);
 			if (CacheResult)
 			{
@@ -274,36 +235,28 @@ namespace
 			}
 		}
 	}
-}
+} // namespace
 
-template <typename T>
-void SPropertyComboBox<T>::Construct(const FArguments& InArgs)
+template <typename T> void SPropertyComboBox<T>::Construct(const FArguments& InArgs)
 {
 	ComboItemList = InArgs._ComboItemList.Get();
 
 	SComboBox<TSharedPtr<T>>::Construct(SComboBox<TSharedPtr<T>>::FArguments()
-		.InitiallySelectedItem(InArgs._InitialValue.Get())
-		.Content()
-		[
-			SNew(STextBlock)
-			.Text_Lambda([=]
-			{
-				auto SelectedItem = GetSelectedItem();
-				return SelectedItem ? FText::FromString(ValueToString(SelectedItem)) : FText::FromString("");
-			})
-			.Font(IDetailLayoutBuilder::GetDetailFont())
-		]
-		.OptionsSource(&ComboItemList)
-		.OnSelectionChanged(InArgs._OnSelectionChanged)
-		.OnGenerateWidget(this, &SPropertyComboBox::OnGenerateComboWidget)
-	);
+											.InitiallySelectedItem(InArgs._InitialValue.Get())
+											.Content()[SNew(STextBlock)
+														   .Text_Lambda([=] {
+															   auto SelectedItem = GetSelectedItem();
+															   return SelectedItem ? FText::FromString(ValueToString(SelectedItem)) : FText::FromString("");
+														   })
+														   .Font(IDetailLayoutBuilder::GetDetailFont())]
+											.OptionsSource(&ComboItemList)
+											.OnSelectionChanged(InArgs._OnSelectionChanged)
+											.OnGenerateWidget(this, &SPropertyComboBox::OnGenerateComboWidget));
 }
 
-template <typename T>
-TSharedRef<SWidget> SPropertyComboBox<T>::OnGenerateComboWidget(TSharedPtr<T> InValue) const
+template <typename T> TSharedRef<SWidget> SPropertyComboBox<T>::OnGenerateComboWidget(TSharedPtr<T> InValue) const
 {
-	return SNew(STextBlock)
-		.Text(FText::FromString(ValueToString(InValue)));
+	return SNew(STextBlock).Text(FText::FromString(ValueToString(InValue)));
 }
 
 FPRTActorDetails::FPRTActorDetails()
@@ -325,7 +278,7 @@ void FPRTActorDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
 	ObjectsBeingCustomized.Empty();
 	DetailBuilder.GetObjectsBeingCustomized(ObjectsBeingCustomized);
-	
+
 	APRTActor* PrtActor = nullptr;
 	for (size_t ObjectIndex = 0; ObjectIndex < ObjectsBeingCustomized.Num(); ++ObjectIndex)
 	{
@@ -366,4 +319,3 @@ void FPRTActorDetails::OnAttributesChanged(UObject* Object, struct FPropertyChan
 		}
 	}
 }
-

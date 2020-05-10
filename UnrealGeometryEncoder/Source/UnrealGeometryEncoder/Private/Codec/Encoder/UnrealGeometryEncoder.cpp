@@ -1,4 +1,7 @@
+// Copyright 2019 - 2020 Esri. All Rights Reserved.
+
 #include "UnrealGeometryEncoder.h"
+
 #include "Codec/Encoder/IUnrealCallbacks.h"
 
 #include "prtx/Attributable.h"
@@ -16,9 +19,9 @@
 #include <algorithm>
 #include <memory>
 #include <numeric>
+#include <set>
 #include <sstream>
 #include <vector>
-#include <set>
 
 namespace
 {
@@ -53,10 +56,13 @@ namespace
 
 	using AttributeMapNOPtrVector = std::vector<const prt::AttributeMap*>;
 
-	struct AttributeMapNOPtrVectorOwner {
+	struct AttributeMapNOPtrVectorOwner
+	{
 		AttributeMapNOPtrVector v;
-		~AttributeMapNOPtrVectorOwner() {
-			for (const auto& m : v) {
+		~AttributeMapNOPtrVectorOwner()
+		{
+			for (const auto& m : v)
+			{
 				if (m != nullptr)
 					m->destroy();
 			}
@@ -113,7 +119,7 @@ namespace
 		for (const auto& t : TEXTURE_UV_MAPPINGS)
 		{
 			const auto& ta = mat->getTextureArray(t.key);
-			if (ta.size() > t.index&& ta[t.index]->isValid())
+			if (ta.size() > t.index && ta[t.index]->isValid())
 				highestUVSet = std::max(highestUVSet, t.uvSet);
 		}
 		if (highestUVSet < 0)
@@ -122,101 +128,106 @@ namespace
 			return highestUVSet + 1;
 	}
 
-	std::wstring uriToPath(const prtx::TexturePtr& t) {
+	std::wstring uriToPath(const prtx::TexturePtr& t)
+	{
 		return t->getURI()->getPath();
 	}
 
 	// we blacklist all CGA-style material attribute keys, see prtx/Material.h
+	// clang-format off
 	const std::set<std::wstring> MATERIAL_ATTRIBUTE_BLACKLIST = {
-			L"ambient.b",
-			L"ambient.g",
-			L"ambient.r",
-			L"bumpmap.rw",
-			L"bumpmap.su",
-			L"bumpmap.sv",
-			L"bumpmap.tu",
-			L"bumpmap.tv",
-			L"color.a",
-			L"color.b",
-			L"color.g",
-			L"color.r",
-			L"color.rgb",
-			L"colormap.rw",
-			L"colormap.su",
-			L"colormap.sv",
-			L"colormap.tu",
-			L"colormap.tv",
-			L"dirtmap.rw",
-			L"dirtmap.su",
-			L"dirtmap.sv",
-			L"dirtmap.tu",
-			L"dirtmap.tv",
-			L"normalmap.rw",
-			L"normalmap.su",
-			L"normalmap.sv",
-			L"normalmap.tu",
-			L"normalmap.tv",
-			L"opacitymap.rw",
-			L"opacitymap.su",
-			L"opacitymap.sv",
-			L"opacitymap.tu",
-			L"opacitymap.tv",
-			L"specular.b",
-			L"specular.g",
-			L"specular.r",
-			L"specularmap.rw",
-			L"specularmap.su",
-			L"specularmap.sv",
-			L"specularmap.tu",
-			L"specularmap.tv",
-			L"bumpmap",
-			L"colormap",
-			L"dirtmap",
-			L"normalmap",
-			L"opacitymap",
-			L"opacitymap.mode",
-			L"specularmap",
-			L"emissive.b",
-			L"emissive.g",
-			L"emissive.r",
-			L"emissivemap.rw",
-			L"emissivemap.su",
-			L"emissivemap.sv",
-			L"emissivemap.tu",
-			L"emissivemap.tv",
-			L"metallicmap.rw",
-			L"metallicmap.su",
-			L"metallicmap.sv",
-			L"metallicmap.tu",
-			L"metallicmap.tv",
-			L"occlusionmap.rw",
-			L"occlusionmap.su",
-			L"occlusionmap.sv",
-			L"occlusionmap.tu",
-			L"occlusionmap.tv",
-			L"roughnessmap.rw",
-			L"roughnessmap.su",
-			L"roughnessmap.sv",
-			L"roughnessmap.tu",
-			L"roughnessmap.tv",
-			L"emissivemap",
-			L"metallicmap",
-			L"occlusionmap",
-			L"roughnessmap"
+		L"ambient.b",
+		L"ambient.g",
+		L"ambient.r",
+		L"bumpmap.rw",
+		L"bumpmap.su",
+		L"bumpmap.sv",
+		L"bumpmap.tu",
+		L"bumpmap.tv",
+		L"color.a",
+		L"color.b",
+		L"color.g",
+		L"color.r",
+		L"color.rgb",
+		L"colormap.rw",
+		L"colormap.su",
+		L"colormap.sv",
+		L"colormap.tu",
+		L"colormap.tv",
+		L"dirtmap.rw",
+		L"dirtmap.su",
+		L"dirtmap.sv",
+		L"dirtmap.tu",
+		L"dirtmap.tv",
+		L"normalmap.rw",
+		L"normalmap.su",
+		L"normalmap.sv",
+		L"normalmap.tu",
+		L"normalmap.tv",
+		L"opacitymap.rw",
+		L"opacitymap.su",
+		L"opacitymap.sv",
+		L"opacitymap.tu",
+		L"opacitymap.tv",
+		L"specular.b",
+		L"specular.g",
+		L"specular.r",
+		L"specularmap.rw",
+		L"specularmap.su",
+		L"specularmap.sv",
+		L"specularmap.tu",
+		L"specularmap.tv",
+		L"bumpmap",
+		L"colormap",
+		L"dirtmap",
+		L"normalmap",
+		L"opacitymap",
+		L"opacitymap.mode",
+		L"specularmap",
+		L"emissive.b",
+		L"emissive.g",
+		L"emissive.r",
+		L"emissivemap.rw",
+		L"emissivemap.su",
+		L"emissivemap.sv",
+		L"emissivemap.tu",
+		L"emissivemap.tv",
+		L"metallicmap.rw",
+		L"metallicmap.su",
+		L"metallicmap.sv",
+		L"metallicmap.tu",
+		L"metallicmap.tv",
+		L"occlusionmap.rw",
+		L"occlusionmap.su",
+		L"occlusionmap.sv",
+		L"occlusionmap.tu",
+		L"occlusionmap.tv",
+		L"roughnessmap.rw",
+		L"roughnessmap.su",
+		L"roughnessmap.sv",
+		L"roughnessmap.tu",
+		L"roughnessmap.tv",
+		L"emissivemap",
+		L"metallicmap",
+		L"occlusionmap",
+		L"roughnessmap"
 	};
+	// clang-format on
 
-
-	void convertMaterialToAttributeMap(prtx::PRTUtils::AttributeMapBuilderPtr& aBuilder, const prtx::Material& prtxAttr, const prtx::WStringVector& keys) {
+	void convertMaterialToAttributeMap(prtx::PRTUtils::AttributeMapBuilderPtr& aBuilder, const prtx::Material& prtxAttr, const prtx::WStringVector& keys)
+	{
 		if (DBG)
 			log_debug(L"-- converting material: %1%") % prtxAttr.name();
-		for (const auto& key : keys) {
+		for (const auto& key : keys)
+		{
 			if (MATERIAL_ATTRIBUTE_BLACKLIST.count(key) > 0)
 				continue;
 
 			if (DBG)
 				log_debug(L"   key: %1%") % key;
 
-			switch (prtxAttr.getType(key)) {
+			switch (prtxAttr.getType(key))
+			{
 			case prt::Attributable::PT_BOOL:
 				aBuilder->setBool(key.c_str(), prtxAttr.getBool(key) == prtx::PRTX_TRUE);
 				break;
@@ -229,13 +240,15 @@ namespace
 				aBuilder->setInt(key.c_str(), prtxAttr.getInt(key));
 				break;
 
-			case prt::Attributable::PT_STRING: {
+			case prt::Attributable::PT_STRING:
+			{
 				const std::wstring& v = prtxAttr.getString(key); // explicit copy
-				aBuilder->setString(key.c_str(), v.c_str());     // also passing on empty strings
+				aBuilder->setString(key.c_str(), v.c_str());	 // also passing on empty strings
 				break;
 			}
 
-			case prt::Attributable::PT_BOOL_ARRAY: {
+			case prt::Attributable::PT_BOOL_ARRAY:
+			{
 				const std::vector<uint8_t>& ba = prtxAttr.getBoolArray(key);
 				auto boo = std::unique_ptr<bool[]>(new bool[ba.size()]);
 				for (size_t i = 0; i < ba.size(); i++)
@@ -244,26 +257,30 @@ namespace
 				break;
 			}
 
-			case prt::Attributable::PT_INT_ARRAY: {
+			case prt::Attributable::PT_INT_ARRAY:
+			{
 				const std::vector<int32_t>& array = prtxAttr.getIntArray(key);
 				aBuilder->setIntArray(key.c_str(), &array[0], array.size());
 				break;
 			}
 
-			case prt::Attributable::PT_FLOAT_ARRAY: {
+			case prt::Attributable::PT_FLOAT_ARRAY:
+			{
 				const std::vector<double>& array = prtxAttr.getFloatArray(key);
 				aBuilder->setFloatArray(key.c_str(), array.data(), array.size());
 				break;
 			}
 
-			case prt::Attributable::PT_STRING_ARRAY: {
+			case prt::Attributable::PT_STRING_ARRAY:
+			{
 				const prtx::WStringVector& a = prtxAttr.getStringArray(key);
 				std::vector<const wchar_t*> pw = toPtrVec(a);
 				aBuilder->setStringArray(key.c_str(), pw.data(), pw.size());
 				break;
 			}
 
-			case prtx::Material::PT_TEXTURE: {
+			case prtx::Material::PT_TEXTURE:
+			{
 				const auto& t = prtxAttr.getTexture(key);
 				std::wstring path = uriToPath(t);
 				prtx::WStringVector pw;
@@ -273,7 +290,8 @@ namespace
 				break;
 			}
 
-			case prtx::Material::PT_TEXTURE_ARRAY: {
+			case prtx::Material::PT_TEXTURE_ARRAY:
+			{
 				const auto& ta = prtxAttr.getTextureArray(key);
 
 				prtx::WStringVector pa(ta.size());
@@ -286,7 +304,7 @@ namespace
 
 			default:
 				if (DBG)
-					log_debug(L"ignored atttribute '%s' with type %d") % key% prtxAttr.getType(key);
+					log_debug(L"ignored atttribute '%s' with type %d") % key % prtxAttr.getType(key);
 				break;
 			}
 		}
@@ -333,7 +351,7 @@ namespace
 			default:
 				break;
 			}
-			});
+		});
 	}
 
 	SerializedGeometry serializeGeometry(const prtx::GeometryPtrVector& geometries, const std::vector<prtx::MaterialPtrVector>& materials)
@@ -343,11 +361,13 @@ namespace
 		uint32_t numIndices = 0;
 		uint32_t maxNumUVSets = 0;
 		auto matsIt = materials.cbegin();
-		for (const auto& geo : geometries) {
+		for (const auto& geo : geometries)
+		{
 			const prtx::MeshPtrVector& meshes = geo->getMeshes();
 			const prtx::MaterialPtrVector& mats = *matsIt;
 			auto matIt = mats.cbegin();
-			for (const auto& mesh : meshes) {
+			for (const auto& mesh : meshes)
+			{
 				numCounts += mesh->getFaceCount();
 				const auto& vtxCnts = mesh->getFaceVertexCounts();
 				numIndices = std::accumulate(vtxCnts.begin(), vtxCnts.end(), numIndices);
@@ -365,9 +385,11 @@ namespace
 		uint32_t vertexIndexBase = 0u;
 		uint32_t normalIndexBase = 0u;
 		std::vector<uint32_t> uvIndexBases(maxNumUVSets, 0u);
-		for (const auto& geo : geometries) {
+		for (const auto& geo : geometries)
+		{
 			const prtx::MeshPtrVector& meshes = geo->getMeshes();
-			for (const auto& mesh : meshes) {
+			for (const auto& mesh : meshes)
+			{
 				// append points
 				const prtx::DoubleVector& verts = mesh->getVertexCoords();
 				sg.coords.insert(sg.coords.end(), verts.begin(), verts.end());
@@ -381,12 +403,12 @@ namespace
 				// - if mesh has less uv sets than maxNumUVSets, copy uv set 0 to the missing higher sets
 				const uint32_t numUVSets = mesh->getUVSetsCount();
 				const prtx::DoubleVector& uvs0 = (numUVSets > 0) ? mesh->getUVCoords(0) : EMPTY_UVS;
-				const prtx::IndexVector faceUVCounts0 =
-					(numUVSets > 0) ? mesh->getFaceUVCounts(0) : prtx::IndexVector(mesh->getFaceCount(), 0);
+				const prtx::IndexVector faceUVCounts0 = (numUVSets > 0) ? mesh->getFaceUVCounts(0) : prtx::IndexVector(mesh->getFaceCount(), 0);
 				if (DBG)
 					log_debug("-- mesh: numUVSets = %1%") % numUVSets;
 
-				for (uint32_t uvSet = 0; uvSet < sg.uvs.size(); uvSet++) {
+				for (uint32_t uvSet = 0; uvSet < sg.uvs.size(); uvSet++)
+				{
 					// append texture coordinates
 					const prtx::DoubleVector& uvs = (uvSet < numUVSets) ? mesh->getUVCoords(uvSet) : EMPTY_UVS;
 					const auto& src = uvs.empty() ? uvs0 : uvs;
@@ -394,23 +416,21 @@ namespace
 					tgt.insert(tgt.end(), src.begin(), src.end());
 
 					// append uv face counts
-					const prtx::IndexVector& faceUVCounts =
-						(uvSet < numUVSets && !uvs.empty()) ? mesh->getFaceUVCounts(uvSet) : faceUVCounts0;
+					const prtx::IndexVector& faceUVCounts = (uvSet < numUVSets && !uvs.empty()) ? mesh->getFaceUVCounts(uvSet) : faceUVCounts0;
 					assert(faceUVCounts.size() == mesh->getFaceCount());
 					auto& tgtCnts = sg.uvCounts[uvSet];
 					tgtCnts.insert(tgtCnts.end(), faceUVCounts.begin(), faceUVCounts.end());
 					if (DBG)
-						log_debug("   -- uvset %1%: face counts size = %2%") % uvSet% faceUVCounts.size();
+						log_debug("   -- uvset %1%: face counts size = %2%") % uvSet % faceUVCounts.size();
 
 					// append uv vertex indices
-					for (uint32_t fi = 0, faceCount = static_cast<uint32_t>(faceUVCounts.size()); fi < faceCount; ++fi) {
+					for (uint32_t fi = 0, faceCount = static_cast<uint32_t>(faceUVCounts.size()); fi < faceCount; ++fi)
+					{
 						const uint32_t* faceUVIdx0 = (numUVSets > 0) ? mesh->getFaceUVIndices(fi, 0) : EMPTY_IDX.data();
-						const uint32_t* faceUVIdx =
-							(uvSet < numUVSets && !uvs.empty()) ? mesh->getFaceUVIndices(fi, uvSet) : faceUVIdx0;
+						const uint32_t* faceUVIdx = (uvSet < numUVSets && !uvs.empty()) ? mesh->getFaceUVIndices(fi, uvSet) : faceUVIdx0;
 						const uint32_t faceUVCnt = faceUVCounts[fi];
 						if (DBG)
-							log_debug("      fi %1%: faceUVCnt = %2%, faceVtxCnt = %3%") % fi% faceUVCnt%
-							mesh->getFaceVertexCount(fi);
+							log_debug("      fi %1%: faceUVCnt = %2%, faceVtxCnt = %3%") % fi % faceUVCnt % mesh->getFaceVertexCount(fi);
 						for (uint32_t vi = 0; vi < faceUVCnt; vi++)
 							sg.uvIndices[uvSet].push_back(uvIndexBases[uvSet] + faceUVIdx[vi]);
 					}
@@ -419,12 +439,14 @@ namespace
 				} // for all uv sets
 
 				// append counts and indices for vertices and vertex normals
-				for (uint32_t fi = 0, faceCount = mesh->getFaceCount(); fi < faceCount; ++fi) {
+				for (uint32_t fi = 0, faceCount = mesh->getFaceCount(); fi < faceCount; ++fi)
+				{
 					const uint32_t vtxCnt = mesh->getFaceVertexCount(fi);
 					sg.faceVertexCounts.push_back(vtxCnt);
 					const uint32_t* vtxIdx = mesh->getFaceVertexIndices(fi);
 					const uint32_t* nrmIdx = mesh->getFaceVertexNormalIndices(fi);
-					for (uint32_t vi = 0; vi < vtxCnt; vi++) {
+					for (uint32_t vi = 0; vi < vtxCnt; vi++)
+					{
 						sg.vertexIndices.push_back(vertexIndexBase + vtxIdx[vi]);
 						sg.normalIndices.push_back(normalIndexBase + nrmIdx[vi]);
 					}
@@ -433,12 +455,13 @@ namespace
 				vertexIndexBase += (uint32_t)verts.size() / 3u;
 				normalIndexBase += (uint32_t)norms.size() / 3u;
 			} // for all meshes
-		}     // for all geometries
+		}	  // for all geometries
 
 		return sg;
 	}
 
-	void encodeMesh(IUnrealCallbacks* cb, const SerializedGeometry& sg, wchar_t const* name, int32_t prototypeIndex, prtx::GeometryPtrVector geometries, std::vector<prtx::MaterialPtrVector> materials)
+	void encodeMesh(IUnrealCallbacks* cb, const SerializedGeometry& sg, wchar_t const* name, int32_t prototypeIndex, prtx::GeometryPtrVector geometries,
+					std::vector<prtx::MaterialPtrVector> materials)
 	{
 		auto puvs = toPtrVec(sg.uvs);
 		auto puvCounts = toPtrVec(sg.uvCounts);
@@ -450,10 +473,12 @@ namespace
 
 		auto matIt = materials.cbegin();
 		prtx::PRTUtils::AttributeMapBuilderPtr amb(prt::AttributeMapBuilder::create());
-		for (const auto& geo : geometries) {
+		for (const auto& geo : geometries)
+		{
 			const prtx::MeshPtrVector& meshes = geo->getMeshes();
 
-			for (size_t mi = 0; mi < meshes.size(); mi++) {
+			for (size_t mi = 0; mi < meshes.size(); mi++)
+			{
 				const prtx::MeshPtr& m = meshes.at(mi);
 				const prtx::MaterialPtr& mat = matIt->at(mi);
 
@@ -464,14 +489,13 @@ namespace
 
 			++matIt;
 		}
-		
+
 		cb->addMesh(name, prototypeIndex, sg.coords.data(), sg.coords.size(), sg.normals.data(), sg.normals.size(), sg.faceVertexCounts.data(), sg.faceVertexCounts.size(),
-		sg.vertexIndices.data(), sg.vertexIndices.size(), sg.normalIndices.data(), sg.normalIndices.size(),
+					sg.vertexIndices.data(), sg.vertexIndices.size(), sg.normalIndices.data(), sg.normalIndices.size(),
 
-		puvs.first.data(), puvs.second.data(), puvCounts.first.data(), puvCounts.second.data(), puvIndices.first.data(), puvIndices.second.data(), sg.uvs.size(),
+					puvs.first.data(), puvs.second.data(), puvCounts.first.data(), puvCounts.second.data(), puvIndices.first.data(), puvIndices.second.data(), sg.uvs.size(),
 
-		faceRanges.data(), faceRanges.size(), matAttrMaps.v.empty() ? nullptr : matAttrMaps.v.data()
-		);
+					faceRanges.data(), faceRanges.size(), matAttrMaps.v.empty() ? nullptr : matAttrMaps.v.data());
 	}
 } // namespace
 
@@ -514,15 +538,15 @@ void UnrealGeometryEncoder::encode(prtx::GenerateContext& context, size_t initia
 	}
 
 	const prtx::EncodePreparator::PreparationFlags PREP_FLAGS = prtx::EncodePreparator::PreparationFlags()
-		.instancing(true)
-		.mergeByMaterial(true)
-		.triangulate(false)
-		.processHoles(prtx::HoleProcessor::TRIANGULATE_FACES_WITH_HOLES)
-		.mergeVertices(true)
-		.cleanupVertexNormals(true)
-		.cleanupUVs(true)
-		.processVertexNormals(prtx::VertexNormalProcessor::SET_MISSING_TO_FACE_NORMALS)
-		.indexSharing(prtx::EncodePreparator::PreparationFlags::INDICES_SEPARATE_FOR_ALL_VERTEX_ATTRIBUTES);
+																	.instancing(true)
+																	.mergeByMaterial(true)
+																	.triangulate(false)
+																	.processHoles(prtx::HoleProcessor::TRIANGULATE_FACES_WITH_HOLES)
+																	.mergeVertices(true)
+																	.cleanupVertexNormals(true)
+																	.cleanupUVs(true)
+																	.processVertexNormals(prtx::VertexNormalProcessor::SET_MISSING_TO_FACE_NORMALS)
+																	.indexSharing(prtx::EncodePreparator::PreparationFlags::INDICES_SEPARATE_FOR_ALL_VERTEX_ATTRIBUTES);
 
 	prtx::EncodePreparator::InstanceVector instances;
 	encPrep->fetchFinalizedInstances(instances, PREP_FLAGS);
@@ -543,9 +567,9 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialSha
 			{
 				const prtx::GeometryPtr& instGeom = inst.getGeometry();
 				const prtx::MaterialPtrVector& instMaterials = inst.getMaterials();
-				const SerializedGeometry sg = serializeGeometry({ instGeom }, { instMaterials });
+				const SerializedGeometry sg = serializeGeometry({instGeom}, {instMaterials});
 
-				encodeMesh(cb, sg, initialShape.getName(), inst.getPrototypeIndex(), { instGeom }, { instMaterials });
+				encodeMesh(cb, sg, initialShape.getName(), inst.getPrototypeIndex(), {instGeom}, {instMaterials});
 
 				serializedPrototypes.insert(inst.getPrototypeIndex());
 			}
@@ -564,7 +588,6 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialSha
 		const SerializedGeometry sg = serializeGeometry(geometries, materials);
 		encodeMesh(cb, sg, initialShape.getName(), -1, geometries, materials);
 	}
-
 
 	if (DBG)
 		log_debug(L"UnrealGeometryEncoder::convertGeometry: end");
