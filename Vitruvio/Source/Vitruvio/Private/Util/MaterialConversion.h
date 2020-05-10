@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿// Copyright 2019 - 2020 Esri. All Rights Reserved.
+
+#pragma once
 
 #include "prt/AttributeMap.h"
 

@@ -1,3 +1,5 @@
+// Copyright 2019 - 2020 Esri. All Rights Reserved.
+
 #include "UnrealGeometryEncoderModule.h"
 
 #define LOCTEXT_NAMESPACE "UnrealGeometryEncoderModule"

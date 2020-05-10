@@ -1,5 +1,9 @@
+// Copyright 2019 - 2020 Esri. All Rights Reserved.
+
 #pragma once
+
 #include "Factories/Factory.h"
+
 #include "RulePackageFactory.generated.h"
 
 UCLASS(hidecategories = Object)

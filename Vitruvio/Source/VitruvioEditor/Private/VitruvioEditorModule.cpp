@@ -1,10 +1,12 @@
+// Copyright 2019 - 2020 Esri. All Rights Reserved.
+
 #include "VitruvioEditorModule.h"
 #include "PRTActorDetails.h"
 #include "RulePackageAssetTypeActions.h"
 
 #include "AssetToolsModule.h"
-#include "IAssetTools.h"
 #include "Core.h"
+#include "IAssetTools.h"
 #include "Modules/ModuleManager.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioEditorModule"

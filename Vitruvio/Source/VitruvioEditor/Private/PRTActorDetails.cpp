@@ -1,4 +1,6 @@
-﻿#include "PRTActorDetails.h"
+﻿// Copyright 2019 - 2020 Esri. All Rights Reserved.
+
+#include "PRTActorDetails.h"
 
 #include "PRTActor.h"
 
@@ -7,8 +9,8 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
 #include "IDetailGroup.h"
-#include "Widgets/Colors/SColorPicker.h"
 #include "Widgets/Colors/SColorBlock.h"
+#include "Widgets/Colors/SColorPicker.h"
 #include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Input/SSpinBox.h"
 #include "Widgets/Layout/SBox.h"
