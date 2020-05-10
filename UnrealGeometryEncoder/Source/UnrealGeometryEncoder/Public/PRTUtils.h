@@ -113,10 +113,8 @@ namespace prtu
 	inline std::wstring temp_directory_path()
 	{
 #ifdef PLATFORM_WINDOWS
-		DWORD dwRetVal = 0;
 		wchar_t lpTempPathBuffer[MAX_PATH];
-
-		dwRetVal = GetTempPathW(MAX_PATH, lpTempPathBuffer);
+		DWORD dwRetVal = GetTempPathW(MAX_PATH, lpTempPathBuffer);
 		if (dwRetVal > MAX_PATH || (dwRetVal == 0))
 		{
 			return L".\tmp";

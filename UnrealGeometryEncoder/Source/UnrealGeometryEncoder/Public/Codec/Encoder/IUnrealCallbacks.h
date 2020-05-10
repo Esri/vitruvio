@@ -4,10 +4,7 @@
 
 #include "prt/Callbacks.h"
 
-constexpr const wchar_t* ENCODER_ID_UnrealGeometry = L"UnrealGeometryEncoder";
-constexpr const wchar_t* EO_EMIT_ATTRIBUTES = L"emitAttributes";
-constexpr const wchar_t* EO_EMIT_MATERIALS = L"emitMaterials";
-constexpr const wchar_t* EO_EMIT_REPORTS = L"emitReports";
+constexpr const wchar_t* UNREAL_GEOMETRY_ENCODER_ID = L"UnrealGeometryEncoder";
 
 class IUnrealCallbacks : public prt::Callbacks
 {

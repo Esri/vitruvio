@@ -7,11 +7,11 @@
 
 #include "CoreMinimal.h"
 #include "Engine/StaticMeshActor.h"
-#include "GameFramework/Actor.h"
 #include "Materials/Material.h"
 
 #include "PRTActor.generated.h"
 
+// TODO: wondering if we should just call it "generate" instead of regenerate?
 UCLASS()
 class VITRUVIO_API APRTActor : public AStaticMeshActor
 {
@@ -50,7 +50,6 @@ public:
 
 protected:
 	void BeginPlay() override;
-	void LoadDefaultAttributes(UStaticMesh* InitialShape);
 
 public:
 	void Tick(float DeltaTime) override;
@@ -59,4 +58,7 @@ public:
 	void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	bool ShouldTickIfViewportsOnly() const override;
 #endif
+
+private:
+	void LoadDefaultAttributes(UStaticMesh* InitialShape);
 };

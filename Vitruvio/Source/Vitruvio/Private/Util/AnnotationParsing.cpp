@@ -96,7 +96,6 @@ namespace
 				Result->Restricted = Argument->getBool();
 			}
 		}
-
 		return Result;
 	}
 

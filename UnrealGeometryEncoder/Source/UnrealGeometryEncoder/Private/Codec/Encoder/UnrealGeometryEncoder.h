@@ -26,7 +26,7 @@ class IUnrealCallbacks;
 
 using InstanceVectorPtr = std::shared_ptr<prtx::EncodePreparator::InstanceVector>;
 
-class UnrealGeometryEncoder : public prtx::GeometryEncoder, public FUseSystemMallocForNew
+class UnrealGeometryEncoder final : public prtx::GeometryEncoder, public FUseSystemMallocForNew
 {
 public:
 	UnrealGeometryEncoder(const std::wstring& id, const prt::AttributeMap* options, prt::Callbacks* callbacks);
@@ -41,7 +41,7 @@ private:
 	void convertGeometry(const prtx::InitialShape& initialShape, const prtx::EncodePreparator::InstanceVector& instances, IUnrealCallbacks* callbacks) const;
 };
 
-class UnrealGeometryEncoderFactory : public prtx::EncoderFactory, public prtx::Singleton<UnrealGeometryEncoderFactory>
+class UnrealGeometryEncoderFactory final : public prtx::EncoderFactory, public prtx::Singleton<UnrealGeometryEncoderFactory>
 {
 public:
 	static UnrealGeometryEncoderFactory* createInstance();

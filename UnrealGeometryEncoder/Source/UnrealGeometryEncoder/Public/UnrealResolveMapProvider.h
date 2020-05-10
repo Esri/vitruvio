@@ -11,7 +11,7 @@
 #include <istream>
 #include <string>
 
-class UNREALGEOMETRYENCODER_API UnrealResolveMapProvider : public prtx::ResolveMapProvider
+class UNREALGEOMETRYENCODER_API UnrealResolveMapProvider final : public prtx::ResolveMapProvider
 {
 public:
 	static const std::wstring ID;
@@ -24,7 +24,7 @@ public:
 	prt::ResolveMap const* createResolveMap(prtx::URIPtr uri) const override;
 };
 
-class UnrealResolveMapProviderFactory : public prtx::ResolveMapProviderFactory, public prtx::Singleton<UnrealResolveMapProviderFactory>
+class UnrealResolveMapProviderFactory final : public prtx::ResolveMapProviderFactory, public prtx::Singleton<UnrealResolveMapProviderFactory>
 {
 public:
 	~UnrealResolveMapProviderFactory() override;

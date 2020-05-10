@@ -30,8 +30,7 @@ public class Vitruvio : ModuleRules
 				"ImageWrapper"
 			}
 		);
-			
-		
+
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{

@@ -25,7 +25,7 @@ DEFINE_LOG_CATEGORY(LogUnrealPrt);
 
 namespace
 {
-	constexpr const wchar_t* ENC_ID_ATTR_EVAL = L"com.esri.prt.core.AttributeEvalEncoder";
+	constexpr const wchar_t* ATTRIBUTE_EVAL_ENCODER_ID = L"com.esri.prt.core.AttributeEvalEncoder";
 	const FString DEFAULT_STYLE = L"Default";
 
 	class FLoadResolveMapTask
@@ -166,8 +166,8 @@ namespace
 		const InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShapeAndReset());
 		const InitialShapeNOPtrVector InitialShapes = {Shape.get()};
 
-		const std::vector<const wchar_t*> EncoderIds = {ENC_ID_ATTR_EVAL};
-		const AttributeMapUPtr AttributeEncodeOptions = prtu::createValidatedOptions(ENC_ID_ATTR_EVAL);
+		const std::vector<const wchar_t*> EncoderIds = {ATTRIBUTE_EVAL_ENCODER_ID};
+		const AttributeMapUPtr AttributeEncodeOptions = prtu::createValidatedOptions(ATTRIBUTE_EVAL_ENCODER_ID);
 		const AttributeMapNOPtrVector EncoderOptions = {AttributeEncodeOptions.get()};
 
 		prt::generate(InitialShapes.data(), InitialShapes.size(), nullptr, EncoderIds.data(), EncoderIds.size(), EncoderOptions.data(), &UnrealCallbacks, nullptr, nullptr);
@@ -280,7 +280,6 @@ namespace
 			}
 		}
 	}
-
 } // namespace
 
 void VitruvioModule::StartupModule()
@@ -309,6 +308,8 @@ void VitruvioModule::StartupModule()
 
 void VitruvioModule::ShutdownModule()
 {
+	// TODO: what happens if we still have threads busy with generation?
+
 	if (PrtDllHandle)
 	{
 		FPlatformProcess::FreeDllHandle(PrtDllHandle);
@@ -320,6 +321,108 @@ void VitruvioModule::ShutdownModule()
 	}
 
 	delete LogHandler;
+}
+
+TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
+													   URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
+{
+	check(InitialShape);
+	check(RulePackage);
+
+	if (!Initialized)
+	{
+		UE_LOG(LogUnrealPrt, Error, TEXT("prt not initialized"))
+		return {};
+	}
+
+	return Async(EAsyncExecution::Thread, [=]() -> FGenerateResult { return Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, Attributes); });
+}
+
+FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent, URulePackage* RulePackage,
+										 const TMap<FString, URuleAttribute*>& Attributes) const
+{
+	check(InitialShape);
+	check(RulePackage);
+
+	if (!Initialized)
+	{
+		UE_LOG(LogUnrealPrt, Error, TEXT("prt not initialized"))
+		return {};
+	}
+
+	const InitialShapeBuilderUPtr InitialShapeBuilder(prt::InitialShapeBuilder::create());
+	SetInitialShapeGeometry(InitialShapeBuilder, InitialShape);
+
+	const FString PathName = RulePackage->GetPathName();
+	const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + *PathName;
+	const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(PathUri).Get();
+
+	const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
+	const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
+
+	const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
+	const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
+
+	// TODO calculate random seed
+	const int32_t RandomSeed = 0;
+	const AttributeMapUPtr AttributeMap = CreateAttributeMap(Attributes);
+	InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", AttributeMap.get(), ResolveMap.get());
+
+	AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
+	const std::unique_ptr<UnrealCallbacks> OutputHandler(new UnrealCallbacks(AttributeMapBuilder, OpaqueParent, MaskedParent, TranslucentParent));
+
+	const InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShapeAndReset());
+
+	const std::vector<const wchar_t*> EncoderIds = {UNREAL_GEOMETRY_ENCODER_ID};
+	const AttributeMapUPtr UnrealEncoderOptions(prtu::createValidatedOptions(UNREAL_GEOMETRY_ENCODER_ID));
+	const AttributeMapNOPtrVector EncoderOptions = {UnrealEncoderOptions.get()};
+
+	InitialShapeNOPtrVector Shapes = {Shape.get()};
+
+	const prt::Status GenerateStatus =
+		prt::generate(Shapes.data(), Shapes.size(), nullptr, EncoderIds.data(), EncoderIds.size(), EncoderOptions.data(), OutputHandler.get(), PrtCache.get(), nullptr);
+
+	if (GenerateStatus != prt::STATUS_OK)
+	{
+		UE_LOG(LogUnrealPrt, Error, TEXT("prt generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
+	}
+
+	return {OutputHandler->GetModel(), OutputHandler->GetInstances()};
+}
+
+TFuture<TMap<FString, URuleAttribute*>> VitruvioModule::LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage) const
+{
+	check(InitialShape);
+	check(RulePackage);
+
+	if (!Initialized)
+	{
+		UE_LOG(LogUnrealPrt, Error, TEXT("prt not initialized"))
+		return {};
+	}
+
+	return Async(EAsyncExecution::Thread, [=]() -> TMap<FString, URuleAttribute*> {
+		const FString PathName = RulePackage->GetPathName();
+		const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + *PathName;
+		const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(PathUri).Get();
+
+		const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
+		const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
+
+		const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
+		const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
+
+		prt::Status InfoStatus;
+		const RuleFileInfoUPtr RuleInfo(prt::createRuleFileInfo(RuleFileUri, nullptr, &InfoStatus));
+		if (!RuleInfo || InfoStatus != prt::STATUS_OK)
+		{
+			UE_LOG(LogUnrealPrt, Error, TEXT("could not get rule file info from rule file %s"), RuleFileUri)
+			return {};
+		}
+
+		const AttributeMapUPtr DefaultAttributeMap(GetDefaultAttributeValues(RuleFile.c_str(), StartRule.c_str(), ResolveMap, InitialShape));
+		return ConvertAttributeMap(DefaultAttributeMap, RuleInfo);
+	});
 }
 
 TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(const std::wstring& InUri) const
@@ -378,102 +481,6 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(const std::wstring& 
 	}
 
 	return Future;
-}
-
-FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent, URulePackage* RulePackage,
-										 const TMap<FString, URuleAttribute*>& Attributes) const
-{
-	check(InitialShape);
-	check(RulePackage);
-
-	if (!Initialized)
-	{
-		UE_LOG(LogUnrealPrt, Error, TEXT("prt not initialized"))
-		return {};
-	}
-
-	const InitialShapeBuilderUPtr InitialShapeBuilder(prt::InitialShapeBuilder::create());
-	SetInitialShapeGeometry(InitialShapeBuilder, InitialShape);
-
-	const FString PathName = RulePackage->GetPathName();
-	const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + *PathName;
-	const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(PathUri).Get();
-
-	const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
-	const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
-
-	const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
-	const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
-
-	// TODO calculate random seed
-	const int32_t RandomSeed = 0;
-	const AttributeMapUPtr AttributeMap = CreateAttributeMap(Attributes);
-	InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", AttributeMap.get(), ResolveMap.get());
-
-	AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
-	const std::unique_ptr<UnrealCallbacks> OutputHandler(new UnrealCallbacks(AttributeMapBuilder, OpaqueParent, MaskedParent, TranslucentParent));
-
-	const InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShapeAndReset());
-
-	const std::vector<const wchar_t*> EncoderIds = {ENCODER_ID_UnrealGeometry};
-	const AttributeMapUPtr UnrealEncoderOptions(prtu::createValidatedOptions(ENCODER_ID_UnrealGeometry));
-	const AttributeMapNOPtrVector EncoderOptions = {UnrealEncoderOptions.get()};
-
-	InitialShapeNOPtrVector Shapes = {Shape.get()};
-
-	const prt::Status GenerateStatus =
-		prt::generate(Shapes.data(), Shapes.size(), nullptr, EncoderIds.data(), EncoderIds.size(), EncoderOptions.data(), OutputHandler.get(), PrtCache.get(), nullptr);
-
-	if (GenerateStatus != prt::STATUS_OK)
-	{
-		UE_LOG(LogUnrealPrt, Error, TEXT("prt generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
-	}
-
-	return {OutputHandler->GetModel(), OutputHandler->GetInstances()};
-}
-
-TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
-													   URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
-{
-	check(InitialShape);
-	check(RulePackage);
-
-	if (!Initialized)
-	{
-		UE_LOG(LogUnrealPrt, Error, TEXT("prt not initialized"))
-		return {};
-	}
-
-	return Async(EAsyncExecution::Thread, [=]() -> FGenerateResult { return Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, Attributes); });
-}
-
-TFuture<TMap<FString, URuleAttribute*>> VitruvioModule::LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage) const
-{
-	check(InitialShape);
-	check(RulePackage);
-
-	return Async(EAsyncExecution::Thread, [=]() -> TMap<FString, URuleAttribute*> {
-		const FString PathName = RulePackage->GetPathName();
-		const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + *PathName;
-		const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(PathUri).Get();
-
-		const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
-		const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
-
-		const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
-		const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
-
-		prt::Status InfoStatus;
-		const RuleFileInfoUPtr RuleInfo(prt::createRuleFileInfo(RuleFileUri, nullptr, &InfoStatus));
-		if (!RuleInfo || InfoStatus != prt::STATUS_OK)
-		{
-			UE_LOG(LogUnrealPrt, Error, TEXT("could not get rule file info from rule file %s"), RuleFileUri)
-			return {};
-		}
-
-		const AttributeMapUPtr DefaultAttributeMap(GetDefaultAttributeValues(RuleFile.c_str(), StartRule.c_str(), ResolveMap, InitialShape));
-		return ConvertAttributeMap(DefaultAttributeMap, RuleInfo);
-	});
 }
 
 #undef LOCTEXT_NAMESPACE

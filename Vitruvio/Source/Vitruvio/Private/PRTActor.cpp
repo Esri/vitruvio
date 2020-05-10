@@ -21,35 +21,6 @@ void APRTActor::BeginPlay()
 	Super::BeginPlay();
 }
 
-void APRTActor::LoadDefaultAttributes(UStaticMesh* InitialShape)
-{
-	check(InitialShape);
-	check(Rpk);
-
-	AttributesReady = false;
-
-	TFuture<TMap<FString, URuleAttribute*>> AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk);
-	AttributesFuture.Next([this](const TMap<FString, URuleAttribute*>& Result) {
-		Attributes = Result;
-		AttributesReady = true;
-
-#if WITH_EDITOR
-		// Notify possible listeners (eg. Details panel) about changes to the Attributes
-		FFunctionGraphTask::CreateAndDispatchWhenReady(
-			[this, &Result]() {
-				FPropertyChangedEvent PropertyEvent(GetClass()->FindPropertyByName(GET_MEMBER_NAME_CHECKED(APRTActor, Attributes)));
-				FCoreUObjectDelegates::OnObjectPropertyChanged.Broadcast(this, PropertyEvent);
-			},
-			TStatId(), nullptr, ENamedThreads::GameThread);
-#endif
-
-		if (GenerateAutomatically)
-		{
-			Regenerate();
-		}
-	});
-}
-
 void APRTActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -127,6 +98,7 @@ void APRTActor::Regenerate()
 }
 
 #if WITH_EDITOR
+
 void APRTActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
@@ -148,7 +120,6 @@ void APRTActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 		if (InitialShape)
 		{
 			InitialShape->bAllowCPUAccess = true;
-
 			if (Rpk)
 			{
 				LoadDefaultAttributes(InitialShape);
@@ -166,4 +137,34 @@ bool APRTActor::ShouldTickIfViewportsOnly() const
 {
 	return true;
 }
-#endif
+
+#endif // WITH_EDITOR
+
+void APRTActor::LoadDefaultAttributes(UStaticMesh* InitialShape)
+{
+	check(InitialShape);
+	check(Rpk);
+
+	AttributesReady = false;
+
+	TFuture<TMap<FString, URuleAttribute*>> AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk);
+	AttributesFuture.Next([this](const TMap<FString, URuleAttribute*>& Result) {
+		Attributes = Result;
+		AttributesReady = true;
+
+#if WITH_EDITOR
+		// Notify possible listeners (eg. Details panel) about changes to the Attributes
+		FFunctionGraphTask::CreateAndDispatchWhenReady(
+			[this, &Result]() {
+				FPropertyChangedEvent PropertyEvent(GetClass()->FindPropertyByName(GET_MEMBER_NAME_CHECKED(APRTActor, Attributes)));
+				FCoreUObjectDelegates::OnObjectPropertyChanged.Broadcast(this, PropertyEvent);
+			},
+			TStatId(), nullptr, ENamedThreads::GameThread);
+#endif // WITH_EDITOR
+
+		if (GenerateAutomatically)
+		{
+			Regenerate();
+		}
+	});
+}

@@ -24,7 +24,7 @@ struct FGenerateResult
 	TMap<UStaticMesh*, TArray<FTransform>> Instances;
 };
 
-class VitruvioModule : public IModuleInterface
+class VitruvioModule final : public IModuleInterface
 {
 public:
 	void StartupModule() override;

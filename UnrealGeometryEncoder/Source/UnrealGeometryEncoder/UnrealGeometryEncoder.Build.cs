@@ -28,8 +28,7 @@ public class UnrealGeometryEncoder : ModuleRules
 				"InputCore",
 			}
 		);
-			
-		
+
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{

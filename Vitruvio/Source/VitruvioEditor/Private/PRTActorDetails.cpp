@@ -42,11 +42,11 @@ namespace
 		}
 	}
 
-	template <typename A, typename V> TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Attribute, TSharedPtr<EnumAnnotation<V>> Annot, APRTActor* PrtActor)
+	template <typename A, typename V> TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Attribute, TSharedPtr<EnumAnnotation<V>> Annotation, APRTActor* PrtActor)
 	{
 		TArray<TSharedPtr<V>> SharedPtrValues;
-		Algo::Transform(Annot->Values, SharedPtrValues, [](const V& Value) { return MakeShared<V>(Value); });
-		auto InitialSelectedIndex = Annot->Values.IndexOfByPredicate([Attribute](const V& Value) { return Value == Attribute->Value; });
+		Algo::Transform(Annotation->Values, SharedPtrValues, [](const V& Value) { return MakeShared<V>(Value); });
+		auto InitialSelectedIndex = Annotation->Values.IndexOfByPredicate([Attribute](const V& Value) { return Value == Attribute->Value; });
 		auto InitialSelectedValue = InitialSelectedIndex != INDEX_NONE ? SharedPtrValues[InitialSelectedIndex] : nullptr;
 
 		auto ValueWidget = SNew(SPropertyComboBox<V>)
@@ -75,7 +75,6 @@ namespace
 
 	TSharedPtr<SHorizontalBox> CreateColorInputWidget(UStringAttribute* Attribute, APRTActor* PrtActor)
 	{
-
 		return SNew(SHorizontalBox) + SHorizontalBox::Slot()
 										  .VAlign(VAlign_Center)
 										  .Padding(0.0f, 2.0f)[
@@ -308,9 +307,9 @@ void FPRTActorDetails::CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& 
 	CustomizeDetails(*DetailBuilder);
 }
 
-void FPRTActorDetails::OnAttributesChanged(UObject* Object, struct FPropertyChangedEvent& PropertyChangedEvent)
+void FPRTActorDetails::OnAttributesChanged(UObject* Object, struct FPropertyChangedEvent& Event)
 {
-	if (PropertyChangedEvent.Property && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(APRTActor, Attributes))
+	if (Event.Property && Event.Property->GetFName() == GET_MEMBER_NAME_CHECKED(APRTActor, Attributes))
 	{
 		const auto DetailBuilder = CachedDetailBuilder.Pin().Get();
 		if (DetailBuilder)

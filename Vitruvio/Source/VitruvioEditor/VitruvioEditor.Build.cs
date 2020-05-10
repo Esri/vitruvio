@@ -29,7 +29,6 @@ public class VitruvioEditor : ModuleRules
 				"EditorStyle"
 			}
 		);
-			
 		
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
@@ -41,6 +40,5 @@ public class VitruvioEditor : ModuleRules
 				"UnrealGeometryEncoder"
 			}
 		);
-
 	}
 }

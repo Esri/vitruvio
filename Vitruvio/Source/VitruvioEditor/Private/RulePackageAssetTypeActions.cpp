@@ -1,6 +1,6 @@
 // Copyright 2019 - 2020 Esri. All Rights Reserved.
 
-#include "VitruvioEditor/Public/RulePackageAssetTypeActions.h"
+#include "RulePackageAssetTypeActions.h"
 
 #include "RulePackage.h"
 #include "UnrealEd.h"
