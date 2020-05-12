@@ -4,7 +4,7 @@
 
 #include "Modules/ModuleManager.h"
 
-class VitruvioEditorModule : public IModuleInterface
+class VitruvioEditorModule final : public IModuleInterface
 {
 public:
 	void StartupModule() override;

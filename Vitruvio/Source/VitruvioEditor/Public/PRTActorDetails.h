@@ -5,7 +5,7 @@
 #include "IDetailCustomization.h"
 #include "PRTActor.h"
 
-class FPRTActorDetails : public IDetailCustomization
+class FPRTActorDetails final : public IDetailCustomization
 {
 public:
 	FPRTActorDetails();
@@ -24,7 +24,7 @@ private:
 	TSharedPtr<SWidget> ColorPickerParentWidget;
 };
 
-template <typename T> class SPropertyComboBox : public SComboBox<TSharedPtr<T>>
+template <typename T> class SPropertyComboBox final : public SComboBox<TSharedPtr<T>>
 {
 public:
 	SLATE_BEGIN_ARGS(SPropertyComboBox)

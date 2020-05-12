@@ -25,11 +25,14 @@
 
 namespace
 {
-
 	constexpr bool DBG = false;
 
-	constexpr const wchar_t* ENC_NAME = L"Unreal Encoder";
-	constexpr const wchar_t* ENC_DESCRIPTION = L"Encodes geometry into Unreal geometry.";
+	constexpr const wchar_t* UNREAL_GEOMETRY_ENCODER_NAME = L"Unreal Encoder";
+	constexpr const wchar_t* UNREAL_GEOMETRY_ENCODER_DESCRIPTION = L"Encodes geometry into Unreal geometry.";
+
+	constexpr const wchar_t* EO_EMIT_ATTRIBUTES = L"emitAttributes";
+	constexpr const wchar_t* EO_EMIT_MATERIALS = L"emitMaterials";
+	constexpr const wchar_t* EO_EMIT_REPORTS = L"emitReports";
 
 	const prtx::DoubleVector EMPTY_UVS;
 	const prtx::IndexVector EMPTY_IDX;
@@ -59,6 +62,7 @@ namespace
 	struct AttributeMapNOPtrVectorOwner
 	{
 		AttributeMapNOPtrVector v;
+
 		~AttributeMapNOPtrVectorOwner()
 		{
 			for (const auto& m : v)
@@ -76,21 +80,19 @@ namespace
 		int8_t uvSet;
 	};
 
-	const std::vector<TextureUVMapping> TEXTURE_UV_MAPPINGS = []() -> std::vector<TextureUVMapping> {
-		return {
-			// shader key   | idx | uv set  | CGA key
-			{L"diffuseMap", 0, 0},	 // colormap
-			{L"bumpMap", 0, 1},		 // bumpmap
-			{L"diffuseMap", 1, 2},	 // dirtmap
-			{L"specularMap", 0, 3},	 // specularmap
-			{L"opacityMap", 0, 4},	 // opacitymap
-			{L"normalMap", 0, 5},	 // normalmap
-			{L"emissiveMap", 0, 6},	 // emissivemap
-			{L"occlusionMap", 0, 7}, // occlusionmap
-			{L"roughnessMap", 0, 8}, // roughnessmap
-			{L"metallicMap", 0, 9}	 // metallicmap
-		};
-	}();
+	const std::vector<TextureUVMapping> TEXTURE_UV_MAPPINGS = {
+		// shader key   | idx | uv set  | CGA key
+		{L"diffuseMap", 0, 0},	 // colormap
+		{L"bumpMap", 0, 1},		 // bumpmap
+		{L"diffuseMap", 1, 2},	 // dirtmap
+		{L"specularMap", 0, 3},	 // specularmap
+		{L"opacityMap", 0, 4},	 // opacitymap
+		{L"normalMap", 0, 5},	 // normalmap
+		{L"emissiveMap", 0, 6},	 // emissivemap
+		{L"occlusionMap", 0, 7}, // occlusionmap
+		{L"roughnessMap", 0, 8}, // roughnessmap
+		{L"metallicMap", 0, 9}	 // metallicmap
+	};
 
 	std::vector<const wchar_t*> toPtrVec(const prtx::WStringVector& wsv)
 	{
@@ -601,9 +603,9 @@ UnrealGeometryEncoderFactory* UnrealGeometryEncoderFactory::createInstance()
 {
 	prtx::EncoderInfoBuilder encoderInfoBuilder;
 
-	encoderInfoBuilder.setID(ENCODER_ID_UnrealGeometry);
-	encoderInfoBuilder.setName(ENC_NAME);
-	encoderInfoBuilder.setDescription(ENC_DESCRIPTION);
+	encoderInfoBuilder.setID(UNREAL_GEOMETRY_ENCODER_ID);
+	encoderInfoBuilder.setName(UNREAL_GEOMETRY_ENCODER_NAME);
+	encoderInfoBuilder.setDescription(UNREAL_GEOMETRY_ENCODER_DESCRIPTION);
 	encoderInfoBuilder.setType(prt::CT_GEOMETRY);
 
 	prtx::PRTUtils::AttributeMapBuilderPtr amb(prt::AttributeMapBuilder::create());

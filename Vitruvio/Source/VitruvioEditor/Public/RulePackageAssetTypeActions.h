@@ -5,7 +5,7 @@
 #include "AssetTypeActions_Base.h"
 #include "UnrealEd.h"
 
-class FRulePackageAssetTypeActions : public FAssetTypeActions_Base
+class FRulePackageAssetTypeActions final : public FAssetTypeActions_Base
 {
 public:
 	FText GetName() const override;

@@ -12,7 +12,7 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogUnrealCallbacks, Log, All);
 
-class UnrealCallbacks : public IUnrealCallbacks
+class UnrealCallbacks final : public IUnrealCallbacks
 {
 	AttributeMapBuilderUPtr& AttributeMapBuilder;
 
@@ -76,13 +76,13 @@ public:
 		const uint32_t* faceRanges, size_t faceRangesSize,
 		const prt::AttributeMap** materials
 	) override;
+	// clang-format on
 
 	/**
 	 * @param prototypeId the prototype id of the instance, must be >= 0
 	 * @param transform the transformation matrix of the instance
 	 */
 	void addInstance(int32_t prototypeId, const double* transform) override;
-	// clang-format on
 
 	prt::Status generateError(size_t /*isIndex*/, prt::Status /*status*/, const wchar_t* message) override
 	{

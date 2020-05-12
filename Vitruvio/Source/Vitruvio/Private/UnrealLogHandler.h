@@ -7,7 +7,7 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(UnrealPrtLog, Log, All);
 
-class UnrealLogHandler : public prt::LogHandler
+class UnrealLogHandler final : public prt::LogHandler
 {
 public:
 	UnrealLogHandler() = default;

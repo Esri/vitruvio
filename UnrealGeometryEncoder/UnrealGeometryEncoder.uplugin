@@ -3,7 +3,7 @@
 	"Version": 1,
 	"VersionName": "0.1",
 	"FriendlyName": "Unreal Geometry Encoder",
-	"Description": "Provides an Encoder for PRT to convert geometry to Unreal Static Meshes.",
+	"Description": "CityEngine procedural runtime (PRT) encoder plugin to convert geometry to Unreal Static Meshes",
 	"Category": "Misc",
 	"CreatedBy": "Esri",
 	"CreatedByURL": "",
@@ -23,7 +23,7 @@
 			"WhitelistPlatforms": [
 				"Win64"
 			]
-		},
+		}
 	],
 	"Plugins": [
 	]

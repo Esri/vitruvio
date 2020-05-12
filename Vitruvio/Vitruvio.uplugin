@@ -3,7 +3,7 @@
 	"Version": 1,
 	"VersionName": "0.1",
 	"FriendlyName": "Vitruvio",
-	"Description": "CityEngine Procedural Runtime (PRT) Plugin",
+	"Description": "CityEngine procedural runtime (PRT) plugin",
 	"Category": "Misc",
 	"CreatedBy": "Esri",
 	"CreatedByURL": "",

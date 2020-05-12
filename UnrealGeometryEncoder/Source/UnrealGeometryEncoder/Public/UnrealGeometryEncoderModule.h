@@ -4,7 +4,7 @@
 
 #include "Modules/ModuleManager.h"
 
-class UnrealGeometryEncoderModule : public IModuleInterface
+class UnrealGeometryEncoderModule final : public IModuleInterface
 {
 public:
 	void StartupModule() override;

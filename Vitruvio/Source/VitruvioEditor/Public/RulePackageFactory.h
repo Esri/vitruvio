@@ -7,7 +7,7 @@
 #include "RulePackageFactory.generated.h"
 
 UCLASS(hidecategories = Object)
-class URulePackageFactory : public UFactory
+class URulePackageFactory final : public UFactory
 {
 	GENERATED_UCLASS_BODY()
 

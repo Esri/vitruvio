@@ -1,6 +1,7 @@
 // Copyright 2019 - 2020 Esri. All Rights Reserved.
 
 #include "RulePackageFactory.h"
+
 #include "RulePackage.h"
 
 URulePackageFactory::URulePackageFactory(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
@@ -13,6 +14,7 @@ URulePackageFactory::URulePackageFactory(const FObjectInitializer& ObjectInitial
 	Formats.Add("rpk;Esri Rule Package");
 }
 
+// TODO: do we want to load the whole RPK into memory? Alternatively use FactoryCreateFile() and just keep the filename?
 UObject* URulePackageFactory::FactoryCreateBinary(UClass* Class, UObject* InParent, FName Name, EObjectFlags Flags, UObject* Context, const TCHAR* Type, const uint8*& Buffer,
 												  const uint8* BufferEnd, FFeedbackContext* Warn)
 {

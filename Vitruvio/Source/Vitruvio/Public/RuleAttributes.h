@@ -15,6 +15,7 @@ enum FilesystemMode
 	Directory,
 	None
 };
+
 enum AnnotationType
 {
 	FileSystem,
@@ -30,7 +31,7 @@ public:
 	virtual AnnotationType GetAnnotationType() = 0;
 };
 
-class ColorAnnotation : public AttributeAnnotation
+class ColorAnnotation final : public AttributeAnnotation
 {
 	AnnotationType GetAnnotationType() override
 	{
@@ -38,7 +39,7 @@ class ColorAnnotation : public AttributeAnnotation
 	}
 };
 
-class FilesystemAnnotation : public AttributeAnnotation
+class FilesystemAnnotation final : public AttributeAnnotation
 {
 public:
 	FilesystemMode Mode = None;
@@ -50,7 +51,7 @@ public:
 	}
 };
 
-class RangeAnnotation : public AttributeAnnotation
+class RangeAnnotation final : public AttributeAnnotation
 {
 public:
 	TOptional<double> Min;
@@ -64,7 +65,7 @@ public:
 	}
 };
 
-template <typename T> class EnumAnnotation : public AttributeAnnotation
+template <typename T> class EnumAnnotation final : public AttributeAnnotation
 {
 public:
 	TArray<T> Values;
@@ -102,7 +103,7 @@ public:
 };
 
 UCLASS()
-class VITRUVIO_API UStringAttribute : public URuleAttribute
+class VITRUVIO_API UStringAttribute final : public URuleAttribute
 {
 	GENERATED_BODY()
 
@@ -121,7 +122,7 @@ public:
 };
 
 UCLASS()
-class VITRUVIO_API UFloatAttribute : public URuleAttribute
+class VITRUVIO_API UFloatAttribute final : public URuleAttribute
 {
 	GENERATED_BODY()
 
@@ -140,7 +141,7 @@ public:
 };
 
 UCLASS()
-class VITRUVIO_API UBoolAttribute : public URuleAttribute
+class VITRUVIO_API UBoolAttribute final : public URuleAttribute
 {
 	GENERATED_BODY()
 

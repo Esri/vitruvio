@@ -17,7 +17,6 @@ namespace
 
 extern "C"
 {
-
 	CODEC_EXPORTS_API void registerExtensionFactories(prtx::ExtensionManager* manager)
 	{
 		manager->addFactory(UnrealGeometryEncoderFactory::createInstance());

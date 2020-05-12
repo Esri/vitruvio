@@ -22,10 +22,10 @@ namespace
 		TextureCompressionSettings Compression;
 	};
 
-	UTexture2D* CreateTexture(UObject* Outer, const TArray<uint8>& PixelData, int32 InSizeX, int32 InSizeY, const TextureSettings& Settings, EPixelFormat Format, FName BaseName)
+	UTexture2D* CreateTexture(UObject* Outer, const TArray<uint8>& PixelData, int32 SizeX, int32 SizeY, const TextureSettings& Settings, EPixelFormat Format, FName BaseName)
 	{
 		// Shamelessly copied from UTexture2D::CreateTransient with a few modifications
-		if (InSizeX <= 0 || InSizeY <= 0 || (InSizeX % GPixelFormats[Format].BlockSizeX) != 0 || (InSizeY % GPixelFormats[Format].BlockSizeY) != 0)
+		if (SizeX <= 0 || SizeY <= 0 || (SizeX % GPixelFormats[Format].BlockSizeX) != 0 || (SizeY % GPixelFormats[Format].BlockSizeY) != 0)
 		{
 			UE_LOG(LogMaterialConversion, Warning, TEXT("Invalid parameters"));
 			return nullptr;
@@ -36,8 +36,8 @@ namespace
 		UTexture2D* NewTexture = NewObject<UTexture2D>(Outer, TextureName, RF_Transient);
 
 		NewTexture->PlatformData = new FTexturePlatformData();
-		NewTexture->PlatformData->SizeX = InSizeX;
-		NewTexture->PlatformData->SizeY = InSizeY;
+		NewTexture->PlatformData->SizeX = SizeX;
+		NewTexture->PlatformData->SizeY = SizeY;
 		NewTexture->PlatformData->PixelFormat = Format;
 		NewTexture->CompressionSettings = Settings.Compression;
 		NewTexture->SRGB = Settings.SRGB;
@@ -45,10 +45,10 @@ namespace
 		// Allocate first mipmap and upload the pixel data
 		FTexture2DMipMap* Mip = new FTexture2DMipMap();
 		NewTexture->PlatformData->Mips.Add(Mip);
-		Mip->SizeX = InSizeX;
-		Mip->SizeY = InSizeY;
+		Mip->SizeX = SizeX;
+		Mip->SizeY = SizeY;
 		Mip->BulkData.Lock(LOCK_READ_WRITE);
-		void* TextureData = Mip->BulkData.Realloc(CalculateImageBytes(InSizeX, InSizeY, 0, Format));
+		void* TextureData = Mip->BulkData.Realloc(CalculateImageBytes(SizeX, SizeY, 0, Format));
 		FMemory::Memcpy(TextureData, PixelData.GetData(), PixelData.Num());
 		Mip->BulkData.Unlock();
 
@@ -182,7 +182,7 @@ namespace
 		{
 			return {false, TC_Normalmap};
 		}
-		else if (Key == L"roughnessMap" || Key == L"metallicMap")
+		if (Key == L"roughnessMap" || Key == L"metallicMap")
 		{
 			return {false, TC_Masks};
 		}

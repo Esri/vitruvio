@@ -8,7 +8,7 @@
 #include "RulePackage.generated.h"
 
 UCLASS(BlueprintType, hidecategories = (Object))
-class UNREALGEOMETRYENCODER_API URulePackage : public UObject
+class UNREALGEOMETRYENCODER_API URulePackage final : public UObject
 {
 	GENERATED_BODY()
 public:
