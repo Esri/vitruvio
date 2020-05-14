@@ -17,9 +17,9 @@ class VITRUVIO_API APRTActor : public AStaticMeshActor
 {
 	GENERATED_BODY()
 
-	bool Initialized = false;
-	bool Regenerated = false;
-	bool AttributesReady = false;
+	TAtomic<bool> Initialized = false;
+	TAtomic<bool> Regenerated = false;
+	TAtomic<bool> AttributesReady = false;
 
 public:
 	APRTActor();
