@@ -152,6 +152,8 @@ void APRTActor::LoadDefaultAttributes(UStaticMesh* InitialShape)
 		Attributes = Result;
 		AttributesReady = true;
 
+		FGenericPlatformMisc::MemoryBarrier();
+
 #if WITH_EDITOR
 		// Notify possible listeners (eg. Details panel) about changes to the Attributes
 		FFunctionGraphTask::CreateAndDispatchWhenReady(
