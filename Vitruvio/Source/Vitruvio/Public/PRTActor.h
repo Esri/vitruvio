@@ -4,11 +4,11 @@
 
 #include "RuleAttributes.h"
 #include "RulePackage.h"
+#include "VitruvioModule.h"
 
 #include "CoreMinimal.h"
 #include "Engine/StaticMeshActor.h"
 #include "Materials/Material.h"
-
 #include "PRTActor.generated.h"
 
 UCLASS()
@@ -17,8 +17,9 @@ class VITRUVIO_API APRTActor : public AStaticMeshActor
 	GENERATED_BODY()
 
 	TAtomic<bool> Initialized = false;
-	TAtomic<bool> Regenerated = false;
 	TAtomic<bool> AttributesReady = false;
+
+	TFuture<FGenerateResult> GenerateFuture;
 
 public:
 	APRTActor();

@@ -25,8 +25,6 @@ void APRTActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	Regenerated = false;
-
 	// Note that we also tick in editor for initialization
 	if (!Initialized)
 	{
@@ -43,57 +41,65 @@ void APRTActor::Tick(float DeltaTime)
 
 void APRTActor::Generate()
 {
-	if (Rpk && AttributesReady && !Regenerated)
+	if (!Rpk || !AttributesReady || !GetStaticMeshComponent())
 	{
-		Regenerated = true;
+		return;
+	}
 
-		// Generate
-		if (GetStaticMeshComponent())
+	// If the generate future is valid but not ready means there is already a generation in progress. Since we can not abort an ongoing generation call
+	// from PRT, we just reset the future and therefore ignore the result.
+	if (GenerateFuture.IsValid() && !GenerateFuture.IsReady())
+	{
+		GenerateFuture.Reset();
+	}
+
+	UStaticMesh* InitialShape = GetStaticMeshComponent()->GetStaticMesh();
+
+	if (InitialShape)
+	{
+		GenerateFuture = VitruvioModule::Get().GenerateAsync(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, Rpk, Attributes);
+
+		// clang-format off
+		GenerateFuture.Next([=](const FGenerateResult& Result) 
 		{
-			UStaticMesh* InitialShape = GetStaticMeshComponent()->GetStaticMesh();
-
-			if (InitialShape)
+			const FGraphEventRef CreateMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this, &Result]() 
 			{
-				VitruvioModule::Get().GenerateAsync(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, Rpk, Attributes).Next([=](const FGenerateResult& Result) {
-					const FGraphEventRef CreateMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady(
-						[this, &Result]() {
-							// Remove previously generated actors
-							TArray<AActor*> GeneratedMeshes;
-							GetAttachedActors(GeneratedMeshes);
-							for (const auto& Child : GeneratedMeshes)
-							{
-								Child->Destroy();
-							}
+				// Remove previously generated actors
+				TArray<AActor*> GeneratedMeshes;
+				GetAttachedActors(GeneratedMeshes);
+				for (const auto& Child : GeneratedMeshes)
+				{
+					Child->Destroy();
+				}
 
-							// Create actors for generated meshes
-							QUICK_SCOPE_CYCLE_COUNTER(STAT_PRTActor_CreateActors);
-							FActorSpawnParameters Parameters;
-							Parameters.Owner = this;
-							AStaticMeshActor* StaticMeshActor = GetWorld()->SpawnActor<AStaticMeshActor>(Parameters);
-							StaticMeshActor->SetMobility(EComponentMobility::Movable);
-							StaticMeshActor->GetStaticMeshComponent()->SetStaticMesh(Result.ShapeMesh);
-							StaticMeshActor->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
+				// Create actors for generated meshes
+				QUICK_SCOPE_CYCLE_COUNTER(STAT_PRTActor_CreateActors);
+				FActorSpawnParameters Parameters;
+				Parameters.Owner = this;
+				AStaticMeshActor* StaticMeshActor = GetWorld()->SpawnActor<AStaticMeshActor>(Parameters);
+				StaticMeshActor->SetMobility(EComponentMobility::Movable);
+				StaticMeshActor->GetStaticMeshComponent()->SetStaticMesh(Result.ShapeMesh);
+				StaticMeshActor->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
 
-							for (const auto Instance : Result.Instances)
-							{
-								auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(StaticMeshActor);
-								InstancedComponent->SetStaticMesh(Instance.Key);
-								for (FTransform InstanceTransform : Instance.Value)
-								{
-									InstancedComponent->AddInstance(InstanceTransform);
-								}
-								StaticMeshActor->AddInstanceComponent(InstancedComponent);
-								InstancedComponent->RegisterComponent();
-								InstancedComponent->SetRelativeTransform(StaticMeshActor->GetTransform());
-							}
-							StaticMeshActor->RegisterAllComponents();
-						},
-						TStatId(), nullptr, ENamedThreads::GameThread);
+				for (const auto Instance : Result.Instances)
+				{
+					auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(StaticMeshActor);
+					InstancedComponent->SetStaticMesh(Instance.Key);
+					for (FTransform InstanceTransform : Instance.Value)
+					{
+						InstancedComponent->AddInstance(InstanceTransform);
+					}
+					StaticMeshActor->AddInstanceComponent(InstancedComponent);
+					InstancedComponent->RegisterComponent();
+					InstancedComponent->SetRelativeTransform(StaticMeshActor->GetTransform());
+				}
+				StaticMeshActor->RegisterAllComponents();
+			},
+			TStatId(), nullptr, ENamedThreads::GameThread);
 
-					FTaskGraphInterface::Get().WaitUntilTaskCompletes(CreateMeshTask);
-				});
-			}
-		}
+			FTaskGraphInterface::Get().WaitUntilTaskCompletes(CreateMeshTask);
+		});
+		// clang-format on
 	}
 }
 
