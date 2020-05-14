@@ -38,7 +38,7 @@ namespace
 		Attribute->Value = Value;
 		if (PrtActor->GenerateAutomatically)
 		{
-			PrtActor->Regenerate();
+			PrtActor->Generate();
 		}
 	}
 

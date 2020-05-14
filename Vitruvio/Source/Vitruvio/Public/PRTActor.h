@@ -11,7 +11,6 @@
 
 #include "PRTActor.generated.h"
 
-// TODO: wondering if we should just call it "generate" instead of regenerate?
 UCLASS()
 class VITRUVIO_API APRTActor : public AStaticMeshActor
 {
@@ -46,7 +45,7 @@ public:
 	bool GenerateAutomatically = true;
 
 	UFUNCTION(BlueprintCallable)
-	void Regenerate();
+	void Generate();
 
 protected:
 	void BeginPlay() override;

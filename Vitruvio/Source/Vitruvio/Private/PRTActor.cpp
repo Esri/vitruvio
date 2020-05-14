@@ -41,7 +41,7 @@ void APRTActor::Tick(float DeltaTime)
 	}
 }
 
-void APRTActor::Regenerate()
+void APRTActor::Generate()
 {
 	if (Rpk && AttributesReady && !Regenerated)
 	{
@@ -129,7 +129,7 @@ void APRTActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 
 	if (GenerateAutomatically)
 	{
-		Regenerate();
+		Generate();
 	}
 }
 
@@ -166,7 +166,7 @@ void APRTActor::LoadDefaultAttributes(UStaticMesh* InitialShape)
 
 		if (GenerateAutomatically)
 		{
-			Regenerate();
+			Generate();
 		}
 	});
 }
