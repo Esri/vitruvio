@@ -126,7 +126,11 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 
 		PolygonGroupStartIndex += PolygonFaces;
 
-		FTaskGraphInterface::Get().WaitUntilTaskCompletes(CreateMaterialTask);
+		// Only wait for task completion if we are not in game thread. Could cause deadlock otherwise.
+		if (!IsInGameThread())
+		{
+			FTaskGraphInterface::Get().WaitUntilTaskCompletes(CreateMaterialTask);
+		}
 	}
 
 	// Build mesh in game thread
@@ -143,7 +147,12 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 				Meshes.Add(prototypeId, Mesh);
 			},
 			TStatId(), nullptr, ENamedThreads::GameThread);
-		FTaskGraphInterface::Get().WaitUntilTaskCompletes(CreateMeshTask);
+
+		// Only wait for task completion if we are not in game thread. Could cause deadlock otherwise.
+		if (!IsInGameThread())
+		{
+			FTaskGraphInterface::Get().WaitUntilTaskCompletes(CreateMeshTask);
+		}
 	}
 }
 
