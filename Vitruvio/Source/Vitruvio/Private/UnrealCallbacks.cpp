@@ -72,7 +72,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 			[=, &Attributes]() {
 				QUICK_SCOPE_CYCLE_COUNTER(STAT_UnrealCallbacks_CreateMaterials);
 				const prt::AttributeMap* MaterialAttributes = materials[PolygonGroupIndex];
-				UMaterialInstanceDynamic* MaterialInstance = CreateMaterialInstance(Mesh, OpaqueParent, MaskedParent, TranslucentParent, MaterialAttributes);
+				UMaterialInstanceDynamic* MaterialInstance = GameThread_CreateMaterialInstance(Mesh, OpaqueParent, MaskedParent, TranslucentParent, MaterialAttributes);
 				const FName MaterialSlot = Mesh->AddMaterial(MaterialInstance);
 				Attributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlot;
 			},
