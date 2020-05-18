@@ -16,44 +16,28 @@ public class PRT : ModuleRules
 	private const int PrtMinor = 1;
 	private const int PrtBuild = 5705;
 
-	private const String PrtPlatformWindows = "win10-vc141-x86_64-rel-opt";
-	private const String PrtPlatformMacOS = "osx12-ac81-x86_64-rel-opt";
-
-
 	public PRT(ReadOnlyTargetRules Target) : base(Target)
 	{
 		bUseRTTI = true;
 		bEnableExceptions = true;
 		Type = ModuleType.External;
 
-		String PlatformDir;
-		String PlatformLibPre;
-		String PlatformLibExt;
-		String PrtPlatform;
-		IZipExtractor Extractor;
+		IPlatform Platform;
 		if (Target.Platform == UnrealTargetPlatform.Win64) 
 		{
-			PlatformDir = "Win64";
-			PlatformLibPre = "";
-			PlatformLibExt = ".dll";
-			PrtPlatform = PrtPlatformWindows;
-			Extractor = new WindowsZipExtractor();
+			Platform = new WindowsPlatform();
 		}
 		else if (Target.Platform == UnrealTargetPlatform.Mac)
 		{
-			PlatformDir = "Mac";
-			PlatformLibPre = "lib";
-			PlatformLibExt = ".dylib";
-			PrtPlatform = PrtPlatformMacOS;
-			Extractor = new UnixZipExtractor();
+			Platform = new MacPlatform();
 		}
 		else 
 		{
 			throw new System.PlatformNotSupportedException();
 		}
 
-		string LibDir = Path.Combine(ModuleDirectory, "lib", PlatformDir, "Release");
-		string BinDir = Path.Combine(ModuleDirectory, "bin", PlatformDir, "Release");
+		string LibDir = Path.Combine(ModuleDirectory, "lib", Platform.Name, "Release");
+		string BinDir = Path.Combine(ModuleDirectory, "bin", Platform.Name, "Release");
 		string IncludeDir = Path.Combine(ModuleDirectory, "include");
 
 		// TODO improve checking if already installed
@@ -74,7 +58,7 @@ public class PRT : ModuleRules
 				string PrtUrl = "https://github.com/Esri/esri-cityengine-sdk/releases/download";
 				string PrtVersion = string.Format("{0}.{1}.{2}", PrtMajor, PrtMinor, PrtBuild);
 
-				string PrtLibName = string.Format("esri_ce_sdk-{0}-{1}", PrtVersion, PrtPlatform);
+				string PrtLibName = string.Format("esri_ce_sdk-{0}-{1}", PrtVersion, Platform.PrtPlatform);
 				string PrtLibZipFile = PrtLibName + ".zip";
 				string PrtDownloadUrl = Path.Combine(PrtUrl, PrtVersion, PrtLibZipFile);
 
@@ -87,7 +71,7 @@ public class PRT : ModuleRules
 
 				if (Debug) System.Console.WriteLine("Extracting " + PrtLibZipFile + "...");
 
-				Extractor.Unzip(ModuleDirectory, PrtLibZipFile, PrtLibName);
+				Platform.ZipExtractor.Unzip(ModuleDirectory, PrtLibZipFile, PrtLibName);
 
 				Directory.CreateDirectory(LibDir);
 				Directory.CreateDirectory(BinDir);
@@ -109,7 +93,7 @@ public class PRT : ModuleRules
 		}
 
 		// 2. Copy libraries to module binaries directory and add dependencies
-		string ModuleBinariesDir = Path.GetFullPath(Path.Combine(ModuleDirectory, "../../..", "Binaries", PlatformDir));
+		string ModuleBinariesDir = Path.GetFullPath(Path.Combine(ModuleDirectory, "../../..", "Binaries", Platform.Name));
 
 		if (Debug)
 		{
@@ -130,7 +114,7 @@ public class PRT : ModuleRules
 			string FileName = Path.GetFileName(FilePath);
 			string LibraryPath = Path.Combine(ModuleBinariesDir, FileName);
 
-			if (Path.GetExtension(FilePath) == PlatformLibExt)
+			if (Path.GetExtension(FilePath) == Platform.DynamicLibExtension)
 			{
 				if (Debug) Console.WriteLine("Adding Runtime Dpendency " + FileName);
 
@@ -156,11 +140,11 @@ public class PRT : ModuleRules
 		if (Debug) Console.WriteLine("Adding PRT core libraries to binary directory " + ModuleBinariesDir);
 		foreach (string FilePath in Directory.GetFiles(LibDir))
 		{
-			if (Path.GetExtension(FilePath) == PlatformLibExt)
+			if (Path.GetExtension(FilePath) == Platform.DynamicLibExtension)
 			{
 				string FileName = Path.GetFileName(FilePath);
 				string DllPath = Path.Combine(ModuleBinariesDir, FileName);
-				if (Debug) Console.WriteLine("Adding " + FileName);
+				if (Debug) Console.WriteLine("Adding Extension Library " + FileName);
 				CopyLibraryFile(LibDir, FilePath, DllPath);
 				RuntimeDependencies.Add(DllPath);
 			}
@@ -244,5 +228,32 @@ public class PRT : ModuleRules
 			UnzipProcess.Start();
 			UnzipProcess.WaitForExit();
 		}		
+	}
+
+	private interface IPlatform
+	{
+		IZipExtractor ZipExtractor { get; }
+
+		string Name { get; }
+		string PrtPlatform { get; }
+		string DynamicLibExtension { get; }
+	}
+
+	private class WindowsPlatform : IPlatform
+	{
+		public IZipExtractor ZipExtractor {	get	{ return new WindowsZipExtractor();	} }
+
+		public string Name { get { return "Win64"; } }
+		public string PrtPlatform { get	{ return "win10-vc141-x86_64-rel-opt"; } }
+		public string DynamicLibExtension {	get	{ return "dll";	} }
+	}
+
+	private class MacPlatform : IPlatform
+	{
+		public IZipExtractor ZipExtractor {	get { return new UnixZipExtractor(); } }
+
+		public string Name { get { return "Mac"; } }
+		public string PrtPlatform {	get { return "osx12-ac81-x86_64-rel-opt"; } }
+		public string DynamicLibExtension {	get { return "dylib"; } }
 	}
 }
