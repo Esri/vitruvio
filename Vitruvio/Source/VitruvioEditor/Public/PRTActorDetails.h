@@ -1,4 +1,4 @@
-﻿// Copyright 2019 - 2020 Esri. All Rights Reserved.
+// Copyright 2019 - 2020 Esri. All Rights Reserved.
 
 #pragma once
 
@@ -26,12 +26,14 @@ private:
 
 template <typename T> class SPropertyComboBox final : public SComboBox<TSharedPtr<T>>
 {
+	using SelectionChanged = typename SComboBox<TSharedPtr<T>>::FOnSelectionChanged;
+
 public:
 	SLATE_BEGIN_ARGS(SPropertyComboBox)
 	{
 	}
 	SLATE_ATTRIBUTE(TArray<TSharedPtr<T>>, ComboItemList)
-	SLATE_EVENT(SComboBox<TSharedPtr<T>>::FOnSelectionChanged, OnSelectionChanged)
+	SLATE_EVENT(SelectionChanged, OnSelectionChanged)
 	SLATE_ATTRIBUTE(TSharedPtr<T>, InitialValue)
 	SLATE_END_ARGS()
 

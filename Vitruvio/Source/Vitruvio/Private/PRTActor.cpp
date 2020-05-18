@@ -114,7 +114,7 @@ void APRTActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 		}
 	}
 
-	if (PropertyChangedEvent.Property && PropertyChangedEvent.Property->GetFName() == L"StaticMeshComponent")
+	if (PropertyChangedEvent.Property && PropertyChangedEvent.Property->GetFName() == TEXT("StaticMeshComponent"))
 	{
 		UStaticMesh* InitialShape = GetStaticMeshComponent()->GetStaticMesh();
 		if (InitialShape)
