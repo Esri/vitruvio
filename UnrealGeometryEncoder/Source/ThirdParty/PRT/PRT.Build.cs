@@ -127,15 +127,28 @@ public class PRT : ModuleRules
 		if (Debug) Console.WriteLine("Adding PRT core libraries to binary directory " + ModuleBinariesDir);
 		foreach (string FilePath in Directory.GetFiles(BinDir))
 		{
+			string FileName = Path.GetFileName(FilePath);
+			string LibraryPath = Path.Combine(ModuleBinariesDir, FileName);
+
 			if (Path.GetExtension(FilePath) == PlatformLibExt)
 			{
-				string FileName = Path.GetFileName(FilePath);
-				string DllPath = Path.Combine(ModuleBinariesDir, FileName);
-				if (Debug) Console.WriteLine("Adding " + FileName);
-				CopyLibraryFile(LibDir, FilePath, DllPath);
-				RuntimeDependencies.Add(DllPath);
-				PublicAdditionalLibraries.Add(DllPath);
-				//PublicDelayLoadDLLs.Add(FileName);
+				if (Debug) Console.WriteLine("Adding Runtime Dpendency " + FileName);
+
+				CopyLibraryFile(LibDir, FilePath, LibraryPath);
+
+				RuntimeDependencies.Add(LibraryPath);
+				PublicDelayLoadDLLs.Add(FileName);
+			}
+
+			if (Target.Platform == UnrealTargetPlatform.Win64)
+			{
+				if (Path.GetExtension(FilePath) == ".lib")
+				{
+					if (Debug) Console.WriteLine("Adding Public Additional Library" + FileName);
+
+					CopyLibraryFile(LibDir, FilePath, LibraryPath);
+					PublicAdditionalLibraries.Add(LibraryPath);
+				}
 			}
 		}
 
@@ -163,12 +176,7 @@ public class PRT : ModuleRules
 		string SrcLib = Path.Combine(SrcLibDir, SrcFile);
 		if (!System.IO.File.Exists(DstLibDir) || System.IO.File.GetCreationTime(SrcLib) > System.IO.File.GetCreationTime(DstLibDir))
 		{
-			//if (Debug) System.Console.WriteLine("Copy \"" + Path.GetFileName(SrcFile) + "\" to " + DstLibDir);
 			System.IO.File.Copy(SrcLib, DstLibDir, true);
-		}
-		else
-		{
-			//if (Debug) System.Console.WriteLine("Not copying \"" + Path.GetFileName(SrcFile) + "\" to \"" + DstLibDir + "\" as it already exists");
 		}
 	}
 
