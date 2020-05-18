@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Net;
 using UnrealBuildTool;
+using System.ComponentModel.Design;
 
 public class PRT : ModuleRules
 {
@@ -128,7 +129,7 @@ public class PRT : ModuleRules
 			{
 				if (Path.GetExtension(FilePath) == ".lib")
 				{
-					if (Debug) Console.WriteLine("Adding Public Additional Library" + FileName);
+					if (Debug) Console.WriteLine("Adding Public Additional Library " + FileName);
 
 					CopyLibraryFile(LibDir, FilePath, LibraryPath);
 					PublicAdditionalLibraries.Add(LibraryPath);
@@ -179,18 +180,13 @@ public class PRT : ModuleRules
 		}
 	}
 
-	private interface IZipExtractor
-	{
-		void Unzip(string WorkingDir, string ZipFile, string Destination);
-	}
-
-	private class WindowsZipExtractor : IZipExtractor
+	private abstract class AbstractZipExtractor
 	{
 		public void Unzip(string WorkingDir, string ZipFile, string Destination)
 		{
-			var Command = string.Format("PowerShell -Command \" & Expand-Archive -Path {0} -DestinationPath {1}\"", ZipFile, Destination);
+			var ExpandedArguments = string.Format(Arguments, ZipFile, Destination);
 
-			ProcessStartInfo ProcStartInfo = new System.Diagnostics.ProcessStartInfo("cmd", "/c " + Command)
+			ProcessStartInfo ProcStartInfo = new System.Diagnostics.ProcessStartInfo(Command, ExpandedArguments)
 			{
 				WorkingDirectory = WorkingDir,
 				UseShellExecute = false,
@@ -199,40 +195,46 @@ public class PRT : ModuleRules
 
 			System.Diagnostics.Process UnzipProcess = new System.Diagnostics.Process
 			{
-				StartInfo = ProcStartInfo, 
+				StartInfo = ProcStartInfo,
 				EnableRaisingEvents = true
 			};
 			UnzipProcess.Start();
 			UnzipProcess.WaitForExit();
 		}
+
+		public abstract string Command { get; }
+		public abstract string Arguments { get; }
 	}
 
-	private class UnixZipExtractor : IZipExtractor
+	private class WindowsZipExtractor : AbstractZipExtractor
 	{
-		public void Unzip(string WorkingDir, string ZipFile, string Destination)
+		public override string Command { get { return "cmd"; } }
+
+		public override string Arguments
 		{
-			var Arguments = string.Format("-q {0} -d {1}", ZipFile, Destination);
-
-			ProcessStartInfo ProcStartInfo = new System.Diagnostics.ProcessStartInfo("unzip", Arguments)
+			get
 			{
-				WorkingDirectory = WorkingDir,
-				UseShellExecute = false,
-				CreateNoWindow = true
-			};
+				return "/c PowerShell -Command \" & Expand-Archive -Path {0} -DestinationPath {1}\"";
+			}
+		}
+	}
 
-			System.Diagnostics.Process UnzipProcess = new System.Diagnostics.Process
+	private class UnixZipExtractor : AbstractZipExtractor
+	{
+		public override string Command { get { return "unzip"; } }
+
+		public override string Arguments
+		{
+			get
 			{
-				StartInfo = ProcStartInfo, 
-				EnableRaisingEvents = true
-			};
-			UnzipProcess.Start();
-			UnzipProcess.WaitForExit();
-		}		
+				return "-q {0} -d {1}";
+			}
+		}
 	}
 
 	private interface IPlatform
 	{
-		IZipExtractor ZipExtractor { get; }
+		AbstractZipExtractor ZipExtractor { get; }
 
 		string Name { get; }
 		string PrtPlatform { get; }
@@ -241,7 +243,7 @@ public class PRT : ModuleRules
 
 	private class WindowsPlatform : IPlatform
 	{
-		public IZipExtractor ZipExtractor {	get	{ return new WindowsZipExtractor();	} }
+		public AbstractZipExtractor ZipExtractor {	get	{ return new WindowsZipExtractor();	} }
 
 		public string Name { get { return "Win64"; } }
 		public string PrtPlatform { get	{ return "win10-vc141-x86_64-rel-opt"; } }
@@ -250,7 +252,7 @@ public class PRT : ModuleRules
 
 	private class MacPlatform : IPlatform
 	{
-		public IZipExtractor ZipExtractor {	get { return new UnixZipExtractor(); } }
+		public AbstractZipExtractor ZipExtractor {	get { return new UnixZipExtractor(); } }
 
 		public string Name { get { return "Mac"; } }
 		public string PrtPlatform {	get { return "osx12-ac81-x86_64-rel-opt"; } }
