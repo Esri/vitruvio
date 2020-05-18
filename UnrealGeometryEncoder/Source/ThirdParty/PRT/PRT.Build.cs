@@ -245,7 +245,7 @@ public class PRT : ModuleRules
 
 		public string Name { get { return "Win64"; } }
 		public string PrtPlatform { get	{ return "win10-vc141-x86_64-rel-opt"; } }
-		public string DynamicLibExtension {	get	{ return "dll";	} }
+		public string DynamicLibExtension {	get	{ return ".dll";	} }
 	}
 
 	private class MacPlatform : IPlatform
@@ -254,6 +254,6 @@ public class PRT : ModuleRules
 
 		public string Name { get { return "Mac"; } }
 		public string PrtPlatform {	get { return "osx12-ac81-x86_64-rel-opt"; } }
-		public string DynamicLibExtension {	get { return "dylib"; } }
+		public string DynamicLibExtension {	get { return ".dylib"; } }
 	}
 }
