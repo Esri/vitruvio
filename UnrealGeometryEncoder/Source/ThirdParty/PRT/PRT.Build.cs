@@ -23,8 +23,8 @@ public class PRT : ModuleRules
 		bEnableExceptions = true;
 		Type = ModuleType.External;
 
-		IPlatform Platform;
-		if (Target.Platform == UnrealTargetPlatform.Win64) 
+		AbstractPlatform Platform;
+		if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
 			Platform = new WindowsPlatform();
 		}
@@ -32,7 +32,7 @@ public class PRT : ModuleRules
 		{
 			Platform = new MacPlatform();
 		}
-		else 
+		else
 		{
 			throw new System.PlatformNotSupportedException();
 		}
@@ -42,7 +42,7 @@ public class PRT : ModuleRules
 		string IncludeDir = Path.Combine(ModuleDirectory, "include");
 
 		// TODO improve checking if already installed
-		
+
 		// 1. Check if prt is already available, otherwise download from official github repo
 		bool PrtInstalled = Directory.Exists(LibDir) && Directory.Exists(BinDir);
 		if (!PrtInstalled)
@@ -87,7 +87,7 @@ public class PRT : ModuleRules
 			{
 				// TODO cleanup
 			}
-		} 
+		}
 		else if (Debug)
 		{
 			Console.WriteLine("PRT found");
@@ -108,37 +108,17 @@ public class PRT : ModuleRules
 		PublicRuntimeLibraryPaths.Add(ModuleBinariesDir);
 
 		// Copy PRT core libraries
-		// see for example https://github.com/EpicGames/UnrealEngine/blob/release/Engine/Plugins/Runtime/LeapMotion/Source/LeapMotion/LeapMotion.Build.cs
 		if (Debug) Console.WriteLine("Adding PRT core libraries to binary directory " + ModuleBinariesDir);
 		foreach (string FilePath in Directory.GetFiles(BinDir))
 		{
 			string FileName = Path.GetFileName(FilePath);
 			string LibraryPath = Path.Combine(ModuleBinariesDir, FileName);
 
-			if (Path.GetExtension(FilePath) == Platform.DynamicLibExtension)
-			{
-				if (Debug) Console.WriteLine("Adding Runtime Dpendency " + FileName);
-
-				CopyLibraryFile(LibDir, FilePath, LibraryPath);
-
-				RuntimeDependencies.Add(LibraryPath);
-				PublicDelayLoadDLLs.Add(FileName);
-			}
-
-			if (Target.Platform == UnrealTargetPlatform.Win64)
-			{
-				if (Path.GetExtension(FilePath) == ".lib")
-				{
-					if (Debug) Console.WriteLine("Adding Public Additional Library " + FileName);
-
-					CopyLibraryFile(LibDir, FilePath, LibraryPath);
-					PublicAdditionalLibraries.Add(LibraryPath);
-				}
-			}
+			Platform.CopyPrtCoreLibrary(FilePath, FileName, LibraryPath, LibDir, this);
 		}
 
 		// Copy PRT extension libraries
-		if (Debug) Console.WriteLine("Adding PRT core libraries to binary directory " + ModuleBinariesDir);
+		if (Debug) Console.WriteLine("Adding PRT extension libraries to binary directory " + ModuleBinariesDir);
 		foreach (string FilePath in Directory.GetFiles(LibDir))
 		{
 			if (Path.GetExtension(FilePath) == Platform.DynamicLibExtension)
@@ -232,30 +212,57 @@ public class PRT : ModuleRules
 		}
 	}
 
-	private interface IPlatform
+	private abstract class AbstractPlatform
 	{
-		AbstractZipExtractor ZipExtractor { get; }
+		public abstract AbstractZipExtractor ZipExtractor { get; }
 
-		string Name { get; }
-		string PrtPlatform { get; }
-		string DynamicLibExtension { get; }
+		public abstract string Name { get; }
+		public abstract string PrtPlatform { get; }
+		public abstract string DynamicLibExtension { get; }
+
+		public virtual void CopyPrtCoreLibrary(string FilePath, string FileName, string LibraryPath, string LibDir, ModuleRules Rules)
+		{
+			if (Path.GetExtension(FilePath) == DynamicLibExtension)
+			{
+				if (Debug) Console.WriteLine("Adding Runtime Dpendency " + FileName);
+
+				CopyLibraryFile(LibDir, FilePath, LibraryPath);
+
+				Rules.RuntimeDependencies.Add(LibraryPath);
+				Rules.PublicDelayLoadDLLs.Add(FileName);
+			}
+		}
 	}
 
-	private class WindowsPlatform : IPlatform
+	private class WindowsPlatform : AbstractPlatform
 	{
-		public AbstractZipExtractor ZipExtractor {	get	{ return new WindowsZipExtractor();	} }
+		public override AbstractZipExtractor ZipExtractor { get { return new WindowsZipExtractor(); } }
 
-		public string Name { get { return "Win64"; } }
-		public string PrtPlatform { get	{ return "win10-vc141-x86_64-rel-opt"; } }
-		public string DynamicLibExtension {	get	{ return ".dll";	} }
+		public override string Name { get { return "Win64"; } }
+		public override string PrtPlatform { get { return "win10-vc141-x86_64-rel-opt"; } }
+		public override string DynamicLibExtension { get { return ".dll"; } }
+
+		public override void CopyPrtCoreLibrary(string FilePath, string FileName, string LibraryPath, string LibDir, ModuleRules Rules)
+		{
+			base.CopyPrtCoreLibrary(FilePath, FileName, LibraryPath, LibDir, Rules);
+
+			if (Path.GetExtension(FilePath) == ".lib")
+			{
+				if (Debug) Console.WriteLine("Adding Public Additional Library " + FileName);
+
+				CopyLibraryFile(LibDir, FilePath, LibraryPath);
+
+				Rules.PublicAdditionalLibraries.Add(LibraryPath);
+			}
+		}
 	}
 
-	private class MacPlatform : IPlatform
+	private class MacPlatform : AbstractPlatform
 	{
-		public AbstractZipExtractor ZipExtractor {	get { return new UnixZipExtractor(); } }
+		public override AbstractZipExtractor ZipExtractor {	get { return new UnixZipExtractor(); } }
 
-		public string Name { get { return "Mac"; } }
-		public string PrtPlatform {	get { return "osx12-ac81-x86_64-rel-opt"; } }
-		public string DynamicLibExtension {	get { return ".dylib"; } }
+		public override string Name { get { return "Mac"; } }
+		public override string PrtPlatform { get { return "osx12-ac81-x86_64-rel-opt"; } }
+		public override string DynamicLibExtension { get { return ".dylib"; } }
 	}
 }
