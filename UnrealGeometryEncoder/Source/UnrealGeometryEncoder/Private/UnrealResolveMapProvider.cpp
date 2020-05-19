@@ -5,9 +5,12 @@
 #include "PRTUtils.h"
 #include "RulePackage.h"
 
+#pragma warning(push)
+#pragma warning(disable : 4263 4264)
 #include "prt/API.h"
 #include "prt/ResolveMap.h"
 #include "prtx/ExtensionManager.h"
+#pragma warning(pop)
 
 #include "GenericPlatform/GenericPlatformFile.h"
 #include "HAL/PlatformFilemanager.h"
@@ -20,23 +23,22 @@ const std::wstring UnrealResolveMapProvider::SCHEME_UNREAL = L"Unreal";
 
 prt::ResolveMap const* UnrealResolveMapProvider::createResolveMap(prtx::URIPtr uri) const
 {
-	const std::wstring Uri = uri->wstring();
-	const FString FullUri = Uri.c_str();
+	const FString FullUri = WCHAR_TO_TCHAR(uri->wstring().c_str());
 
 	FString Scheme;
 	FString UriPath;
-	FullUri.Split(L":", &Scheme, &UriPath);
+	FullUri.Split(TEXT(":"), &Scheme, &UriPath);
 
-	const FString PackageName = L"RulePackage'" + UriPath + L"'";
+	const FString PackageName = TEXT("RulePackage'") + UriPath + TEXT("'");
 	UObject* RulePackageObject = StaticLoadObject(URulePackage::StaticClass(), nullptr, *PackageName);
 
 	if (URulePackage* RulePackage = Cast<URulePackage>(RulePackageObject))
 	{
 		// Create rpk on disk for PRT
 		IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-		FString TempDir(prtu::temp_directory_path().c_str());
-		const FString RpkFolder = FPaths::Combine(TempDir, L"PRT", L"UnrealGeometryEncoder", FPaths::GetPath(UriPath.Mid(1)));
-		const FString RpkFile = FPaths::GetBaseFilename(UriPath, true) + ".rpk";
+		FString TempDir(WCHAR_TO_TCHAR(prtu::temp_directory_path().c_str()));
+		const FString RpkFolder = FPaths::Combine(TempDir, TEXT("PRT"), TEXT("UnrealGeometryEncoder"), FPaths::GetPath(UriPath.Mid(1)));
+		const FString RpkFile = FPaths::GetBaseFilename(UriPath, true) + TEXT(".rpk");
 		const FString RpkPath = FPaths::Combine(RpkFolder, RpkFile);
 		PlatformFile.CreateDirectoryTree(*RpkFolder);
 		IFileHandle* RpkHandle = PlatformFile.OpenWrite(*RpkPath);
@@ -48,9 +50,9 @@ prt::ResolveMap const* UnrealResolveMapProvider::createResolveMap(prtx::URIPtr u
 			delete RpkHandle;
 
 			// Create rpk
-			const std::wstring AbsoluteRpkPath(*FPaths::ConvertRelativePathToFull(RpkPath));
+			const std::wstring AbsoluteRpkPath(TCHAR_TO_WCHAR(*FPaths::ConvertRelativePathToFull(RpkPath)));
 			const std::wstring AbsoluteRpkFolder(
-				*FPaths::Combine(FPaths::GetPath(FPaths::ConvertRelativePathToFull(RpkPath)), FPaths::GetBaseFilename(UriPath, true) + L"_Unpacked"));
+				TCHAR_TO_WCHAR(*FPaths::Combine(FPaths::GetPath(FPaths::ConvertRelativePathToFull(RpkPath)), FPaths::GetBaseFilename(UriPath, true) + TEXT("_Unpacked"))));
 			const std::wstring RpkFileUri = prtu::toFileURI(AbsoluteRpkPath);
 
 			prt::Status Status;
@@ -66,8 +68,8 @@ prt::ResolveMap const* UnrealResolveMapProvider::createResolveMap(prtx::URIPtr u
 UnrealResolveMapProviderFactory::~UnrealResolveMapProviderFactory()
 {
 	// Cleanup temp RPK directory
-	FString TempDir(prtu::temp_directory_path().c_str());
-	const FString RpkUnpackFolder = FPaths::Combine(TempDir, L"PRT", L"UnrealGeometryEncoder");
+	FString TempDir(WCHAR_TO_TCHAR(prtu::temp_directory_path().c_str()));
+	const FString RpkUnpackFolder = FPaths::Combine(TempDir, TEXT("PRT"), TEXT("UnrealGeometryEncoder"));
 	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
 	PlatformFile.DeleteDirectoryRecursively(*RpkUnpackFolder);
 }

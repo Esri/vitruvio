@@ -42,7 +42,7 @@ namespace
 
 	void ParseValue(const prt::AnnotationArgument* Argument, FString& Result)
 	{
-		Result = FString(Argument->getStr());
+		Result = FString(WCHAR_TO_TCHAR(Argument->getStr()));
 	}
 
 	template <typename T> TSharedPtr<EnumAnnotation<T>> ParseEnumAnnotation(const prt::Annotation* Annotation)
@@ -106,16 +106,16 @@ namespace
 		{
 			if (Annotation->getArgument(ArgumentIndex)->getType() == prt::AAT_STR)
 			{
-				Extensions += Annotation->getArgument(ArgumentIndex)->getStr();
-				Extensions += L" (*.";
-				Extensions += Annotation->getArgument(ArgumentIndex)->getStr();
-				Extensions += L");";
+				Extensions += WCHAR_TO_TCHAR(Annotation->getArgument(ArgumentIndex)->getStr());
+				Extensions += TEXT(" (*.");
+				Extensions += WCHAR_TO_TCHAR(Annotation->getArgument(ArgumentIndex)->getStr());
+				Extensions += TEXT(");");
 			}
 		}
-		Extensions += L"All Files (*.*)";
+		Extensions += TEXT("All Files (*.*)");
 
 		auto Result = MakeShared<FilesystemAnnotation>();
-		Result->Mode = File;
+		Result->Mode = FilesystemMode::File;
 		Result->Extensions = Extensions;
 		return Result;
 	}
@@ -131,7 +131,7 @@ namespace
 		{
 			if (Annotation->getArgument(AnnotationIndex)->getType() == prt::AAT_STR)
 			{
-				InAttribute.Groups.Add(Annotation->getArgument(AnnotationIndex)->getStr());
+				InAttribute.Groups.Add(WCHAR_TO_TCHAR(Annotation->getArgument(AnnotationIndex)->getStr()));
 			}
 			else if (AnnotationIndex == Annotation->getNumArguments() - 1 && Annotation->getArgument(AnnotationIndex)->getType() == prt::AAT_FLOAT)
 			{
@@ -170,7 +170,7 @@ void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, UR
 		else if (std::wcscmp(Name, ANNOT_DIR) == 0)
 		{
 			auto Annotation = MakeShared<FilesystemAnnotation>();
-			Annotation->Mode = Directory;
+			Annotation->Mode = FilesystemMode::Directory;
 			InAttribute.SetAnnotation(Annotation);
 		}
 		else if (std::wcscmp(Name, ANNOT_FILE) == 0)

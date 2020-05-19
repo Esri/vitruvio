@@ -6,11 +6,13 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Net;
 using UnrealBuildTool;
+using System.ComponentModel.Design;
 
 public class PRT : ModuleRules
 {
 	private const bool Debug = true;
 
+	// PRT version and toolchain (needs to be correct for download URL)
 	private const int PrtMajor = 2;
 	private const int PrtMinor = 1;
 	private const int PrtBuild = 5705;
@@ -21,151 +23,150 @@ public class PRT : ModuleRules
 		bEnableExceptions = true;
 		Type = ModuleType.External;
 
+		AbstractPlatform Platform;
 		if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
-			string LibFolder = Path.Combine(ModuleDirectory, "lib", "Win64", "Release");
-			string BinFolder = Path.Combine(ModuleDirectory, "bin", "Win64", "Release");
-
-			// TODO improve checking if already installed
-			// 1. Check if prt is already available, otherwise download from official github repo
-			bool PrtInstalled = Directory.Exists(LibFolder) && Directory.Exists(BinFolder);
-			if (!PrtInstalled)
-			{
-				try
-				{
-					if (Directory.Exists(LibFolder)) Directory.Delete(LibFolder, true);
-					if (Directory.Exists(BinFolder)) Directory.Delete(BinFolder, true);
-
-					if (Debug) Console.WriteLine("PRT not found");
-
-					string PrtBuildUrl = "https://github.com/Esri/esri-cityengine-sdk/releases/download";
-					string Version = string.Format("{0}.{1}.{2}", PrtMajor, PrtMinor, PrtBuild);
-
-					string Platform = "win10-vc141-x86_64-rel-opt";
-					string LibName = string.Format("esri_ce_sdk-{0}-{1}", Version, Platform);
-					string LibZipFile = LibName + ".zip";
-					string PrtLib = Path.Combine(PrtBuildUrl, Version, LibZipFile);
-
-					if (Debug) System.Console.WriteLine("Downloading " + PrtLib + "...");
-
-					using (var Client = new WebClient())
-					{
-						Client.DownloadFile(PrtLib, Path.Combine(ModuleDirectory, LibZipFile));
-					}
-
-					if (Debug) System.Console.WriteLine("Extracting " + LibZipFile + "...");
-
-					IZipExtractor Extractor = new WindowsZipExtractor();
-					Extractor.Unzip(ModuleDirectory, LibZipFile, LibName);
-
-					Directory.CreateDirectory(LibFolder);
-					Directory.CreateDirectory(BinFolder);
-					Copy(Path.Combine(ModuleDirectory, LibName, "lib"), Path.Combine(ModuleDirectory, LibFolder));
-					Copy(Path.Combine(ModuleDirectory, LibName, "bin"), Path.Combine(ModuleDirectory, BinFolder));
-					Copy(Path.Combine(ModuleDirectory, LibName, "include"), Path.Combine(ModuleDirectory, "include"));
-
-					Directory.Delete(Path.Combine(ModuleDirectory, LibName), true);
-					File.Delete(Path.Combine(ModuleDirectory, LibZipFile));
-				}
-				finally
-				{
-					// TODO cleanup
-				}
-			} 
-			else if (Debug)
-			{
-				Console.WriteLine("PRT found");
-			}
-
-			// 2. Add necessary includes
-			if (Debug) Console.WriteLine("Adding necessary include paths");
-			PublicSystemIncludePaths.Add(Path.Combine(ModuleDirectory, "include"));
-
-			string BinariesFolder = Path.GetFullPath(Path.Combine(ModuleDirectory, "../../..", "Binaries", "Win64"));
-
-			PublicRuntimeLibraryPaths.Add(BinariesFolder);
-
-			Directory.CreateDirectory(BinariesFolder);
-
-			if (Debug)
-			{
-				System.Console.WriteLine("LibFolder: " + LibFolder);
-				System.Console.WriteLine("BinFolder: " + BinFolder);
-				System.Console.WriteLine("ThirdPartyBinFolder: " + BinariesFolder);
-			}
-
-			// Add the import library
-			PublicAdditionalLibraries.Add(Path.Combine(BinFolder, "com.esri.prt.core.lib"));
-			PublicAdditionalLibraries.Add(Path.Combine(BinFolder, "glutess.lib"));
-
-			PublicDelayLoadDLLs.Add("com.esri.prt.core.dll");
-			PublicDelayLoadDLLs.Add("glutess.dll");
-
-			// 3. Add libraries to Binaries folder
-			// see for example https://github.com/EpicGames/UnrealEngine/blob/release/Engine/Plugins/Runtime/LeapMotion/Source/LeapMotion/LeapMotion.Build.cs
-			if (Debug) Console.WriteLine("Adding libraries to binary folder");
-			foreach (string BinFile in Directory.GetFiles(BinFolder))
-			{
-				if (Path.GetExtension(BinFile) == ".dll")
-				{
-					string BinaryDllPath = Path.Combine(BinariesFolder, Path.GetFileName(BinFile));
-					CopyLibraryFile(BinaryDllPath, LibFolder, BinFile);
-					RuntimeDependencies.Add(BinaryDllPath);
-				}
-			}
-
-			// 4. Add prt extension libraries to Binaries folder
-			foreach (string LibFile in Directory.GetFiles(LibFolder))
-			{
-				if (Path.GetExtension(LibFile) == ".dll")
-				{
-					string BinaryDllPath = Path.Combine(BinariesFolder, Path.GetFileName(LibFile));
-					CopyLibraryFile(BinaryDllPath, LibFolder, LibFile);
-				}
-			}
+			Platform = new WindowsPlatform();
 		}
-	}
-
-	private static void CopyLibraryFile(string BinaryDllPath, string LibFolder, string File)
-	{
-		if (!System.IO.File.Exists(BinaryDllPath) || System.IO.File.GetCreationTime(Path.Combine(LibFolder, File)) > System.IO.File.GetCreationTime(BinaryDllPath))
+		else if (Target.Platform == UnrealTargetPlatform.Mac)
 		{
-			if (Debug) System.Console.WriteLine("Copy \"" + Path.GetFileName(File) + "\" to " + BinaryDllPath);
-			System.IO.File.Copy(Path.Combine(LibFolder, File), BinaryDllPath, true);
+			Platform = new MacPlatform();
+		}
+		else
+		{
+			throw new System.PlatformNotSupportedException();
+		}
+
+		string LibDir = Path.Combine(ModuleDirectory, "lib", Platform.Name, "Release");
+		string BinDir = Path.Combine(ModuleDirectory, "bin", Platform.Name, "Release");
+		string IncludeDir = Path.Combine(ModuleDirectory, "include");
+
+		// TODO improve checking if already installed
+
+		// 1. Check if prt is already available, otherwise download from official github repo
+		bool PrtInstalled = Directory.Exists(LibDir) && Directory.Exists(BinDir);
+		if (!PrtInstalled)
+		{
+			try
+			{
+				if (Directory.Exists(LibDir)) Directory.Delete(LibDir, true);
+				if (Directory.Exists(BinDir)) Directory.Delete(BinDir, true);
+				if (Directory.Exists(IncludeDir)) Directory.Delete(IncludeDir, true);
+
+
+				if (Debug) Console.WriteLine("PRT not found");
+
+				string PrtUrl = "https://github.com/Esri/esri-cityengine-sdk/releases/download";
+				string PrtVersion = string.Format("{0}.{1}.{2}", PrtMajor, PrtMinor, PrtBuild);
+
+				string PrtLibName = string.Format("esri_ce_sdk-{0}-{1}", PrtVersion, Platform.PrtPlatform);
+				string PrtLibZipFile = PrtLibName + ".zip";
+				string PrtDownloadUrl = Path.Combine(PrtUrl, PrtVersion, PrtLibZipFile);
+
+				if (Debug) System.Console.WriteLine("Downloading " + PrtDownloadUrl + "...");
+
+				using (var Client = new WebClient())
+				{
+					Client.DownloadFile(PrtDownloadUrl, Path.Combine(ModuleDirectory, PrtLibZipFile));
+				}
+
+				if (Debug) System.Console.WriteLine("Extracting " + PrtLibZipFile + "...");
+
+				Platform.ZipExtractor.Unzip(ModuleDirectory, PrtLibZipFile, PrtLibName);
+
+				Directory.CreateDirectory(LibDir);
+				Directory.CreateDirectory(BinDir);
+				Copy(Path.Combine(ModuleDirectory, PrtLibName, "lib"), Path.Combine(ModuleDirectory, LibDir));
+				Copy(Path.Combine(ModuleDirectory, PrtLibName, "bin"), Path.Combine(ModuleDirectory, BinDir));
+				Copy(Path.Combine(ModuleDirectory, PrtLibName, "include"), Path.Combine(ModuleDirectory, "include"));
+
+				Directory.Delete(Path.Combine(ModuleDirectory, PrtLibName), true);
+				File.Delete(Path.Combine(ModuleDirectory, PrtLibZipFile));
+			}
+			finally
+			{
+				// TODO cleanup
+			}
 		}
 		else if (Debug)
 		{
-			System.Console.WriteLine("Not copying \"" + Path.GetFileName(File) + "\" to \"" + BinaryDllPath + "\" as it already exists");
+			Console.WriteLine("PRT found");
 		}
-	}
 
-	void Copy(string SourceDir, string TargetDir)
-	{
-		Directory.CreateDirectory(TargetDir);
+		// 2. Copy libraries to module binaries directory and add dependencies
+		string ModuleBinariesDir = Path.GetFullPath(Path.Combine(ModuleDirectory, "../../..", "Binaries", Platform.Name));
 
-		foreach (var CopyFile in Directory.GetFiles(SourceDir))
+		if (Debug)
 		{
-			File.Copy(CopyFile, Path.Combine(TargetDir, Path.GetFileName(CopyFile)));
+			System.Console.WriteLine("PRT Source Lib Dir: " + LibDir);
+			System.Console.WriteLine("PRT Source Bin Dir: " + BinDir);
+			System.Console.WriteLine("PRT Source Include Dir: " + IncludeDir);
+			System.Console.WriteLine("Module Binaries Dir: " + ModuleBinariesDir);
 		}
 
-		foreach (var Dir in Directory.GetDirectories(SourceDir))
+		Directory.CreateDirectory(ModuleBinariesDir);
+		PublicRuntimeLibraryPaths.Add(ModuleBinariesDir);
+
+		// Copy PRT core libraries
+		if (Debug) Console.WriteLine("Adding PRT core libraries to binary directory " + ModuleBinariesDir);
+		foreach (string FilePath in Directory.GetFiles(BinDir))
 		{
-			Copy(Dir, Path.Combine(TargetDir, Path.GetFileName(Dir)));
+			string FileName = Path.GetFileName(FilePath);
+			string LibraryPath = Path.Combine(ModuleBinariesDir, FileName);
+
+			Platform.CopyPrtCoreLibrary(FilePath, FileName, LibraryPath, LibDir, this);
+		}
+
+		// Copy PRT extension libraries
+		if (Debug) Console.WriteLine("Adding PRT extension libraries to binary directory " + ModuleBinariesDir);
+		foreach (string FilePath in Directory.GetFiles(LibDir))
+		{
+			if (Path.GetExtension(FilePath) == Platform.DynamicLibExtension)
+			{
+				string FileName = Path.GetFileName(FilePath);
+				string DllPath = Path.Combine(ModuleBinariesDir, FileName);
+				if (Debug) Console.WriteLine("Adding Extension Library " + FileName);
+				CopyLibraryFile(LibDir, FilePath, DllPath);
+				RuntimeDependencies.Add(DllPath);
+			}
+		}
+
+		// Add include search path
+		if (Debug) Console.WriteLine("Adding include search path " + IncludeDir);
+		PublicSystemIncludePaths.Add(IncludeDir);
+	}
+
+	private static void CopyLibraryFile(string SrcLibDir, string SrcFile, string DstLibDir)
+	{
+		string SrcLib = Path.Combine(SrcLibDir, SrcFile);
+		if (!System.IO.File.Exists(DstLibDir) || System.IO.File.GetCreationTime(SrcLib) > System.IO.File.GetCreationTime(DstLibDir))
+		{
+			System.IO.File.Copy(SrcLib, DstLibDir, true);
 		}
 	}
 
-	private interface IZipExtractor
+	void Copy(string SrcDir, string DstDir)
 	{
-		void Unzip(string WorkingDir, string ZipFile, string Destination);
+		Directory.CreateDirectory(DstDir);
+
+		foreach (var CopyFile in Directory.GetFiles(SrcDir))
+		{
+			File.Copy(CopyFile, Path.Combine(DstDir, Path.GetFileName(CopyFile)));
+		}
+
+		foreach (var Dir in Directory.GetDirectories(SrcDir))
+		{
+			Copy(Dir, Path.Combine(DstDir, Path.GetFileName(Dir)));
+		}
 	}
 
-	private class WindowsZipExtractor : IZipExtractor
+	private abstract class AbstractZipExtractor
 	{
 		public void Unzip(string WorkingDir, string ZipFile, string Destination)
 		{
-			var Command = string.Format("PowerShell -Command \" & Expand-Archive -Path {0} -DestinationPath {1}\"", ZipFile, Destination);
+			var ExpandedArguments = string.Format(Arguments, ZipFile, Destination);
 
-			ProcessStartInfo ProcStartInfo = new System.Diagnostics.ProcessStartInfo("cmd", "/c " + Command)
+			ProcessStartInfo ProcStartInfo = new System.Diagnostics.ProcessStartInfo(Command, ExpandedArguments)
 			{
 				WorkingDirectory = WorkingDir,
 				UseShellExecute = false,
@@ -174,11 +175,94 @@ public class PRT : ModuleRules
 
 			System.Diagnostics.Process UnzipProcess = new System.Diagnostics.Process
 			{
-				StartInfo = ProcStartInfo, 
+				StartInfo = ProcStartInfo,
 				EnableRaisingEvents = true
 			};
 			UnzipProcess.Start();
 			UnzipProcess.WaitForExit();
 		}
+
+		public abstract string Command { get; }
+		public abstract string Arguments { get; }
+	}
+
+	private class WindowsZipExtractor : AbstractZipExtractor
+	{
+		public override string Command { get { return "cmd"; } }
+
+		public override string Arguments
+		{
+			get
+			{
+				return "/c PowerShell -Command \" & Expand-Archive -Path {0} -DestinationPath {1}\"";
+			}
+		}
+	}
+
+	private class UnixZipExtractor : AbstractZipExtractor
+	{
+		public override string Command { get { return "unzip"; } }
+
+		public override string Arguments
+		{
+			get
+			{
+				return "-q {0} -d {1}";
+			}
+		}
+	}
+
+	private abstract class AbstractPlatform
+	{
+		public abstract AbstractZipExtractor ZipExtractor { get; }
+
+		public abstract string Name { get; }
+		public abstract string PrtPlatform { get; }
+		public abstract string DynamicLibExtension { get; }
+
+		public virtual void CopyPrtCoreLibrary(string FilePath, string FileName, string LibraryPath, string LibDir, ModuleRules Rules)
+		{
+			if (Path.GetExtension(FilePath) == DynamicLibExtension)
+			{
+				if (Debug) Console.WriteLine("Adding Runtime Dpendency " + FileName);
+
+				CopyLibraryFile(LibDir, FilePath, LibraryPath);
+
+				Rules.RuntimeDependencies.Add(LibraryPath);
+				Rules.PublicDelayLoadDLLs.Add(FileName);
+			}
+		}
+	}
+
+	private class WindowsPlatform : AbstractPlatform
+	{
+		public override AbstractZipExtractor ZipExtractor { get { return new WindowsZipExtractor(); } }
+
+		public override string Name { get { return "Win64"; } }
+		public override string PrtPlatform { get { return "win10-vc141-x86_64-rel-opt"; } }
+		public override string DynamicLibExtension { get { return ".dll"; } }
+
+		public override void CopyPrtCoreLibrary(string FilePath, string FileName, string LibraryPath, string LibDir, ModuleRules Rules)
+		{
+			base.CopyPrtCoreLibrary(FilePath, FileName, LibraryPath, LibDir, Rules);
+
+			if (Path.GetExtension(FilePath) == ".lib")
+			{
+				if (Debug) Console.WriteLine("Adding Public Additional Library " + FileName);
+
+				CopyLibraryFile(LibDir, FilePath, LibraryPath);
+
+				Rules.PublicAdditionalLibraries.Add(LibraryPath);
+			}
+		}
+	}
+
+	private class MacPlatform : AbstractPlatform
+	{
+		public override AbstractZipExtractor ZipExtractor {	get { return new UnixZipExtractor(); } }
+
+		public override string Name { get { return "Mac"; } }
+		public override string PrtPlatform { get { return "osx12-ac81-x86_64-rel-opt"; } }
+		public override string DynamicLibExtension { get { return ".dylib"; } }
 	}
 }

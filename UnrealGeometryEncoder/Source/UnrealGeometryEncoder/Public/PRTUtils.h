@@ -4,14 +4,17 @@
 
 #include "PRTTypes.h"
 
+#pragma warning(push)
+#pragma warning(disable : 4263 4264)
 #include "prt/API.h"
+#pragma warning(pop)
 
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
 
 #include "Windows/AllowWindowsPlatformTypes.h"
 
@@ -110,42 +113,6 @@ namespace prtu
 		return AttributeMapUPtr(validatedOptions);
 	}
 
-	inline std::wstring temp_directory_path()
-	{
-#ifdef PLATFORM_WINDOWS
-		wchar_t lpTempPathBuffer[MAX_PATH];
-		DWORD dwRetVal = GetTempPathW(MAX_PATH, lpTempPathBuffer);
-		if (dwRetVal > MAX_PATH || (dwRetVal == 0))
-		{
-			return L".\tmp";
-		}
-		else
-		{
-			return std::wstring(lpTempPathBuffer);
-		}
-
-#else
-
-		char const* folder = getenv("TMPDIR");
-		if (folder == nullptr)
-		{
-			folder = getenv("TMP");
-			if (folder == nullptr)
-			{
-				folder = getenv("TEMP");
-				if (folder == nullptr)
-				{
-					folder = getenv("TEMPDIR");
-					if (folder == nullptr)
-						folder = "/tmp";
-				}
-			}
-		}
-
-		return toUTF16FromOSNarrow(std::string(folder));
-#endif
-	}
-
 	template <typename CO, typename CI, typename AF> std::basic_string<CO> stringConversionWrapper(AF apiFunc, const std::basic_string<CI>& inputString)
 	{
 		std::vector<CO> temp(2 * inputString.size(), 0);
@@ -191,7 +158,7 @@ namespace prtu
 
 	inline std::wstring toFileURI(const std::wstring& p)
 	{
-#ifdef PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
 		static const std::wstring schema = L"file:/";
 #else
 		static const std::wstring schema = L"file:";
@@ -202,4 +169,39 @@ namespace prtu
 		return schema + u16String;
 	}
 
+	inline std::wstring temp_directory_path()
+	{
+#if PLATFORM_WINDOWS
+		wchar_t lpTempPathBuffer[MAX_PATH];
+		DWORD dwRetVal = GetTempPathW(MAX_PATH, lpTempPathBuffer);
+		if (dwRetVal > MAX_PATH || (dwRetVal == 0))
+		{
+			return L".\tmp";
+		}
+		else
+		{
+			return std::wstring(lpTempPathBuffer);
+		}
+
+#else
+
+		char const* folder = getenv("TMPDIR");
+		if (folder == nullptr)
+		{
+			folder = getenv("TMP");
+			if (folder == nullptr)
+			{
+				folder = getenv("TEMP");
+				if (folder == nullptr)
+				{
+					folder = getenv("TEMPDIR");
+					if (folder == nullptr)
+						folder = "/tmp";
+				}
+			}
+		}
+
+		return toUTF16FromOSNarrow(std::string(folder));
+#endif
+	}
 } // namespace prtu

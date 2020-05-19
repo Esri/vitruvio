@@ -1,4 +1,4 @@
-﻿// Copyright 2019 - 2020 Esri. All Rights Reserved.
+// Copyright 2019 - 2020 Esri. All Rights Reserved.
 
 #pragma once
 
@@ -122,7 +122,7 @@ namespace
 			std::wstring TextureUri(Values[ValueIndex]);
 			if (TextureUri.size() > 0)
 			{
-				return LoadImageFromDisk(Outer, FString(Values[ValueIndex]), Settings);
+				return LoadImageFromDisk(Outer, FString(WCHAR_TO_TCHAR(Values[ValueIndex])), Settings);
 			}
 		}
 		return nullptr;
@@ -189,7 +189,7 @@ namespace
 		return {true, TC_Default};
 	}
 
-	enum MaterialPropertyType
+	enum class MaterialPropertyType
 	{
 		TEXTURE,
 		LINEAR_COLOR,
@@ -199,19 +199,19 @@ namespace
 	// see prtx/Material.h
 	// clang-format off
 	const std::map<std::wstring, MaterialPropertyType> KeyToTypeMap = {
-		{L"diffuseMap", 	TEXTURE},
-		{L"opacityMap", 	TEXTURE},
-		{L"emissiveMap", 	TEXTURE},
-		{L"metallicMap", 	TEXTURE},
-		{L"roughnessMap", 	TEXTURE},
-		{L"normalMap", 		TEXTURE},
+		{L"diffuseMap", 	MaterialPropertyType::TEXTURE},
+		{L"opacityMap", 	MaterialPropertyType::TEXTURE},
+		{L"emissiveMap", 	MaterialPropertyType::TEXTURE},
+		{L"metallicMap", 	MaterialPropertyType::TEXTURE},
+		{L"roughnessMap", 	MaterialPropertyType::TEXTURE},
+		{L"normalMap", 		MaterialPropertyType::TEXTURE},
 
-		{L"diffuseColor", 	LINEAR_COLOR},
-		{L"emissiveColor", 	LINEAR_COLOR},
+		{L"diffuseColor", 	MaterialPropertyType::LINEAR_COLOR},
+		{L"emissiveColor", 	MaterialPropertyType::LINEAR_COLOR},
 
-		{L"metallic", 		SCALAR},
-		{L"opacity", 		SCALAR},
-		{L"roughness", 		SCALAR},
+		{L"metallic", 		MaterialPropertyType::SCALAR},
+		{L"opacity", 		MaterialPropertyType::SCALAR},
+		{L"roughness", 		MaterialPropertyType::SCALAR},
 	};
 	// clang-format on
 } // namespace
@@ -237,14 +237,14 @@ UMaterialInstanceDynamic* CreateMaterialInstance(UObject* Outer, UMaterialInterf
 			switch (Type)
 			{
 				// TODO loading the texture should probably not happen in the game thread
-			case TEXTURE:
-				MaterialInstance->SetTextureParameterValue(FName(Key), GetTexture(Outer, MaterialAttributes, GetTextureSettings(Key), Key));
+			case MaterialPropertyType::TEXTURE:
+				MaterialInstance->SetTextureParameterValue(FName(WCHAR_TO_TCHAR(Key)), GetTexture(Outer, MaterialAttributes, GetTextureSettings(Key), Key));
 				break;
-			case LINEAR_COLOR:
-				MaterialInstance->SetVectorParameterValue(FName(Key), GetLinearColor(MaterialAttributes, Key));
+			case MaterialPropertyType::LINEAR_COLOR:
+				MaterialInstance->SetVectorParameterValue(FName(WCHAR_TO_TCHAR(Key)), GetLinearColor(MaterialAttributes, Key));
 				break;
-			case SCALAR:
-				MaterialInstance->SetScalarParameterValue(FName(Key), GetScalar(MaterialAttributes, Key));
+			case MaterialPropertyType::SCALAR:
+				MaterialInstance->SetScalarParameterValue(FName(WCHAR_TO_TCHAR(Key)), GetScalar(MaterialAttributes, Key));
 				break;
 			default:;
 			}

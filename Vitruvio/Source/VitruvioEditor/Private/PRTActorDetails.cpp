@@ -1,4 +1,4 @@
-﻿// Copyright 2019 - 2020 Esri. All Rights Reserved.
+// Copyright 2019 - 2020 Esri. All Rights Reserved.
 
 #include "PRTActorDetails.h"
 
@@ -30,7 +30,7 @@ namespace
 
 	FString ValueToString(const TSharedPtr<bool>& In)
 	{
-		return *In ? L"True" : L"False";
+		return *In ? TEXT("True") : TEXT("False");
 	}
 
 	template <typename A, typename V> void UpdateAttributeValue(APRTActor* PrtActor, A* Attribute, const V& Value)
@@ -67,7 +67,7 @@ namespace
 			PickerArgs.DisplayGamma = TAttribute<float>::Create(TAttribute<float>::FGetter::CreateUObject(GEngine, &UEngine::GetDisplayGamma));
 			PickerArgs.InitialColorOverride = FLinearColor(FColor::FromHex(Attribute->Value));
 			PickerArgs.OnColorCommitted.BindLambda(
-				[Attribute, PrtActor](FLinearColor NewColor) { UpdateAttributeValue(PrtActor, Attribute, L"#" + NewColor.ToFColor(true).ToHex()); });
+				[Attribute, PrtActor](FLinearColor NewColor) { UpdateAttributeValue(PrtActor, Attribute, TEXT("#") + NewColor.ToFColor(true).ToHex()); });
 		}
 
 		OpenColorPicker(PickerArgs);
@@ -274,14 +274,14 @@ template <typename T> void SPropertyComboBox<T>::Construct(const FArguments& InA
 	ComboItemList = InArgs._ComboItemList.Get();
 
 	// clang-format off
-	SComboBox<TSharedPtr<T>>::Construct(SComboBox<TSharedPtr<T>>::FArguments()
+	SComboBox<TSharedPtr<T>>::Construct(typename SComboBox<TSharedPtr<T>>::FArguments()
 		.InitiallySelectedItem(InArgs._InitialValue.Get())
 		.Content()
 		[
 			SNew(STextBlock)
 			.Text_Lambda([=]
 			{
-				auto SelectedItem = GetSelectedItem();
+				auto SelectedItem = SComboBox<TSharedPtr<T>>::GetSelectedItem();
 				return SelectedItem ? FText::FromString(ValueToString(SelectedItem)) : FText::FromString("");
 			})
 			.Font(IDetailLayoutBuilder::GetDetailFont())

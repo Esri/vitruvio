@@ -9,14 +9,14 @@
 
 using FAttributeGroups = TArray<FString>;
 
-enum FilesystemMode
+enum class FilesystemMode
 {
 	File,
 	Directory,
 	None
 };
 
-enum AnnotationType
+enum class AnnotationType
 {
 	FileSystem,
 	Range,
@@ -35,19 +35,19 @@ class ColorAnnotation final : public AttributeAnnotation
 {
 	AnnotationType GetAnnotationType() override
 	{
-		return Color;
+		return AnnotationType::Color;
 	}
 };
 
 class FilesystemAnnotation final : public AttributeAnnotation
 {
 public:
-	FilesystemMode Mode = None;
+	FilesystemMode Mode = FilesystemMode::None;
 	FString Extensions;
 
 	AnnotationType GetAnnotationType() override
 	{
-		return FileSystem;
+		return AnnotationType::FileSystem;
 	}
 };
 
@@ -61,7 +61,7 @@ public:
 
 	AnnotationType GetAnnotationType() override
 	{
-		return Range;
+		return AnnotationType::Range;
 	}
 };
 
@@ -73,7 +73,7 @@ public:
 
 	AnnotationType GetAnnotationType() override
 	{
-		return Enum;
+		return AnnotationType::Enum;
 	}
 };
 
@@ -112,12 +112,13 @@ public:
 
 	TSharedPtr<EnumAnnotation<FString>> GetEnumAnnotation() const
 	{
-		return Annotation && Annotation->GetAnnotationType() == Enum ? StaticCastSharedPtr<EnumAnnotation<FString>>(Annotation) : TSharedPtr<EnumAnnotation<FString>>();
+		return Annotation && Annotation->GetAnnotationType() == AnnotationType::Enum ? StaticCastSharedPtr<EnumAnnotation<FString>>(Annotation)
+																					 : TSharedPtr<EnumAnnotation<FString>>();
 	}
 
 	TSharedPtr<ColorAnnotation> GetColorAnnotation() const
 	{
-		return Annotation && Annotation->GetAnnotationType() == Color ? StaticCastSharedPtr<ColorAnnotation>(Annotation) : TSharedPtr<ColorAnnotation>();
+		return Annotation && Annotation->GetAnnotationType() == AnnotationType::Color ? StaticCastSharedPtr<ColorAnnotation>(Annotation) : TSharedPtr<ColorAnnotation>();
 	}
 };
 
@@ -131,12 +132,13 @@ public:
 
 	TSharedPtr<EnumAnnotation<double>> GetEnumAnnotation() const
 	{
-		return Annotation && Annotation->GetAnnotationType() == Enum ? StaticCastSharedPtr<EnumAnnotation<double>>(Annotation) : TSharedPtr<EnumAnnotation<double>>();
+		return Annotation && Annotation->GetAnnotationType() == AnnotationType::Enum ? StaticCastSharedPtr<EnumAnnotation<double>>(Annotation)
+																					 : TSharedPtr<EnumAnnotation<double>>();
 	}
 
 	TSharedPtr<RangeAnnotation> GetRangeAnnotation() const
 	{
-		return Annotation && Annotation->GetAnnotationType() == Range ? StaticCastSharedPtr<RangeAnnotation>(Annotation) : TSharedPtr<RangeAnnotation>();
+		return Annotation && Annotation->GetAnnotationType() == AnnotationType::Range ? StaticCastSharedPtr<RangeAnnotation>(Annotation) : TSharedPtr<RangeAnnotation>();
 	}
 };
 

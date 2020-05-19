@@ -4,9 +4,13 @@
 
 #include "PRTUtils.h"
 #include "RulePackage.h"
+
+#pragma warning(push)
+#pragma warning(disable : 4263 4264)
 #include "prtx/ResolveMapProvider.h"
 #include "prtx/ResolveMapProviderFactory.h"
 #include "prtx/Singleton.h"
+#pragma warning(pop)
 
 #include <istream>
 #include <string>

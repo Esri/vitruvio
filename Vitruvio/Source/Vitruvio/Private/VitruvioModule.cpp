@@ -26,7 +26,7 @@ DEFINE_LOG_CATEGORY(LogUnrealPrt);
 namespace
 {
 	constexpr const wchar_t* ATTRIBUTE_EVAL_ENCODER_ID = L"com.esri.prt.core.AttributeEvalEncoder";
-	const FString DEFAULT_STYLE = L"Default";
+	const FString DEFAULT_STYLE = TEXT("Default");
 
 	class FLoadResolveMapTask
 	{
@@ -62,7 +62,7 @@ namespace
 
 		void DoTask(ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
 		{
-			const ResolveMapSPtr ResolveMap(prt::createResolveMap(*ResolveMapUri), PRTDestroyer());
+			const ResolveMapSPtr ResolveMap(prt::createResolveMap(TCHAR_TO_WCHAR(*ResolveMapUri)), PRTDestroyer());
 			{
 				FScopeLock Lock(&LoadResolveMapLock);
 				ResolveMapCache.Add(ResolveMapUri, ResolveMap);
@@ -134,15 +134,15 @@ namespace
 
 			if (const UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
 			{
-				AttributeMapBuilder->setFloat(*Attribute->Name, FloatAttribute->Value);
+				AttributeMapBuilder->setFloat(TCHAR_TO_WCHAR(*Attribute->Name), FloatAttribute->Value);
 			}
 			else if (const UStringAttribute* StringAttribute = Cast<UStringAttribute>(Attribute))
 			{
-				AttributeMapBuilder->setString(*Attribute->Name, *StringAttribute->Value);
+				AttributeMapBuilder->setString(TCHAR_TO_WCHAR(*Attribute->Name), TCHAR_TO_WCHAR(*StringAttribute->Value));
 			}
 			else if (const UBoolAttribute* BoolAttribute = Cast<UBoolAttribute>(Attribute))
 			{
-				AttributeMapBuilder->setBool(*Attribute->Name, BoolAttribute->Value);
+				AttributeMapBuilder->setBool(TCHAR_TO_WCHAR(*Attribute->Name), BoolAttribute->Value);
 			}
 		}
 
@@ -196,7 +196,7 @@ namespace
 		case prt::AAT_STR:
 		{
 			UStringAttribute* StringAttribute = NewObject<UStringAttribute>();
-			StringAttribute->Value = AttributeMap->getString(Name.c_str());
+			StringAttribute->Value = WCHAR_TO_TCHAR(AttributeMap->getString(Name.c_str()));
 			return StringAttribute;
 		}
 		case prt::AAT_UNKNOWN:
@@ -221,14 +221,14 @@ namespace
 			}
 
 			// We only support the default style for the moment
-			FString Style(prtu::getStyle(AttrInfo->getName()).c_str());
+			FString Style(WCHAR_TO_TCHAR(prtu::getStyle(AttrInfo->getName()).c_str()));
 			if (Style != DEFAULT_STYLE)
 			{
 				continue;
 			}
 
 			const std::wstring Name(AttrInfo->getName());
-			if (Attributes.Contains(Name.c_str()))
+			if (Attributes.Contains(WCHAR_TO_TCHAR(Name.c_str())))
 			{
 				continue;
 			}
@@ -237,8 +237,8 @@ namespace
 
 			if (Attribute)
 			{
-				FString AttributeName = Name.c_str();
-				FString DisplayName = prtu::removeImport(prtu::removeStyle(Name.c_str())).c_str();
+				FString AttributeName = WCHAR_TO_TCHAR(Name.c_str());
+				FString DisplayName = WCHAR_TO_TCHAR(prtu::removeImport(prtu::removeStyle(Name.c_str())).c_str());
 				Attribute->Name = AttributeName;
 				Attribute->DisplayName = DisplayName;
 
@@ -259,8 +259,8 @@ namespace
 
 		// Find all Unreal dlls
 		TArray<FString> OutFiles;
-		PlatformFile.FindFiles(OutFiles, *BinariesPath, L".dll");
-		TArray<FString> UnrealDlls = OutFiles.FilterByPredicate([](const FString& File) -> auto { return FPaths::GetCleanFilename(File).StartsWith(L"UE4Editor-"); });
+		PlatformFile.FindFiles(OutFiles, *BinariesPath, TEXT(".dll"));
+		TArray<FString> UnrealDlls = OutFiles.FilterByPredicate([](const FString& File) -> auto { return FPaths::GetCleanFilename(File).StartsWith(TEXT("UE4Editor-")); });
 
 		// Sort by date and remove newest (don't want to delete)
 		UnrealDlls.Sort([&PlatformFile](const auto& A, const auto& B) -> auto { return PlatformFile.GetTimeStamp(*A) > PlatformFile.GetTimeStamp(*B); });
@@ -273,7 +273,7 @@ namespace
 		for (const auto& OldDll : UnrealDlls)
 		{
 			PlatformFile.DeleteFile(*OldDll);
-			FString PdbFile = FPaths::GetBaseFilename(OldDll, false) + L".pdb";
+			FString PdbFile = FPaths::GetBaseFilename(OldDll, false) + TEXT(".pdb");
 			if (PlatformFile.FileExists(*PdbFile))
 			{
 				PlatformFile.DeleteFile(*PdbFile);
@@ -285,13 +285,13 @@ namespace
 void VitruvioModule::StartupModule()
 {
 	const FString BaseDir = FPaths::ConvertRelativePathToFull(IPluginManager::Get().FindPlugin("UnrealGeometryEncoder")->GetBaseDir());
-	const FString BinariesPath = FPaths::Combine(*BaseDir, L"Binaries", L"Win64");
-	const FString PrtLibPath = FPaths::Combine(*BinariesPath, L"com.esri.prt.core.dll");
+	const FString BinariesPath = FPaths::Combine(*BaseDir, TEXT("Binaries"), TEXT("Win64"));
+	const FString PrtLibPath = FPaths::Combine(*BinariesPath, TEXT("com.esri.prt.core.dll"));
 
 	PrtDllHandle = FPlatformProcess::GetDllHandle(*PrtLibPath);
 
 	TArray<wchar_t*> PRTPluginsPaths;
-	PRTPluginsPaths.Add(const_cast<wchar_t*>(*BinariesPath));
+	PRTPluginsPaths.Add(const_cast<wchar_t*>(TCHAR_TO_WCHAR(*BinariesPath)));
 
 	// TODO this cleanup should happen in a post build step. See DatasmithExporter Plugin from the Unreal source for more information
 	CleanupGeometryEncoderDlls(BinariesPath);
@@ -354,7 +354,7 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 	SetInitialShapeGeometry(InitialShapeBuilder, InitialShape);
 
 	const FString PathName = RulePackage->GetPathName();
-	const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + *PathName;
+	const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + TCHAR_TO_WCHAR(*PathName);
 	const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(PathUri).Get();
 
 	const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
@@ -403,7 +403,7 @@ TFuture<TMap<FString, URuleAttribute*>> VitruvioModule::LoadDefaultRuleAttribute
 
 	return Async(EAsyncExecution::Thread, [=]() -> TMap<FString, URuleAttribute*> {
 		const FString PathName = RulePackage->GetPathName();
-		const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + *PathName;
+		const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + TCHAR_TO_WCHAR(*PathName);
 		const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(PathUri).Get();
 
 		const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
@@ -429,7 +429,7 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(const std::wstring& 
 {
 	TPromise<ResolveMapSPtr> Promise;
 	TFuture<ResolveMapSPtr> Future = Promise.GetFuture();
-	FString Uri = InUri.c_str();
+	FString Uri = WCHAR_TO_TCHAR(InUri.c_str());
 
 	// Check if has already been cached
 	{
