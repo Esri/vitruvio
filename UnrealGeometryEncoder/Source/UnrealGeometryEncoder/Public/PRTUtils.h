@@ -11,12 +11,10 @@
 #include <string>
 #include <vector>
 
-#ifdef _WIN64
-
-#include "Windows/AllowWindowsPlatformTypes.h"
+#if PLATFORM_WINDOWS
 
 #include "Windows.h"
-
+#include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/HideWindowsPlatformTypes.h"
 
 #endif
@@ -155,7 +153,7 @@ namespace prtu
 
 	inline std::wstring toFileURI(const std::wstring& p)
 	{
-#ifdef _WIN64
+#if PLATFORM_WINDOWS
 		static const std::wstring schema = L"file:/";
 #else
 		static const std::wstring schema = L"file:";
@@ -168,7 +166,7 @@ namespace prtu
 
 	inline std::wstring temp_directory_path()
 	{
-#ifdef _WIN64
+#if PLATFORM_WINDOWS
 		wchar_t lpTempPathBuffer[MAX_PATH];
 		DWORD dwRetVal = GetTempPathW(MAX_PATH, lpTempPathBuffer);
 		if (dwRetVal > MAX_PATH || (dwRetVal == 0))
