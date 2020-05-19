@@ -4,6 +4,8 @@
 
 #include "Codec/Encoder/IUnrealCallbacks.h"
 
+#pragma warning(push)
+#pragma warning(disable : 4263 4264)
 #include "prtx/Attributable.h"
 #include "prtx/Exception.h"
 #include "prtx/ExtensionManager.h"
@@ -15,6 +17,7 @@
 #include "prtx/ReportsCollector.h"
 #include "prtx/Shape.h"
 #include "prtx/ShapeIterator.h"
+#pragma warning(pop)
 
 #include <algorithm>
 #include <memory>

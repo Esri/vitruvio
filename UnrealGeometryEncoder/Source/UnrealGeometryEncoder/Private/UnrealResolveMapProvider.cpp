@@ -5,9 +5,12 @@
 #include "PRTUtils.h"
 #include "RulePackage.h"
 
+#pragma warning(push)
+#pragma warning(disable : 4263 4264)
 #include "prt/API.h"
 #include "prt/ResolveMap.h"
 #include "prtx/ExtensionManager.h"
+#pragma warning(pop)
 
 #include "GenericPlatform/GenericPlatformFile.h"
 #include "HAL/PlatformFilemanager.h"

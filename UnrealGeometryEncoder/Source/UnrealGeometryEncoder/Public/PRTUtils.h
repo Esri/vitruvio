@@ -4,7 +4,10 @@
 
 #include "PRTTypes.h"
 
+#pragma warning(push)
+#pragma warning(disable : 4263 4264)
 #include "prt/API.h"
+#pragma warning(pop)
 
 #include <memory>
 #include <stdexcept>

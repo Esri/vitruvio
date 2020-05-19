@@ -2,10 +2,13 @@
 
 #pragma once
 
+#pragma warning(push)
+#pragma warning(disable : 4263 4264)
 #include "prt/API.h"
 #include "prt/ResolveMap.h"
 #include "prt/RuleFileInfo.h"
 #include "prt/StringUtils.h"
+#pragma warning(pop)
 
 #include <memory>
 #include <vector>

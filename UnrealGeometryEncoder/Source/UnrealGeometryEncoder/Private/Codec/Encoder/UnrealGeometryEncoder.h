@@ -2,6 +2,8 @@
 
 #pragma once
 
+#pragma warning(push)
+#pragma warning(disable : 4263 4264)
 #include "prtx/EncodePreparator.h"
 #include "prtx/Encoder.h"
 #include "prtx/EncoderFactory.h"
@@ -14,6 +16,7 @@
 
 #include "prt/ContentType.h"
 #include "prt/InitialShape.h"
+#pragma warning(pop)
 
 #include "Codec/CodecMain.h"
 #include "HAL/MemoryBase.h"
