@@ -81,11 +81,11 @@ void APRTActor::Generate()
 				StaticMeshActor->GetStaticMeshComponent()->SetStaticMesh(Result.ShapeMesh);
 				StaticMeshActor->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
 
-				for (const auto Instance : Result.Instances)
+				for (const auto& Instance : Result.Instances)
 				{
 					auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(StaticMeshActor);
 					InstancedComponent->SetStaticMesh(Instance.Key);
-					for (FTransform InstanceTransform : Instance.Value)
+					for (const FTransform& InstanceTransform : Instance.Value)
 					{
 						InstancedComponent->AddInstance(InstanceTransform);
 					}

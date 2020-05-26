@@ -231,10 +231,10 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, UMat
 	// Convert AttributeMap to material
 	size_t KeyCount = 0;
 	wchar_t const* const* Keys = MaterialAttributes->getKeys(&KeyCount);
-	for (int KeyIndex = 0; KeyIndex < KeyCount; KeyIndex++)
+	for (size_t KeyIndex = 0; KeyIndex < KeyCount; KeyIndex++)
 	{
 		const wchar_t* Key = Keys[KeyIndex];
-		const std::wstring KeyString(Keys[KeyIndex]);
+		const std::wstring KeyString(Key);
 		const auto TypeIter = KeyToTypeMap.find(KeyString);
 		if (TypeIter != KeyToTypeMap.end())
 		{
