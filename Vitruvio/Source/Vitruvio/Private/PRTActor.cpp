@@ -89,9 +89,8 @@ void APRTActor::Generate()
 					{
 						InstancedComponent->AddInstance(InstanceTransform);
 					}
+					InstancedComponent->AttachToComponent(StaticMeshActor->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
 					StaticMeshActor->AddInstanceComponent(InstancedComponent);
-					InstancedComponent->RegisterComponent();
-					InstancedComponent->SetRelativeTransform(StaticMeshActor->GetTransform());
 				}
 				StaticMeshActor->RegisterAllComponents();
 			},
