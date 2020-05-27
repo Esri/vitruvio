@@ -260,7 +260,7 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, UMat
 				MaterialInstance->SetVectorParameterValue(FName(Key), GetLinearColor(MaterialAttributes, Key));
 				break;
 			case MaterialPropertyType::SCALAR:
-				MaterialInstance->SetScalarParameterValue(FName(WCHAR_TO_TCHAR(Key)), GetScalar(MaterialAttributes, Key));
+				MaterialInstance->SetScalarParameterValue(FName(Key), GetScalar(MaterialAttributes, Key));
 				break;
 			default:;
 			}
