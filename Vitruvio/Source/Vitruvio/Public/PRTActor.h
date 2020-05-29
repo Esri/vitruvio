@@ -27,6 +27,9 @@ public:
 	UPROPERTY(EditAnywhere, DisplayName = "Rule Package", Category = "CGA")
 	URulePackage* Rpk;
 
+	UPROPERTY()
+	bool bValidRandomSeed = false;
+
 	UPROPERTY(EditAnywhere, Category = "CGA")
 	int32 RandomSeed;
 

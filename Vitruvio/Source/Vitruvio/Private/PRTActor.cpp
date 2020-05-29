@@ -7,6 +7,27 @@
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "ObjectEditorUtils.h"
 
+namespace
+{
+	int32 CalculateRandomSeed(const FTransform Transform, UStaticMesh* const InitialShape)
+	{
+		FVector Centroid = FVector::ZeroVector;
+		if (InitialShape->RenderData != nullptr && InitialShape->RenderData->LODResources.IsValidIndex(0))
+		{
+			const FStaticMeshLODResources& LOD = InitialShape->RenderData->LODResources[0];
+			for (auto SectionIndex = 0; SectionIndex < LOD.Sections.Num(); ++SectionIndex)
+			{
+				for (uint32 VertexIndex = 0; VertexIndex < LOD.VertexBuffers.PositionVertexBuffer.GetNumVertices(); ++VertexIndex)
+				{
+					Centroid += LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(VertexIndex);
+				}
+			}
+			Centroid = Centroid / LOD.GetNumVertices();
+		}
+		return GetTypeHash(Transform.TransformPosition(Centroid));
+	}
+} // namespace
+
 APRTActor::APRTActor()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -119,6 +140,11 @@ void APRTActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 		}
 	}
 
+	if (PropertyChangedEvent.Property && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(APRTActor, RandomSeed))
+	{
+		bValidRandomSeed = true;
+	}
+
 	if (PropertyChangedEvent.Property && PropertyChangedEvent.Property->GetFName() == TEXT("StaticMeshComponent"))
 	{
 		UStaticMesh* InitialShape = GetStaticMeshComponent()->GetStaticMesh();
@@ -128,6 +154,12 @@ void APRTActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 			if (Rpk)
 			{
 				LoadDefaultAttributes(InitialShape);
+			}
+
+			if (!bValidRandomSeed)
+			{
+				RandomSeed = CalculateRandomSeed(GetActorTransform(), InitialShape);
+				bValidRandomSeed = true;
 			}
 		}
 	}
