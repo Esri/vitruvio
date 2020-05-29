@@ -57,12 +57,12 @@ void APRTActor::Generate()
 
 	if (InitialShape)
 	{
-		GenerateFuture = VitruvioModule::Get().GenerateAsync(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, Rpk, Attributes);
+		GenerateFuture = VitruvioModule::Get().GenerateAsync(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, Rpk, Attributes, RandomSeed);
 
 		// clang-format off
-		GenerateFuture.Next([=](const FGenerateResult& Result) 
+		GenerateFuture.Next([=](const FGenerateResult& Result)
 		{
-			const FGraphEventRef CreateMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this, &Result]() 
+			const FGraphEventRef CreateMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this, &Result]()
 			{
 				// Remove previously generated actors
 				TArray<AActor*> GeneratedMeshes;
@@ -152,7 +152,7 @@ void APRTActor::LoadDefaultAttributes(UStaticMesh* InitialShape)
 
 	AttributesReady = false;
 
-	TFuture<TMap<FString, URuleAttribute*>> AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk);
+	TFuture<TMap<FString, URuleAttribute*>> AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk, RandomSeed);
 	AttributesFuture.Next([this](const TMap<FString, URuleAttribute*>& Result) {
 		Attributes = Result;
 		AttributesReady = true;
