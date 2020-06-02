@@ -216,39 +216,62 @@ namespace
 	// clang-format on
 } // namespace
 
-UMaterialInstanceDynamic* CreateMaterialInstance(UObject* Outer, UMaterialInterface* OpaqueParent, UMaterialInterface* MaskedParent, UMaterialInterface* TranslucentParent,
-												 const prt::AttributeMap* MaterialAttributes)
+UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, UMaterialInterface* OpaqueParent, UMaterialInterface* MaskedParent,
+															UMaterialInterface* TranslucentParent, const prt::AttributeMap* MaterialAttributes)
 {
+	check(IsInGameThread());
+
 	const auto BlendMode = GetBlendMode(MaterialAttributes);
 	const auto Parent = GetMaterialByBlendMode(BlendMode, OpaqueParent, MaskedParent, TranslucentParent);
 	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, Outer);
 
+	using TTextureAsyncResult = TFuture<TTuple<const wchar_t*, UTexture*>>;
+	TArray<TTextureAsyncResult> LoadTextureResult;
+
 	// Convert AttributeMap to material
 	size_t KeyCount = 0;
 	wchar_t const* const* Keys = MaterialAttributes->getKeys(&KeyCount);
-	for (int KeyIndex = 0; KeyIndex < KeyCount; KeyIndex++)
+	for (size_t KeyIndex = 0; KeyIndex < KeyCount; KeyIndex++)
 	{
 		const wchar_t* Key = Keys[KeyIndex];
-		const std::wstring KeyString(Keys[KeyIndex]);
+		const std::wstring KeyString(Key);
 		const auto TypeIter = KeyToTypeMap.find(KeyString);
 		if (TypeIter != KeyToTypeMap.end())
 		{
 			const MaterialPropertyType Type = TypeIter->second;
 			switch (Type)
 			{
-				// TODO loading the texture should probably not happen in the game thread
 			case MaterialPropertyType::TEXTURE:
-				MaterialInstance->SetTextureParameterValue(FName(WCHAR_TO_TCHAR(Key)), GetTexture(Outer, MaterialAttributes, GetTextureSettings(Key), Key));
+			{
+				// Load textures async in thread pool
+				// clang-format off
+				TTextureAsyncResult Result = Async(EAsyncExecution::ThreadPool, [MaterialInstance, Outer, MaterialAttributes, Key]() {
+					QUICK_SCOPE_CYCLE_COUNTER(STAT_MaterialConversion_LoadTexture);
+					UTexture* Texture = GetTexture(Outer, MaterialAttributes, GetTextureSettings(Key), Key);
+					return TTuple<const wchar_t*, UTexture*>(Key, Texture);
+				});
+				// clang-format on
+
+				LoadTextureResult.Add(MoveTemp(Result));
+
 				break;
+			}
 			case MaterialPropertyType::LINEAR_COLOR:
-				MaterialInstance->SetVectorParameterValue(FName(WCHAR_TO_TCHAR(Key)), GetLinearColor(MaterialAttributes, Key));
+				MaterialInstance->SetVectorParameterValue(FName(Key), GetLinearColor(MaterialAttributes, Key));
 				break;
 			case MaterialPropertyType::SCALAR:
-				MaterialInstance->SetScalarParameterValue(FName(WCHAR_TO_TCHAR(Key)), GetScalar(MaterialAttributes, Key));
+				MaterialInstance->SetScalarParameterValue(FName(Key), GetScalar(MaterialAttributes, Key));
 				break;
 			default:;
 			}
 		}
+	}
+
+	// Apply textures in Game Thread
+	for (const TTextureAsyncResult& TextureFutureResult : LoadTextureResult)
+	{
+		const auto Result = TextureFutureResult.Get();
+		MaterialInstance->SetTextureParameterValue(FName(Result.Key), Result.Value);
 	}
 
 	return MaterialInstance;

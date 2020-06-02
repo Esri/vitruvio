@@ -4,22 +4,22 @@
 
 #include "RuleAttributes.h"
 #include "RulePackage.h"
+#include "VitruvioModule.h"
 
 #include "CoreMinimal.h"
 #include "Engine/StaticMeshActor.h"
 #include "Materials/Material.h"
-
 #include "PRTActor.generated.h"
 
-// TODO: wondering if we should just call it "generate" instead of regenerate?
 UCLASS()
 class VITRUVIO_API APRTActor : public AStaticMeshActor
 {
 	GENERATED_BODY()
 
-	bool Initialized = false;
-	bool Regenerated = false;
-	bool AttributesReady = false;
+	TAtomic<bool> Initialized = false;
+	TAtomic<bool> AttributesReady = false;
+
+	TFuture<FGenerateResult> GenerateFuture;
 
 public:
 	APRTActor();
@@ -46,7 +46,7 @@ public:
 	bool GenerateAutomatically = true;
 
 	UFUNCTION(BlueprintCallable)
-	void Regenerate();
+	void Generate();
 
 protected:
 	void BeginPlay() override;

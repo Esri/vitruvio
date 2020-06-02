@@ -12,6 +12,7 @@
 #include "StaticMeshAttributes.h"
 #include "StaticMeshDescription.h"
 #include "StaticMeshOperations.h"
+#include "Util/AsyncHelpers.h"
 
 DEFINE_LOG_CATEGORY(LogUnrealCallbacks);
 
@@ -61,6 +62,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 	BaseUVIndex.Init(0, uvSets);
 
 	size_t PolygonGroupStartIndex = 0;
+	TArray<TFuture<void>> CreateMaterialFutures;
 	for (size_t PolygonGroupIndex = 0; PolygonGroupIndex < faceRangesSize; ++PolygonGroupIndex)
 	{
 		const size_t PolygonFaceCount = faceRanges[PolygonGroupIndex];
@@ -68,15 +70,13 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 		const FPolygonGroupID PolygonGroupId = Description.CreatePolygonGroup();
 
 		// Create material in game thread
-		FGraphEventRef CreateMaterialTask = FFunctionGraphTask::CreateAndDispatchWhenReady(
-			[=, &Attributes]() {
-				QUICK_SCOPE_CYCLE_COUNTER(STAT_UnrealCallbacks_CreateMaterials);
-				const prt::AttributeMap* MaterialAttributes = materials[PolygonGroupIndex];
-				UMaterialInstanceDynamic* MaterialInstance = CreateMaterialInstance(Mesh, OpaqueParent, MaskedParent, TranslucentParent, MaterialAttributes);
-				const FName MaterialSlot = Mesh->AddMaterial(MaterialInstance);
-				Attributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlot;
-			},
-			TStatId(), nullptr, ENamedThreads::GameThread);
+		CreateMaterialFutures.Add(Vitruvio::AsyncHelpers::ExecuteOnGameThread<void>([=, &Attributes]() {
+			QUICK_SCOPE_CYCLE_COUNTER(STAT_UnrealCallbacks_CreateMaterials);
+			const prt::AttributeMap* MaterialAttributes = materials[PolygonGroupIndex];
+			UMaterialInstanceDynamic* MaterialInstance = GameThread_CreateMaterialInstance(Mesh, OpaqueParent, MaskedParent, TranslucentParent, MaterialAttributes);
+			const FName MaterialSlot = Mesh->AddMaterial(MaterialInstance);
+			Attributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlot;
+		}));
 
 		// Create Geometry
 		const auto Normals = Attributes.GetVertexInstanceNormals();
@@ -125,25 +125,26 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 		}
 
 		PolygonGroupStartIndex += PolygonFaces;
-
-		FTaskGraphInterface::Get().WaitUntilTaskCompletes(CreateMaterialTask);
+	}
+	for (const TFuture<void>& CreateMaterialFuture : CreateMaterialFutures)
+	{
+		CreateMaterialFuture.Wait();
 	}
 
 	// Build mesh in game thread
 	if (BaseVertexIndex > 0)
 	{
-		const FGraphEventRef CreateMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady(
-			[this, prototypeId, Mesh, &Description]() {
-				QUICK_SCOPE_CYCLE_COUNTER(STAT_UnrealCallbacks_BuildMeshes);
+		const TFuture<void> CreateMeshTask = Vitruvio::AsyncHelpers::ExecuteOnGameThread<void>([this, prototypeId, Mesh, &Description]() {
+			QUICK_SCOPE_CYCLE_COUNTER(STAT_UnrealCallbacks_BuildMeshes);
 
-				TArray<const FMeshDescription*> MeshDescriptionPtrs;
-				MeshDescriptionPtrs.Emplace(&Description);
-				Mesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
+			TArray<const FMeshDescription*> MeshDescriptionPtrs;
+			MeshDescriptionPtrs.Emplace(&Description);
+			Mesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
 
-				Meshes.Add(prototypeId, Mesh);
-			},
-			TStatId(), nullptr, ENamedThreads::GameThread);
-		FTaskGraphInterface::Get().WaitUntilTaskCompletes(CreateMeshTask);
+			Meshes.Add(prototypeId, Mesh);
+		});
+
+		CreateMeshTask.Wait();
 	}
 }
 
