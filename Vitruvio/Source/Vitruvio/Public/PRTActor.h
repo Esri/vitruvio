@@ -21,14 +21,14 @@ class VITRUVIO_API APRTActor : public AStaticMeshActor
 
 	TFuture<FGenerateResult> GenerateFuture;
 
+	UPROPERTY()
+	bool bValidRandomSeed = false;
+
 public:
 	APRTActor();
 
 	UPROPERTY(EditAnywhere, DisplayName = "Rule Package", Category = "CGA")
 	URulePackage* Rpk;
-
-	UPROPERTY()
-	bool bValidRandomSeed = false;
 
 	UPROPERTY(EditAnywhere, Category = "CGA")
 	int32 RandomSeed;
