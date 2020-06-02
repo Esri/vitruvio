@@ -57,8 +57,8 @@ public:
 	 * \param RandomSeed
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API FGenerateResult Generate(const ::UStaticMesh* InitialShape, ::UMaterial* OpaqueParent, ::UMaterial* MaskedParent, ::UMaterial* TranslucentParent,
-										  ::URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const;
+	VITRUVIO_API FGenerateResult Generate(const UStaticMesh* InitialShape, ::UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
+										  URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const;
 
 	/**
 	 * \brief Asynchronously loads the default attribute values for the given initial shape and rule package
