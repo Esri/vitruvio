@@ -9,10 +9,10 @@
 #include "CoreMinimal.h"
 #include "Engine/StaticMeshActor.h"
 #include "Materials/Material.h"
-#include "PRTActor.generated.h"
+#include "VitruvioActor.generated.h"
 
 UCLASS()
-class VITRUVIO_API APRTActor : public AStaticMeshActor
+class VITRUVIO_API AVitruvioActor : public AStaticMeshActor
 {
 	GENERATED_BODY()
 
@@ -26,7 +26,7 @@ class VITRUVIO_API APRTActor : public AStaticMeshActor
 	bool bIsGenerating = false;
 
 public:
-	APRTActor();
+	AVitruvioActor();
 
 	UPROPERTY(EditAnywhere, DisplayName = "Rule Package", Category = "CGA")
 	URulePackage* Rpk;
