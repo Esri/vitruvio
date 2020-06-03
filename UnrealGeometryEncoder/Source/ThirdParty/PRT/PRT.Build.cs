@@ -141,7 +141,10 @@ public class PRT : ModuleRules
 		string SrcLib = Path.Combine(SrcLibDir, SrcFile);
 		if (!System.IO.File.Exists(DstLibDir) || System.IO.File.GetCreationTime(SrcLib) > System.IO.File.GetCreationTime(DstLibDir))
 		{
+			// For some reason File.Copy does not always preserve the creation time so we set it manually
+			DateTime CreationTime = System.IO.File.GetCreationTime(SrcLib);
 			System.IO.File.Copy(SrcLib, DstLibDir, true);
+			System.IO.File.SetCreationTime(DstLibDir, CreationTime);
 		}
 	}
 
