@@ -17,6 +17,8 @@ public class PRT : ModuleRules
 	private const int PrtMinor = 1;
 	private const int PrtBuild = 5705;
 
+	private const string PrtCoreDllName = "com.esri.prt.core.dll";
+
 	public PRT(ReadOnlyTargetRules Target) : base(Target)
 	{
 		bUseRTTI = true;
@@ -41,11 +43,14 @@ public class PRT : ModuleRules
 		string BinDir = Path.Combine(ModuleDirectory, "bin", Platform.Name, "Release");
 		string IncludeDir = Path.Combine(ModuleDirectory, "include");
 
-		// TODO improve checking if already installed
-
-		// 1. Check if prt is already available, otherwise download from official github repo
+		// 1. Check if prt is already available and has correct version, otherwise download from official github repo
 		bool PrtInstalled = Directory.Exists(LibDir) && Directory.Exists(BinDir);
-		if (!PrtInstalled)
+
+		string PrtCorePath = Path.Combine(BinDir, PrtCoreDllName);
+		bool PrtCoreExists = File.Exists(PrtCorePath);
+		bool PrtVersionMatch = PrtCoreExists && CheckDllVersion(PrtCorePath, PrtMajor, PrtMinor, PrtBuild);
+
+		if (!PrtInstalled || !PrtVersionMatch)
 		{
 			try
 			{
@@ -53,8 +58,11 @@ public class PRT : ModuleRules
 				if (Directory.Exists(BinDir)) Directory.Delete(BinDir, true);
 				if (Directory.Exists(IncludeDir)) Directory.Delete(IncludeDir, true);
 
-
-				if (Debug) Console.WriteLine("PRT not found");
+				if (Debug)
+				{
+					if (!PrtInstalled) Console.WriteLine("PRT not found");
+					Console.WriteLine("Updating PRT");
+				}
 
 				string PrtUrl = "https://github.com/Esri/esri-cityengine-sdk/releases/download";
 				string PrtVersion = string.Format("{0}.{1}.{2}", PrtMajor, PrtMinor, PrtBuild);
@@ -161,6 +169,21 @@ public class PRT : ModuleRules
 		{
 			Copy(Dir, Path.Combine(DstDir, Path.GetFileName(Dir)));
 		}
+	}
+
+	public static bool CheckDllVersion(string DllPath, int Major, int Minor, int Build)
+	{
+		FileVersionInfo Info = FileVersionInfo.GetVersionInfo(DllPath);
+		string[] BuildVersions = Info.ProductVersion.Split(' ');
+		int DllBuild = int.Parse(BuildVersions[BuildVersions.Length - 1]);
+
+		bool Match = Info.FileMajorPart == Major && Info.FileMinorPart == Minor && DllBuild == Build;
+		if (Debug && !Match)
+		{
+			Console.WriteLine(string.Format("Version {0}.{1}.{2} of \"{3}\" does not match expected version of Build file {4}.{5}.{6}",
+				 Info.FileMajorPart, Info.FileMinorPart, DllBuild, Path.GetFileName(DllPath), Major, Minor, Build));
+		}
+		return Match;
 	}
 
 	private abstract class AbstractZipExtractor
