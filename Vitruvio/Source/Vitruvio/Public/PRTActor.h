@@ -19,7 +19,11 @@ class VITRUVIO_API APRTActor : public AStaticMeshActor
 	TAtomic<bool> Initialized = false;
 	TAtomic<bool> AttributesReady = false;
 
-	TFuture<FGenerateResult> GenerateFuture;
+	UPROPERTY()
+	bool bValidRandomSeed = false;
+
+	bool bNeedsRegenerate = false;
+	bool bIsGenerating = false;
 
 public:
 	APRTActor();

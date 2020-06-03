@@ -16,7 +16,6 @@
 #include "Interfaces/IPluginManager.h"
 #include "MeshDescription.h"
 #include "Modules/ModuleManager.h"
-#include "StaticMeshAttributes.h"
 #include "UObject/UObjectBaseUtility.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioModule"
@@ -149,7 +148,8 @@ namespace
 		return AttributeMapUPtr(AttributeMapBuilder->createAttributeMap(), PRTDestroyer());
 	}
 
-	AttributeMapUPtr GetDefaultAttributeValues(const std::wstring& RuleFile, const std::wstring& StartRule, const ResolveMapSPtr& ResolveMapPtr, const UStaticMesh* InitialShape)
+	AttributeMapUPtr GetDefaultAttributeValues(const std::wstring& RuleFile, const std::wstring& StartRule, const ResolveMapSPtr& ResolveMapPtr, const UStaticMesh* InitialShape,
+											   const int32 RandomSeed)
 	{
 		AttributeMapBuilderUPtr UnrealCallbacksAttributeBuilder(prt::AttributeMapBuilder::create());
 		UnrealCallbacks UnrealCallbacks(UnrealCallbacksAttributeBuilder, nullptr, nullptr, nullptr);
@@ -158,8 +158,6 @@ namespace
 
 		SetInitialShapeGeometry(InitialShapeBuilder, InitialShape);
 
-		// TODO calculate random seed
-		const int32_t RandomSeed = 0;
 		const AttributeMapUPtr EmptyAttributes(AttributeMapBuilderUPtr(prt::AttributeMapBuilder::create())->createAttributeMap());
 		InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", EmptyAttributes.get(), ResolveMapPtr.get());
 
@@ -324,7 +322,7 @@ void VitruvioModule::ShutdownModule()
 }
 
 TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
-													   URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes) const
+													   URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const
 {
 	check(InitialShape);
 	check(RulePackage);
@@ -335,11 +333,12 @@ TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const UStaticMesh* Initia
 		return {};
 	}
 
-	return Async(EAsyncExecution::Thread, [=]() -> FGenerateResult { return Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, Attributes); });
+	return Async(EAsyncExecution::Thread,
+				 [=]() -> FGenerateResult { return Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, Attributes, RandomSeed); });
 }
 
 FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent, URulePackage* RulePackage,
-										 const TMap<FString, URuleAttribute*>& Attributes) const
+										 const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const
 {
 	check(InitialShape);
 	check(RulePackage);
@@ -363,8 +362,6 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 	const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
 	const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
 
-	// TODO calculate random seed
-	const int32_t RandomSeed = 0;
 	const AttributeMapUPtr AttributeMap = CreateAttributeMap(Attributes);
 	InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", AttributeMap.get(), ResolveMap.get());
 
@@ -390,7 +387,7 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 	return {OutputHandler->GetModel(), OutputHandler->GetInstances()};
 }
 
-TFuture<TMap<FString, URuleAttribute*>> VitruvioModule::LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage) const
+TFuture<TMap<FString, URuleAttribute*>> VitruvioModule::LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage, const int32 RandomSeed) const
 {
 	check(InitialShape);
 	check(RulePackage);
@@ -420,7 +417,7 @@ TFuture<TMap<FString, URuleAttribute*>> VitruvioModule::LoadDefaultRuleAttribute
 			return {};
 		}
 
-		const AttributeMapUPtr DefaultAttributeMap(GetDefaultAttributeValues(RuleFile.c_str(), StartRule.c_str(), ResolveMap, InitialShape));
+		const AttributeMapUPtr DefaultAttributeMap(GetDefaultAttributeValues(RuleFile.c_str(), StartRule.c_str(), ResolveMap, InitialShape, RandomSeed));
 		return ConvertAttributeMap(DefaultAttributeMap, RuleInfo);
 	});
 }
