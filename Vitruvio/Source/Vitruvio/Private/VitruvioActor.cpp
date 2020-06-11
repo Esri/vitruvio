@@ -1,6 +1,6 @@
 // Copyright 2019 - 2020 Esri. All Rights Reserved.
 
-#include "PRTActor.h"
+#include "VitruvioActor.h"
 
 #include "VitruvioModule.h"
 
@@ -28,7 +28,7 @@ namespace
 	}
 } // namespace
 
-APRTActor::APRTActor()
+AVitruvioActor::AVitruvioActor()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -37,12 +37,12 @@ APRTActor::APRTActor()
 	TranslucentParent = LoadObject<UMaterial>(this, TEXT("Material'/Vitruvio/Materials/M_TranslucentParent.M_TranslucentParent'"), nullptr);
 }
 
-void APRTActor::BeginPlay()
+void AVitruvioActor::BeginPlay()
 {
 	Super::BeginPlay();
 }
 
-void APRTActor::Tick(float DeltaTime)
+void AVitruvioActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
@@ -60,7 +60,7 @@ void APRTActor::Tick(float DeltaTime)
 	}
 }
 
-void APRTActor::Generate()
+void AVitruvioActor::Generate()
 {
 	if (!Rpk || !AttributesReady || !GetStaticMeshComponent())
 	{
@@ -106,7 +106,7 @@ void APRTActor::Generate()
 					}
 
 					// Create actors for generated meshes
-					QUICK_SCOPE_CYCLE_COUNTER(STAT_PRTActor_CreateActors);
+					QUICK_SCOPE_CYCLE_COUNTER(STAT_VitruvioActor_CreateActors);
 					FActorSpawnParameters Parameters;
 					Parameters.Owner = this;
 					AStaticMeshActor* StaticMeshActor = GetWorld()->SpawnActor<AStaticMeshActor>(Parameters);
@@ -141,11 +141,11 @@ void APRTActor::Generate()
 
 #if WITH_EDITOR
 
-void APRTActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void AVitruvioActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
-	if (PropertyChangedEvent.Property && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(APRTActor, Rpk))
+	if (PropertyChangedEvent.Property && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(AVitruvioActor, Rpk))
 	{
 		Attributes.Empty();
 
@@ -156,7 +156,7 @@ void APRTActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 		}
 	}
 
-	if (PropertyChangedEvent.Property && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(APRTActor, RandomSeed))
+	if (PropertyChangedEvent.Property && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(AVitruvioActor, RandomSeed))
 	{
 		bValidRandomSeed = true;
 	}
@@ -186,14 +186,14 @@ void APRTActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 	}
 }
 
-bool APRTActor::ShouldTickIfViewportsOnly() const
+bool AVitruvioActor::ShouldTickIfViewportsOnly() const
 {
 	return true;
 }
 
 #endif // WITH_EDITOR
 
-void APRTActor::LoadDefaultAttributes(UStaticMesh* InitialShape)
+void AVitruvioActor::LoadDefaultAttributes(UStaticMesh* InitialShape)
 {
 	check(InitialShape);
 	check(Rpk);
@@ -211,7 +211,7 @@ void APRTActor::LoadDefaultAttributes(UStaticMesh* InitialShape)
 		// Notify possible listeners (eg. Details panel) about changes to the Attributes
 		FFunctionGraphTask::CreateAndDispatchWhenReady(
 			[this, &Result]() {
-				FPropertyChangedEvent PropertyEvent(GetClass()->FindPropertyByName(GET_MEMBER_NAME_CHECKED(APRTActor, Attributes)));
+				FPropertyChangedEvent PropertyEvent(GetClass()->FindPropertyByName(GET_MEMBER_NAME_CHECKED(AVitruvioActor, Attributes)));
 				FCoreUObjectDelegates::OnObjectPropertyChanged.Broadcast(this, PropertyEvent);
 			},
 			TStatId(), nullptr, ENamedThreads::GameThread);
