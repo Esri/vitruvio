@@ -49,6 +49,10 @@ public:
 	UPROPERTY(EditAnywhere, Category = "CGA")
 	bool GenerateAutomatically = true;
 
+	/** Automatically hide initial shape (i.e. this actor's static mesh) after generation. */
+	UPROPERTY(EditAnywhere, DisplayName = "Hide after Generation", Category = "CGA")
+	bool HideAfterGeneration = true;
+
 	UFUNCTION(BlueprintCallable)
 	void Generate();
 
