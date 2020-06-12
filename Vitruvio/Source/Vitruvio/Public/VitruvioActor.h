@@ -28,30 +28,37 @@ class VITRUVIO_API AVitruvioActor : public AStaticMeshActor
 public:
 	AVitruvioActor();
 
+	/** CityEngine Rule Package used for generation. */
 	UPROPERTY(EditAnywhere, DisplayName = "Rule Package", Category = "CGA")
 	URulePackage* Rpk;
 
-	UPROPERTY(EditAnywhere, Category = "CGA")
+	/** Random seed used for generation. */
+	UPROPERTY(EditAnywhere, DisplayName = "Random Seed", Category = "CGA")
 	int32 RandomSeed;
 
-	UPROPERTY(EditAnywhere)
-	TMap<FString, URuleAttribute*> Attributes;
-
-	UPROPERTY(EditAnywhere)
-	UMaterial* OpaqueParent;
-
-	UPROPERTY(EditAnywhere)
-	UMaterial* MaskedParent;
-
-	UPROPERTY(EditAnywhere)
-	UMaterial* TranslucentParent;
-
-	UPROPERTY(EditAnywhere, Category = "CGA")
+	/** Automatically generate after changing attributes or properties. */
+	UPROPERTY(EditAnywhere, DisplayName = "Generate Automatically", Category = "CGA")
 	bool GenerateAutomatically = true;
 
 	/** Automatically hide initial shape (i.e. this actor's static mesh) after generation. */
 	UPROPERTY(EditAnywhere, DisplayName = "Hide after Generation", Category = "CGA")
 	bool HideAfterGeneration = true;
+
+	/** Rule attributes used for generation. */
+	UPROPERTY(EditAnywhere, DisplayName = "Attributes", Category = "CGA")
+	TMap<FString, URuleAttribute*> Attributes;
+
+	/** Default parent material for opaque geometry. */
+	UPROPERTY(EditAnywhere, DisplayName = "Opaque Parent", Category = "CGA Default Materials")
+	UMaterial* OpaqueParent;
+
+	/** Default parent material for masked geometry. */
+	UPROPERTY(EditAnywhere, DisplayName = "Masked Parent", Category = "CGA Default Materials")
+	UMaterial* MaskedParent;
+
+	/** Default parent material for translucent geometry. */
+	UPROPERTY(EditAnywhere, DisplayName = "Translucent Parent", Category = "CGA Default Materials")
+	UMaterial* TranslucentParent;
 
 	UFUNCTION(BlueprintCallable)
 	void Generate();
