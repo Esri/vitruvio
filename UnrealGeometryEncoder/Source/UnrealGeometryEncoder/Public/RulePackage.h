@@ -14,4 +14,7 @@ class UNREALGEOMETRYENCODER_API URulePackage final : public UObject
 public:
 	UPROPERTY()
 	TArray<uint8> Data;
+
+	virtual void PreSave(const class ITargetPlatform* TargetPlatform) override;
+	;
 };

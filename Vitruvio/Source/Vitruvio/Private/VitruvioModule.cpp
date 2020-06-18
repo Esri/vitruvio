@@ -29,14 +29,17 @@ namespace
 
 	class FLoadResolveMapTask
 	{
+		TLazyObjectPtr<URulePackage> LazyRulePackagePtr;
 		FString ResolveMapUri;
 		TPromise<ResolveMapSPtr> Promise;
-		TMap<FString, ResolveMapSPtr>& ResolveMapCache;
+		TMap<TLazyObjectPtr<URulePackage>, ResolveMapSPtr>& ResolveMapCache;
 		FCriticalSection& LoadResolveMapLock;
 
 	public:
-		FLoadResolveMapTask(TPromise<ResolveMapSPtr>&& InPromise, FString ResolveMapUri, TMap<FString, ResolveMapSPtr>& ResolveMapCache, FCriticalSection& LoadResolveMapLock)
-			: ResolveMapUri(ResolveMapUri), Promise(MoveTemp(InPromise)), ResolveMapCache(ResolveMapCache), LoadResolveMapLock(LoadResolveMapLock)
+		FLoadResolveMapTask(TPromise<ResolveMapSPtr>&& InPromise, const TLazyObjectPtr<URulePackage> LazyRulePackagePtr, const FString ResolveMapUri,
+							TMap<TLazyObjectPtr<URulePackage>, ResolveMapSPtr>& ResolveMapCache, FCriticalSection& LoadResolveMapLock)
+			: LazyRulePackagePtr(LazyRulePackagePtr), ResolveMapUri(ResolveMapUri), Promise(MoveTemp(InPromise)), ResolveMapCache(ResolveMapCache),
+			  LoadResolveMapLock(LoadResolveMapLock)
 		{
 		}
 
@@ -64,7 +67,7 @@ namespace
 			const ResolveMapSPtr ResolveMap(prt::createResolveMap(TCHAR_TO_WCHAR(*ResolveMapUri)), PRTDestroyer());
 			{
 				FScopeLock Lock(&LoadResolveMapLock);
-				ResolveMapCache.Add(ResolveMapUri, ResolveMap);
+				ResolveMapCache.Add(LazyRulePackagePtr, ResolveMap);
 				Promise.SetValue(ResolveMap);
 			}
 		}
@@ -352,9 +355,7 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 	const InitialShapeBuilderUPtr InitialShapeBuilder(prt::InitialShapeBuilder::create());
 	SetInitialShapeGeometry(InitialShapeBuilder, InitialShape);
 
-	const FString PathName = RulePackage->GetPathName();
-	const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + TCHAR_TO_WCHAR(*PathName);
-	const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(PathUri).Get();
+	const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(RulePackage).Get();
 
 	const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
 	const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
@@ -399,9 +400,7 @@ TFuture<TMap<FString, URuleAttribute*>> VitruvioModule::LoadDefaultRuleAttribute
 	}
 
 	return Async(EAsyncExecution::Thread, [=]() -> TMap<FString, URuleAttribute*> {
-		const FString PathName = RulePackage->GetPathName();
-		const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + TCHAR_TO_WCHAR(*PathName);
-		const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(PathUri).Get();
+		const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(RulePackage).Get();
 
 		const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
 		const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
@@ -422,16 +421,21 @@ TFuture<TMap<FString, URuleAttribute*>> VitruvioModule::LoadDefaultRuleAttribute
 	});
 }
 
-TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(const std::wstring& InUri) const
+TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(URulePackage* const RulePackage) const
 {
 	TPromise<ResolveMapSPtr> Promise;
 	TFuture<ResolveMapSPtr> Future = Promise.GetFuture();
-	FString Uri = WCHAR_TO_TCHAR(InUri.c_str());
+
+	const FString PathName = RulePackage->GetPathName();
+	const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + TCHAR_TO_WCHAR(*PathName);
+	const FString Uri = WCHAR_TO_TCHAR(PathUri.c_str());
+
+	const TLazyObjectPtr<URulePackage> LazyRulePackagePtr(RulePackage);
 
 	// Check if has already been cached
 	{
 		FScopeLock Lock(&LoadResolveMapLock);
-		const auto CachedResolveMap = ResolveMapCache.Find(Uri);
+		const auto CachedResolveMap = ResolveMapCache.Find(LazyRulePackagePtr);
 		if (CachedResolveMap)
 		{
 			Promise.SetValue(*CachedResolveMap);
@@ -443,7 +447,7 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(const std::wstring& 
 	FGraphEventRef* ScheduledTaskEvent;
 	{
 		FScopeLock Lock(&LoadResolveMapLock);
-		ScheduledTaskEvent = ResolveMapEventGraphRefCache.Find(Uri);
+		ScheduledTaskEvent = ResolveMapEventGraphRefCache.Find(LazyRulePackagePtr);
 	}
 	if (ScheduledTaskEvent)
 	{
@@ -452,9 +456,9 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(const std::wstring& 
 		Prerequisites.Add(*ScheduledTaskEvent);
 		TGraphTask<TAsyncGraphTask<ResolveMapSPtr>>::CreateTask(&Prerequisites)
 			.ConstructAndDispatchWhenReady(
-				[this, Uri]() {
+				[this, LazyRulePackagePtr]() {
 					FScopeLock Lock(&LoadResolveMapLock);
-					return ResolveMapCache[Uri];
+					return ResolveMapCache[LazyRulePackagePtr];
 				},
 				MoveTemp(Promise), ENamedThreads::AnyThread);
 	}
@@ -464,15 +468,15 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(const std::wstring& 
 		{
 			FScopeLock Lock(&LoadResolveMapLock);
 			// Task which does the actual resolve map loading which might take a long time
-			LoadTask = TGraphTask<FLoadResolveMapTask>::CreateTask().ConstructAndDispatchWhenReady(MoveTemp(Promise), Uri, ResolveMapCache, LoadResolveMapLock);
-			ResolveMapEventGraphRefCache.Add(Uri, LoadTask);
+			LoadTask = TGraphTask<FLoadResolveMapTask>::CreateTask().ConstructAndDispatchWhenReady(MoveTemp(Promise), LazyRulePackagePtr, Uri, ResolveMapCache, LoadResolveMapLock);
+			ResolveMapEventGraphRefCache.Add(LazyRulePackagePtr, LoadTask);
 		}
 
 		// Task which removes the event from the cache once finished
 		FFunctionGraphTask::CreateAndDispatchWhenReady(
-			[this, Uri]() {
+			[this, LazyRulePackagePtr]() {
 				FScopeLock Lock(&LoadResolveMapLock);
-				ResolveMapEventGraphRefCache.Remove(Uri);
+				ResolveMapEventGraphRefCache.Remove(LazyRulePackagePtr);
 			},
 			TStatId(), LoadTask, ENamedThreads::AnyThread);
 	}

@@ -83,10 +83,10 @@ private:
 
 	UnrealLogHandler* LogHandler = nullptr;
 
-	mutable TMap<FString, ResolveMapSPtr> ResolveMapCache;
-	mutable TMap<FString, FGraphEventRef> ResolveMapEventGraphRefCache;
+	mutable TMap<TLazyObjectPtr<URulePackage>, ResolveMapSPtr> ResolveMapCache;
+	mutable TMap<TLazyObjectPtr<URulePackage>, FGraphEventRef> ResolveMapEventGraphRefCache;
 
 	mutable FCriticalSection LoadResolveMapLock;
 
-	TFuture<ResolveMapSPtr> LoadResolveMapAsync(const std::wstring& InUri) const;
+	TFuture<ResolveMapSPtr> LoadResolveMapAsync(URulePackage* RulePackage) const;
 };
