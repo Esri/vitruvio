@@ -1,18 +1,21 @@
-Language                        : Cpp
-BasedOnStyle                    : LLVM
-IndentWidth                     : 4
-TabWidth                        : 4
-UseTab                          : Always
-Standard                        : Cpp11
-BreakBeforeBraces               : Allman
-PointerAlignment                : Left
-AccessModifierOffset            : -4
-AllowShortFunctionsOnASingleLine: None
-ColumnLimit                     : 180
-ReflowComments                  : true
-FixNamespaceComments            : true
-SpacesInAngles                  : false
-NamespaceIndentation            : All
+Language                                      : Cpp
+BasedOnStyle                                  : LLVM
+IndentWidth                                   : 4
+TabWidth                                      : 4
+UseTab                                        : Always
+Standard                                      : Cpp11
+BreakBeforeBraces                             : Allman
+PointerAlignment                              : Left
+AccessModifierOffset                          : -4
+ColumnLimit                                   : 150
+ReflowComments                                : true
+FixNamespaceComments                          : true
+AlwaysBreakTemplateDeclarations               : Yes
+AllowShortCaseLabelsOnASingleLine             : true
+NamespaceIndentation                          : Inner
+AllowShortBlocksOnASingleLine                 : Never
+AllowShortFunctionsOnASingleLine              : Inline
+AllowShortLambdasOnASingleLine                : Inline
 IncludeCategories:
   - Regex:           'generated.h'
     Priority:        2

@@ -9,15 +9,14 @@ import sys
 
 def check_is_path_valid(path: pathlib.Path) -> None:
     if not path.exists() or not path.is_dir():
-        print("Invalid path: '{}'".format(path_git), file=sys.stderr)
-        print("Make sure the path exists and is a valid directory.", file=sys.stderr)
+        print("! Error: Invalid path: '{}'".format(path), file=sys.stderr)
         sys.exit(1)
 
 def check_clang_format() -> None:
     try:
         subprocess.call(["clang-format", "--version"])
     except:
-        print("Error: clang-format cannot be found.", file=sys.stderr)
+        print("! Error: clang-format cannot be found.", file=sys.stderr)
         sys.exit(1)
 
 check_clang_format()

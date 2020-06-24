@@ -5,14 +5,16 @@ import subprocess
 import sys
 
 
+# Configuration Constants.
 formatted_files = ['.cpp', '.h', '.hpp']
 formatting_cmd = "clang-format -style=file -i"
 
-path_root = pathlib.Path.cwd().absolute()
+# Root path is either CWD or provided path.
+path_root = pathlib.Path.cwd().absolute() if len(sys.argv) <= 1 else pathlib.Path(sys.argv[1]).absolute()
 
+# Find all files of the specified extensions recursively in the root folder.
 targets = [path_root.glob('**/*{}'.format(extension)) for extension in formatted_files]
 targets = [file for sublist in targets for file in sublist]
-
 
 for target in targets:
     print("> Formatting file '{}'".format(target.relative_to(path_root)))
