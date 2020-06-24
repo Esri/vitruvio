@@ -42,7 +42,7 @@ public:
 
 	/** Automatically hide initial shape (i.e. this actor's static mesh) after generation. */
 	UPROPERTY(EditAnywhere, DisplayName = "Hide after Generation", Category = "CGA")
-	bool HideAfterGeneration = true;
+	bool HideAfterGeneration = false;
 
 	/** Rule attributes used for generation. */
 	UPROPERTY(EditAnywhere, DisplayName = "Attributes", Category = "CGA")
