@@ -15,6 +15,5 @@ public:
 	UPROPERTY()
 	TArray<uint8> Data;
 
-	virtual void PreSave(const class ITargetPlatform* TargetPlatform) override;
-	;
+	void PreSave(const class ITargetPlatform* TargetPlatform) override;
 };

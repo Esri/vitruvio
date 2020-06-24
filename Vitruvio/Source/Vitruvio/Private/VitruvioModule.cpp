@@ -426,10 +426,6 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(URulePackage* const 
 	TPromise<ResolveMapSPtr> Promise;
 	TFuture<ResolveMapSPtr> Future = Promise.GetFuture();
 
-	const FString PathName = RulePackage->GetPathName();
-	const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + TCHAR_TO_WCHAR(*PathName);
-	const FString Uri = WCHAR_TO_TCHAR(PathUri.c_str());
-
 	const TLazyObjectPtr<URulePackage> LazyRulePackagePtr(RulePackage);
 
 	// Check if has already been cached
@@ -466,6 +462,10 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(URulePackage* const 
 	{
 		FGraphEventRef LoadTask;
 		{
+			const FString PathName = RulePackage->GetPathName();
+			const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + TCHAR_TO_WCHAR(*PathName);
+			const FString Uri = WCHAR_TO_TCHAR(PathUri.c_str());
+
 			FScopeLock Lock(&LoadResolveMapLock);
 			// Task which does the actual resolve map loading which might take a long time
 			LoadTask = TGraphTask<FLoadResolveMapTask>::CreateTask().ConstructAndDispatchWhenReady(MoveTemp(Promise), LazyRulePackagePtr, Uri, ResolveMapCache, LoadResolveMapLock);
