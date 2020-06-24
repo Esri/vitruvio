@@ -127,6 +127,12 @@ void AVitruvioActor::Generate()
 					}
 					StaticMeshActor->RegisterAllComponents();
 
+					if (HideAfterGeneration)
+					{
+						GetStaticMeshComponent()->SetVisibility(false);
+						SetActorHiddenInGame(true);
+					}
+					
 					bNeedsRegenerate = false;
 				}
 				
@@ -145,6 +151,8 @@ void AVitruvioActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChang
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
+	bool bGenerate = GenerateAutomatically; // allow control over generate() in case we trigger it in LoadDefaultAttributes()
+
 	if (PropertyChangedEvent.Property && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(AVitruvioActor, Rpk))
 	{
 		Attributes.Empty();
@@ -153,6 +161,7 @@ void AVitruvioActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChang
 		if (Rpk && InitialShape)
 		{
 			LoadDefaultAttributes(InitialShape);
+			bGenerate = false;
 		}
 	}
 
@@ -170,6 +179,7 @@ void AVitruvioActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChang
 			if (Rpk)
 			{
 				LoadDefaultAttributes(InitialShape);
+				bGenerate = false;
 			}
 
 			if (!bValidRandomSeed)
@@ -180,7 +190,7 @@ void AVitruvioActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChang
 		}
 	}
 
-	if (GenerateAutomatically)
+	if (bGenerate)
 	{
 		Generate();
 	}
