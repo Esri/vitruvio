@@ -61,7 +61,34 @@ public:
 	}
 };
 
-// Function is closely adapted from FPoly#GetOutsideWindings. Works for concave and convex polygons but does not support holes.
+bool FindConnected(const TArray<FEdge>& Edges, const FEdge& Edge, FEdge& OutConnected, SIZE_T& OutIndex)
+{
+	OutIndex = -1;
+
+	for (int32 EdgeIndex = 0; EdgeIndex < Edges.Num(); ++EdgeIndex)
+	{
+		FEdge Next = Edges[EdgeIndex];
+
+		const bool IsConnected = Edge.Vertex[1].Equals(Next.Vertex[0]);
+		const bool InverseConnected = Edge.Vertex[1].Equals(Next.Vertex[1]);
+
+		if (InverseConnected)
+		{
+			Exchange(Next.Vertex[0], Next.Vertex[1]);
+		}
+
+		if (IsConnected || InverseConnected)
+		{
+			OutConnected = Next;
+			OutIndex = EdgeIndex;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+// Function is adapted from FPoly#GetOutsideWindings. Works for concave and convex polygons but does not support holes.
 void GetOutsideWindings(const TArray<FVector>& InVertices, const TArray<int32>& InIndices, TArray<TArray<FVector>>& InWindings)
 {
 	InWindings.Empty();
@@ -80,10 +107,10 @@ void GetOutsideWindings(const TArray<FVector>& InVertices, const TArray<int32>& 
 
 			FEdge Edge(InVertices[Index0], InVertices[Index1]);
 
-			int32 idx;
-			if (EdgePool.Find(Edge, idx))
+			int32 FoundIndex;
+			if (EdgePool.Find(Edge, FoundIndex))
 			{
-				EdgePool[idx].Count++;
+				EdgePool[FoundIndex].Count++;
 			}
 			else
 			{
@@ -93,64 +120,35 @@ void GetOutsideWindings(const TArray<FVector>& InVertices, const TArray<int32>& 
 		}
 	}
 
-	// Remove any edges from the list that are used more than once. This will leave us with a collection of edges that represents the outside of the
-	// shape.
-	for (int32 EdgeIndex = 0; EdgeIndex < EdgePool.Num(); ++EdgeIndex)
+	// Remove any edges from the list that are used more than once which will leave edges at the outside of the shape
+	EdgePool.RemoveAll([](const FEdge& E) { return E.Count > 1; });
+
+	// Organize the remaining edges in the list so that the vertices will meet up to form a continuous outline around the shape
+	while (EdgePool.Num() > 0)
 	{
-		const FEdge* Edge = &EdgePool[EdgeIndex];
+		TArray<FEdge> ConnectedEdges;
 
-		if (Edge->Count > 1)
-		{
-			EdgePool.RemoveAt(EdgeIndex);
-			EdgeIndex = -1;
-		}
-	}
-
-	// Organize the remaining edges in the list so that the vertices will meet up, start to end, properly to form a continuous outline around the
-	// brush shape.
-	while (EdgePool.Num())
-	{
-		TArray<FEdge> OrderedEdges;
-
-		FEdge Edge0 = EdgePool[0];
+		FEdge Current = EdgePool[0];
 		EdgePool.RemoveAt(0);
-		OrderedEdges.Add(Edge0);
+		ConnectedEdges.Add(Current);
 
-		for (int32 EdgeIndex = 0; EdgeIndex < EdgePool.Num(); ++EdgeIndex)
+		SIZE_T ConnectedIndex;
+		FEdge Next;
+		while (FindConnected(EdgePool, Current, Next, ConnectedIndex))
 		{
-			FEdge Edge1 = EdgePool[EdgeIndex];
-
-			if (Edge0.Vertex[1].Equals(Edge1.Vertex[0]))
-			{
-				// If these edges are already lined up correctly then add Edge1 into the ordered array, remove it from the pool and start over.
-				OrderedEdges.Add(Edge1);
-				Edge0 = Edge1;
-				EdgePool.RemoveAt(EdgeIndex);
-				EdgeIndex = -1;
-			}
-			else if (Edge0.Vertex[1].Equals(Edge1.Vertex[1]))
-			{
-				// If these edges are lined up but the verts are backwards, swap the verts on Edge1, add it into the ordered array, remove it from the
-				// pool and start over.
-				Exchange(Edge1.Vertex[0], Edge1.Vertex[1]);
-
-				OrderedEdges.Add(Edge1);
-				Edge0 = Edge1;
-				EdgePool.RemoveAt(EdgeIndex);
-				EdgeIndex = -1;
-			}
+			ConnectedEdges.Add(Next);
+			Current = Next;
+			EdgePool.RemoveAt(ConnectedIndex);
 		}
 
 		// Create the winding array
-		TArray<FVector> WindingVerts;
-		for (int32 e = 0; e < OrderedEdges.Num(); ++e)
+		TArray<FVector> WindingVertices;
+		for (const auto& Edge : ConnectedEdges)
 		{
-			FEdge* Edge = &OrderedEdges[e];
-
-			WindingVerts.Add(Edge->Vertex[0]);
+			WindingVertices.Add(Edge.Vertex[0]);
 		}
 
-		InWindings.Add(WindingVerts);
+		InWindings.Add(WindingVertices);
 	}
 }
 
