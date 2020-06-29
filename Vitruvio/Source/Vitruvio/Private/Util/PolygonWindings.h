@@ -12,10 +12,9 @@ namespace PolygonWindings
 	 *
 	 * Note: This function is adapted from FPoly#GetOutsideWindings.
 	 *
-	 * @param InVertices		Input vertices
+	 * @param InVertices	Input vertices
 	 * @param InIndices		Input triangle indices
-	 * @param InWindings		The resulting sets of vertices that represent the windings
 	 */
-	void GetOutsideWindings(const TArray<FVector>& InVertices, const TArray<int32>& InIndices, TArray<TArray<FVector>>& InWindings);
+	TArray<TArray<FVector>> GetOutsideWindings(const TArray<FVector>& InVertices, const TArray<int32>& InIndices);
 } // namespace PolygonWindings
 } // namespace Vitruvio
