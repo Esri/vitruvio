@@ -33,6 +33,12 @@ FQuat Conjugate(const FQuat& In)
 	return Res;
 }
 
+// Standard conversion from meters (PRT) to centimeters (UE4)
+constexpr float PRT_TO_UE_SCALE = 100.0f;
+
+// Note that we use the same tolerance (1e-25f) as in PRT to avoid numerical issues when converting planar geometry
+constexpr float PRT_DIVISOR_LIMIT = 1e-25f;
+
 } // namespace
 
 void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const double* vtx, size_t vtxSize, const double* nrm, size_t nrmSize,
@@ -65,7 +71,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 	for (size_t VertexIndex = 0; VertexIndex < vtxSize; VertexIndex += 3)
 	{
 		const FVertexID VertexID = Description.CreateVertex();
-		VertexPositions[VertexID] = FVector(vtx[VertexIndex], vtx[VertexIndex + 2], vtx[VertexIndex + 1]) * 100;
+		VertexPositions[VertexID] = FVector(vtx[VertexIndex], vtx[VertexIndex + 2], vtx[VertexIndex + 1]) * PRT_TO_UE_SCALE;
 	}
 
 	// Create Polygons
@@ -167,8 +173,7 @@ void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform)
 	const int32 SignumDet = FMath::Sign(TransformationMat.Determinant());
 
 	// Create proper rotation matrix (remove scaling and translation and det == 1)
-	// Note that we use the same tolerance (1e-25f) as in PRT to avoid numerical issues when converting planar geometry
-	FMatrix RotationMat = TransformationMat.GetMatrixWithoutScale(1e-25f).RemoveTranslation();
+	FMatrix RotationMat = TransformationMat.GetMatrixWithoutScale(PRT_DIVISOR_LIMIT).RemoveTranslation();
 	RotationMat = RotationMat * SignumDet;
 	RotationMat.M[3][3] = 1;
 
@@ -177,10 +182,11 @@ void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform)
 	const FVector Scale = TransformationMat.GetScaleVector() * SignumDet;
 	const FVector Translation = TransformationMat.GetOrigin();
 
-	// convert from y-up (CE) to z-up (Unreal) (see https://stackoverflow.com/questions/16099979/can-i-switch-x-y-z-in-a-quaternion)
+	// Convert from right-handed y-up (CE) to left-handed z-up (Unreal) (see
+	// https://stackoverflow.com/questions/16099979/can-i-switch-x-y-z-in-a-quaternion)
 	const FQuat CERotation = FQuat(Rotation.X, Rotation.Z, Rotation.Y, Rotation.W);
 	const FVector CEScale = FVector(Scale.X, Scale.Z, Scale.Y);
-	const FVector CETranslation = FVector(Translation.X, Translation.Z, Translation.Y) * 100;
+	const FVector CETranslation = FVector(Translation.X, Translation.Z, Translation.Y) * PRT_TO_UE_SCALE;
 
 	const FTransform Transform(CERotation.GetNormalized(), CETranslation, CEScale);
 
