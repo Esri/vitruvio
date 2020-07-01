@@ -15,7 +15,7 @@ struct FWindingEdge
 
 	FWindingEdge() : Index0(-1), Index1(-1), Count(0) {}
 
-	FWindingEdge(int32 Index0, int32 Index1) : Index0(Index0), Index1(Index1), Count(1) {}
+	FWindingEdge(const int32 Index0, const int32 Index1) : Index0(Index0), Index1(Index1), Count(1) {}
 
 	bool operator==(const FWindingEdge& E) const { return (E.Index0 == Index0 && E.Index1 == Index1) || (E.Index0 == Index1 && E.Index1 == Index0); }
 };
