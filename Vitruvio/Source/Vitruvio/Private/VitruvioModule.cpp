@@ -101,7 +101,7 @@ void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder,
 		}
 	}
 
-	TArray<TArray<FVector>> Windings = Vitruvio::PolygonWindings::GetOutsideWindings(MeshVertices, MeshIndices);
+	const TArray<TArray<FVector>> Windings = Vitruvio::PolygonWindings::GetOutsideWindings(MeshVertices, MeshIndices);
 
 	std::vector<double> vertexCoords;
 	std::vector<uint32_t> indices;
