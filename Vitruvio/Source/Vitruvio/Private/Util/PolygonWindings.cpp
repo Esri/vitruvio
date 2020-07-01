@@ -8,8 +8,8 @@ namespace
 {
 struct FWindingEdge
 {
-	int32 Index0;
-	int32 Index1;
+	const int32 Index0;
+	const int32 Index1;
 
 	int32 Count;
 
@@ -60,7 +60,6 @@ namespace PolygonWindings
 				}
 			}
 		}
-
 		
 		// Only save edges which are used exactly once, this will leave edges at the outside of the shape
 		TSortedMap<int32, FWindingEdge> EdgeMap;
@@ -80,16 +79,18 @@ namespace PolygonWindings
 
 			// Get and remove first edge
 			auto EdgeIter = EdgeMap.CreateIterator();
-			FWindingEdge Current = EdgeIter.Value();
-			WindingVertices.Add(InVertices[Current.Index0]);
+			const FWindingEdge FirstEdge = EdgeIter.Value();
 			EdgeIter.RemoveCurrent();
-
+			
+			WindingVertices.Add(InVertices[FirstEdge.Index0]);
+			int NextIndex = FirstEdge.Index1;
+			
 			// Find connected edges
-			while (EdgeMap.Contains(Current.Index1))
+			while (EdgeMap.Contains(NextIndex))
 			{
-				const FWindingEdge& Next = EdgeMap.FindAndRemoveChecked(Current.Index1);
-				WindingVertices.Add(InVertices[Next.Index0]);
-				Current = Next;
+				const FWindingEdge& Current = EdgeMap.FindAndRemoveChecked(NextIndex);
+				WindingVertices.Add(InVertices[Current.Index0]);
+				NextIndex = Current.Index1;
 			}
 
 			Windings.Add(WindingVertices);
