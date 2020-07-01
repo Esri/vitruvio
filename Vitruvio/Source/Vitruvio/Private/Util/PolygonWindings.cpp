@@ -76,27 +76,20 @@ namespace PolygonWindings
 		TArray<TArray<FVector>> Windings;
 		while (EdgeMap.Num() > 0)
 		{
-			TArray<FWindingEdge> ConnectedEdges;
+			TArray<FVector> WindingVertices;
 
 			// Get and remove first edge
 			auto EdgeIter = EdgeMap.CreateIterator();
 			FWindingEdge Current = EdgeIter.Value();
+			WindingVertices.Add(InVertices[Current.Index0]);
 			EdgeIter.RemoveCurrent();
-			ConnectedEdges.Add(Current);
 
 			// Find connected edges
 			while (EdgeMap.Contains(Current.Index1))
 			{
 				const FWindingEdge& Next = EdgeMap.FindAndRemoveChecked(Current.Index1);
-				ConnectedEdges.Add(Next);
+				WindingVertices.Add(InVertices[Next.Index0]);
 				Current = Next;
-			}
-
-			// Create the winding array
-			TArray<FVector> WindingVertices;
-			for (const auto& Edge : ConnectedEdges)
-			{
-				WindingVertices.Add(InVertices[Edge.Index0]);
 			}
 
 			Windings.Add(WindingVertices);
