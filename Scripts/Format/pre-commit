@@ -12,7 +12,7 @@ path_root = path_hooks.parent.parent
 
 # Get all files that have registered changes in this commit.
 cmd_git_diff = subprocess.Popen("git diff --name-only --cached", shell=True, stdout=subprocess.PIPE, cwd=path_root)
-cmd_git_diff.wait()
+cmd_git_diff.communicate()
 
 # Remove the end of line characters from all file paths.
 output = cmd_git_diff.stdout.readlines()
