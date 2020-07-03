@@ -12,11 +12,11 @@ path_root = path_hooks.parent.parent
 
 # Get all files that have registered changes in this commit.
 cmd_git_diff = subprocess.Popen("git diff --name-only --cached", shell=True, stdout=subprocess.PIPE, cwd=path_root)
-cmd_git_diff.communicate()
+git_diff_out, git_diff_err = cmd_git_diff.communicate()
 
 # Remove the end of line characters from all file paths.
-output = cmd_git_diff.stdout.readlines()
-output = [path_root.joinpath(line.decode('utf-8').rstrip()) for line in output]
+output = git_diff_out.decode('utf-8').splitlines()
+output = [path_root.joinpath(line.rstrip()) for line in output]
 
 # Filter all files by their extension and remove anything but header and source file.
 targets: [pathlib.Path] = filter(lambda f: f.exists() and f.is_file(), output)
