@@ -30,5 +30,10 @@
 		"Win64": [
 			"PowerShell.exe -ExecutionPolicy Bypass -File \"$(PluginDir)/Source/Scripts/CleanupEncoderDlls.ps1\" -PluginDir \"$(PluginDir)\""
 		]
+	},
+	"PostBuildSteps": {
+		"Win64": [
+			"PowerShell.exe -ExecutionPolicy Bypass -File \"$(PluginDir)/Source/Scripts/UninstallPRT.ps1\" -Enabled -PluginDir \"$(PluginDir)\""
+		]
 	}
 }
