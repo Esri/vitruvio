@@ -24,6 +24,29 @@ struct FGenerateResult
 	TMap<UStaticMesh*, TArray<FTransform>> Instances;
 };
 
+class FAttributeMap final : public FGCObject
+{
+public:
+	TMap<FString, URuleAttribute*> Attributes;
+
+	void AddReferencedObjects(FReferenceCollector& Collector) override
+	{
+		TArray<URuleAttribute*> ReferencedObjects;
+		Attributes.GenerateValueArray(ReferencedObjects);
+		Collector.AddReferencedObjects(ReferencedObjects);
+	}
+
+	// This function has to be defined explicitly, otherwise it generates a compiler error because the parent operator= is not accessible.
+	FAttributeMap& operator=(const FAttributeMap& Other)
+	{
+		if (this != &Other)
+		{
+			this->Attributes = Other.Attributes;
+		}
+		return *this;
+	}
+};
+
 class VitruvioModule final : public IModuleInterface
 {
 public:
@@ -42,8 +65,9 @@ public:
 	 * \param RandomSeed
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API TFuture<FGenerateResult> GenerateAsync(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
-														URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const;
+	VITRUVIO_API TFuture<FGenerateResult> GenerateAsync(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
+														UMaterial* TranslucentParent, URulePackage* RulePackage,
+														const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const;
 
 	/**
 	 * \brief Generate the models with the given InitialShape, RulePackage and Attributes.
@@ -57,8 +81,9 @@ public:
 	 * \param RandomSeed
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API FGenerateResult Generate(const UStaticMesh* InitialShape, ::UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
-										  URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const;
+	VITRUVIO_API FGenerateResult Generate(const UStaticMesh* InitialShape, ::UMaterial* OpaqueParent, UMaterial* MaskedParent,
+										  UMaterial* TranslucentParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes,
+										  const int32 RandomSeed) const;
 
 	/**
 	 * \brief Asynchronously loads the default attribute values for the given initial shape and rule package
@@ -68,12 +93,10 @@ public:
 	 * \param RandomSeed
 	 * \return
 	 */
-	VITRUVIO_API TFuture<TMap<FString, URuleAttribute*>> LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage, const int32 RandomSeed) const;
+	VITRUVIO_API TFuture<FAttributeMap> LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage,
+																	   const int32 RandomSeed) const;
 
-	static VitruvioModule& Get()
-	{
-		return FModuleManager::LoadModuleChecked<VitruvioModule>("Vitruvio");
-	}
+	static VitruvioModule& Get() { return FModuleManager::LoadModuleChecked<VitruvioModule>("Vitruvio"); }
 
 private:
 	void* PrtDllHandle = nullptr;

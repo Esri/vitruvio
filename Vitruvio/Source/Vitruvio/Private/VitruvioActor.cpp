@@ -9,23 +9,23 @@
 
 namespace
 {
-	int32 CalculateRandomSeed(const FTransform Transform, UStaticMesh* const InitialShape)
+int32 CalculateRandomSeed(const FTransform Transform, UStaticMesh* const InitialShape)
+{
+	FVector Centroid = FVector::ZeroVector;
+	if (InitialShape->RenderData != nullptr && InitialShape->RenderData->LODResources.IsValidIndex(0))
 	{
-		FVector Centroid = FVector::ZeroVector;
-		if (InitialShape->RenderData != nullptr && InitialShape->RenderData->LODResources.IsValidIndex(0))
+		const FStaticMeshLODResources& LOD = InitialShape->RenderData->LODResources[0];
+		for (auto SectionIndex = 0; SectionIndex < LOD.Sections.Num(); ++SectionIndex)
 		{
-			const FStaticMeshLODResources& LOD = InitialShape->RenderData->LODResources[0];
-			for (auto SectionIndex = 0; SectionIndex < LOD.Sections.Num(); ++SectionIndex)
+			for (uint32 VertexIndex = 0; VertexIndex < LOD.VertexBuffers.PositionVertexBuffer.GetNumVertices(); ++VertexIndex)
 			{
-				for (uint32 VertexIndex = 0; VertexIndex < LOD.VertexBuffers.PositionVertexBuffer.GetNumVertices(); ++VertexIndex)
-				{
-					Centroid += LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(VertexIndex);
-				}
+				Centroid += LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(VertexIndex);
 			}
-			Centroid = Centroid / LOD.GetNumVertices();
 		}
-		return GetTypeHash(Transform.TransformPosition(Centroid));
+		Centroid = Centroid / LOD.GetNumVertices();
 	}
+	return GetTypeHash(Transform.TransformPosition(Centroid));
+}
 } // namespace
 
 AVitruvioActor::AVitruvioActor()
@@ -80,7 +80,8 @@ void AVitruvioActor::Generate()
 
 	if (InitialShape)
 	{
-		TFuture<FGenerateResult> GenerateFuture = VitruvioModule::Get().GenerateAsync(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, Rpk, Attributes, RandomSeed);
+		TFuture<FGenerateResult> GenerateFuture =
+			VitruvioModule::Get().GenerateAsync(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, Rpk, Attributes, RandomSeed);
 
 		// clang-format off
 		GenerateFuture.Next([=](const FGenerateResult& Result)
@@ -210,12 +211,12 @@ void AVitruvioActor::LoadDefaultAttributes(UStaticMesh* InitialShape)
 
 	AttributesReady = false;
 
-	TFuture<TMap<FString, URuleAttribute*>> AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk, RandomSeed);
-	AttributesFuture.Next([this](const TMap<FString, URuleAttribute*>& Result) {
-		Attributes = Result;
+	TFuture<FAttributeMap> AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk, RandomSeed);
+	AttributesFuture.Next([this](const FAttributeMap& Result) {
+		Attributes = Result.Attributes;
 		AttributesReady = true;
 
-		FGenericPlatformMisc::MemoryBarrier();
+		FPlatformMisc::MemoryBarrier();
 
 #if WITH_EDITOR
 		// Notify possible listeners (eg. Details panel) about changes to the Attributes
