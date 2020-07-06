@@ -49,13 +49,21 @@ public class PRT : ModuleRules
 
 		// 1. Check if prt is already available and has correct version, otherwise download from official github repo
 		bool PrtInstalled = Directory.Exists(LibDir) && Directory.Exists(BinDir);
-
+		
 		string PrtCorePath = Path.Combine(BinDir, PrtCoreDllName);
 		bool PrtCoreExists = File.Exists(PrtCorePath);
 		bool PrtVersionMatch = PrtCoreExists && CheckDllVersion(PrtCorePath, PrtMajor, PrtMinor, PrtBuild);
 
 		if (!PrtInstalled || !PrtVersionMatch)
 		{
+
+			string PrtUrl = "https://github.com/Esri/esri-cityengine-sdk/releases/download";
+			string PrtVersion = string.Format("{0}.{1}.{2}", PrtMajor, PrtMinor, PrtBuild);
+
+			string PrtLibName = string.Format("esri_ce_sdk-{0}-{1}", PrtVersion, Platform.PrtPlatform);
+			string PrtLibZipFile = PrtLibName + ".zip";
+			string PrtDownloadUrl = Path.Combine(PrtUrl, PrtVersion, PrtLibZipFile);
+
 			try
 			{
 				if (Directory.Exists(LibDir)) Directory.Delete(LibDir, true);
@@ -67,13 +75,6 @@ public class PRT : ModuleRules
 					if (!PrtInstalled) Console.WriteLine("PRT not found");
 					Console.WriteLine("Updating PRT");
 				}
-
-				string PrtUrl = "https://github.com/Esri/esri-cityengine-sdk/releases/download";
-				string PrtVersion = string.Format("{0}.{1}.{2}", PrtMajor, PrtMinor, PrtBuild);
-
-				string PrtLibName = string.Format("esri_ce_sdk-{0}-{1}", PrtVersion, Platform.PrtPlatform);
-				string PrtLibZipFile = PrtLibName + ".zip";
-				string PrtDownloadUrl = Path.Combine(PrtUrl, PrtVersion, PrtLibZipFile);
 
 				if (Debug) System.Console.WriteLine("Downloading " + PrtDownloadUrl + "...");
 
@@ -91,13 +92,11 @@ public class PRT : ModuleRules
 				Copy(Path.Combine(ModuleDirectory, PrtLibName, "lib"), Path.Combine(ModuleDirectory, LibDir));
 				Copy(Path.Combine(ModuleDirectory, PrtLibName, "bin"), Path.Combine(ModuleDirectory, BinDir));
 				Copy(Path.Combine(ModuleDirectory, PrtLibName, "include"), Path.Combine(ModuleDirectory, "include"));
-
-				Directory.Delete(Path.Combine(ModuleDirectory, PrtLibName), true);
-				File.Delete(Path.Combine(ModuleDirectory, PrtLibZipFile));
 			}
 			finally
 			{
-				// TODO cleanup
+				Directory.Delete(Path.Combine(ModuleDirectory, PrtLibName), true);
+				File.Delete(Path.Combine(ModuleDirectory, PrtLibZipFile));
 			}
 		}
 		else if (Debug)
