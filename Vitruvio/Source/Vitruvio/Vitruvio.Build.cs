@@ -27,7 +27,9 @@ public class Vitruvio : ModuleRules
 				"InputCore",
 				"MeshDescription",
 				"StaticMeshDescription",
-				"ImageWrapper"
+				"ImageWrapper",
+				"HTTP",
+				"zlib"
 			}
 		);
 

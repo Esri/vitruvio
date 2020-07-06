@@ -112,4 +112,7 @@ private:
 	mutable FCriticalSection LoadResolveMapLock;
 
 	TFuture<ResolveMapSPtr> LoadResolveMapAsync(URulePackage* RulePackage) const;
+
+	void DownloadPrt();
+	void InitializePrt();
 };

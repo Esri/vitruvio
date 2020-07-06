@@ -13,6 +13,8 @@
 #include "prt/API.h"
 #include "prtx/EncoderInfoBuilder.h"
 
+#include "ThirdParty/zlib/zlib-1.2.5/Src/contrib/minizip/unzip.h"
+
 #include "Core.h"
 #include "HttpModule.h"
 #include "Interfaces/IPluginManager.h"
@@ -267,18 +269,114 @@ FAttributeMap ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const Ru
 	return UnrealAttributeMap;
 }
 
-} // namespace
-
-void VitruvioModule::StartupModule()
+FString GetBinariesPath()
 {
 	const FString BaseDir = FPaths::ConvertRelativePathToFull(IPluginManager::Get().FindPlugin("UnrealGeometryEncoder")->GetBaseDir());
 	const FString BinariesPath = FPaths::Combine(*BaseDir, TEXT("Binaries"), TEXT("Win64"));
-	const FString PrtLibPath = FPaths::Combine(*BinariesPath, TEXT("com.esri.prt.core.dll"));
+	return BinariesPath;
+}
 
+FString GetPrtDllPath()
+{
+	return FPaths::Combine(*GetBinariesPath(), TEXT("com.esri.prt.core.dll"));
+}
+
+bool PrtInstalled()
+{
+	return FPlatformFileManager::Get().GetPlatformFile().FileExists(*GetPrtDllPath());
+}
+
+int32 Unzip(const FString& ZipPath)
+{
+	static const int32 BUFFER_SIZE = 8096;
+	static const int32 MAX_FILE_LENGTH = 512;
+
+	const FString ZipFolder = FPaths::GetPath(ZipPath);
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+
+	unzFile ZipFile = unzOpen(TCHAR_TO_ANSI(*ZipPath));
+
+	unz_global_info UnzGlobalInfo;
+	if (unzGetGlobalInfo(ZipFile, &UnzGlobalInfo) != UNZ_OK)
+	{
+		unzClose(ZipFile);
+		return -1;
+	}
+
+	uint8 ReadBuffer[BUFFER_SIZE];
+	for (unsigned long FileIndex = 0; FileIndex < UnzGlobalInfo.number_entry; ++FileIndex)
+	{
+		unz_file_info FileInfo;
+		char Filename[MAX_FILE_LENGTH];
+		if (unzGetCurrentFileInfo(ZipFile, &FileInfo, Filename, MAX_FILE_LENGTH, nullptr, 0, nullptr, 0) != UNZ_OK)
+		{
+			unzClose(ZipFile);
+			return -1;
+		}
+
+		const FString FullPath = FPaths::Combine(ZipFolder, ANSI_TO_TCHAR(Filename));
+		PlatformFile.CreateDirectoryTree(*FPaths::GetPath(FullPath));
+
+		IFileHandle* Handle = PlatformFile.OpenWrite(*FullPath, false, false);
+		if (unzOpenCurrentFile(ZipFile) != UNZ_OK)
+		{
+			delete Handle;
+			unzClose(ZipFile);
+			return -1;
+		}
+
+		int Read;
+		while ((Read = unzReadCurrentFile(ZipFile, ReadBuffer, BUFFER_SIZE)) > 0)
+		{
+			Handle->Write(ReadBuffer, Read);
+		}
+
+		if (Read != UNZ_OK)
+		{
+			return -1;
+		}
+
+		if (unzGoToNextFile(ZipFile) != UNZ_OK)
+		{
+			unzClose(ZipFile);
+			return -1;
+		}
+
+		unzCloseCurrentFile(ZipFile);
+		Handle->Flush();
+		delete Handle;
+	}
+
+	return 0;
+}
+
+} // namespace
+
+void VitruvioModule::DownloadPrt()
+{
+	TSharedRef<IHttpRequest> Request = FHttpModule::Get().CreateRequest();
+	Request->SetVerb(TEXT("GET"));
+	Request->SetURL("https://github.com/Esri/cityengine-sdk/releases/download/2.2.6332/esri_ce_sdk-2.2.6332-win10-vc142-x86_64-rel-opt.zip");
+	Request->OnProcessRequestComplete().BindLambda([=](FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded) {
+		const FString BinariesFolder = GetBinariesPath();
+		const FString PrtZip = FPaths::Combine(BinariesFolder, TEXT("esri_ce_sdk-2.2.6332-win10-vc142-x86_64-rel-opt.zip"));
+
+		IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+		IFileHandle* Handle = PlatformFile.OpenWrite(*PrtZip, false, false);
+		const TArray<uint8>& ZipContent = HttpResponse->GetContent();
+		Handle->Write(ZipContent.GetData(), ZipContent.Num());
+		delete Handle;
+	});
+	Request->ProcessRequest();
+}
+
+void VitruvioModule::InitializePrt()
+{
+	const FString PrtLibPath = GetPrtDllPath();
 	PrtDllHandle = FPlatformProcess::GetDllHandle(*PrtLibPath);
 
 	TArray<wchar_t*> PRTPluginsPaths;
-	PRTPluginsPaths.Add(const_cast<wchar_t*>(TCHAR_TO_WCHAR(*BinariesPath)));
+	PRTPluginsPaths.Add(const_cast<wchar_t*>(TCHAR_TO_WCHAR(*GetBinariesPath())));
 
 	LogHandler = new UnrealLogHandler;
 	prt::addLogHandler(LogHandler);
@@ -288,6 +386,11 @@ void VitruvioModule::StartupModule()
 	Initialized = Status == prt::STATUS_OK;
 
 	PrtCache.reset(prt::CacheObject::create(prt::CacheObject::CACHE_TYPE_DEFAULT));
+}
+
+void VitruvioModule::StartupModule()
+{
+	InitializePrt();
 }
 
 void VitruvioModule::ShutdownModule()
