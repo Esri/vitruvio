@@ -14,9 +14,12 @@
 #include "prtx/EncoderInfoBuilder.h"
 
 #include "Core.h"
+#include "HttpModule.h"
 #include "Interfaces/IPluginManager.h"
 #include "MeshDescription.h"
 #include "Modules/ModuleManager.h"
+#include "Online/HTTP/Public/Interfaces/IHttpRequest.h"
+#include "Online/HTTP/Public/Interfaces/IHttpResponse.h"
 #include "UObject/UObjectBaseUtility.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioModule"
@@ -264,34 +267,6 @@ FAttributeMap ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const Ru
 	return UnrealAttributeMap;
 }
 
-void CleanupGeometryEncoderDlls(const FString& BinariesPath)
-{
-	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-
-	// Find all Unreal dlls
-	TArray<FString> OutFiles;
-	PlatformFile.FindFiles(OutFiles, *BinariesPath, TEXT(".dll"));
-	TArray<FString> UnrealDlls =
-		OutFiles.FilterByPredicate([](const FString& File) -> auto { return FPaths::GetCleanFilename(File).StartsWith(TEXT("UE4Editor-")); });
-
-	// Sort by date and remove newest (don't want to delete)
-	UnrealDlls.Sort([&PlatformFile](const auto& A, const auto& B) -> auto { return PlatformFile.GetTimeStamp(*A) > PlatformFile.GetTimeStamp(*B); });
-	if (UnrealDlls.Num() > 0)
-	{
-		UnrealDlls.RemoveAt(0);
-	}
-
-	// Delete old dlls
-	for (const auto& OldDll : UnrealDlls)
-	{
-		PlatformFile.DeleteFile(*OldDll);
-		FString PdbFile = FPaths::GetBaseFilename(OldDll, false) + TEXT(".pdb");
-		if (PlatformFile.FileExists(*PdbFile))
-		{
-			PlatformFile.DeleteFile(*PdbFile);
-		}
-	}
-}
 } // namespace
 
 void VitruvioModule::StartupModule()
@@ -304,9 +279,6 @@ void VitruvioModule::StartupModule()
 
 	TArray<wchar_t*> PRTPluginsPaths;
 	PRTPluginsPaths.Add(const_cast<wchar_t*>(TCHAR_TO_WCHAR(*BinariesPath)));
-
-	// TODO this cleanup should happen in a post build step. See DatasmithExporter Plugin from the Unreal source for more information
-	CleanupGeometryEncoderDlls(BinariesPath);
 
 	LogHandler = new UnrealLogHandler;
 	prt::addLogHandler(LogHandler);
