@@ -2,10 +2,10 @@
 
 #pragma once
 
+#include "AttributeMap.h"
 #include "PRTTypes.h"
 #include "RuleAttributes.h"
 #include "RulePackage.h"
-#include "AttributeMap.h"
 
 #include "prt/Object.h"
 
@@ -83,6 +83,8 @@ private:
 	CacheObjectUPtr PrtCache;
 
 	UnrealLogHandler* LogHandler = nullptr;
+
+	FSimpleDelegate UnzipProgressDelegate;
 
 	mutable TMap<TLazyObjectPtr<URulePackage>, ResolveMapSPtr> ResolveMapCache;
 	mutable TMap<TLazyObjectPtr<URulePackage>, FGraphEventRef> ResolveMapEventGraphRefCache;

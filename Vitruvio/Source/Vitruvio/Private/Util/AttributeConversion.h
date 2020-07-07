@@ -10,10 +10,7 @@
 
 namespace Vitruvio
 {
-namespace AttributeConversion
-{
-	FAttributeMap ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo);
+FAttributeMap ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo);
 
-	AttributeMapUPtr CreateAttributeMap(const TMap<FString, URuleAttribute*>& Attributes);
-} // namespace AttributeConversion
+AttributeMapUPtr CreateAttributeMap(const TMap<FString, URuleAttribute*>& Attributes);
 } // namespace Vitruvio

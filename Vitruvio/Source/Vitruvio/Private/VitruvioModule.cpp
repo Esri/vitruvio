@@ -105,7 +105,7 @@ void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder,
 		}
 	}
 
-	const TArray<TArray<FVector>> Windings = Vitruvio::PolygonWindings::GetOutsideWindings(MeshVertices, MeshIndices);
+	const TArray<TArray<FVector>> Windings = Vitruvio::GetOutsideWindings(MeshVertices, MeshIndices);
 
 	std::vector<double> vertexCoords;
 	std::vector<uint32_t> indices;
@@ -280,7 +280,7 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 	const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
 	const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
 
-	const AttributeMapUPtr AttributeMap = Vitruvio::AttributeConversion::CreateAttributeMap(Attributes);
+	const AttributeMapUPtr AttributeMap = Vitruvio::CreateAttributeMap(Attributes);
 	InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", AttributeMap.get(), ResolveMap.get());
 
 	AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
@@ -336,7 +336,7 @@ TFuture<FAttributeMap> VitruvioModule::LoadDefaultRuleAttributesAsync(const USta
 
 		const AttributeMapUPtr DefaultAttributeMap(
 			GetDefaultAttributeValues(RuleFile.c_str(), StartRule.c_str(), ResolveMap, InitialShape, RandomSeed));
-		return Vitruvio::AttributeConversion::ConvertAttributeMap(DefaultAttributeMap, RuleInfo);
+		return Vitruvio::ConvertAttributeMap(DefaultAttributeMap, RuleInfo);
 	});
 }
 

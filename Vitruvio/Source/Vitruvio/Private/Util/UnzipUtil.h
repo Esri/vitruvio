@@ -9,40 +9,37 @@
 
 namespace Vitruvio
 {
-namespace Unzip
+class FUnzipProgress : public IAsyncProgress
 {
-	class FUnzipProgress : public IAsyncProgress
+public:
+	FUnzipProgress() = default;
+
+	TOptional<float> GetCompletion() override
 	{
-	public:
-		FUnzipProgress() = default;
-
-		TOptional<float> GetCompletion() override
+		if (TotalFiles.IsSet())
 		{
-			if (TotalFiles.IsSet())
-			{
-				return static_cast<float>(CurrentFile) / TotalFiles.GetValue();
-			}
-			return TOptional<float>();
+			return static_cast<float>(CurrentFile) / TotalFiles.GetValue();
 		}
+		return TOptional<float>();
+	}
 
-		FSimpleDelegate& OnProgressChanged() override { return ProgressDelegate; }
+	FSimpleDelegate& OnProgressChanged() override { return ProgressDelegate; }
 
-		FText GetStatusText() override { return FText::FromString("Unzipping"); }
+	FText GetStatusText() override { return FText::FromString("Unzipping"); }
 
-		void SetTotal(int32 NumFiles) { TotalFiles = NumFiles; }
+	void SetTotal(int32 NumFiles) { TotalFiles = NumFiles; }
 
-		void ReportProgress()
-		{
-			++CurrentFile;
-			ProgressDelegate.ExecuteIfBound();
-		}
+	void ReportProgress()
+	{
+		++CurrentFile;
+		ProgressDelegate.ExecuteIfBound();
+	}
 
-	private:
-		int32 CurrentFile = 0;
-		TOptional<int32> TotalFiles;
-		FSimpleDelegate ProgressDelegate;
-	};
+private:
+	int32 CurrentFile = 0;
+	TOptional<int32> TotalFiles;
+	FSimpleDelegate ProgressDelegate;
+};
 
-	TAsyncResult<bool> Unzip(const FString& ZipPath, const TSharedPtr<FUnzipProgress>& UnzipProgress);
-} // namespace Unzip
+TAsyncResult<bool> Unzip(const FString& ZipPath, const TSharedPtr<FUnzipProgress>& UnzipProgress);
 } // namespace Vitruvio

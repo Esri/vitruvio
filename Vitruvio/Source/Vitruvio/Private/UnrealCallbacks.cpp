@@ -99,11 +99,11 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 		const FPolygonGroupID PolygonGroupId = Description.CreatePolygonGroup();
 
 		// Create material in game thread
-		CreateMaterialFutures.Add(Vitruvio::AsyncHelpers::ExecuteOnGameThread<void>([=, &Attributes]() {
+		CreateMaterialFutures.Add(Vitruvio::ExecuteOnGameThread<void>([=, &Attributes]() {
 			QUICK_SCOPE_CYCLE_COUNTER(STAT_UnrealCallbacks_CreateMaterials);
 			const prt::AttributeMap* MaterialAttributes = materials[PolygonGroupIndex];
 			UMaterialInstanceDynamic* MaterialInstance =
-				GameThread_CreateMaterialInstance(Mesh, OpaqueParent, MaskedParent, TranslucentParent, MaterialAttributes);
+				Vitruvio::GameThread_CreateMaterialInstance(Mesh, OpaqueParent, MaskedParent, TranslucentParent, MaterialAttributes);
 			const FName MaterialSlot = Mesh->AddMaterial(MaterialInstance);
 			Attributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlot;
 		}));
@@ -164,7 +164,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 	// Build mesh in game thread
 	if (BaseVertexIndex > 0)
 	{
-		const TFuture<void> CreateMeshTask = Vitruvio::AsyncHelpers::ExecuteOnGameThread<void>([this, prototypeId, Mesh, &Description]() {
+		const TFuture<void> CreateMeshTask = Vitruvio::ExecuteOnGameThread<void>([this, prototypeId, Mesh, &Description]() {
 			QUICK_SCOPE_CYCLE_COUNTER(STAT_UnrealCallbacks_BuildMeshes);
 
 			TArray<const FMeshDescription*> MeshDescriptionPtrs;

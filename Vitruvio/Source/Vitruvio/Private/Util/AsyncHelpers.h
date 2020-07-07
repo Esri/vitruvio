@@ -8,36 +8,37 @@
 
 namespace Vitruvio
 {
-	namespace AsyncHelpers
+template <typename ResultType, typename... Args>
+static TFunction<void()> MakePromiseKeeper(const TSharedRef<TPromise<ResultType>, ESPMode::ThreadSafe>& Promise,
+										   const TFunction<ResultType(Args...)>& Function)
+{
+	return [Promise, Function]() {
+		Promise->SetValue(Function());
+	};
+}
+
+template <typename... Args>
+static TFunction<void()> MakePromiseKeeper(const TSharedRef<TPromise<void>, ESPMode::ThreadSafe>& Promise, const TFunction<void(Args...)>& Function)
+{
+	return [Promise, Function]() {
+		Function();
+		Promise->SetValue();
+	};
+}
+
+template <typename ResultType>
+static TFuture<ResultType> ExecuteOnGameThread(const TFunction<ResultType()>& Function)
+{
+	TSharedRef<TPromise<ResultType>, ESPMode::ThreadSafe> Promise = MakeShareable(new TPromise<ResultType>());
+	TFunction<void()> PromiseKeeper = MakePromiseKeeper(Promise, Function);
+	if (!IsInGameThread())
 	{
-		template <typename ResultType, typename... Args>
-		static TFunction<void()> MakePromiseKeeper(const TSharedRef<TPromise<ResultType>, ESPMode::ThreadSafe>& Promise, const TFunction<ResultType(Args...)>& Function)
-		{
-			return [Promise, Function]() { Promise->SetValue(Function()); };
-		}
-
-		template <typename... Args>
-		static TFunction<void()> MakePromiseKeeper(const TSharedRef<TPromise<void>, ESPMode::ThreadSafe>& Promise, const TFunction<void(Args...)>& Function)
-		{
-			return [Promise, Function]() {
-				Function();
-				Promise->SetValue();
-			};
-		}
-
-		template <typename ResultType> static TFuture<ResultType> ExecuteOnGameThread(const TFunction<ResultType()>& Function)
-		{
-			TSharedRef<TPromise<ResultType>, ESPMode::ThreadSafe> Promise = MakeShareable(new TPromise<ResultType>());
-			TFunction<void()> PromiseKeeper = MakePromiseKeeper(Promise, Function);
-			if (!IsInGameThread())
-			{
-				AsyncTask(ENamedThreads::GameThread, MoveTemp(PromiseKeeper));
-			}
-			else
-			{
-				PromiseKeeper();
-			}
-			return Promise->GetFuture();
-		}
-	} // namespace AsyncHelpers
+		AsyncTask(ENamedThreads::GameThread, MoveTemp(PromiseKeeper));
+	}
+	else
+	{
+		PromiseKeeper();
+	}
+	return Promise->GetFuture();
+}
 } // namespace Vitruvio

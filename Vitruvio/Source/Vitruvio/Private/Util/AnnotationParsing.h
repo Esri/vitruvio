@@ -5,4 +5,7 @@
 #include "PRTTypes.h"
 #include "RuleAttributes.h"
 
+namespace Vitruvio
+{
 void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, URuleAttribute& InAttribute);
+}

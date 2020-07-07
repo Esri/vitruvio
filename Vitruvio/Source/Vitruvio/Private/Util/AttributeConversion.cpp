@@ -50,81 +50,77 @@ URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt:
 
 namespace Vitruvio
 {
-namespace AttributeConversion
+FAttributeMap ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo)
 {
-	FAttributeMap ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo)
+	FAttributeMap UnrealAttributeMap;
+	for (size_t AttributeIndex = 0; AttributeIndex < RuleInfo->getNumAttributes(); AttributeIndex++)
 	{
-		FAttributeMap UnrealAttributeMap;
-		for (size_t AttributeIndex = 0; AttributeIndex < RuleInfo->getNumAttributes(); AttributeIndex++)
+		const prt::RuleFileInfo::Entry* AttrInfo = RuleInfo->getAttribute(AttributeIndex);
+		if (AttrInfo->getNumParameters() != 0)
 		{
-			const prt::RuleFileInfo::Entry* AttrInfo = RuleInfo->getAttribute(AttributeIndex);
-			if (AttrInfo->getNumParameters() != 0)
-			{
-				continue;
-			}
+			continue;
+		}
 
-			// We only support the default style for the moment
-			FString Style(WCHAR_TO_TCHAR(prtu::getStyle(AttrInfo->getName()).c_str()));
-			if (Style != DEFAULT_STYLE)
-			{
-				continue;
-			}
+		// We only support the default style for the moment
+		FString Style(WCHAR_TO_TCHAR(prtu::getStyle(AttrInfo->getName()).c_str()));
+		if (Style != DEFAULT_STYLE)
+		{
+			continue;
+		}
 
-			const std::wstring Name(AttrInfo->getName());
-			if (UnrealAttributeMap.Attributes.Contains(WCHAR_TO_TCHAR(Name.c_str())))
-			{
-				continue;
-			}
+		const std::wstring Name(AttrInfo->getName());
+		if (UnrealAttributeMap.Attributes.Contains(WCHAR_TO_TCHAR(Name.c_str())))
+		{
+			continue;
+		}
 
-			{
-				// CreateAttribute creates new UObjects and requires that the garbage collector is currently not running
-				FGCScopeGuard GCGuard;
-				URuleAttribute* Attribute = CreateAttribute(AttributeMap, AttrInfo);
+		{
+			// CreateAttribute creates new UObjects and requires that the garbage collector is currently not running
+			FGCScopeGuard GCGuard;
+			URuleAttribute* Attribute = CreateAttribute(AttributeMap, AttrInfo);
 
-				if (Attribute)
+			if (Attribute)
+			{
+				const FString AttributeName = WCHAR_TO_TCHAR(Name.c_str());
+				const FString DisplayName = WCHAR_TO_TCHAR(prtu::removeImport(prtu::removeStyle(Name.c_str())).c_str());
+				Attribute->Name = AttributeName;
+				Attribute->DisplayName = DisplayName;
+
+				ParseAttributeAnnotations(AttrInfo, *Attribute);
+
+				if (!Attribute->Hidden)
 				{
-					const FString AttributeName = WCHAR_TO_TCHAR(Name.c_str());
-					const FString DisplayName = WCHAR_TO_TCHAR(prtu::removeImport(prtu::removeStyle(Name.c_str())).c_str());
-					Attribute->Name = AttributeName;
-					Attribute->DisplayName = DisplayName;
-
-					ParseAttributeAnnotations(AttrInfo, *Attribute);
-
-					if (!Attribute->Hidden)
-					{
-						// By adding the UObject to the attribute map, it is saved from being garbage collected
-						UnrealAttributeMap.Attributes.Add(AttributeName, Attribute);
-					}
+					// By adding the UObject to the attribute map, it is saved from being garbage collected
+					UnrealAttributeMap.Attributes.Add(AttributeName, Attribute);
 				}
 			}
 		}
-		return UnrealAttributeMap;
 	}
+	return UnrealAttributeMap;
+}
 
-	AttributeMapUPtr CreateAttributeMap(const TMap<FString, URuleAttribute*>& Attributes)
+AttributeMapUPtr CreateAttributeMap(const TMap<FString, URuleAttribute*>& Attributes)
+{
+	AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
+
+	for (const TPair<FString, URuleAttribute*>& AttributeEntry : Attributes)
 	{
-		AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
+		const URuleAttribute* Attribute = AttributeEntry.Value;
 
-		for (const TPair<FString, URuleAttribute*>& AttributeEntry : Attributes)
+		if (const UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
 		{
-			const URuleAttribute* Attribute = AttributeEntry.Value;
-
-			if (const UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
-			{
-				AttributeMapBuilder->setFloat(TCHAR_TO_WCHAR(*Attribute->Name), FloatAttribute->Value);
-			}
-			else if (const UStringAttribute* StringAttribute = Cast<UStringAttribute>(Attribute))
-			{
-				AttributeMapBuilder->setString(TCHAR_TO_WCHAR(*Attribute->Name), TCHAR_TO_WCHAR(*StringAttribute->Value));
-			}
-			else if (const UBoolAttribute* BoolAttribute = Cast<UBoolAttribute>(Attribute))
-			{
-				AttributeMapBuilder->setBool(TCHAR_TO_WCHAR(*Attribute->Name), BoolAttribute->Value);
-			}
+			AttributeMapBuilder->setFloat(TCHAR_TO_WCHAR(*Attribute->Name), FloatAttribute->Value);
 		}
-
-		return AttributeMapUPtr(AttributeMapBuilder->createAttributeMap(), PRTDestroyer());
+		else if (const UStringAttribute* StringAttribute = Cast<UStringAttribute>(Attribute))
+		{
+			AttributeMapBuilder->setString(TCHAR_TO_WCHAR(*Attribute->Name), TCHAR_TO_WCHAR(*StringAttribute->Value));
+		}
+		else if (const UBoolAttribute* BoolAttribute = Cast<UBoolAttribute>(Attribute))
+		{
+			AttributeMapBuilder->setBool(TCHAR_TO_WCHAR(*Attribute->Name), BoolAttribute->Value);
+		}
 	}
 
-} // namespace AttributeConversion
+	return AttributeMapUPtr(AttributeMapBuilder->createAttributeMap(), PRTDestroyer());
+}
 } // namespace Vitruvio
