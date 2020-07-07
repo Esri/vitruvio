@@ -231,8 +231,8 @@ void VitruvioModule::InstallPrt()
 		InitializePrt();
 	});
 
+	State = EPrtState::Installing;
 	Vitruvio::Unzip(PrtZip, Promise, UnzipProgress);
-	State = EPrtState::Unzipping;
 }
 
 void VitruvioModule::InitializePrt()

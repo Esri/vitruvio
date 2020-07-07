@@ -29,7 +29,6 @@ enum class EPrtState
 {
 	Uninitialized,
 	Downloading,
-	Unzipping,
 	Installing,
 	Initialized
 };
@@ -84,10 +83,15 @@ public:
 																	   const int32 RandomSeed) const;
 
 	/**
-	 * \brief Returns whether PRT is initialized meaning installed and ready to use. Before initialization generation is not possible and will
+	 * \return whether PRT is initialized meaning installed and ready to use. Before initialization generation is not possible and will
 	 * immediately return without results.
 	 */
 	VITRUVIO_API bool IsInitialized() const { return State == EPrtState::Initialized; }
+
+	/**
+	 * \return the PRT state
+	 */
+	VITRUVIO_API EPrtState GetState() const { return State; }
 
 	/**
 	 * \return the download progress if PRT is currently being downloaded. If no download is in progress it will return an empty TOptional.
