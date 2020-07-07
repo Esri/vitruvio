@@ -215,9 +215,9 @@ URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt:
 	}
 }
 
-TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo)
+FAttributeMap ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo)
 {
-	TMap<FString, URuleAttribute*> Attributes;
+	FAttributeMap UnrealAttributeMap;
 	for (size_t AttributeIndex = 0; AttributeIndex < RuleInfo->getNumAttributes(); AttributeIndex++)
 	{
 		const prt::RuleFileInfo::Entry* AttrInfo = RuleInfo->getAttribute(AttributeIndex);
@@ -234,29 +234,34 @@ TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& Attri
 		}
 
 		const std::wstring Name(AttrInfo->getName());
-		if (Attributes.Contains(WCHAR_TO_TCHAR(Name.c_str())))
+		if (UnrealAttributeMap.Attributes.Contains(WCHAR_TO_TCHAR(Name.c_str())))
 		{
 			continue;
 		}
 
-		URuleAttribute* Attribute = CreateAttribute(AttributeMap, AttrInfo);
-
-		if (Attribute)
 		{
-			FString AttributeName = WCHAR_TO_TCHAR(Name.c_str());
-			FString DisplayName = WCHAR_TO_TCHAR(prtu::removeImport(prtu::removeStyle(Name.c_str())).c_str());
-			Attribute->Name = AttributeName;
-			Attribute->DisplayName = DisplayName;
+			// CreateAttribute creates new UObjects and requires that the garbage collector is currently not running
+			FGCScopeGuard GCGuard;
+			URuleAttribute* Attribute = CreateAttribute(AttributeMap, AttrInfo);
 
-			ParseAttributeAnnotations(AttrInfo, *Attribute);
-
-			if (!Attribute->Hidden)
+			if (Attribute)
 			{
-				Attributes.Add(AttributeName, Attribute);
+				const FString AttributeName = WCHAR_TO_TCHAR(Name.c_str());
+				const FString DisplayName = WCHAR_TO_TCHAR(prtu::removeImport(prtu::removeStyle(Name.c_str())).c_str());
+				Attribute->Name = AttributeName;
+				Attribute->DisplayName = DisplayName;
+
+				ParseAttributeAnnotations(AttrInfo, *Attribute);
+
+				if (!Attribute->Hidden)
+				{
+					// By adding the UObject to the attribute map, it is saved from being garbage collected
+					UnrealAttributeMap.Attributes.Add(AttributeName, Attribute);
+				}
 			}
 		}
 	}
-	return Attributes;
+	return UnrealAttributeMap;
 }
 
 void CleanupGeometryEncoderDlls(const FString& BinariesPath)
@@ -397,8 +402,8 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 	return {OutputHandler->GetModel(), OutputHandler->GetInstances()};
 }
 
-TFuture<TMap<FString, URuleAttribute*>> VitruvioModule::LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage,
-																					   const int32 RandomSeed) const
+TFuture<FAttributeMap> VitruvioModule::LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage,
+																	  const int32 RandomSeed) const
 {
 	check(InitialShape);
 	check(RulePackage);
@@ -409,7 +414,7 @@ TFuture<TMap<FString, URuleAttribute*>> VitruvioModule::LoadDefaultRuleAttribute
 		return {};
 	}
 
-	return Async(EAsyncExecution::Thread, [=]() -> TMap<FString, URuleAttribute*> {
+	return Async(EAsyncExecution::Thread, [=]() -> FAttributeMap {
 		const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(RulePackage).Get();
 
 		const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);

@@ -41,6 +41,11 @@ constexpr float PRT_DIVISOR_LIMIT = 1e-25f;
 
 } // namespace
 
+void UnrealCallbacks::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	Collector.AddReferencedObjects(ReferencedUObjects);
+}
+
 void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const double* vtx, size_t vtxSize, const double* nrm, size_t nrmSize,
 							  const uint32_t* faceVertexCounts, size_t faceVertexCountsSize, const uint32_t* vertexIndices, size_t vertexIndicesSize,
 							  const uint32_t* normalIndices, size_t normalIndicesSize,
@@ -50,7 +55,13 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 
 							  const uint32_t* faceRanges, size_t faceRangesSize, const prt::AttributeMap** materials)
 {
-	UStaticMesh* Mesh = NewObject<UStaticMesh>();
+	UStaticMesh* Mesh;
+	{
+		// NewObject calls require that the garbage collector is currently not running
+		FGCScopeGuard GCGuard;
+		Mesh = NewObject<UStaticMesh>();
+		ReferencedUObjects.Add(Mesh);
+	}
 
 	FMeshDescription Description;
 	FStaticMeshAttributes Attributes(Description);

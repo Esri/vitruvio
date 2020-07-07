@@ -12,7 +12,7 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogUnrealCallbacks, Log, All);
 
-class UnrealCallbacks final : public IUnrealCallbacks
+class UnrealCallbacks final : public IUnrealCallbacks, public FGCObject
 {
 	AttributeMapBuilderUPtr& AttributeMapBuilder;
 
@@ -25,6 +25,8 @@ class UnrealCallbacks final : public IUnrealCallbacks
 
 	static const int32 NO_PROTOTYPE_INDEX = -1;
 
+	TArray<UObject*> ReferencedUObjects;
+
 public:
 	~UnrealCallbacks() override = default;
 	UnrealCallbacks(AttributeMapBuilderUPtr& AttributeMapBuilder, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent)
@@ -32,15 +34,11 @@ public:
 	{
 	}
 
-	const TMap<UStaticMesh*, TArray<FTransform>>& GetInstances() const
-	{
-		return Instances;
-	}
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
-	UStaticMesh* GetModel() const
-	{
-		return Meshes.Contains(NO_PROTOTYPE_INDEX) ? Meshes[NO_PROTOTYPE_INDEX] : nullptr;
-	}
+	const TMap<UStaticMesh*, TArray<FTransform>>& GetInstances() const { return Instances; }
+
+	UStaticMesh* GetModel() const { return Meshes.Contains(NO_PROTOTYPE_INDEX) ? Meshes[NO_PROTOTYPE_INDEX] : nullptr; }
 
 	/**
 	 * @param name initial shape name, optionally used to create primitive groups on output
@@ -89,12 +87,14 @@ public:
 		UE_LOG(LogUnrealCallbacks, Error, TEXT("GENERATE ERROR: %s"), message)
 		return prt::STATUS_OK;
 	}
-	prt::Status assetError(size_t /*isIndex*/, prt::CGAErrorLevel /*level*/, const wchar_t* /*key*/, const wchar_t* /*uri*/, const wchar_t* message) override
+	prt::Status assetError(size_t /*isIndex*/, prt::CGAErrorLevel /*level*/, const wchar_t* /*key*/, const wchar_t* /*uri*/,
+						   const wchar_t* message) override
 	{
 		UE_LOG(LogUnrealCallbacks, Error, TEXT("ASSET ERROR: %s"), message)
 		return prt::STATUS_OK;
 	}
-	prt::Status cgaError(size_t /*isIndex*/, int32_t /*shapeID*/, prt::CGAErrorLevel /*level*/, int32_t /*methodId*/, int32_t /*pc*/, const wchar_t* message) override
+	prt::Status cgaError(size_t /*isIndex*/, int32_t /*shapeID*/, prt::CGAErrorLevel /*level*/, int32_t /*methodId*/, int32_t /*pc*/,
+						 const wchar_t* message) override
 	{
 		UE_LOG(LogUnrealCallbacks, Error, TEXT("CGA ERROR: %s"), message)
 		return prt::STATUS_OK;
@@ -105,18 +105,9 @@ public:
 		return prt::STATUS_OK;
 	}
 
-	prt::Status cgaReportBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value) override
-	{
-		return prt::STATUS_OK;
-	}
-	prt::Status cgaReportFloat(size_t isIndex, int32_t shapeID, const wchar_t* key, double value) override
-	{
-		return prt::STATUS_OK;
-	}
-	prt::Status cgaReportString(size_t isIndex, int32_t shapeID, const wchar_t* key, const wchar_t* value) override
-	{
-		return prt::STATUS_OK;
-	}
+	prt::Status cgaReportBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value) override { return prt::STATUS_OK; }
+	prt::Status cgaReportFloat(size_t isIndex, int32_t shapeID, const wchar_t* key, double value) override { return prt::STATUS_OK; }
+	prt::Status cgaReportString(size_t isIndex, int32_t shapeID, const wchar_t* key, const wchar_t* value) override { return prt::STATUS_OK; }
 
 	prt::Status attrBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value) override;
 	prt::Status attrFloat(size_t isIndex, int32_t shapeID, const wchar_t* key, double value) override;
