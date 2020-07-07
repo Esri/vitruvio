@@ -11,14 +11,12 @@ namespace Vitruvio
 namespace Unzip
 {
 
-	bool Unzip(const FString& ZipPath)
+	TAsyncResult<bool> Unzip(const FString& ZipPath, const TSharedPtr<FUnzipProgress>& UnzipProgress)
 	{
 		static const int32 BUFFER_SIZE = 8096;
 		static const int32 MAX_FILE_LENGTH = 512;
 
 		const FString ZipFolder = FPaths::GetPath(ZipPath);
-		IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-
 		const unzFile ZipFile = unzOpen(TCHAR_TO_ANSI(*ZipPath));
 
 		unz_global_info UnzGlobalInfo;
@@ -28,54 +26,66 @@ namespace Unzip
 			return false;
 		}
 
-		uint8 ReadBuffer[BUFFER_SIZE];
-		FScopedSlowTask UnzipTask(static_cast<float>(UnzGlobalInfo.number_entry), FText::FromString("Unzipping PRT"));
-		for (unsigned long FileIndex = 0; FileIndex < UnzGlobalInfo.number_entry; ++FileIndex)
-		{
-			UnzipTask.EnterProgressFrame(1);
+		const TSharedRef<TPromise<bool>, ESPMode::ThreadSafe> Promise = MakeShareable(new TPromise<bool>());
 
-			unz_file_info FileInfo;
-			char Filename[MAX_FILE_LENGTH];
-			if (unzGetCurrentFileInfo(ZipFile, &FileInfo, Filename, MAX_FILE_LENGTH, nullptr, 0, nullptr, 0) != UNZ_OK)
+		AsyncTask(ENamedThreads::AnyBackgroundHiPriTask, [UnzGlobalInfo, ZipFile, Promise, ZipFolder, UnzipProgress]() {
+			uint8 ReadBuffer[BUFFER_SIZE];
+			IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+
+			UnzipProgress->SetTotal(UnzGlobalInfo.number_entry);
+
+			for (unsigned long FileIndex = 0; FileIndex < UnzGlobalInfo.number_entry; ++FileIndex)
 			{
-				unzClose(ZipFile);
-				return false;
-			}
+				UnzipProgress->ReportProgress();
 
-			const FString FullPath = FPaths::Combine(ZipFolder, ANSI_TO_TCHAR(Filename));
-			PlatformFile.CreateDirectoryTree(*FPaths::GetPath(FullPath));
+				unz_file_info FileInfo;
+				char Filename[MAX_FILE_LENGTH];
+				if (unzGetCurrentFileInfo(ZipFile, &FileInfo, Filename, MAX_FILE_LENGTH, nullptr, 0, nullptr, 0) != UNZ_OK)
+				{
+					unzClose(ZipFile);
+					Promise->SetValue(false);
+					return;
+				}
 
-			IFileHandle* Handle = PlatformFile.OpenWrite(*FullPath, false, false);
-			if (unzOpenCurrentFile(ZipFile) != UNZ_OK)
-			{
+				const FString FullPath = FPaths::Combine(ZipFolder, ANSI_TO_TCHAR(Filename));
+				PlatformFile.CreateDirectoryTree(*FPaths::GetPath(FullPath));
+
+				IFileHandle* Handle = PlatformFile.OpenWrite(*FullPath, false, false);
+				if (unzOpenCurrentFile(ZipFile) != UNZ_OK)
+				{
+					delete Handle;
+					unzClose(ZipFile);
+					Promise->SetValue(false);
+					return;
+				}
+
+				int Read;
+				while ((Read = unzReadCurrentFile(ZipFile, ReadBuffer, BUFFER_SIZE)) > 0)
+				{
+					Handle->Write(ReadBuffer, Read);
+				}
+
+				if (Read != UNZ_OK)
+				{
+					Promise->SetValue(false);
+					return;
+				}
+
+				if (unzGoToNextFile(ZipFile) != UNZ_OK)
+				{
+					unzClose(ZipFile);
+					Promise->SetValue(false);
+					return;
+				}
+
+				unzCloseCurrentFile(ZipFile);
+				Handle->Flush();
 				delete Handle;
-				unzClose(ZipFile);
-				return false;
 			}
+			Promise->SetValue(true);
+		});
 
-			int Read;
-			while ((Read = unzReadCurrentFile(ZipFile, ReadBuffer, BUFFER_SIZE)) > 0)
-			{
-				Handle->Write(ReadBuffer, Read);
-			}
-
-			if (Read != UNZ_OK)
-			{
-				return false;
-			}
-
-			if (unzGoToNextFile(ZipFile) != UNZ_OK)
-			{
-				unzClose(ZipFile);
-				return false;
-			}
-
-			unzCloseCurrentFile(ZipFile);
-			Handle->Flush();
-			delete Handle;
-		}
-
-		return true;
+		return TAsyncResult<bool>(Promise->GetFuture(), UnzipProgress, nullptr);
 	}
 
 } // namespace Unzip
