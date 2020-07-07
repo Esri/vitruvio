@@ -8,12 +8,12 @@
 #include "UnrealResolveMapProvider.h"
 
 #include "Util/AnnotationParsing.h"
+#include "Util/AttributeConversion.h"
 #include "Util/PolygonWindings.h"
+#include "Util/UnzipUtil.h"
 
 #include "prt/API.h"
 #include "prtx/EncoderInfoBuilder.h"
-
-#include "ThirdParty/zlib/zlib-1.2.5/Src/contrib/minizip/unzip.h"
 
 #include "Core.h"
 #include "HttpModule.h"
@@ -23,7 +23,6 @@
 #include "Online/HTTP/Public/Interfaces/IHttpRequest.h"
 #include "Online/HTTP/Public/Interfaces/IHttpResponse.h"
 #include "UObject/UObjectBaseUtility.h"
-#include "Util/AttributeConversion.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioModule"
 
@@ -177,70 +176,6 @@ FString GetPrtDllPath()
 bool PrtInstalled()
 {
 	return FPlatformFileManager::Get().GetPlatformFile().FileExists(*GetPrtDllPath());
-}
-
-int32 Unzip(const FString& ZipPath)
-{
-	static const int32 BUFFER_SIZE = 8096;
-	static const int32 MAX_FILE_LENGTH = 512;
-
-	const FString ZipFolder = FPaths::GetPath(ZipPath);
-	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-
-	unzFile ZipFile = unzOpen(TCHAR_TO_ANSI(*ZipPath));
-
-	unz_global_info UnzGlobalInfo;
-	if (unzGetGlobalInfo(ZipFile, &UnzGlobalInfo) != UNZ_OK)
-	{
-		unzClose(ZipFile);
-		return -1;
-	}
-
-	uint8 ReadBuffer[BUFFER_SIZE];
-	for (unsigned long FileIndex = 0; FileIndex < UnzGlobalInfo.number_entry; ++FileIndex)
-	{
-		unz_file_info FileInfo;
-		char Filename[MAX_FILE_LENGTH];
-		if (unzGetCurrentFileInfo(ZipFile, &FileInfo, Filename, MAX_FILE_LENGTH, nullptr, 0, nullptr, 0) != UNZ_OK)
-		{
-			unzClose(ZipFile);
-			return -1;
-		}
-
-		const FString FullPath = FPaths::Combine(ZipFolder, ANSI_TO_TCHAR(Filename));
-		PlatformFile.CreateDirectoryTree(*FPaths::GetPath(FullPath));
-
-		IFileHandle* Handle = PlatformFile.OpenWrite(*FullPath, false, false);
-		if (unzOpenCurrentFile(ZipFile) != UNZ_OK)
-		{
-			delete Handle;
-			unzClose(ZipFile);
-			return -1;
-		}
-
-		int Read;
-		while ((Read = unzReadCurrentFile(ZipFile, ReadBuffer, BUFFER_SIZE)) > 0)
-		{
-			Handle->Write(ReadBuffer, Read);
-		}
-
-		if (Read != UNZ_OK)
-		{
-			return -1;
-		}
-
-		if (unzGoToNextFile(ZipFile) != UNZ_OK)
-		{
-			unzClose(ZipFile);
-			return -1;
-		}
-
-		unzCloseCurrentFile(ZipFile);
-		Handle->Flush();
-		delete Handle;
-	}
-
-	return 0;
 }
 
 } // namespace
