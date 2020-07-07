@@ -8,7 +8,7 @@
 
 namespace Vitruvio
 {
-TAsyncResult<bool> Unzip(const FString& ZipPath, const TSharedPtr<FUnzipProgress>& UnzipProgress)
+void Unzip(const FString& ZipPath, TSharedRef<TPromise<bool>, ESPMode::ThreadSafe> Promise, const TSharedPtr<FUnzipProgress>& UnzipProgress)
 {
 	static const int32 BUFFER_SIZE = 8096;
 	static const int32 MAX_FILE_LENGTH = 512;
@@ -20,10 +20,8 @@ TAsyncResult<bool> Unzip(const FString& ZipPath, const TSharedPtr<FUnzipProgress
 	if (unzGetGlobalInfo(ZipFile, &UnzGlobalInfo) != UNZ_OK)
 	{
 		unzClose(ZipFile);
-		return false;
+		return;
 	}
-
-	const TSharedRef<TPromise<bool>, ESPMode::ThreadSafe> Promise = MakeShareable(new TPromise<bool>());
 
 	AsyncTask(ENamedThreads::AnyBackgroundHiPriTask, [UnzGlobalInfo, ZipFile, Promise, ZipFolder, UnzipProgress]() {
 		uint8 ReadBuffer[BUFFER_SIZE];
@@ -81,8 +79,6 @@ TAsyncResult<bool> Unzip(const FString& ZipPath, const TSharedPtr<FUnzipProgress
 		}
 		Promise->SetValue(true);
 	});
-
-	return TAsyncResult<bool>(Promise->GetFuture(), UnzipProgress, nullptr);
 }
 
 } // namespace Vitruvio

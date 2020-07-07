@@ -41,5 +41,5 @@ private:
 	FSimpleDelegate ProgressDelegate;
 };
 
-TAsyncResult<bool> Unzip(const FString& ZipPath, const TSharedPtr<FUnzipProgress>& UnzipProgress);
+void Unzip(const FString& ZipPath, TSharedRef<TPromise<bool>, ESPMode::ThreadSafe> Promise, const TSharedPtr<FUnzipProgress>& UnzipProgress);
 } // namespace Vitruvio
