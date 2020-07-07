@@ -184,7 +184,17 @@ void VitruvioModule::DownloadPrt()
 {
 	TSharedRef<IHttpRequest> Request = FHttpModule::Get().CreateRequest();
 	Request->SetVerb(TEXT("GET"));
+
+	// TODO use correct ZIP file from Build Script
 	Request->SetURL("https://github.com/Esri/cityengine-sdk/releases/download/2.2.6332/esri_ce_sdk-2.2.6332-win10-vc142-x86_64-rel-opt.zip");
+	Request->OnHeaderReceived().BindLambda([this](FHttpRequestPtr Request, const FString& HeaderName, const FString& NewHeaderValue) {
+		if (HeaderName.Equals("Content-Length", ESearchCase::IgnoreCase))
+		{
+			DownloadSizeBytes = FCString::Atod(*NewHeaderValue);
+		}
+	});
+	Request->OnRequestProgress().BindLambda(
+		[this](FHttpRequestPtr Request, int32 BytesSent, int32 BytesReceived) { DownloadProgress = BytesReceived / DownloadSizeBytes; });
 	Request->OnProcessRequestComplete().BindLambda([=](FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded) {
 		const FString BinariesFolder = GetBinariesPath();
 		const FString PrtZip = FPaths::Combine(BinariesFolder, TEXT("esri_ce_sdk-2.2.6332-win10-vc142-x86_64-rel-opt.zip"));
@@ -194,8 +204,35 @@ void VitruvioModule::DownloadPrt()
 		const TArray<uint8>& ZipContent = HttpResponse->GetContent();
 		Handle->Write(ZipContent.GetData(), ZipContent.Num());
 		delete Handle;
+
+		InstallPrt();
 	});
+
+	State = EPrtState::Downloading;
 	Request->ProcessRequest();
+}
+
+void VitruvioModule::InstallPrt()
+{
+	const FString BinariesFolder = GetBinariesPath();
+	const FString PrtZip = FPaths::Combine(BinariesFolder, TEXT("esri_ce_sdk-2.2.6332-win10-vc142-x86_64-rel-opt.zip"));
+	TSharedPtr<Vitruvio::FUnzipProgress> UnzipProgress = MakeShared<Vitruvio::FUnzipProgress>();
+	UnzipProgress->OnProgressChanged().BindLambda([this, UnzipProgress] {
+		if (UnzipProgress->GetCompletion())
+		{
+			InstallProgress = UnzipProgress->GetCompletion().GetValue();
+		}
+	});
+
+	TSharedRef<TPromise<bool>, ESPMode::ThreadSafe> Promise = MakeShareable(new TPromise<bool>());
+	Promise->GetFuture().Next([this](bool bExtracted) {
+		// TODO copy libraries and do cleanup
+
+		InitializePrt();
+	});
+
+	Vitruvio::Unzip(PrtZip, Promise, UnzipProgress);
+	State = EPrtState::Unzipping;
 }
 
 void VitruvioModule::InitializePrt()
@@ -211,14 +248,21 @@ void VitruvioModule::InitializePrt()
 
 	prt::Status Status;
 	PrtLibrary = prt::init(PRTPluginsPaths.GetData(), PRTPluginsPaths.Num(), prt::LogLevel::LOG_TRACE, &Status);
-	Initialized = Status == prt::STATUS_OK;
+	State = (Status == prt::STATUS_OK) ? EPrtState::Initialized : EPrtState::Uninitialized;
 
 	PrtCache.reset(prt::CacheObject::create(prt::CacheObject::CACHE_TYPE_DEFAULT));
 }
 
 void VitruvioModule::StartupModule()
 {
-	InitializePrt();
+	if (PrtInstalled())
+	{
+		InitializePrt();
+	}
+	else
+	{
+		DownloadPrt();
+	}
 }
 
 void VitruvioModule::ShutdownModule()
@@ -245,9 +289,9 @@ TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const UStaticMesh* Initia
 	check(InitialShape);
 	check(RulePackage);
 
-	if (!Initialized)
+	if (State != EPrtState::Initialized)
 	{
-		UE_LOG(LogUnrealPrt, Error, TEXT("prt not initialized"))
+		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
 		return {};
 	}
 
@@ -263,9 +307,9 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 	check(InitialShape);
 	check(RulePackage);
 
-	if (!Initialized)
+	if (State != EPrtState::Initialized)
 	{
-		UE_LOG(LogUnrealPrt, Error, TEXT("prt not initialized"))
+		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
 		return {};
 	}
 
@@ -299,7 +343,7 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 
 	if (GenerateStatus != prt::STATUS_OK)
 	{
-		UE_LOG(LogUnrealPrt, Error, TEXT("prt generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
+		UE_LOG(LogUnrealPrt, Error, TEXT("PRT generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
 	}
 
 	return {OutputHandler->GetModel(), OutputHandler->GetInstances()};
@@ -311,9 +355,9 @@ TFuture<FAttributeMap> VitruvioModule::LoadDefaultRuleAttributesAsync(const USta
 	check(InitialShape);
 	check(RulePackage);
 
-	if (!Initialized)
+	if (State != EPrtState::Initialized)
 	{
-		UE_LOG(LogUnrealPrt, Error, TEXT("prt not initialized"))
+		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
 		return {};
 	}
 
