@@ -5,6 +5,7 @@
 #include "PRTTypes.h"
 #include "RuleAttributes.h"
 #include "RulePackage.h"
+#include "AttributeMap.h"
 
 #include "prt/Object.h"
 
@@ -22,29 +23,6 @@ struct FGenerateResult
 {
 	UStaticMesh* ShapeMesh;
 	TMap<UStaticMesh*, TArray<FTransform>> Instances;
-};
-
-class FAttributeMap final : public FGCObject
-{
-public:
-	TMap<FString, URuleAttribute*> Attributes;
-
-	void AddReferencedObjects(FReferenceCollector& Collector) override
-	{
-		TArray<URuleAttribute*> ReferencedObjects;
-		Attributes.GenerateValueArray(ReferencedObjects);
-		Collector.AddReferencedObjects(ReferencedObjects);
-	}
-
-	// This function has to be defined explicitly, otherwise it generates a compiler error because the parent operator= is not accessible.
-	FAttributeMap& operator=(const FAttributeMap& Other)
-	{
-		if (this != &Other)
-		{
-			this->Attributes = Other.Attributes;
-		}
-		return *this;
-	}
 };
 
 class VitruvioModule final : public IModuleInterface
