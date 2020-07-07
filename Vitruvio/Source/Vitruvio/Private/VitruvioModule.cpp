@@ -193,8 +193,12 @@ void VitruvioModule::DownloadPrt()
 			DownloadSizeBytes = FCString::Atod(*NewHeaderValue);
 		}
 	});
-	Request->OnRequestProgress().BindLambda(
-		[this](FHttpRequestPtr Request, int32 BytesSent, int32 BytesReceived) { DownloadProgress = BytesReceived / DownloadSizeBytes; });
+	Request->OnRequestProgress().BindLambda([this](FHttpRequestPtr Request, int32 BytesSent, int32 BytesReceived) {
+		if (DownloadSizeBytes)
+		{
+			DownloadProgress = static_cast<double>(BytesReceived) / DownloadSizeBytes.GetValue();
+		}
+	});
 	Request->OnProcessRequestComplete().BindLambda([=](FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded) {
 		const FString BinariesFolder = GetBinariesPath();
 		const FString PrtZip = FPaths::Combine(BinariesFolder, TEXT("esri_ce_sdk-2.2.6332-win10-vc142-x86_64-rel-opt.zip"));

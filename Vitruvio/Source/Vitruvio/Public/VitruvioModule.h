@@ -101,7 +101,7 @@ public:
 	/**
 	 * \return the install progress if PRT is currently being installed. If no installation is in progress it will return an empty TOptional.
 	 */
-	VITRUVIO_API TOptional<double> GetInstallProgress() const { return InstallProgress; }
+	VITRUVIO_API double GetInstallProgress() const { return InstallProgress; }
 
 	static VitruvioModule& Get() { return FModuleManager::LoadModuleChecked<VitruvioModule>("Vitruvio"); }
 
@@ -116,8 +116,8 @@ private:
 
 	FSimpleDelegate UnzipProgressDelegate;
 	TOptional<double> DownloadProgress;
-	TOptional<double> InstallProgress;
-	int32 DownloadSizeBytes = 0;
+	double InstallProgress = 0;
+	TOptional<int32> DownloadSizeBytes;
 
 	mutable TMap<TLazyObjectPtr<URulePackage>, ResolveMapSPtr> ResolveMapCache;
 	mutable TMap<TLazyObjectPtr<URulePackage>, FGraphEventRef> ResolveMapEventGraphRefCache;
