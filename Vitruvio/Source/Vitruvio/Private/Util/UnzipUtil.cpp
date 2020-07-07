@@ -60,16 +60,7 @@ void Unzip(const FString& ZipPath, TSharedRef<TPromise<bool>, ESPMode::ThreadSaf
 				Handle->Write(ReadBuffer, Read);
 			}
 
-			if (Read != UNZ_OK)
-			{
-				unzClose(ZipFile);
-				Promise->SetValue(false);
-				Handle->Flush();
-				delete Handle;
-				return;
-			}
-
-			if (unzGoToNextFile(ZipFile) != UNZ_OK)
+			if (Read != UNZ_OK || unzGoToNextFile(ZipFile) != UNZ_OK)
 			{
 				unzClose(ZipFile);
 				Promise->SetValue(false);
