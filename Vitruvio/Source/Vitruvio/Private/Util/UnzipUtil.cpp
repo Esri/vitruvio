@@ -29,7 +29,7 @@ void Unzip(const FString& ZipPath, TSharedRef<TPromise<bool>, ESPMode::ThreadSaf
 
 		UnzipProgress->SetTotal(UnzGlobalInfo.number_entry);
 
-		for (unsigned long FileIndex = 0; FileIndex < UnzGlobalInfo.number_entry; ++FileIndex)
+		do
 		{
 			UnzipProgress->ReportProgress();
 
@@ -49,6 +49,7 @@ void Unzip(const FString& ZipPath, TSharedRef<TPromise<bool>, ESPMode::ThreadSaf
 			if (unzOpenCurrentFile(ZipFile) != UNZ_OK)
 			{
 				delete Handle;
+				unzCloseCurrentFile(ZipFile);
 				unzClose(ZipFile);
 				Promise->SetValue(false);
 				return;
@@ -60,19 +61,19 @@ void Unzip(const FString& ZipPath, TSharedRef<TPromise<bool>, ESPMode::ThreadSaf
 				Handle->Write(ReadBuffer, Read);
 			}
 
-			if (Read != UNZ_OK || unzGoToNextFile(ZipFile) != UNZ_OK)
-			{
-				unzClose(ZipFile);
-				Promise->SetValue(false);
-				Handle->Flush();
-				delete Handle;
-				return;
-			}
-
 			unzCloseCurrentFile(ZipFile);
 			Handle->Flush();
 			delete Handle;
-		}
+
+			if (Read != UNZ_OK)
+			{
+				unzClose(ZipFile);
+				Promise->SetValue(false);
+				return;
+			}
+		} while (unzGoToNextFile(ZipFile) != UNZ_END_OF_LIST_OF_FILE);
+
+		unzClose(ZipFile);
 		Promise->SetValue(true);
 	});
 }
