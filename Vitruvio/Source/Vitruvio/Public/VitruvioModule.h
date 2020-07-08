@@ -10,6 +10,7 @@
 #include "prt/Object.h"
 
 #include "Engine/StaticMesh.h"
+#include "Interfaces/IHttpRequest.h"
 #include "Modules/ModuleManager.h"
 #include "UnrealLogHandler.h"
 
@@ -118,6 +119,7 @@ private:
 	TOptional<double> DownloadProgress;
 	double InstallProgress = 0;
 	TOptional<int32> DownloadSizeBytes;
+	TSharedPtr<IHttpRequest> DownloadRequest;
 
 	mutable TMap<TLazyObjectPtr<URulePackage>, ResolveMapSPtr> ResolveMapCache;
 	mutable TMap<TLazyObjectPtr<URulePackage>, FGraphEventRef> ResolveMapEventGraphRefCache;

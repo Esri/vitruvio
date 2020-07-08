@@ -240,8 +240,12 @@ void CopyChildren(const FString& From, const FString& ToFolder)
 
 void VitruvioModule::DownloadPrt()
 {
-	TSharedRef<IHttpRequest> Request = FHttpModule::Get().CreateRequest();
-	Request->SetVerb(TEXT("GET"));
+	if (DownloadRequest)
+	{
+		DownloadRequest->CancelRequest();
+	}
+	DownloadRequest = FHttpModule::Get().CreateRequest();
+	DownloadRequest->SetVerb(TEXT("GET"));
 
 	const FString PrtVersion = FString::Printf(TEXT("%i.%i.%i"), PrtMajor, PrtMinor, PrtBuild);
 	const FString PlatformName = PrtPlatformName();
@@ -249,20 +253,20 @@ void VitruvioModule::DownloadPrt()
 	const FString PrtLibZipFile = PrtLibName + ".zip";
 	const FString PrtDownloadUrl = FPaths::Combine(PrtUrl, PrtVersion, PrtLibZipFile);
 
-	Request->SetURL(PrtDownloadUrl);
-	Request->OnHeaderReceived().BindLambda([this](FHttpRequestPtr Request, const FString& HeaderName, const FString& NewHeaderValue) {
+	DownloadRequest->SetURL(PrtDownloadUrl);
+	DownloadRequest->OnHeaderReceived().BindLambda([this](FHttpRequestPtr Request, const FString& HeaderName, const FString& NewHeaderValue) {
 		if (HeaderName.Equals("Content-Length", ESearchCase::IgnoreCase))
 		{
 			DownloadSizeBytes = FCString::Atod(*NewHeaderValue);
 		}
 	});
-	Request->OnRequestProgress().BindLambda([this](FHttpRequestPtr Request, int32 BytesSent, int32 BytesReceived) {
+	DownloadRequest->OnRequestProgress().BindLambda([this](FHttpRequestPtr Request, int32 BytesSent, int32 BytesReceived) {
 		if (DownloadSizeBytes)
 		{
 			DownloadProgress = static_cast<double>(BytesReceived) / DownloadSizeBytes.GetValue();
 		}
 	});
-	Request->OnProcessRequestComplete().BindLambda([=](FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded) {
+	DownloadRequest->OnProcessRequestComplete().BindLambda([=](FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded) {
 		const FString BinariesFolder = GetBinariesPath();
 		const FString PrtZip = FPaths::Combine(BinariesFolder, PrtLibZipFile);
 
@@ -273,10 +277,12 @@ void VitruvioModule::DownloadPrt()
 		delete Handle;
 
 		InstallPrt(PrtLibZipFile);
+
+		DownloadRequest.Reset();
 	});
 
 	State = EPrtState::Downloading;
-	Request->ProcessRequest();
+	DownloadRequest->ProcessRequest();
 }
 
 void VitruvioModule::InstallPrt(const FString& ZipFileName)
@@ -361,6 +367,10 @@ void VitruvioModule::ShutdownModule()
 	if (PrtLibrary)
 	{
 		PrtLibrary->destroy();
+	}
+	if (DownloadRequest)
+	{
+		DownloadRequest->CancelRequest();
 	}
 
 	delete LogHandler;
