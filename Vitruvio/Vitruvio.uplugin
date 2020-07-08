@@ -19,7 +19,7 @@
 		{
 			"Name": "Vitruvio",
 			"Type": "Runtime",
-			"LoadingPhase": "Default",
+			"LoadingPhase": "PostDefault",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac"
@@ -33,12 +33,21 @@
 				"Win64",
 				"Mac"
 			]
-		}
-	],
-	"Plugins": [
+		},
 		{
 			"Name": "UnrealGeometryEncoder",
-			"Enabled": true
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac"
+			]
 		}
-	]
+	],
+	"PostBuildSteps": {
+		"Win64": [
+			"PowerShell.exe -ExecutionPolicy Bypass -File \"$(PluginDir)/Source/Scripts/UninstallPRT.ps1\" -PluginDir \"$(PluginDir)\"",
+			"PowerShell.exe -ExecutionPolicy Bypass -File \"$(PluginDir)/Source/Scripts/CleanupEncoderDlls.ps1\" -PluginDir \"$(PluginDir)\""
+		]
+	}
 }

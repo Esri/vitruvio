@@ -41,7 +41,8 @@ public:
 	void finish(prtx::GenerateContext& context) override;
 
 private:
-	void convertGeometry(const prtx::InitialShape& initialShape, const prtx::EncodePreparator::InstanceVector& instances, IUnrealCallbacks* callbacks) const;
+	void convertGeometry(const prtx::InitialShape& initialShape, const prtx::EncodePreparator::InstanceVector& instances,
+						 IUnrealCallbacks* callbacks) const;
 };
 
 class UnrealGeometryEncoderFactory final : public prtx::EncoderFactory, public prtx::Singleton<UnrealGeometryEncoderFactory>
@@ -49,9 +50,7 @@ class UnrealGeometryEncoderFactory final : public prtx::EncoderFactory, public p
 public:
 	static UnrealGeometryEncoderFactory* createInstance();
 
-	explicit UnrealGeometryEncoderFactory(const prt::EncoderInfo* info) : prtx::EncoderFactory(info)
-	{
-	}
+	explicit UnrealGeometryEncoderFactory(const prt::EncoderInfo* info) : prtx::EncoderFactory(info) {}
 	~UnrealGeometryEncoderFactory() override = default;
 
 	UnrealGeometryEncoder* create(const prt::AttributeMap* options, prt::Callbacks* callbacks) const override

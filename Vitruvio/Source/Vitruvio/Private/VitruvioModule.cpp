@@ -163,7 +163,7 @@ AttributeMapUPtr GetDefaultAttributeValues(const std::wstring& RuleFile, const s
 
 FString GetBinariesPath()
 {
-	const FString BaseDir = FPaths::ConvertRelativePathToFull(IPluginManager::Get().FindPlugin("UnrealGeometryEncoder")->GetBaseDir());
+	const FString BaseDir = FPaths::ConvertRelativePathToFull(IPluginManager::Get().FindPlugin("Vitruvio")->GetBaseDir());
 	const FString BinariesPath = FPaths::Combine(*BaseDir, TEXT("Binaries"), TEXT("Win64"));
 	return BinariesPath;
 }
@@ -245,7 +245,8 @@ void VitruvioModule::InitializePrt()
 	PrtDllHandle = FPlatformProcess::GetDllHandle(*PrtLibPath);
 
 	TArray<wchar_t*> PRTPluginsPaths;
-	PRTPluginsPaths.Add(const_cast<wchar_t*>(TCHAR_TO_WCHAR(*GetBinariesPath())));
+	const FString BinariesPath = GetBinariesPath();
+	PRTPluginsPaths.Add(const_cast<wchar_t*>(TCHAR_TO_WCHAR(*BinariesPath)));
 
 	LogHandler = new UnrealLogHandler;
 	prt::addLogHandler(LogHandler);

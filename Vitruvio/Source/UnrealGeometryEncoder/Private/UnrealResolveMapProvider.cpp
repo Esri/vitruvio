@@ -51,8 +51,8 @@ prt::ResolveMap const* UnrealResolveMapProvider::createResolveMap(prtx::URIPtr u
 
 			// Create rpk
 			const std::wstring AbsoluteRpkPath(TCHAR_TO_WCHAR(*FPaths::ConvertRelativePathToFull(RpkPath)));
-			const std::wstring AbsoluteRpkFolder(
-				TCHAR_TO_WCHAR(*FPaths::Combine(FPaths::GetPath(FPaths::ConvertRelativePathToFull(RpkPath)), FPaths::GetBaseFilename(UriPath, true) + TEXT("_Unpacked"))));
+			const std::wstring AbsoluteRpkFolder(TCHAR_TO_WCHAR(*FPaths::Combine(FPaths::GetPath(FPaths::ConvertRelativePathToFull(RpkPath)),
+																				 FPaths::GetBaseFilename(UriPath, true) + TEXT("_Unpacked"))));
 			const std::wstring RpkFileUri = prtu::toFileURI(AbsoluteRpkPath);
 
 			prt::Status Status;

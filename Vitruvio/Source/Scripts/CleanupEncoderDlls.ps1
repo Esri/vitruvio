@@ -8,6 +8,5 @@ Write-Host "Cleanup Encoder dlls"
 
 $BinariesDir="$PluginDir\Binaries\Win64"
 
-Remove-Old -Dir $BinariesDir -Name "UE4Editor*.dll"
-Remove-Old -Dir $BinariesDir -Name "UE4Editor*.pdb"
-
+#Remove-Old -Dir $BinariesDir -Name "UE4Editor*.dll"
+#Remove-Old -Dir $BinariesDir -Name "UE4Editor*.pdb"

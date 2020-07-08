@@ -33,31 +33,13 @@ class UnrealResolveMapProviderFactory final : public prtx::ResolveMapProviderFac
 public:
 	~UnrealResolveMapProviderFactory() override;
 
-	UnrealResolveMapProvider* create() const override
-	{
-		return new UnrealResolveMapProvider();
-	}
+	UnrealResolveMapProvider* create() const override { return new UnrealResolveMapProvider(); }
 
-	const std::wstring& getID() const override
-	{
-		return UnrealResolveMapProvider::ID;
-	};
-	const std::wstring& getName() const override
-	{
-		return UnrealResolveMapProvider::NAME;
-	}
-	const std::wstring& getDescription() const override
-	{
-		return UnrealResolveMapProvider::DESCRIPTION;
-	}
-	float getMerit() const override
-	{
-		return 3.0f;
-	}
+	const std::wstring& getID() const override { return UnrealResolveMapProvider::ID; };
+	const std::wstring& getName() const override { return UnrealResolveMapProvider::NAME; }
+	const std::wstring& getDescription() const override { return UnrealResolveMapProvider::DESCRIPTION; }
+	float getMerit() const override { return 3.0f; }
 	bool canHandleURI(prtx::URIPtr uri) const override;
 
-	static UnrealResolveMapProviderFactory* createInstance()
-	{
-		return new UnrealResolveMapProviderFactory();
-	}
+	static UnrealResolveMapProviderFactory* createInstance() { return new UnrealResolveMapProviderFactory(); }
 };
