@@ -32,6 +32,32 @@ namespace
 {
 constexpr const wchar_t* ATTRIBUTE_EVAL_ENCODER_ID = L"com.esri.prt.core.AttributeEvalEncoder";
 
+const FString PrtUrl = "https://github.com/Esri/esri-cityengine-sdk/releases/download";
+const int PrtMajor = 2; // Note that the PRT version must match the version from the PRT.Build.cs
+const int PrtMinor = 1;
+const int PrtBuild = 5705;
+
+class ListDirectoryVisitor : public IPlatformFile::FDirectoryVisitor
+{
+public:
+	TArray<FString> Directories;
+	TArray<FString> Files;
+
+	bool Visit(const TCHAR* FilenameOrDirectory, bool bIsDirectory) override
+	{
+		if (bIsDirectory)
+		{
+			Directories.Add(FilenameOrDirectory);
+		}
+		else
+		{
+			Files.Add(FilenameOrDirectory);
+		}
+
+		return true;
+	}
+};
+
 class FLoadResolveMapTask
 {
 	TLazyObjectPtr<URulePackage> LazyRulePackagePtr;
@@ -178,6 +204,38 @@ bool PrtInstalled()
 	return FPlatformFileManager::Get().GetPlatformFile().FileExists(*GetPrtDllPath());
 }
 
+FString PrtPlatformName()
+{
+#if PLATFORM_WINDOWS
+	return "win10-vc141-x86_64-rel-opt";
+#elif PLATFORM_MAC
+	return "osx12-ac81-x86_64-rel-opt";
+#else
+	return "unkown";
+#endif
+}
+
+void CopyChildren(const FString& From, const FString& ToFolder)
+{
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+
+	ListDirectoryVisitor ListDirectory;
+	PlatformFile.IterateDirectory(*From, ListDirectory);
+	for (const FString& File : ListDirectory.Files)
+	{
+		const FString FileName = FPaths::GetPathLeaf(File);
+		const FString ToPath = FPaths::Combine(ToFolder, FileName);
+		PlatformFile.CopyFile(*ToPath, *File, EPlatformFileRead::None, EPlatformFileWrite::None);
+	}
+
+	for (const FString& Directory : ListDirectory.Directories)
+	{
+		const FString DirectoryName = FPaths::GetPathLeaf(Directory);
+		const FString ToPath = FPaths::Combine(ToFolder, DirectoryName);
+		PlatformFile.CopyDirectoryTree(*ToPath, *Directory, true);
+	}
+}
+
 } // namespace
 
 void VitruvioModule::DownloadPrt()
@@ -185,8 +243,13 @@ void VitruvioModule::DownloadPrt()
 	TSharedRef<IHttpRequest> Request = FHttpModule::Get().CreateRequest();
 	Request->SetVerb(TEXT("GET"));
 
-	// TODO use correct ZIP file from Build Script
-	Request->SetURL("https://github.com/Esri/cityengine-sdk/releases/download/2.2.6332/esri_ce_sdk-2.2.6332-win10-vc142-x86_64-rel-opt.zip");
+	const FString PrtVersion = FString::Printf(TEXT("%i.%i.%i"), PrtMajor, PrtMinor, PrtBuild);
+	const FString PlatformName = PrtPlatformName();
+	const FString PrtLibName = FString::Printf(TEXT("esri_ce_sdk-%s-%s"), *PrtVersion, *PlatformName);
+	const FString PrtLibZipFile = PrtLibName + ".zip";
+	const FString PrtDownloadUrl = FPaths::Combine(PrtUrl, PrtVersion, PrtLibZipFile);
+
+	Request->SetURL(PrtDownloadUrl);
 	Request->OnHeaderReceived().BindLambda([this](FHttpRequestPtr Request, const FString& HeaderName, const FString& NewHeaderValue) {
 		if (HeaderName.Equals("Content-Length", ESearchCase::IgnoreCase))
 		{
@@ -201,7 +264,7 @@ void VitruvioModule::DownloadPrt()
 	});
 	Request->OnProcessRequestComplete().BindLambda([=](FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded) {
 		const FString BinariesFolder = GetBinariesPath();
-		const FString PrtZip = FPaths::Combine(BinariesFolder, TEXT("esri_ce_sdk-2.2.6332-win10-vc142-x86_64-rel-opt.zip"));
+		const FString PrtZip = FPaths::Combine(BinariesFolder, PrtLibZipFile);
 
 		IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
 		IFileHandle* Handle = PlatformFile.OpenWrite(*PrtZip, false, false);
@@ -209,17 +272,17 @@ void VitruvioModule::DownloadPrt()
 		Handle->Write(ZipContent.GetData(), ZipContent.Num());
 		delete Handle;
 
-		InstallPrt();
+		InstallPrt(PrtLibZipFile);
 	});
 
 	State = EPrtState::Downloading;
 	Request->ProcessRequest();
 }
 
-void VitruvioModule::InstallPrt()
+void VitruvioModule::InstallPrt(const FString& ZipFileName)
 {
 	const FString BinariesFolder = GetBinariesPath();
-	const FString PrtZip = FPaths::Combine(BinariesFolder, TEXT("esri_ce_sdk-2.2.6332-win10-vc142-x86_64-rel-opt.zip"));
+	const FString PrtZip = FPaths::Combine(BinariesFolder, ZipFileName);
 	TSharedPtr<Vitruvio::FUnzipProgress> UnzipProgress = MakeShared<Vitruvio::FUnzipProgress>();
 	UnzipProgress->OnProgressChanged().BindLambda([this, UnzipProgress] {
 		if (UnzipProgress->GetCompletion())
@@ -229,8 +292,23 @@ void VitruvioModule::InstallPrt()
 	});
 
 	TSharedRef<TPromise<bool>, ESPMode::ThreadSafe> Promise = MakeShareable(new TPromise<bool>());
-	Promise->GetFuture().Next([this](bool bExtracted) {
-		// TODO copy libraries and do cleanup
+	Promise->GetFuture().Next([this, PrtZip, BinariesFolder](bool bExtracted) {
+		IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+
+		// Copy necessary libraries from bin and lib to the binaries folder
+		CopyChildren(FPaths::Combine(*BinariesFolder, TEXT("lib")), BinariesFolder);
+		CopyChildren(FPaths::Combine(*BinariesFolder, TEXT("bin")), BinariesFolder);
+
+		// Delete downloaded PRT zip file
+		PlatformFile.DeleteFile(*PrtZip);
+
+		// Cleanup extracted directories from zip
+		ListDirectoryVisitor ListDirectory;
+		PlatformFile.IterateDirectory(*BinariesFolder, ListDirectory);
+		for (const FString& Directory : ListDirectory.Directories)
+		{
+			IFileManager::Get().DeleteDirectory(*Directory, true, true);
+		}
 
 		InitializePrt();
 	});
@@ -260,6 +338,7 @@ void VitruvioModule::InitializePrt()
 
 void VitruvioModule::StartupModule()
 {
+
 	if (PrtInstalled())
 	{
 		InitializePrt();

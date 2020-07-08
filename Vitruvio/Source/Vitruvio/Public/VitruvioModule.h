@@ -127,7 +127,7 @@ private:
 	TFuture<ResolveMapSPtr> LoadResolveMapAsync(URulePackage* RulePackage) const;
 
 	void DownloadPrt();
-	void InstallPrt();
+	void InstallPrt(const FString& ZipFileName);
 
 	void InitializePrt();
 };
