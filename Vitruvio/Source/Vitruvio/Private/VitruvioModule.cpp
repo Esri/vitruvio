@@ -160,16 +160,49 @@ AttributeMapUPtr GetDefaultAttributeValues(const std::wstring& RuleFile, const s
 	return AttributeMapUPtr(UnrealCallbacksAttributeBuilder->createAttributeMap());
 }
 
+FString GetPlatformName()
+{
+#if PLATFORM_64BITS && PLATFORM_WINDOWS
+	return "Win64";
+#elif PLATFORM_MAC
+	return "Mac";
+#else
+	return "Unknown";
+#endif
+}
+
 FString GetBinariesPath()
 {
 	const FString BaseDir = FPaths::ConvertRelativePathToFull(IPluginManager::Get().FindPlugin("Vitruvio")->GetBaseDir());
-	const FString BinariesPath = FPaths::Combine(*BaseDir, TEXT("Binaries"), TEXT("Win64"));
+	const FString BinariesPath = FPaths::Combine(*BaseDir, TEXT("Binaries"), GetPlatformName());
 	return BinariesPath;
+}
+
+FString GetPrtThirdPartyPath()
+{
+	const FString BaseDir = FPaths::ConvertRelativePathToFull(IPluginManager::Get().FindPlugin("Vitruvio")->GetBaseDir());
+	const FString BinariesPath = FPaths::Combine(*BaseDir, TEXT("Source"), TEXT("ThirdParty"), TEXT("PRT"));
+	return BinariesPath;
+}
+
+FString GetPrtLibDir()
+{
+	const FString BaseDir = GetPrtThirdPartyPath();
+	const FString LibDir = FPaths::Combine(*BaseDir, TEXT("lib"), GetPlatformName(), TEXT("Release"));
+	return LibDir;
+}
+
+FString GetPrtBinDir()
+{
+	const FString BaseDir = GetPrtThirdPartyPath();
+	const FString BinDir = FPaths::Combine(*BaseDir, TEXT("bin"), GetPlatformName(), TEXT("Release"));
+	return BinDir;
 }
 
 FString GetPrtDllPath()
 {
-	return FPaths::Combine(*GetBinariesPath(), TEXT("com.esri.prt.core.dll"));
+	const FString BaseDir = GetPrtBinDir();
+	return FPaths::Combine(*BaseDir, TEXT("com.esri.prt.core.dll"));
 }
 
 } // namespace
@@ -177,11 +210,17 @@ FString GetPrtDllPath()
 void VitruvioModule::InitializePrt()
 {
 	const FString PrtLibPath = GetPrtDllPath();
+	const FString PrtBinDir = GetPrtBinDir();
+	const FString PrtLibDir = GetPrtLibDir();
+	FPlatformProcess::AddDllDirectory(*PrtBinDir);
+	FPlatformProcess::AddDllDirectory(*PrtLibDir);
 	PrtDllHandle = FPlatformProcess::GetDllHandle(*PrtLibPath);
 
 	TArray<wchar_t*> PRTPluginsPaths;
 	const FString BinariesPath = GetBinariesPath();
+	const FString PrtExtensionPaths = GetPrtLibDir();
 	PRTPluginsPaths.Add(const_cast<wchar_t*>(TCHAR_TO_WCHAR(*BinariesPath)));
+	PRTPluginsPaths.Add(const_cast<wchar_t*>(TCHAR_TO_WCHAR(*PrtExtensionPaths)));
 
 	LogHandler = new UnrealLogHandler;
 	prt::addLogHandler(LogHandler);
