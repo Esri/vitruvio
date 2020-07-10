@@ -26,14 +26,6 @@ struct FGenerateResult
 	TMap<UStaticMesh*, TArray<FTransform>> Instances;
 };
 
-enum class EPrtState
-{
-	Uninitialized,
-	Downloading,
-	Installing,
-	Initialized
-};
-
 class VitruvioModule final : public IModuleInterface
 {
 public:
@@ -87,22 +79,7 @@ public:
 	 * \return whether PRT is initialized meaning installed and ready to use. Before initialization generation is not possible and will
 	 * immediately return without results.
 	 */
-	VITRUVIO_API bool IsInitialized() const { return State == EPrtState::Initialized; }
-
-	/**
-	 * \return the PRT state
-	 */
-	VITRUVIO_API EPrtState GetState() const { return State; }
-
-	/**
-	 * \return the download progress if PRT is currently being downloaded. If no download is in progress it will return an empty TOptional.
-	 */
-	VITRUVIO_API TOptional<double> GetDownloadProgress() const { return DownloadProgress; }
-
-	/**
-	 * \return the install progress if PRT is currently being installed. If no installation is in progress it will return an empty TOptional.
-	 */
-	VITRUVIO_API double GetInstallProgress() const { return InstallProgress; }
+	VITRUVIO_API bool IsInitialized() const { return Initialized; }
 
 	static VitruvioModule& Get() { return FModuleManager::LoadModuleChecked<VitruvioModule>("Vitruvio"); }
 
@@ -113,13 +90,7 @@ private:
 
 	UnrealLogHandler* LogHandler = nullptr;
 
-	EPrtState State = EPrtState::Uninitialized;
-
-	FSimpleDelegate UnzipProgressDelegate;
-	TOptional<double> DownloadProgress;
-	double InstallProgress = 0;
-	TOptional<int32> DownloadSizeBytes;
-	TSharedPtr<IHttpRequest> DownloadRequest;
+	bool Initialized = false;
 
 	mutable TMap<TLazyObjectPtr<URulePackage>, ResolveMapSPtr> ResolveMapCache;
 	mutable TMap<TLazyObjectPtr<URulePackage>, FGraphEventRef> ResolveMapEventGraphRefCache;
@@ -127,9 +98,6 @@ private:
 	mutable FCriticalSection LoadResolveMapLock;
 
 	TFuture<ResolveMapSPtr> LoadResolveMapAsync(URulePackage* RulePackage) const;
-
-	void DownloadPrt();
-	void InstallPrt(const FString& ZipFileName);
 
 	void InitializePrt();
 };

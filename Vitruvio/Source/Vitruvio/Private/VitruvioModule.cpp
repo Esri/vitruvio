@@ -10,7 +10,6 @@
 #include "Util/AnnotationParsing.h"
 #include "Util/AttributeConversion.h"
 #include "Util/PolygonWindings.h"
-#include "Util/UnzipUtil.h"
 
 #include "prt/API.h"
 #include "prtx/EncoderInfoBuilder.h"
@@ -31,32 +30,6 @@ DEFINE_LOG_CATEGORY(LogUnrealPrt);
 namespace
 {
 constexpr const wchar_t* ATTRIBUTE_EVAL_ENCODER_ID = L"com.esri.prt.core.AttributeEvalEncoder";
-
-const FString PrtUrl = "https://github.com/Esri/esri-cityengine-sdk/releases/download";
-const int PrtMajor = 2; // Note that the PRT version must match the version from the PRT.Build.cs
-const int PrtMinor = 1;
-const int PrtBuild = 5705;
-
-class ListDirectoryVisitor : public IPlatformFile::FDirectoryVisitor
-{
-public:
-	TArray<FString> Directories;
-	TArray<FString> Files;
-
-	bool Visit(const TCHAR* FilenameOrDirectory, bool bIsDirectory) override
-	{
-		if (bIsDirectory)
-		{
-			Directories.Add(FilenameOrDirectory);
-		}
-		else
-		{
-			Files.Add(FilenameOrDirectory);
-		}
-
-		return true;
-	}
-};
 
 class FLoadResolveMapTask
 {
@@ -199,129 +172,7 @@ FString GetPrtDllPath()
 	return FPaths::Combine(*GetBinariesPath(), TEXT("com.esri.prt.core.dll"));
 }
 
-bool PrtInstalled()
-{
-	return FPlatformFileManager::Get().GetPlatformFile().FileExists(*GetPrtDllPath());
-}
-
-FString PrtPlatformName()
-{
-#if PLATFORM_WINDOWS
-	return "win10-vc141-x86_64-rel-opt";
-#elif PLATFORM_MAC
-	return "osx12-ac81-x86_64-rel-opt";
-#else
-	return "unkown";
-#endif
-}
-
-void CopyChildren(const FString& From, const FString& ToFolder)
-{
-	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-
-	ListDirectoryVisitor ListDirectory;
-	PlatformFile.IterateDirectory(*From, ListDirectory);
-	for (const FString& File : ListDirectory.Files)
-	{
-		const FString FileName = FPaths::GetPathLeaf(File);
-		const FString ToPath = FPaths::Combine(ToFolder, FileName);
-		PlatformFile.CopyFile(*ToPath, *File, EPlatformFileRead::None, EPlatformFileWrite::None);
-	}
-
-	for (const FString& Directory : ListDirectory.Directories)
-	{
-		const FString DirectoryName = FPaths::GetPathLeaf(Directory);
-		const FString ToPath = FPaths::Combine(ToFolder, DirectoryName);
-		PlatformFile.CopyDirectoryTree(*ToPath, *Directory, true);
-	}
-}
-
 } // namespace
-
-void VitruvioModule::DownloadPrt()
-{
-	if (DownloadRequest)
-	{
-		DownloadRequest->CancelRequest();
-	}
-	DownloadRequest = FHttpModule::Get().CreateRequest();
-	DownloadRequest->SetVerb(TEXT("GET"));
-
-	const FString PrtVersion = FString::Printf(TEXT("%i.%i.%i"), PrtMajor, PrtMinor, PrtBuild);
-	const FString PlatformName = PrtPlatformName();
-	const FString PrtLibName = FString::Printf(TEXT("esri_ce_sdk-%s-%s"), *PrtVersion, *PlatformName);
-	const FString PrtLibZipFile = PrtLibName + ".zip";
-	const FString PrtDownloadUrl = FPaths::Combine(PrtUrl, PrtVersion, PrtLibZipFile);
-
-	DownloadRequest->SetURL(PrtDownloadUrl);
-	DownloadRequest->OnHeaderReceived().BindLambda([this](FHttpRequestPtr Request, const FString& HeaderName, const FString& NewHeaderValue) {
-		if (HeaderName.Equals("Content-Length", ESearchCase::IgnoreCase))
-		{
-			DownloadSizeBytes = FCString::Atod(*NewHeaderValue);
-		}
-	});
-	DownloadRequest->OnRequestProgress().BindLambda([this](FHttpRequestPtr Request, int32 BytesSent, int32 BytesReceived) {
-		if (DownloadSizeBytes)
-		{
-			DownloadProgress = static_cast<double>(BytesReceived) / DownloadSizeBytes.GetValue();
-		}
-	});
-	DownloadRequest->OnProcessRequestComplete().BindLambda([=](FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bSucceeded) {
-		const FString BinariesFolder = GetBinariesPath();
-		const FString PrtZip = FPaths::Combine(BinariesFolder, PrtLibZipFile);
-
-		IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-		IFileHandle* Handle = PlatformFile.OpenWrite(*PrtZip, false, false);
-		const TArray<uint8>& ZipContent = HttpResponse->GetContent();
-		Handle->Write(ZipContent.GetData(), ZipContent.Num());
-		delete Handle;
-
-		InstallPrt(PrtLibZipFile);
-
-		DownloadRequest.Reset();
-	});
-
-	State = EPrtState::Downloading;
-	DownloadRequest->ProcessRequest();
-}
-
-void VitruvioModule::InstallPrt(const FString& ZipFileName)
-{
-	const FString BinariesFolder = GetBinariesPath();
-	const FString PrtZip = FPaths::Combine(BinariesFolder, ZipFileName);
-	TSharedPtr<Vitruvio::FUnzipProgress> UnzipProgress = MakeShared<Vitruvio::FUnzipProgress>();
-	UnzipProgress->OnProgressChanged().BindLambda([this, UnzipProgress] {
-		if (UnzipProgress->GetCompletion())
-		{
-			InstallProgress = UnzipProgress->GetCompletion().GetValue();
-		}
-	});
-
-	TSharedRef<TPromise<bool>, ESPMode::ThreadSafe> Promise = MakeShareable(new TPromise<bool>());
-	Promise->GetFuture().Next([this, PrtZip, BinariesFolder](bool bExtracted) {
-		IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-
-		// Copy necessary libraries from bin and lib to the binaries folder
-		CopyChildren(FPaths::Combine(*BinariesFolder, TEXT("lib")), BinariesFolder);
-		CopyChildren(FPaths::Combine(*BinariesFolder, TEXT("bin")), BinariesFolder);
-
-		// Delete downloaded PRT zip file
-		PlatformFile.DeleteFile(*PrtZip);
-
-		// Cleanup extracted directories from zip
-		ListDirectoryVisitor ListDirectory;
-		PlatformFile.IterateDirectory(*BinariesFolder, ListDirectory);
-		for (const FString& Directory : ListDirectory.Directories)
-		{
-			IFileManager::Get().DeleteDirectory(*Directory, true, true);
-		}
-
-		InitializePrt();
-	});
-
-	State = EPrtState::Installing;
-	Vitruvio::Unzip(PrtZip, Promise, UnzipProgress);
-}
 
 void VitruvioModule::InitializePrt()
 {
@@ -337,22 +188,14 @@ void VitruvioModule::InitializePrt()
 
 	prt::Status Status;
 	PrtLibrary = prt::init(PRTPluginsPaths.GetData(), PRTPluginsPaths.Num(), prt::LogLevel::LOG_TRACE, &Status);
-	State = (Status == prt::STATUS_OK) ? EPrtState::Initialized : EPrtState::Uninitialized;
+	Initialized = Status == prt::STATUS_OK;
 
 	PrtCache.reset(prt::CacheObject::create(prt::CacheObject::CACHE_TYPE_DEFAULT));
 }
 
 void VitruvioModule::StartupModule()
 {
-
-	if (PrtInstalled())
-	{
-		InitializePrt();
-	}
-	else
-	{
-		DownloadPrt();
-	}
+	InitializePrt();
 }
 
 void VitruvioModule::ShutdownModule()
@@ -368,10 +211,6 @@ void VitruvioModule::ShutdownModule()
 	{
 		PrtLibrary->destroy();
 	}
-	if (DownloadRequest)
-	{
-		DownloadRequest->CancelRequest();
-	}
 
 	delete LogHandler;
 }
@@ -383,7 +222,7 @@ TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const UStaticMesh* Initia
 	check(InitialShape);
 	check(RulePackage);
 
-	if (State != EPrtState::Initialized)
+	if (!Initialized)
 	{
 		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
 		return {};
@@ -401,7 +240,7 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 	check(InitialShape);
 	check(RulePackage);
 
-	if (State != EPrtState::Initialized)
+	if (!Initialized)
 	{
 		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
 		return {};
@@ -449,7 +288,7 @@ TFuture<FAttributeMap> VitruvioModule::LoadDefaultRuleAttributesAsync(const USta
 	check(InitialShape);
 	check(RulePackage);
 
-	if (State != EPrtState::Initialized)
+	if (!Initialized)
 	{
 		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
 		return {};
