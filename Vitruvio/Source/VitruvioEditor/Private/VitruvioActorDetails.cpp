@@ -18,65 +18,69 @@
 
 namespace
 {
-	FString ValueToString(const TSharedPtr<FString>& In)
+FString ValueToString(const TSharedPtr<FString>& In)
+{
+	return *In;
+}
+
+FString ValueToString(const TSharedPtr<double>& In)
+{
+	return FString::SanitizeFloat(*In);
+}
+
+FString ValueToString(const TSharedPtr<bool>& In)
+{
+	return *In ? TEXT("True") : TEXT("False");
+}
+
+template <typename A, typename V>
+void UpdateAttributeValue(AVitruvioActor* VitruvioActor, A* Attribute, const V& Value)
+{
+	Attribute->Value = Value;
+	if (VitruvioActor->GenerateAutomatically)
 	{
-		return *In;
+		VitruvioActor->Generate();
+	}
+}
+
+template <typename A, typename V>
+TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Attribute, TSharedPtr<EnumAnnotation<V>> Annotation, AVitruvioActor* VitruvioActor)
+{
+	TArray<TSharedPtr<V>> SharedPtrValues;
+	Algo::Transform(Annotation->Values, SharedPtrValues, [](const V& Value) { return MakeShared<V>(Value); });
+	auto InitialSelectedIndex = Annotation->Values.IndexOfByPredicate([Attribute](const V& Value) { return Value == Attribute->Value; });
+	auto InitialSelectedValue = InitialSelectedIndex != INDEX_NONE ? SharedPtrValues[InitialSelectedIndex] : nullptr;
+
+	auto ValueWidget = SNew(SPropertyComboBox<V>)
+						   .ComboItemList(SharedPtrValues)
+						   .OnSelectionChanged_Lambda([VitruvioActor, Attribute](TSharedPtr<V> Val, ESelectInfo::Type Type) {
+							   UpdateAttributeValue(VitruvioActor, Attribute, *Val);
+						   })
+						   .InitialValue(InitialSelectedValue);
+
+	return ValueWidget;
+}
+
+void CreateColorPicker(UStringAttribute* Attribute, AVitruvioActor* VitruvioActor)
+{
+	FColorPickerArgs PickerArgs;
+	{
+		PickerArgs.bUseAlpha = false;
+		PickerArgs.bOnlyRefreshOnOk = true;
+		PickerArgs.sRGBOverride = true;
+		PickerArgs.DisplayGamma = TAttribute<float>::Create(TAttribute<float>::FGetter::CreateUObject(GEngine, &UEngine::GetDisplayGamma));
+		PickerArgs.InitialColorOverride = FLinearColor(FColor::FromHex(Attribute->Value));
+		PickerArgs.OnColorCommitted.BindLambda([Attribute, VitruvioActor](FLinearColor NewColor) {
+			UpdateAttributeValue(VitruvioActor, Attribute, TEXT("#") + NewColor.ToFColor(true).ToHex());
+		});
 	}
 
-	FString ValueToString(const TSharedPtr<double>& In)
-	{
-		return FString::SanitizeFloat(*In);
-	}
+	OpenColorPicker(PickerArgs);
+}
 
-	FString ValueToString(const TSharedPtr<bool>& In)
-	{
-		return *In ? TEXT("True") : TEXT("False");
-	}
-
-	template <typename A, typename V> void UpdateAttributeValue(AVitruvioActor* VitruvioActor, A* Attribute, const V& Value)
-	{
-		Attribute->Value = Value;
-		if (VitruvioActor->GenerateAutomatically)
-		{
-			VitruvioActor->Generate();
-		}
-	}
-
-	template <typename A, typename V> TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Attribute, TSharedPtr<EnumAnnotation<V>> Annotation, AVitruvioActor* VitruvioActor)
-	{
-		TArray<TSharedPtr<V>> SharedPtrValues;
-		Algo::Transform(Annotation->Values, SharedPtrValues, [](const V& Value) { return MakeShared<V>(Value); });
-		auto InitialSelectedIndex = Annotation->Values.IndexOfByPredicate([Attribute](const V& Value) { return Value == Attribute->Value; });
-		auto InitialSelectedValue = InitialSelectedIndex != INDEX_NONE ? SharedPtrValues[InitialSelectedIndex] : nullptr;
-
-		auto ValueWidget =
-			SNew(SPropertyComboBox<V>)
-				.ComboItemList(SharedPtrValues)
-				.OnSelectionChanged_Lambda([VitruvioActor, Attribute](TSharedPtr<V> Val, ESelectInfo::Type Type) { UpdateAttributeValue(VitruvioActor, Attribute, *Val); })
-				.InitialValue(InitialSelectedValue);
-
-		return ValueWidget;
-	}
-
-	void CreateColorPicker(UStringAttribute* Attribute, AVitruvioActor* VitruvioActor)
-	{
-		FColorPickerArgs PickerArgs;
-		{
-			PickerArgs.bUseAlpha = false;
-			PickerArgs.bOnlyRefreshOnOk = true;
-			PickerArgs.sRGBOverride = true;
-			PickerArgs.DisplayGamma = TAttribute<float>::Create(TAttribute<float>::FGetter::CreateUObject(GEngine, &UEngine::GetDisplayGamma));
-			PickerArgs.InitialColorOverride = FLinearColor(FColor::FromHex(Attribute->Value));
-			PickerArgs.OnColorCommitted.BindLambda(
-				[Attribute, VitruvioActor](FLinearColor NewColor) { UpdateAttributeValue(VitruvioActor, Attribute, TEXT("#") + NewColor.ToFColor(true).ToHex()); });
-		}
-
-		OpenColorPicker(PickerArgs);
-	}
-
-	TSharedPtr<SHorizontalBox> CreateColorInputWidget(UStringAttribute* Attribute, AVitruvioActor* VitruvioActor)
-	{
-		// clang-format off
+TSharedPtr<SHorizontalBox> CreateColorInputWidget(UStringAttribute* Attribute, AVitruvioActor* VitruvioActor)
+{
+	// clang-format off
 		return SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot()
 			.VAlign(VAlign_Center)
@@ -103,37 +107,39 @@ namespace
 				.IgnoreAlpha(true)
 				.Size(FVector2D(35.0f, 12.0f))
 			];
-		// clang-format on
-	}
+	// clang-format on
+}
 
-	TSharedPtr<SCheckBox> CreateBoolInputWidget(UBoolAttribute* Attribute, AVitruvioActor* VitruvioActor)
-	{
-		auto OnCheckStateChanged = [VitruvioActor, Attribute](ECheckBoxState CheckBoxState) -> void {
-			UpdateAttributeValue(VitruvioActor, Attribute, CheckBoxState == ECheckBoxState::Checked);
-		};
+TSharedPtr<SCheckBox> CreateBoolInputWidget(UBoolAttribute* Attribute, AVitruvioActor* VitruvioActor)
+{
+	auto OnCheckStateChanged = [VitruvioActor, Attribute](ECheckBoxState CheckBoxState) -> void {
+		UpdateAttributeValue(VitruvioActor, Attribute, CheckBoxState == ECheckBoxState::Checked);
+	};
 
-		auto ValueWidget = SNew(SCheckBox).OnCheckStateChanged_Lambda(OnCheckStateChanged);
+	auto ValueWidget = SNew(SCheckBox).OnCheckStateChanged_Lambda(OnCheckStateChanged);
 
-		ValueWidget->SetIsChecked(Attribute->Value);
+	ValueWidget->SetIsChecked(Attribute->Value);
 
-		return ValueWidget;
-	}
+	return ValueWidget;
+}
 
-	TSharedPtr<SHorizontalBox> CreateTextInputWidget(UStringAttribute* Attribute, AVitruvioActor* VitruvioActor)
-	{
-		auto OnTextChanged = [VitruvioActor, Attribute](const FText& Text, ETextCommit::Type) -> void { UpdateAttributeValue(VitruvioActor, Attribute, Text.ToString()); };
+TSharedPtr<SHorizontalBox> CreateTextInputWidget(UStringAttribute* Attribute, AVitruvioActor* VitruvioActor)
+{
+	auto OnTextChanged = [VitruvioActor, Attribute](const FText& Text, ETextCommit::Type) -> void {
+		UpdateAttributeValue(VitruvioActor, Attribute, Text.ToString());
+	};
 
-		// clang-format off
+	// clang-format off
 		auto ValueWidget = SNew(SEditableTextBox)
 			.Font(IDetailLayoutBuilder::GetDetailFont())
 			.IsReadOnly(false)
 			.SelectAllTextWhenFocused(true)
 			.OnTextCommitted_Lambda(OnTextChanged);
-		// clang-format on
+	// clang-format on
 
-		ValueWidget->SetText(FText::FromString(Attribute->Value));
+	ValueWidget->SetText(FText::FromString(Attribute->Value));
 
-		// clang-format off
+	// clang-format off
 		return SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot()
 			.VAlign(VAlign_Fill)
@@ -142,36 +148,38 @@ namespace
 			[
 				ValueWidget
 			];
-		// clang-format on
-	}
+	// clang-format on
+}
 
-	TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(UFloatAttribute* Attribute, AVitruvioActor* VitruvioActor)
-	{
-		auto Annotation = Attribute->GetRangeAnnotation();
-		auto OnCommit = [VitruvioActor, Attribute](double Value, ETextCommit::Type Type) -> void { UpdateAttributeValue(VitruvioActor, Attribute, Value); };
+TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(UFloatAttribute* Attribute, AVitruvioActor* VitruvioActor)
+{
+	auto Annotation = Attribute->GetRangeAnnotation();
+	auto OnCommit = [VitruvioActor, Attribute](double Value, ETextCommit::Type Type) -> void {
+		UpdateAttributeValue(VitruvioActor, Attribute, Value);
+	};
 
-		// clang-format off
+	// clang-format off
 		auto ValueWidget = SNew(SSpinBox<double>)
             .Font(IDetailLayoutBuilder::GetDetailFont())
 			.MinValue(Annotation ? Annotation->Min : TOptional<double>())
 			.MaxValue(Annotation ? Annotation->Max : TOptional<double>())
 			.OnValueCommitted_Lambda(OnCommit)
 			.SliderExponent(1);
-		// clang-format on
+	// clang-format on
 
-		if (Annotation)
-		{
-			ValueWidget->SetDelta(Annotation->StepSize);
-		}
-
-		ValueWidget->SetValue(Attribute->Value);
-
-		return ValueWidget;
+	if (Annotation)
+	{
+		ValueWidget->SetDelta(Annotation->StepSize);
 	}
 
-	TSharedPtr<SBox> CreateNameWidget(URuleAttribute* Attribute)
-	{
-		// clang-format off
+	ValueWidget->SetValue(Attribute->Value);
+
+	return ValueWidget;
+}
+
+TSharedPtr<SBox> CreateNameWidget(URuleAttribute* Attribute)
+{
+	// clang-format off
 		auto NameWidget = SNew(SBox)
 			.Content()
 			[
@@ -179,98 +187,99 @@ namespace
 				.Text(FText::FromString(Attribute->DisplayName))
 				.Font(IDetailLayoutBuilder::GetDetailFont())
 			];
-		// clang-format on
-		return NameWidget;
-	}
+	// clang-format on
+	return NameWidget;
+}
 
-	IDetailGroup* GetOrCreateGroups(IDetailGroup& Root, const FAttributeGroups& Groups, TMap<FString, IDetailGroup*>& GroupCache)
+IDetailGroup* GetOrCreateGroups(IDetailGroup& Root, const FAttributeGroups& Groups, TMap<FString, IDetailGroup*>& GroupCache)
+{
+	if (Groups.Num() == 0)
 	{
-		if (Groups.Num() == 0)
-		{
-			return &Root;
-		}
-
-		auto GetOrCreateGroup = [&GroupCache](IDetailGroup& Parent, FString Name) -> IDetailGroup* {
-			const auto CacheResult = GroupCache.Find(Name);
-			if (CacheResult)
-			{
-				return *CacheResult;
-			}
-			IDetailGroup& Group = Parent.AddGroup(*Name, FText::FromString(Name), true);
-			GroupCache.Add(Name, &Group);
-			return &Group;
-		};
-
-		FString QualifiedIdentifier = Groups[0];
-		IDetailGroup* CurrentGroup = GetOrCreateGroup(Root, QualifiedIdentifier);
-		for (auto GroupIndex = 1; GroupIndex < Groups.Num(); ++GroupIndex)
-		{
-			QualifiedIdentifier += Groups[GroupIndex];
-			CurrentGroup = GetOrCreateGroup(*CurrentGroup, Groups[GroupIndex]);
-		}
-
-		return CurrentGroup;
+		return &Root;
 	}
 
-	void BuildAttributeEditor(IDetailLayoutBuilder& DetailBuilder, AVitruvioActor* VitruvioActor)
+	auto GetOrCreateGroup = [&GroupCache](IDetailGroup& Parent, FString Name) -> IDetailGroup* {
+		const auto CacheResult = GroupCache.Find(Name);
+		if (CacheResult)
+		{
+			return *CacheResult;
+		}
+		IDetailGroup& Group = Parent.AddGroup(*Name, FText::FromString(Name), true);
+		GroupCache.Add(Name, &Group);
+		return &Group;
+	};
+
+	FString QualifiedIdentifier = Groups[0];
+	IDetailGroup* CurrentGroup = GetOrCreateGroup(Root, QualifiedIdentifier);
+	for (auto GroupIndex = 1; GroupIndex < Groups.Num(); ++GroupIndex)
 	{
-		if (!VitruvioActor || !VitruvioActor->Rpk)
+		QualifiedIdentifier += Groups[GroupIndex];
+		CurrentGroup = GetOrCreateGroup(*CurrentGroup, Groups[GroupIndex]);
+	}
+
+	return CurrentGroup;
+}
+
+void BuildAttributeEditor(IDetailLayoutBuilder& DetailBuilder, AVitruvioActor* VitruvioActor)
+{
+	if (!VitruvioActor || !VitruvioActor->Rpk)
+	{
+		return;
+	}
+
+	IDetailCategoryBuilder& RootCategory = DetailBuilder.EditCategory("Vitruvio");
+	RootCategory.SetShowAdvanced(true);
+
+	IDetailGroup& RootGroup = RootCategory.AddGroup("Attributes", FText::FromString("Attributes"), true, true);
+	TMap<FString, IDetailGroup*> GroupCache;
+
+	for (const auto& AttributeEntry : VitruvioActor->Attributes)
+	{
+		URuleAttribute* Attribute = AttributeEntry.Value;
+
+		IDetailGroup* Group = GetOrCreateGroups(RootGroup, Attribute->Groups, GroupCache);
+		FDetailWidgetRow& Row = Group->AddWidgetRow();
+
+		Row.FilterTextString = FText::FromString(Attribute->DisplayName);
+
+		Row.NameContent()[CreateNameWidget(Attribute).ToSharedRef()];
+
+		if (UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
 		{
-			return;
+			if (FloatAttribute->GetEnumAnnotation())
+			{
+				Row.ValueContent()[CreateEnumWidget(FloatAttribute, FloatAttribute->GetEnumAnnotation(), VitruvioActor).ToSharedRef()];
+			}
+			else
+			{
+				Row.ValueContent()[CreateNumericInputWidget(FloatAttribute, VitruvioActor).ToSharedRef()];
+			}
 		}
-
-		IDetailCategoryBuilder& RootCategory = DetailBuilder.EditCategory("CGA");
-		RootCategory.SetShowAdvanced(true);
-
-		IDetailGroup& RootGroup = RootCategory.AddGroup("Attributes", FText::FromString("Attributes"), true, true);
-		TMap<FString, IDetailGroup*> GroupCache;
-
-		for (const auto& AttributeEntry : VitruvioActor->Attributes)
+		else if (UStringAttribute* StringAttribute = Cast<UStringAttribute>(Attribute))
 		{
-			URuleAttribute* Attribute = AttributeEntry.Value;
-
-			IDetailGroup* Group = GetOrCreateGroups(RootGroup, Attribute->Groups, GroupCache);
-			FDetailWidgetRow& Row = Group->AddWidgetRow();
-
-			Row.FilterTextString = FText::FromString(Attribute->DisplayName);
-
-			Row.NameContent()[CreateNameWidget(Attribute).ToSharedRef()];
-
-			if (UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
+			if (StringAttribute->GetEnumAnnotation())
 			{
-				if (FloatAttribute->GetEnumAnnotation())
-				{
-					Row.ValueContent()[CreateEnumWidget(FloatAttribute, FloatAttribute->GetEnumAnnotation(), VitruvioActor).ToSharedRef()];
-				}
-				else
-				{
-					Row.ValueContent()[CreateNumericInputWidget(FloatAttribute, VitruvioActor).ToSharedRef()];
-				}
+				Row.ValueContent()[CreateEnumWidget(StringAttribute, StringAttribute->GetEnumAnnotation(), VitruvioActor).ToSharedRef()];
 			}
-			else if (UStringAttribute* StringAttribute = Cast<UStringAttribute>(Attribute))
+			else if (StringAttribute->GetColorAnnotation())
 			{
-				if (StringAttribute->GetEnumAnnotation())
-				{
-					Row.ValueContent()[CreateEnumWidget(StringAttribute, StringAttribute->GetEnumAnnotation(), VitruvioActor).ToSharedRef()];
-				}
-				else if (StringAttribute->GetColorAnnotation())
-				{
-					Row.ValueContent()[CreateColorInputWidget(StringAttribute, VitruvioActor).ToSharedRef()];
-				}
-				else
-				{
-					Row.ValueContent()[CreateTextInputWidget(StringAttribute, VitruvioActor).ToSharedRef()];
-				}
+				Row.ValueContent()[CreateColorInputWidget(StringAttribute, VitruvioActor).ToSharedRef()];
 			}
-			else if (UBoolAttribute* BoolAttribute = Cast<UBoolAttribute>(Attribute))
+			else
 			{
-				Row.ValueContent()[CreateBoolInputWidget(BoolAttribute, VitruvioActor).ToSharedRef()];
+				Row.ValueContent()[CreateTextInputWidget(StringAttribute, VitruvioActor).ToSharedRef()];
 			}
+		}
+		else if (UBoolAttribute* BoolAttribute = Cast<UBoolAttribute>(Attribute))
+		{
+			Row.ValueContent()[CreateBoolInputWidget(BoolAttribute, VitruvioActor).ToSharedRef()];
 		}
 	}
+}
 } // namespace
 
-template <typename T> void SPropertyComboBox<T>::Construct(const FArguments& InArgs)
+template <typename T>
+void SPropertyComboBox<T>::Construct(const FArguments& InArgs)
 {
 	ComboItemList = InArgs._ComboItemList.Get();
 
@@ -294,7 +303,8 @@ template <typename T> void SPropertyComboBox<T>::Construct(const FArguments& InA
 	// clang-format on
 }
 
-template <typename T> TSharedRef<SWidget> SPropertyComboBox<T>::OnGenerateComboWidget(TSharedPtr<T> InValue) const
+template <typename T>
+TSharedRef<SWidget> SPropertyComboBox<T>::OnGenerateComboWidget(TSharedPtr<T> InValue) const
 {
 	return SNew(STextBlock).Text(FText::FromString(ValueToString(InValue)));
 }
