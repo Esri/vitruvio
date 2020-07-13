@@ -31,15 +31,18 @@ int32 CalculateRandomSeed(const FTransform Transform, UStaticMesh* const Initial
 AVitruvioActor::AVitruvioActor()
 {
 	PrimaryActorTick.bCanEverTick = true;
+
+	static ConstructorHelpers::FObjectFinder<UMaterial> Opaque(TEXT("Material'/Vitruvio/Materials/M_OpaqueParent.M_OpaqueParent'"));
+	static ConstructorHelpers::FObjectFinder<UMaterial> Masked(TEXT("Material'/Vitruvio/Materials/M_MaskedParent.M_MaskedParent'"));
+	static ConstructorHelpers::FObjectFinder<UMaterial> Translucent(TEXT("Material'/Vitruvio/Materials/M_TranslucentParent.M_TranslucentParent'"));
+	OpaqueParent = Opaque.Object;
+	MaskedParent = Masked.Object;
+	TranslucentParent = Translucent.Object;
 }
 
 void AVitruvioActor::BeginPlay()
 {
 	Super::BeginPlay();
-
-	OpaqueParent = LoadObject<UMaterial>(this, TEXT("Material'/Vitruvio/Materials/M_OpaqueParent.M_OpaqueParent'"), nullptr);
-	MaskedParent = LoadObject<UMaterial>(this, TEXT("Material'/Vitruvio/Materials/M_MaskedParent.M_MaskedParent'"), nullptr);
-	TranslucentParent = LoadObject<UMaterial>(this, TEXT("Material'/Vitruvio/Materials/M_TranslucentParent.M_TranslucentParent'"), nullptr);
 }
 
 void AVitruvioActor::Tick(float DeltaTime)
