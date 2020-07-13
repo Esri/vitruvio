@@ -10,6 +10,7 @@
 #include "prt/Object.h"
 
 #include "Engine/StaticMesh.h"
+#include "HAL/ThreadSafeCounter.h"
 #include "Modules/ModuleManager.h"
 #include "UnrealLogHandler.h"
 
@@ -80,6 +81,16 @@ public:
 	 */
 	VITRUVIO_API bool IsInitialized() const { return Initialized; }
 
+	/**
+	 * \return true if currently at least one generate call ongoing.
+	 */
+	VITRUVIO_API bool IsGenerating() const { return GenerateCallsCounter.GetValue() > 0; }
+
+	/**
+	 * \return true if currently at least one RPK is being loaded.
+	 */
+	VITRUVIO_API bool IsLoadingRpks() const { return RpkLoadingTasksCounter.GetValue() > 0; }
+
 	static VitruvioModule& Get() { return FModuleManager::LoadModuleChecked<VitruvioModule>("Vitruvio"); }
 
 private:
@@ -95,6 +106,9 @@ private:
 	mutable TMap<TLazyObjectPtr<URulePackage>, FGraphEventRef> ResolveMapEventGraphRefCache;
 
 	mutable FCriticalSection LoadResolveMapLock;
+
+	mutable FThreadSafeCounter GenerateCallsCounter;
+	mutable FThreadSafeCounter RpkLoadingTasksCounter;
 
 	TFuture<ResolveMapSPtr> LoadResolveMapAsync(URulePackage* RulePackage) const;
 

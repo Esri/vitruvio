@@ -311,6 +311,8 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 		return {};
 	}
 
+	GenerateCallsCounter.Increment();
+
 	const InitialShapeBuilderUPtr InitialShapeBuilder(prt::InitialShapeBuilder::create());
 	SetInitialShapeGeometry(InitialShapeBuilder, InitialShape);
 
@@ -343,6 +345,8 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 	{
 		UE_LOG(LogUnrealPrt, Error, TEXT("PRT generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
 	}
+
+	GenerateCallsCounter.Decrement();
 
 	return {OutputHandler->GetModel(), OutputHandler->GetInstances()};
 }
@@ -421,6 +425,8 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(URulePackage* const 
 	}
 	else
 	{
+		RpkLoadingTasksCounter.Increment();
+
 		FGraphEventRef LoadTask;
 		{
 			FScopeLock Lock(&LoadResolveMapLock);
@@ -434,6 +440,7 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(URulePackage* const 
 		FFunctionGraphTask::CreateAndDispatchWhenReady(
 			[this, LazyRulePackagePtr]() {
 				FScopeLock Lock(&LoadResolveMapLock);
+				RpkLoadingTasksCounter.Decrement();
 				ResolveMapEventGraphRefCache.Remove(LazyRulePackagePtr);
 			},
 			TStatId(), LoadTask, ENamedThreads::AnyThread);
