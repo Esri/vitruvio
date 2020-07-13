@@ -33,15 +33,6 @@
 				"Win64",
 				"Mac"
 			]
-		},
-		{
-			"Name": "UnrealGeometryEncoder",
-			"Type": "Runtime",
-			"LoadingPhase": "Default",
-			"WhitelistPlatforms": [
-				"Win64",
-				"Mac"
-			]
 		}
 	],
 	"PostBuildSteps": {

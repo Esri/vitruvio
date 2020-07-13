@@ -19,7 +19,6 @@
 #pragma warning(pop)
 
 #include "Codec/CodecMain.h"
-#include "HAL/MemoryBase.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -29,7 +28,7 @@ class IUnrealCallbacks;
 
 using InstanceVectorPtr = std::shared_ptr<prtx::EncodePreparator::InstanceVector>;
 
-class UnrealGeometryEncoder final : public prtx::GeometryEncoder, public FUseSystemMallocForNew
+class UnrealGeometryEncoder final : public prtx::GeometryEncoder
 {
 public:
 	UnrealGeometryEncoder(const std::wstring& id, const prt::AttributeMap* options, prt::Callbacks* callbacks);

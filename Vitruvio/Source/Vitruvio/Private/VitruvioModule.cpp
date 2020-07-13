@@ -5,7 +5,6 @@
 #include "PRTTypes.h"
 #include "PRTUtils.h"
 #include "UnrealCallbacks.h"
-#include "UnrealResolveMapProvider.h"
 
 #include "Util/AnnotationParsing.h"
 #include "Util/AttributeConversion.h"
@@ -15,12 +14,9 @@
 #include "prtx/EncoderInfoBuilder.h"
 
 #include "Core.h"
-#include "HttpModule.h"
 #include "Interfaces/IPluginManager.h"
 #include "MeshDescription.h"
 #include "Modules/ModuleManager.h"
-#include "Online/HTTP/Public/Interfaces/IHttpRequest.h"
-#include "Online/HTTP/Public/Interfaces/IHttpResponse.h"
 #include "UObject/UObjectBaseUtility.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioModule"
@@ -34,15 +30,14 @@ constexpr const wchar_t* ATTRIBUTE_EVAL_ENCODER_ID = L"com.esri.prt.core.Attribu
 class FLoadResolveMapTask
 {
 	TLazyObjectPtr<URulePackage> LazyRulePackagePtr;
-	FString ResolveMapUri;
 	TPromise<ResolveMapSPtr> Promise;
 	TMap<TLazyObjectPtr<URulePackage>, ResolveMapSPtr>& ResolveMapCache;
 	FCriticalSection& LoadResolveMapLock;
 
 public:
-	FLoadResolveMapTask(TPromise<ResolveMapSPtr>&& InPromise, const TLazyObjectPtr<URulePackage> LazyRulePackagePtr, const FString ResolveMapUri,
+	FLoadResolveMapTask(TPromise<ResolveMapSPtr>&& InPromise, const TLazyObjectPtr<URulePackage> LazyRulePackagePtr,
 						TMap<TLazyObjectPtr<URulePackage>, ResolveMapSPtr>& ResolveMapCache, FCriticalSection& LoadResolveMapLock)
-		: LazyRulePackagePtr(LazyRulePackagePtr), ResolveMapUri(ResolveMapUri), Promise(MoveTemp(InPromise)), ResolveMapCache(ResolveMapCache),
+		: LazyRulePackagePtr(LazyRulePackagePtr), Promise(MoveTemp(InPromise)), ResolveMapCache(ResolveMapCache),
 		  LoadResolveMapLock(LoadResolveMapLock)
 	{
 	}
@@ -56,11 +51,40 @@ public:
 
 	void DoTask(ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
 	{
-		const ResolveMapSPtr ResolveMap(prt::createResolveMap(TCHAR_TO_WCHAR(*ResolveMapUri)), PRTDestroyer());
+		const FString UriPath = LazyRulePackagePtr->GetPathName();
+
+		// Create rpk on disk for PRT
+		IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+		FString TempDir(WCHAR_TO_TCHAR(prtu::temp_directory_path().c_str()));
+		const FString RpkFolder = FPaths::Combine(TempDir, TEXT("PRT"), TEXT("UnrealGeometryEncoder"), FPaths::GetPath(UriPath.Mid(1)));
+		const FString RpkFile = FPaths::GetBaseFilename(UriPath, true) + TEXT(".rpk");
+		const FString RpkPath = FPaths::Combine(RpkFolder, RpkFile);
+		PlatformFile.CreateDirectoryTree(*RpkFolder);
+		IFileHandle* RpkHandle = PlatformFile.OpenWrite(*RpkPath);
+		if (RpkHandle)
 		{
-			FScopeLock Lock(&LoadResolveMapLock);
-			ResolveMapCache.Add(LazyRulePackagePtr, ResolveMap);
-			Promise.SetValue(ResolveMap);
+			// Write file to disk
+			RpkHandle->Write(LazyRulePackagePtr->Data.GetData(), LazyRulePackagePtr->Data.Num());
+			RpkHandle->Flush();
+			delete RpkHandle;
+
+			// Create rpk
+			const std::wstring AbsoluteRpkPath(TCHAR_TO_WCHAR(*FPaths::ConvertRelativePathToFull(RpkPath)));
+			const std::wstring AbsoluteRpkFolder(TCHAR_TO_WCHAR(*FPaths::Combine(FPaths::GetPath(FPaths::ConvertRelativePathToFull(RpkPath)),
+																				 FPaths::GetBaseFilename(UriPath, true) + TEXT("_Unpacked"))));
+			const std::wstring RpkFileUri = prtu::toFileURI(AbsoluteRpkPath);
+
+			prt::Status Status;
+			const ResolveMapSPtr ResolveMapPtr(prt::createResolveMap(RpkFileUri.c_str(), AbsoluteRpkFolder.c_str(), &Status), PRTDestroyer());
+			{
+				FScopeLock Lock(&LoadResolveMapLock);
+				ResolveMapCache.Add(LazyRulePackagePtr, ResolveMapPtr);
+				Promise.SetValue(ResolveMapPtr);
+			}
+		}
+		else
+		{
+			Promise.SetValue(nullptr);
 		}
 	}
 };
@@ -171,17 +195,18 @@ FString GetPlatformName()
 #endif
 }
 
-FString GetBinariesPath()
-{
-	const FString BaseDir = FPaths::ConvertRelativePathToFull(IPluginManager::Get().FindPlugin("Vitruvio")->GetBaseDir());
-	const FString BinariesPath = FPaths::Combine(*BaseDir, TEXT("Binaries"), GetPlatformName());
-	return BinariesPath;
-}
-
 FString GetPrtThirdPartyPath()
 {
 	const FString BaseDir = FPaths::ConvertRelativePathToFull(IPluginManager::Get().FindPlugin("Vitruvio")->GetBaseDir());
 	const FString BinariesPath = FPaths::Combine(*BaseDir, TEXT("Source"), TEXT("ThirdParty"), TEXT("PRT"));
+	return BinariesPath;
+}
+
+FString GetEncoderExtensionPath()
+{
+	const FString BaseDir = FPaths::ConvertRelativePathToFull(IPluginManager::Get().FindPlugin("Vitruvio")->GetBaseDir());
+	const FString BinariesPath = FPaths::Combine(*BaseDir, TEXT("Source"), TEXT("ThirdParty"), TEXT("UnrealGeometryEncoderLib"), TEXT("lib"),
+												 GetPlatformName(), TEXT("Release"));
 	return BinariesPath;
 }
 
@@ -212,14 +237,15 @@ void VitruvioModule::InitializePrt()
 	const FString PrtLibPath = GetPrtDllPath();
 	const FString PrtBinDir = GetPrtBinDir();
 	const FString PrtLibDir = GetPrtLibDir();
+
 	FPlatformProcess::AddDllDirectory(*PrtBinDir);
 	FPlatformProcess::AddDllDirectory(*PrtLibDir);
 	PrtDllHandle = FPlatformProcess::GetDllHandle(*PrtLibPath);
 
 	TArray<wchar_t*> PRTPluginsPaths;
-	const FString BinariesPath = GetBinariesPath();
+	const FString EncoderExtensionPath = GetEncoderExtensionPath();
 	const FString PrtExtensionPaths = GetPrtLibDir();
-	PRTPluginsPaths.Add(const_cast<wchar_t*>(TCHAR_TO_WCHAR(*BinariesPath)));
+	PRTPluginsPaths.Add(const_cast<wchar_t*>(TCHAR_TO_WCHAR(*EncoderExtensionPath)));
 	PRTPluginsPaths.Add(const_cast<wchar_t*>(TCHAR_TO_WCHAR(*PrtExtensionPaths)));
 
 	LogHandler = new UnrealLogHandler;
@@ -397,13 +423,9 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(URulePackage* const 
 	{
 		FGraphEventRef LoadTask;
 		{
-			const FString PathName = RulePackage->GetPathName();
-			const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + TCHAR_TO_WCHAR(*PathName);
-			const FString Uri = WCHAR_TO_TCHAR(PathUri.c_str());
-
 			FScopeLock Lock(&LoadResolveMapLock);
 			// Task which does the actual resolve map loading which might take a long time
-			LoadTask = TGraphTask<FLoadResolveMapTask>::CreateTask().ConstructAndDispatchWhenReady(MoveTemp(Promise), LazyRulePackagePtr, Uri,
+			LoadTask = TGraphTask<FLoadResolveMapTask>::CreateTask().ConstructAndDispatchWhenReady(MoveTemp(Promise), LazyRulePackagePtr,
 																								   ResolveMapCache, LoadResolveMapLock);
 			ResolveMapEventGraphRefCache.Add(LazyRulePackagePtr, LoadTask);
 		}

@@ -37,7 +37,6 @@ public class VitruvioEditor : ModuleRules
 				"Slate",
 				"AppFramework",
 				"Vitruvio",
-				"UnrealGeometryEncoder"
 			}
 		);
 	}

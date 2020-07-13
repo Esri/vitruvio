@@ -10,7 +10,6 @@
 #include "prt/Object.h"
 
 #include "Engine/StaticMesh.h"
-#include "Interfaces/IHttpRequest.h"
 #include "Modules/ModuleManager.h"
 #include "UnrealLogHandler.h"
 

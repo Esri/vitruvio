@@ -2,8 +2,6 @@
 
 #include "CodecMain.h"
 
-#include "UnrealResolveMapProvider.h"
-
 #include "Encoder/UnrealGeometryEncoder.h"
 
 #include "prtx/ExtensionManager.h"
@@ -20,7 +18,6 @@ extern "C"
 	CODEC_EXPORTS_API void registerExtensionFactories(prtx::ExtensionManager* manager)
 	{
 		manager->addFactory(UnrealGeometryEncoderFactory::createInstance());
-		manager->addFactory(UnrealResolveMapProviderFactory::createInstance());
 	}
 
 	CODEC_EXPORTS_API void unregisterExtensionFactories(prtx::ExtensionManager* /*manager*/) {}
