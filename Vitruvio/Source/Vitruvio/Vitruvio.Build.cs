@@ -33,6 +33,7 @@ public class Vitruvio : ModuleRules
 				"MeshDescription",
 				"StaticMeshDescription",
 				"ImageWrapper",
+				"ImageCore",
 				"PRT",
 				"UnrealGeometryEncoderLib"
 			}
