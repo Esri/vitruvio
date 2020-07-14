@@ -16,6 +16,11 @@ DEFINE_LOG_CATEGORY(LogMaterialConversion);
 
 namespace
 {
+
+constexpr double BLACK_COLOR_THRESHOLD = 0.02;
+constexpr double WHITE_COLOR_THRESHOLD = 1.0 - BLACK_COLOR_THRESHOLD;
+constexpr double OPACITY_THRESHOLD = 0.98;
+
 struct TextureSettings
 {
 	bool SRGB;
@@ -125,6 +130,34 @@ UTexture2D* GetTexture(UObject* Outer, const prt::AttributeMap* MaterialAttribut
 	return nullptr;
 }
 
+EBlendMode ChooseBlendModeFromOpacityMap(const UTexture2D& OpacityMap)
+{
+	// TODO check content of opacitymap
+	return BLEND_Opaque;
+}
+
+EBlendMode ChooseBlendMode(UTexture2D* OpacityMap, double Opacity, EBlendMode BlendMode)
+{
+	if (Opacity < OPACITY_THRESHOLD)
+	{
+		return BLEND_Translucent;
+	}
+	else if (BlendMode == BLEND_Masked)
+	{
+		return BLEND_Masked;
+	}
+	else if (BlendMode == BLEND_Translucent && OpacityMap)
+	{
+		// OpacityMap exists and opacitymap.mode is blend (which is the default value) so we need to check the content of the OpacityMap
+		// to really decide which material we need for Unreal
+		return ChooseBlendModeFromOpacityMap(*OpacityMap);
+	}
+	else
+	{
+		return BLEND_Opaque;
+	}
+}
+
 EBlendMode GetBlendMode(const prt::AttributeMap* MaterialAttributes)
 {
 	const wchar_t* OpacityMapMode = MaterialAttributes->getString(L"opacityMap.mode");
@@ -165,7 +198,7 @@ FLinearColor GetLinearColor(const prt::AttributeMap* MaterialAttributes, wchar_t
 	return FLinearColor(Color);
 }
 
-float GetScalar(const prt::AttributeMap* MaterialAttributes, wchar_t const* Key)
+double GetScalar(const prt::AttributeMap* MaterialAttributes, wchar_t const* Key)
 {
 	return MaterialAttributes->getFloat(Key);
 }
@@ -192,21 +225,21 @@ enum class MaterialPropertyType
 
 // see prtx/Material.h
 // clang-format off
-	const std::map<std::wstring, MaterialPropertyType> KeyToTypeMap = {
-		{L"diffuseMap", 	MaterialPropertyType::TEXTURE},
-		{L"opacityMap", 	MaterialPropertyType::TEXTURE},
-		{L"emissiveMap", 	MaterialPropertyType::TEXTURE},
-		{L"metallicMap", 	MaterialPropertyType::TEXTURE},
-		{L"roughnessMap", 	MaterialPropertyType::TEXTURE},
-		{L"normalMap", 		MaterialPropertyType::TEXTURE},
+const std::map<std::wstring, MaterialPropertyType> KeyToTypeMap = {
+	{L"diffuseMap", 	MaterialPropertyType::TEXTURE},
+	{L"opacityMap", 	MaterialPropertyType::TEXTURE},
+	{L"emissiveMap", 	MaterialPropertyType::TEXTURE},
+	{L"metallicMap", 	MaterialPropertyType::TEXTURE},
+	{L"roughnessMap", 	MaterialPropertyType::TEXTURE},
+	{L"normalMap", 		MaterialPropertyType::TEXTURE},
 
-		{L"diffuseColor", 	MaterialPropertyType::LINEAR_COLOR},
-		{L"emissiveColor", 	MaterialPropertyType::LINEAR_COLOR},
+	{L"diffuseColor", 	MaterialPropertyType::LINEAR_COLOR},
+	{L"emissiveColor", 	MaterialPropertyType::LINEAR_COLOR},
 
-		{L"metallic", 		MaterialPropertyType::SCALAR},
-		{L"opacity", 		MaterialPropertyType::SCALAR},
-		{L"roughness", 		MaterialPropertyType::SCALAR},
-	};
+	{L"metallic", 		MaterialPropertyType::SCALAR},
+	{L"opacity", 		MaterialPropertyType::SCALAR},
+	{L"roughness", 		MaterialPropertyType::SCALAR},
+};
 // clang-format on
 } // namespace
 
@@ -217,12 +250,10 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, UMat
 {
 	check(IsInGameThread());
 
-	const auto BlendMode = GetBlendMode(MaterialAttributes);
-	const auto Parent = GetMaterialByBlendMode(BlendMode, OpaqueParent, MaskedParent, TranslucentParent);
-	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, Outer);
-
-	using TTextureAsyncResult = TFuture<TTuple<const wchar_t*, UTexture*>>;
-	TArray<TTextureAsyncResult> LoadTextureResult;
+	
+	TMap<FString, TFuture<UTexture2D*>> TextureProperties;
+	TMap<FString, FLinearColor> ColorProperties;
+	TMap<FString, double> ScalarProperties;
 
 	// Convert AttributeMap to material
 	size_t KeyCount = 0;
@@ -241,31 +272,48 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, UMat
 			{
 				// Load textures async in thread pool
 				// clang-format off
-					TTextureAsyncResult Result = Async(EAsyncExecution::ThreadPool, [MaterialInstance, Outer, MaterialAttributes, Key]() {
-						QUICK_SCOPE_CYCLE_COUNTER(STAT_MaterialConversion_LoadTexture);
-						UTexture* Texture = GetTexture(Outer, MaterialAttributes, GetTextureSettings(Key), Key);
-						return TTuple<const wchar_t*, UTexture*>(Key, Texture);
-						});
+				TFuture<UTexture2D*> Result = Async(EAsyncExecution::ThreadPool, [Outer, MaterialAttributes, Key]() {
+					QUICK_SCOPE_CYCLE_COUNTER(STAT_MaterialConversion_LoadTexture);
+					UTexture2D* Texture = GetTexture(Outer, MaterialAttributes, GetTextureSettings(Key), Key);
+					return Texture;
+				});
 				// clang-format on
 
-				LoadTextureResult.Add(MoveTemp(Result));
+				TextureProperties.Add(Key, MoveTemp(Result));
 
 				break;
 			}
 			case MaterialPropertyType::LINEAR_COLOR:
-				MaterialInstance->SetVectorParameterValue(FName(Key), GetLinearColor(MaterialAttributes, Key));
+				ColorProperties.Add(Key, GetLinearColor(MaterialAttributes, Key));
 				break;
-			case MaterialPropertyType::SCALAR: MaterialInstance->SetScalarParameterValue(FName(Key), GetScalar(MaterialAttributes, Key)); break;
+			case MaterialPropertyType::SCALAR:
+				ScalarProperties.Add(Key, GetScalar(MaterialAttributes, Key));
+				break;
 			default:;
 			}
 		}
 	}
 
-	// Apply textures in Game Thread
-	for (const TTextureAsyncResult& TextureFutureResult : LoadTextureResult)
+	const float Opacity = ScalarProperties["opacity"];
+	UTexture2D* OpacityMap = TextureProperties.Contains("opacityMap") ? TextureProperties["opacityMap"].Get() : nullptr;
+	
+	const EBlendMode ChosenBlendMode = ChooseBlendMode(OpacityMap, Opacity, GetBlendMode(MaterialAttributes));
+
+	const auto Parent = GetMaterialByBlendMode(ChosenBlendMode, OpaqueParent, MaskedParent, TranslucentParent);
+	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, Outer);
+
+	for (const TPair<FString, TFuture<UTexture2D*>>& TextureFuture : TextureProperties)
 	{
-		const auto Result = TextureFutureResult.Get();
-		MaterialInstance->SetTextureParameterValue(FName(Result.Key), Result.Value);
+		const auto Result = TextureFuture.Value.Get();
+		MaterialInstance->SetTextureParameterValue(FName(TextureFuture.Key), Result);
+	}
+	for (const TPair<FString, double>& ScalarProperty : ScalarProperties)
+	{
+		MaterialInstance->SetScalarParameterValue(FName(ScalarProperty.Key), ScalarProperty.Value);
+	}
+	for (const TPair<FString, FLinearColor>& ColorProperty : ColorProperties)
+	{
+		MaterialInstance->SetVectorParameterValue(FName(ColorProperty.Key), ColorProperty.Value);
 	}
 
 	return MaterialInstance;
