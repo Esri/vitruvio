@@ -184,6 +184,14 @@ AttributeMapUPtr GetDefaultAttributeValues(const std::wstring& RuleFile, const s
 	return AttributeMapUPtr(UnrealCallbacksAttributeBuilder->createAttributeMap());
 }
 
+void CleanupTempRpkFolder()
+{
+	FString TempDir(WCHAR_TO_TCHAR(prtu::temp_directory_path().c_str()));
+	const FString RpkUnpackFolder = FPaths::Combine(TempDir, TEXT("PRT"), TEXT("UnrealGeometryEncoder"));
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	PlatformFile.DeleteDirectoryRecursively(*RpkUnpackFolder);
+}
+
 FString GetPlatformName()
 {
 #if PLATFORM_64BITS && PLATFORM_WINDOWS
@@ -276,6 +284,8 @@ void VitruvioModule::ShutdownModule()
 	{
 		PrtLibrary->destroy();
 	}
+
+	CleanupTempRpkFolder();
 
 	delete LogHandler;
 }
