@@ -8,22 +8,14 @@ void UnrealLogHandler::handleLogEvent(const wchar_t* msg, prt::LogLevel level)
 {
 	switch (level)
 	{
-	case prt::LOG_TRACE:
-		UE_LOG(UnrealPrtLog, VeryVerbose, TEXT("%s"), msg) break;
-	case prt::LOG_DEBUG:
-		UE_LOG(UnrealPrtLog, Verbose, TEXT("%s"), msg) break;
-	case prt::LOG_INFO:
-		UE_LOG(UnrealPrtLog, Display, TEXT("%s"), msg) break;
-	case prt::LOG_WARNING:
-		UE_LOG(UnrealPrtLog, Warning, TEXT("%s"), msg) break;
-	case prt::LOG_ERROR:
-		UE_LOG(UnrealPrtLog, Error, TEXT("%s"), msg) break;
-	case prt::LOG_FATAL:
-		UE_LOG(UnrealPrtLog, Fatal, TEXT("%s"), msg) break;
-	case prt::LOG_NO:
-		break;
-	default:
-		break;
+	case prt::LOG_TRACE: UE_LOG(UnrealPrtLog, VeryVerbose, TEXT("%s"), msg) break;
+	case prt::LOG_DEBUG: UE_LOG(UnrealPrtLog, Verbose, TEXT("%s"), msg) break;
+	case prt::LOG_INFO: UE_LOG(UnrealPrtLog, Display, TEXT("%s"), msg) break;
+	case prt::LOG_WARNING: UE_LOG(UnrealPrtLog, Warning, TEXT("%s"), msg) break;
+	case prt::LOG_ERROR: UE_LOG(UnrealPrtLog, Error, TEXT("%s"), msg) break;
+	case prt::LOG_FATAL: UE_LOG(UnrealPrtLog, Fatal, TEXT("%s"), msg) break;
+	case prt::LOG_NO: break;
+	default: break;
 	}
 }
 

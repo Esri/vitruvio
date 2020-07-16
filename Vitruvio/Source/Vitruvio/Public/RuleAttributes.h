@@ -33,10 +33,7 @@ public:
 
 class ColorAnnotation final : public AttributeAnnotation
 {
-	AnnotationType GetAnnotationType() override
-	{
-		return AnnotationType::Color;
-	}
+	AnnotationType GetAnnotationType() override { return AnnotationType::Color; }
 };
 
 class FilesystemAnnotation final : public AttributeAnnotation
@@ -45,10 +42,7 @@ public:
 	FilesystemMode Mode = FilesystemMode::None;
 	FString Extensions;
 
-	AnnotationType GetAnnotationType() override
-	{
-		return AnnotationType::FileSystem;
-	}
+	AnnotationType GetAnnotationType() override { return AnnotationType::FileSystem; }
 };
 
 class RangeAnnotation final : public AttributeAnnotation
@@ -59,22 +53,17 @@ public:
 	double StepSize = 0.1;
 	bool Restricted = true;
 
-	AnnotationType GetAnnotationType() override
-	{
-		return AnnotationType::Range;
-	}
+	AnnotationType GetAnnotationType() override { return AnnotationType::Range; }
 };
 
-template <typename T> class EnumAnnotation final : public AttributeAnnotation
+template <typename T>
+class EnumAnnotation final : public AttributeAnnotation
 {
 public:
 	TArray<T> Values;
 	bool Restricted = true;
 
-	AnnotationType GetAnnotationType() override
-	{
-		return AnnotationType::Enum;
-	}
+	AnnotationType GetAnnotationType() override { return AnnotationType::Enum; }
 };
 
 UCLASS()
@@ -96,10 +85,7 @@ public:
 
 	bool Hidden;
 
-	void SetAnnotation(TSharedPtr<AttributeAnnotation> InAnnotation)
-	{
-		this->Annotation = MoveTemp(InAnnotation);
-	}
+	void SetAnnotation(TSharedPtr<AttributeAnnotation> InAnnotation) { this->Annotation = MoveTemp(InAnnotation); }
 };
 
 UCLASS()
@@ -118,7 +104,8 @@ public:
 
 	TSharedPtr<ColorAnnotation> GetColorAnnotation() const
 	{
-		return Annotation && Annotation->GetAnnotationType() == AnnotationType::Color ? StaticCastSharedPtr<ColorAnnotation>(Annotation) : TSharedPtr<ColorAnnotation>();
+		return Annotation && Annotation->GetAnnotationType() == AnnotationType::Color ? StaticCastSharedPtr<ColorAnnotation>(Annotation)
+																					  : TSharedPtr<ColorAnnotation>();
 	}
 };
 
@@ -138,7 +125,8 @@ public:
 
 	TSharedPtr<RangeAnnotation> GetRangeAnnotation() const
 	{
-		return Annotation && Annotation->GetAnnotationType() == AnnotationType::Range ? StaticCastSharedPtr<RangeAnnotation>(Annotation) : TSharedPtr<RangeAnnotation>();
+		return Annotation && Annotation->GetAnnotationType() == AnnotationType::Range ? StaticCastSharedPtr<RangeAnnotation>(Annotation)
+																					  : TSharedPtr<RangeAnnotation>();
 	}
 };
 

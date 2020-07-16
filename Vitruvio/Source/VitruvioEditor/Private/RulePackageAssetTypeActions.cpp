@@ -20,9 +20,7 @@ UClass* FRulePackageAssetTypeActions::GetSupportedClass() const
 	return URulePackage::StaticClass();
 }
 
-void FRulePackageAssetTypeActions::OpenAssetEditor(const TArray<UObject*>& InObjects, TSharedPtr<class IToolkitHost> EditWithinLevelEditor)
-{
-}
+void FRulePackageAssetTypeActions::OpenAssetEditor(const TArray<UObject*>& InObjects, TSharedPtr<class IToolkitHost> EditWithinLevelEditor) {}
 
 uint32 FRulePackageAssetTypeActions::GetCategories()
 {

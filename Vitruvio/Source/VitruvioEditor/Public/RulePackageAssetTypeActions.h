@@ -11,6 +11,7 @@ public:
 	FText GetName() const override;
 	FColor GetTypeColor() const override;
 	UClass* GetSupportedClass() const override;
-	void OpenAssetEditor(const TArray<UObject*>& InObjects, TSharedPtr<class IToolkitHost> EditWithinLevelEditor = TSharedPtr<IToolkitHost>()) override;
+	void OpenAssetEditor(const TArray<UObject*>& InObjects,
+						 TSharedPtr<class IToolkitHost> EditWithinLevelEditor = TSharedPtr<IToolkitHost>()) override;
 	uint32 GetCategories() override;
 };

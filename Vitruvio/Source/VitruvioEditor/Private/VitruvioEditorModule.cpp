@@ -18,7 +18,8 @@ void VitruvioEditorModule::StartupModule()
 	AssetTools.RegisterAssetTypeActions(MakeShareable(new FRulePackageAssetTypeActions()));
 
 	FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	PropertyModule.RegisterCustomClassLayout(AVitruvioActor::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FVitruvioActorDetails::MakeInstance));
+	PropertyModule.RegisterCustomClassLayout(AVitruvioActor::StaticClass()->GetFName(),
+											 FOnGetDetailCustomizationInstance::CreateStatic(&FVitruvioActorDetails::MakeInstance));
 }
 
 void VitruvioEditorModule::ShutdownModule()

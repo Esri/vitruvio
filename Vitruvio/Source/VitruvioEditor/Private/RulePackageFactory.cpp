@@ -15,8 +15,8 @@ URulePackageFactory::URulePackageFactory(const FObjectInitializer& ObjectInitial
 }
 
 // TODO: do we want to load the whole RPK into memory? Alternatively use FactoryCreateFile() and just keep the filename?
-UObject* URulePackageFactory::FactoryCreateBinary(UClass* Class, UObject* InParent, FName Name, EObjectFlags Flags, UObject* Context, const TCHAR* Type, const uint8*& Buffer,
-												  const uint8* BufferEnd, FFeedbackContext* Warn)
+UObject* URulePackageFactory::FactoryCreateBinary(UClass* Class, UObject* InParent, FName Name, EObjectFlags Flags, UObject* Context,
+												  const TCHAR* Type, const uint8*& Buffer, const uint8* BufferEnd, FFeedbackContext* Warn)
 {
 	URulePackage* RulePackage = NewObject<URulePackage>(InParent, SupportedClass, Name, Flags | RF_Transactional);
 
