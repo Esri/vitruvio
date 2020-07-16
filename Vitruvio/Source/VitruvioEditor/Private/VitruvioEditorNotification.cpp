@@ -7,9 +7,7 @@ namespace
 {
 VitruvioModule* GetVitruvioUnchecked()
 {
-	IModuleInterface* Module = FModuleManager::Get().LoadModule("Vitruvio");
-	VitruvioModule* Vitruvio = dynamic_cast<VitruvioModule*>(Module);
-	return Vitruvio;
+	return FModuleManager::GetModulePtr<VitruvioModule>("Vitruvio");
 }
 } // namespace
 
