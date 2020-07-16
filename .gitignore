@@ -53,9 +53,6 @@ SourceArt/**/*.tga
 Build/*/**
 !Build/*/PakBlacklist*.txt
 
-# Whitelist lib folder for GeometryEncoder
-!Vitruvio/Source/ThirdParty/UnrealGeometryEncoderLib/lib/**
-
 # Don't ignore icon files in Build
 !Build/**/*.ico
 
@@ -72,9 +69,5 @@ Build/*/**
 DerivedDataCache/*
 
 # Content files
-!Content/InitialShapes/*.obj
 *.zip
 desktop.ini
-
-# Ignore PRT includes
-**/ThirdParty/PRT/include/**

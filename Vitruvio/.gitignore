@@ -1,0 +1,6 @@
+
+# Whitelist lib folder for GeometryEncoder
+!Source/ThirdParty/UnrealGeometryEncoderLib/lib/**
+
+# Ignore PRT includes
+**/ThirdParty/PRT/include/**
