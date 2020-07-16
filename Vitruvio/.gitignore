@@ -1,7 +1,4 @@
 
-# Content files
-!Content/InitialShapes/*.obj
-
 # Whitelist lib folder for GeometryEncoder
 !Source/ThirdParty/UnrealGeometryEncoderLib/lib/**
 
