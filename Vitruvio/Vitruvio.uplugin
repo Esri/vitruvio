@@ -19,7 +19,7 @@
 		{
 			"Name": "Vitruvio",
 			"Type": "Runtime",
-			"LoadingPhase": "Default",
+			"LoadingPhase": "PostDefault",
 			"WhitelistPlatforms": [
 				"Win64",
 				"Mac"
@@ -33,12 +33,6 @@
 				"Win64",
 				"Mac"
 			]
-		}
-	],
-	"Plugins": [
-		{
-			"Name": "UnrealGeometryEncoder",
-			"Enabled": true
 		}
 	]
 }

@@ -8,6 +8,7 @@ using System.Net;
 using UnrealBuildTool;
 using System.ComponentModel.Design;
 using System.Collections.Generic;
+using System.Linq;
 
 public class PRT : ModuleRules
 {
@@ -19,6 +20,7 @@ public class PRT : ModuleRules
 	private const int PrtBuild = 5705;
 
 	private const string PrtCoreDllName = "com.esri.prt.core.dll";
+	private static string[] ExtensionLibraries = { "com.esri.prt.adaptors.dll", "com.esri.prt.codecs.dll", "VueExport.dll" };
 
 	const long ERROR_SHARING_VIOLATION = 0x20;
 	const long ERROR_LOCK_VIOLATION = 0x21;
@@ -49,13 +51,21 @@ public class PRT : ModuleRules
 
 		// 1. Check if prt is already available and has correct version, otherwise download from official github repo
 		bool PrtInstalled = Directory.Exists(LibDir) && Directory.Exists(BinDir);
-
+		
 		string PrtCorePath = Path.Combine(BinDir, PrtCoreDllName);
 		bool PrtCoreExists = File.Exists(PrtCorePath);
 		bool PrtVersionMatch = PrtCoreExists && CheckDllVersion(PrtCorePath, PrtMajor, PrtMinor, PrtBuild);
 
 		if (!PrtInstalled || !PrtVersionMatch)
 		{
+
+			string PrtUrl = "https://github.com/Esri/esri-cityengine-sdk/releases/download";
+			string PrtVersion = string.Format("{0}.{1}.{2}", PrtMajor, PrtMinor, PrtBuild);
+
+			string PrtLibName = string.Format("esri_ce_sdk-{0}-{1}", PrtVersion, Platform.PrtPlatform);
+			string PrtLibZipFile = PrtLibName + ".zip";
+			string PrtDownloadUrl = Path.Combine(PrtUrl, PrtVersion, PrtLibZipFile);
+
 			try
 			{
 				if (Directory.Exists(LibDir)) Directory.Delete(LibDir, true);
@@ -67,13 +77,6 @@ public class PRT : ModuleRules
 					if (!PrtInstalled) Console.WriteLine("PRT not found");
 					Console.WriteLine("Updating PRT");
 				}
-
-				string PrtUrl = "https://github.com/Esri/esri-cityengine-sdk/releases/download";
-				string PrtVersion = string.Format("{0}.{1}.{2}", PrtMajor, PrtMinor, PrtBuild);
-
-				string PrtLibName = string.Format("esri_ce_sdk-{0}-{1}", PrtVersion, Platform.PrtPlatform);
-				string PrtLibZipFile = PrtLibName + ".zip";
-				string PrtDownloadUrl = Path.Combine(PrtUrl, PrtVersion, PrtLibZipFile);
 
 				if (Debug) System.Console.WriteLine("Downloading " + PrtDownloadUrl + "...");
 
@@ -91,13 +94,11 @@ public class PRT : ModuleRules
 				Copy(Path.Combine(ModuleDirectory, PrtLibName, "lib"), Path.Combine(ModuleDirectory, LibDir));
 				Copy(Path.Combine(ModuleDirectory, PrtLibName, "bin"), Path.Combine(ModuleDirectory, BinDir));
 				Copy(Path.Combine(ModuleDirectory, PrtLibName, "include"), Path.Combine(ModuleDirectory, "include"));
-
-				Directory.Delete(Path.Combine(ModuleDirectory, PrtLibName), true);
-				File.Delete(Path.Combine(ModuleDirectory, PrtLibZipFile));
 			}
 			finally
 			{
-				// TODO cleanup
+				Directory.Delete(Path.Combine(ModuleDirectory, PrtLibName), true);
+				File.Delete(Path.Combine(ModuleDirectory, PrtLibZipFile));
 			}
 		}
 		else if (Debug)
@@ -120,26 +121,30 @@ public class PRT : ModuleRules
 		PublicRuntimeLibraryPaths.Add(ModuleBinariesDir);
 
 		// Copy PRT core libraries
-		if (Debug) Console.WriteLine("Adding PRT core libraries to binary directory " + ModuleBinariesDir);
+		if (Debug) Console.WriteLine("Adding PRT core libraries");
 		foreach (string FilePath in Directory.GetFiles(BinDir))
 		{
-			string FileName = Path.GetFileName(FilePath);
-			string LibraryPath = Path.Combine(ModuleBinariesDir, FileName);
+			string LibraryName = Path.GetFileName(FilePath);
 
-			Platform.CopyPrtCoreLibrary(FilePath, FileName, LibraryPath, LibDir, this);
+			Platform.AddPrtCoreLibrary(FilePath, LibraryName, this);
 		}
 
-		// Copy PRT extension libraries
-		if (Debug) Console.WriteLine("Adding PRT extension libraries to binary directory " + ModuleBinariesDir);
+		// Delete unused PRT extension libraries
+		if (Debug) Console.WriteLine("Deleting unused PRT extension libraries");
 		foreach (string FilePath in Directory.GetFiles(LibDir))
 		{
+			string FileName = Path.GetFileName(FilePath);
 			if (Path.GetExtension(FilePath) == Platform.DynamicLibExtension)
 			{
-				string FileName = Path.GetFileName(FilePath);
-				string DllPath = Path.Combine(ModuleBinariesDir, FileName);
-				if (Debug) Console.WriteLine("Adding Extension Library " + FileName);
-				CopyLibraryFile(LibDir, FilePath, DllPath);
-				RuntimeDependencies.Add(DllPath);
+				if (!Array.Exists(ExtensionLibraries, e => e == Path.GetFileName(FilePath)))
+				{
+					File.Delete(FilePath);
+				} 
+				else
+				{
+					RuntimeDependencies.Add(FilePath);
+					PublicDelayLoadDLLs.Add(FileName);
+				}
 			}
 		}
 
@@ -269,16 +274,14 @@ public class PRT : ModuleRules
 		public abstract string PrtPlatform { get; }
 		public abstract string DynamicLibExtension { get; }
 
-		public virtual void CopyPrtCoreLibrary(string FilePath, string FileName, string LibraryPath, string LibDir, ModuleRules Rules)
+		public virtual void AddPrtCoreLibrary(string LibraryPath, string LibraryName, ModuleRules Rules)
 		{
-			if (Path.GetExtension(FilePath) == DynamicLibExtension)
+			if (Path.GetExtension(LibraryName) == DynamicLibExtension)
 			{
-				if (Debug) Console.WriteLine("Adding Runtime Dpendency " + FileName);
-
-				CopyLibraryFile(LibDir, FilePath, LibraryPath);
+				if (Debug) Console.WriteLine("Adding Runtime Library " + LibraryName);
 
 				Rules.RuntimeDependencies.Add(LibraryPath);
-				Rules.PublicDelayLoadDLLs.Add(FileName);
+				Rules.PublicDelayLoadDLLs.Add(LibraryName);
 			}
 		}
 	}
@@ -291,15 +294,13 @@ public class PRT : ModuleRules
 		public override string PrtPlatform { get { return "win10-vc141-x86_64-rel-opt"; } }
 		public override string DynamicLibExtension { get { return ".dll"; } }
 
-		public override void CopyPrtCoreLibrary(string FilePath, string FileName, string LibraryPath, string LibDir, ModuleRules Rules)
+		public override void AddPrtCoreLibrary(string LibraryPath, string LibraryName, ModuleRules Rules)
 		{
-			base.CopyPrtCoreLibrary(FilePath, FileName, LibraryPath, LibDir, Rules);
+			base.AddPrtCoreLibrary(LibraryPath, LibraryName, Rules);
 
-			if (Path.GetExtension(FilePath) == ".lib")
+			if (Path.GetExtension(LibraryPath) == ".lib")
 			{
-				if (Debug) Console.WriteLine("Adding Public Additional Library " + FileName);
-
-				CopyLibraryFile(LibDir, FilePath, LibraryPath);
+				if (Debug) Console.WriteLine("Adding Public Additional Library " + LibraryName);
 
 				Rules.PublicAdditionalLibraries.Add(LibraryPath);
 			}

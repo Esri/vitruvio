@@ -1,6 +1,7 @@
 // Copyright 2019 - 2020 Esri. All Rights Reserved.
 
 using UnrealBuildTool;
+using System.IO;
 
 public class Vitruvio : ModuleRules
 {
@@ -10,6 +11,11 @@ public class Vitruvio : ModuleRules
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		PrecompileForTargets = PrecompileTargetsType.Any;
 
+		PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
+
+		PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Private"));
+		PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Private", "Util"));
+
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
@@ -18,7 +24,6 @@ public class Vitruvio : ModuleRules
 				"Engine",
 				"RHI",
 				"RenderCore",
-				"PRT",
 				"Projects",
 				"SlateCore",
 				"Slate",
@@ -27,7 +32,9 @@ public class Vitruvio : ModuleRules
 				"InputCore",
 				"MeshDescription",
 				"StaticMeshDescription",
-				"ImageWrapper"
+				"ImageWrapper",
+				"PRT",
+				"UnrealGeometryEncoderLib"
 			}
 		);
 
@@ -37,7 +44,6 @@ public class Vitruvio : ModuleRules
 				"SlateCore",
 				"Slate",
 				"AppFramework",
-				"UnrealGeometryEncoder"
 			}
 		);
 	}

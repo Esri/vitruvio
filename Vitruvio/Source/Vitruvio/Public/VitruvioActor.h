@@ -29,38 +29,38 @@ public:
 	AVitruvioActor();
 
 	/** CityEngine Rule Package used for generation. */
-	UPROPERTY(EditAnywhere, DisplayName = "Rule Package", Category = "CGA")
+	UPROPERTY(EditAnywhere, DisplayName = "Rule Package", Category = "Vitruvio")
 	URulePackage* Rpk;
 
 	/** Random seed used for generation. */
-	UPROPERTY(EditAnywhere, DisplayName = "Random Seed", Category = "CGA")
+	UPROPERTY(EditAnywhere, DisplayName = "Random Seed", Category = "Vitruvio")
 	int32 RandomSeed;
 
 	/** Automatically generate after changing attributes or properties. */
-	UPROPERTY(EditAnywhere, DisplayName = "Generate Automatically", Category = "CGA")
+	UPROPERTY(EditAnywhere, DisplayName = "Generate Automatically", Category = "Vitruvio")
 	bool GenerateAutomatically = true;
 
 	/** Automatically hide initial shape (i.e. this actor's static mesh) after generation. */
-	UPROPERTY(EditAnywhere, DisplayName = "Hide after Generation", Category = "CGA")
+	UPROPERTY(EditAnywhere, DisplayName = "Hide after Generation", Category = "Vitruvio")
 	bool HideAfterGeneration = false;
 
 	/** Rule attributes used for generation. */
-	UPROPERTY(EditAnywhere, DisplayName = "Attributes", Category = "CGA")
+	UPROPERTY(EditAnywhere, DisplayName = "Attributes", Category = "Vitruvio")
 	TMap<FString, URuleAttribute*> Attributes;
 
 	/** Default parent material for opaque geometry. */
-	UPROPERTY(EditAnywhere, DisplayName = "Opaque Parent", Category = "CGA Default Materials")
+	UPROPERTY(EditAnywhere, DisplayName = "Opaque Parent", Category = "Vitruvio Default Materials")
 	UMaterial* OpaqueParent;
 
 	/** Default parent material for masked geometry. */
-	UPROPERTY(EditAnywhere, DisplayName = "Masked Parent", Category = "CGA Default Materials")
+	UPROPERTY(EditAnywhere, DisplayName = "Masked Parent", Category = "Vitruvio Default Materials")
 	UMaterial* MaskedParent;
 
 	/** Default parent material for translucent geometry. */
-	UPROPERTY(EditAnywhere, DisplayName = "Translucent Parent", Category = "CGA Default Materials")
+	UPROPERTY(EditAnywhere, DisplayName = "Translucent Parent", Category = "Vitruvio Default Materials")
 	UMaterial* TranslucentParent;
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	void Generate();
 
 protected:

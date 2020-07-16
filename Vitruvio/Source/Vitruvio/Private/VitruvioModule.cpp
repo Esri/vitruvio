@@ -5,9 +5,9 @@
 #include "PRTTypes.h"
 #include "PRTUtils.h"
 #include "UnrealCallbacks.h"
-#include "UnrealResolveMapProvider.h"
 
 #include "Util/AnnotationParsing.h"
+#include "Util/AttributeConversion.h"
 #include "Util/PolygonWindings.h"
 
 #include "prt/API.h"
@@ -26,20 +26,18 @@ DEFINE_LOG_CATEGORY(LogUnrealPrt);
 namespace
 {
 constexpr const wchar_t* ATTRIBUTE_EVAL_ENCODER_ID = L"com.esri.prt.core.AttributeEvalEncoder";
-const FString DEFAULT_STYLE = TEXT("Default");
 
 class FLoadResolveMapTask
 {
 	TLazyObjectPtr<URulePackage> LazyRulePackagePtr;
-	FString ResolveMapUri;
 	TPromise<ResolveMapSPtr> Promise;
 	TMap<TLazyObjectPtr<URulePackage>, ResolveMapSPtr>& ResolveMapCache;
 	FCriticalSection& LoadResolveMapLock;
 
 public:
-	FLoadResolveMapTask(TPromise<ResolveMapSPtr>&& InPromise, const TLazyObjectPtr<URulePackage> LazyRulePackagePtr, const FString ResolveMapUri,
+	FLoadResolveMapTask(TPromise<ResolveMapSPtr>&& InPromise, const TLazyObjectPtr<URulePackage> LazyRulePackagePtr,
 						TMap<TLazyObjectPtr<URulePackage>, ResolveMapSPtr>& ResolveMapCache, FCriticalSection& LoadResolveMapLock)
-		: LazyRulePackagePtr(LazyRulePackagePtr), ResolveMapUri(ResolveMapUri), Promise(MoveTemp(InPromise)), ResolveMapCache(ResolveMapCache),
+		: LazyRulePackagePtr(LazyRulePackagePtr), Promise(MoveTemp(InPromise)), ResolveMapCache(ResolveMapCache),
 		  LoadResolveMapLock(LoadResolveMapLock)
 	{
 	}
@@ -53,11 +51,40 @@ public:
 
 	void DoTask(ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
 	{
-		const ResolveMapSPtr ResolveMap(prt::createResolveMap(TCHAR_TO_WCHAR(*ResolveMapUri)), PRTDestroyer());
+		const FString UriPath = LazyRulePackagePtr->GetPathName();
+
+		// Create rpk on disk for PRT
+		IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+		FString TempDir(WCHAR_TO_TCHAR(prtu::temp_directory_path().c_str()));
+		const FString RpkFolder = FPaths::Combine(TempDir, TEXT("PRT"), TEXT("UnrealGeometryEncoder"), FPaths::GetPath(UriPath.Mid(1)));
+		const FString RpkFile = FPaths::GetBaseFilename(UriPath, true) + TEXT(".rpk");
+		const FString RpkPath = FPaths::Combine(RpkFolder, RpkFile);
+		PlatformFile.CreateDirectoryTree(*RpkFolder);
+		IFileHandle* RpkHandle = PlatformFile.OpenWrite(*RpkPath);
+		if (RpkHandle)
 		{
-			FScopeLock Lock(&LoadResolveMapLock);
-			ResolveMapCache.Add(LazyRulePackagePtr, ResolveMap);
-			Promise.SetValue(ResolveMap);
+			// Write file to disk
+			RpkHandle->Write(LazyRulePackagePtr->Data.GetData(), LazyRulePackagePtr->Data.Num());
+			RpkHandle->Flush();
+			delete RpkHandle;
+
+			// Create rpk
+			const std::wstring AbsoluteRpkPath(TCHAR_TO_WCHAR(*FPaths::ConvertRelativePathToFull(RpkPath)));
+			const std::wstring AbsoluteRpkFolder(TCHAR_TO_WCHAR(*FPaths::Combine(FPaths::GetPath(FPaths::ConvertRelativePathToFull(RpkPath)),
+																				 FPaths::GetBaseFilename(UriPath, true) + TEXT("_Unpacked"))));
+			const std::wstring RpkFileUri = prtu::toFileURI(AbsoluteRpkPath);
+
+			prt::Status Status;
+			const ResolveMapSPtr ResolveMapPtr(prt::createResolveMap(RpkFileUri.c_str(), AbsoluteRpkFolder.c_str(), &Status), PRTDestroyer());
+			{
+				FScopeLock Lock(&LoadResolveMapLock);
+				ResolveMapCache.Add(LazyRulePackagePtr, ResolveMapPtr);
+				Promise.SetValue(ResolveMapPtr);
+			}
+		}
+		else
+		{
+			Promise.SetValue(nullptr);
 		}
 	}
 };
@@ -101,7 +128,7 @@ void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder,
 		}
 	}
 
-	const TArray<TArray<FVector>> Windings = Vitruvio::PolygonWindings::GetOutsideWindings(MeshVertices, MeshIndices);
+	const TArray<TArray<FVector>> Windings = Vitruvio::GetOutsideWindings(MeshVertices, MeshIndices);
 
 	std::vector<double> vertexCoords;
 	std::vector<uint32_t> indices;
@@ -131,31 +158,6 @@ void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder,
 	}
 }
 
-AttributeMapUPtr CreateAttributeMap(const TMap<FString, URuleAttribute*>& Attributes)
-{
-	AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
-
-	for (const TPair<FString, URuleAttribute*>& AttributeEntry : Attributes)
-	{
-		const URuleAttribute* Attribute = AttributeEntry.Value;
-
-		if (const UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
-		{
-			AttributeMapBuilder->setFloat(TCHAR_TO_WCHAR(*Attribute->Name), FloatAttribute->Value);
-		}
-		else if (const UStringAttribute* StringAttribute = Cast<UStringAttribute>(Attribute))
-		{
-			AttributeMapBuilder->setString(TCHAR_TO_WCHAR(*Attribute->Name), TCHAR_TO_WCHAR(*StringAttribute->Value));
-		}
-		else if (const UBoolAttribute* BoolAttribute = Cast<UBoolAttribute>(Attribute))
-		{
-			AttributeMapBuilder->setBool(TCHAR_TO_WCHAR(*Attribute->Name), BoolAttribute->Value);
-		}
-	}
-
-	return AttributeMapUPtr(AttributeMapBuilder->createAttributeMap(), PRTDestroyer());
-}
-
 AttributeMapUPtr GetDefaultAttributeValues(const std::wstring& RuleFile, const std::wstring& StartRule, const ResolveMapSPtr& ResolveMapPtr,
 										   const UStaticMesh* InitialShape, const int32 RandomSeed)
 {
@@ -182,131 +184,77 @@ AttributeMapUPtr GetDefaultAttributeValues(const std::wstring& RuleFile, const s
 	return AttributeMapUPtr(UnrealCallbacksAttributeBuilder->createAttributeMap());
 }
 
-URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt::RuleFileInfo::Entry* AttrInfo)
+void CleanupTempRpkFolder()
 {
-	const std::wstring Name(AttrInfo->getName());
-	switch (AttrInfo->getReturnType())
-	{
-	case prt::AAT_BOOL:
-	{
-		UBoolAttribute* BoolAttribute = NewObject<UBoolAttribute>();
-		BoolAttribute->Value = AttributeMap->getBool(Name.c_str());
-		return BoolAttribute;
-	}
-	case prt::AAT_INT:
-	case prt::AAT_FLOAT:
-	{
-		UFloatAttribute* FloatAttribute = NewObject<UFloatAttribute>();
-		FloatAttribute->Value = AttributeMap->getFloat(Name.c_str());
-		return FloatAttribute;
-	}
-	case prt::AAT_STR:
-	{
-		UStringAttribute* StringAttribute = NewObject<UStringAttribute>();
-		StringAttribute->Value = WCHAR_TO_TCHAR(AttributeMap->getString(Name.c_str()));
-		return StringAttribute;
-	}
-	case prt::AAT_UNKNOWN:
-	case prt::AAT_VOID:
-	case prt::AAT_BOOL_ARRAY:
-	case prt::AAT_FLOAT_ARRAY:
-	case prt::AAT_STR_ARRAY:
-	default: return nullptr;
-	}
-}
-
-FAttributeMap ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo)
-{
-	FAttributeMap UnrealAttributeMap;
-	for (size_t AttributeIndex = 0; AttributeIndex < RuleInfo->getNumAttributes(); AttributeIndex++)
-	{
-		const prt::RuleFileInfo::Entry* AttrInfo = RuleInfo->getAttribute(AttributeIndex);
-		if (AttrInfo->getNumParameters() != 0)
-		{
-			continue;
-		}
-
-		// We only support the default style for the moment
-		FString Style(WCHAR_TO_TCHAR(prtu::getStyle(AttrInfo->getName()).c_str()));
-		if (Style != DEFAULT_STYLE)
-		{
-			continue;
-		}
-
-		const std::wstring Name(AttrInfo->getName());
-		if (UnrealAttributeMap.Attributes.Contains(WCHAR_TO_TCHAR(Name.c_str())))
-		{
-			continue;
-		}
-
-		{
-			// CreateAttribute creates new UObjects and requires that the garbage collector is currently not running
-			FGCScopeGuard GCGuard;
-			URuleAttribute* Attribute = CreateAttribute(AttributeMap, AttrInfo);
-
-			if (Attribute)
-			{
-				const FString AttributeName = WCHAR_TO_TCHAR(Name.c_str());
-				const FString DisplayName = WCHAR_TO_TCHAR(prtu::removeImport(prtu::removeStyle(Name.c_str())).c_str());
-				Attribute->Name = AttributeName;
-				Attribute->DisplayName = DisplayName;
-
-				ParseAttributeAnnotations(AttrInfo, *Attribute);
-
-				if (!Attribute->Hidden)
-				{
-					// By adding the UObject to the attribute map, it is saved from being garbage collected
-					UnrealAttributeMap.Attributes.Add(AttributeName, Attribute);
-				}
-			}
-		}
-	}
-	return UnrealAttributeMap;
-}
-
-void CleanupGeometryEncoderDlls(const FString& BinariesPath)
-{
+	FString TempDir(WCHAR_TO_TCHAR(prtu::temp_directory_path().c_str()));
+	const FString RpkUnpackFolder = FPaths::Combine(TempDir, TEXT("PRT"), TEXT("UnrealGeometryEncoder"));
 	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-
-	// Find all Unreal dlls
-	TArray<FString> OutFiles;
-	PlatformFile.FindFiles(OutFiles, *BinariesPath, TEXT(".dll"));
-	TArray<FString> UnrealDlls =
-		OutFiles.FilterByPredicate([](const FString& File) -> auto { return FPaths::GetCleanFilename(File).StartsWith(TEXT("UE4Editor-")); });
-
-	// Sort by date and remove newest (don't want to delete)
-	UnrealDlls.Sort([&PlatformFile](const auto& A, const auto& B) -> auto { return PlatformFile.GetTimeStamp(*A) > PlatformFile.GetTimeStamp(*B); });
-	if (UnrealDlls.Num() > 0)
-	{
-		UnrealDlls.RemoveAt(0);
-	}
-
-	// Delete old dlls
-	for (const auto& OldDll : UnrealDlls)
-	{
-		PlatformFile.DeleteFile(*OldDll);
-		FString PdbFile = FPaths::GetBaseFilename(OldDll, false) + TEXT(".pdb");
-		if (PlatformFile.FileExists(*PdbFile))
-		{
-			PlatformFile.DeleteFile(*PdbFile);
-		}
-	}
+	PlatformFile.DeleteDirectoryRecursively(*RpkUnpackFolder);
 }
+
+FString GetPlatformName()
+{
+#if PLATFORM_64BITS && PLATFORM_WINDOWS
+	return "Win64";
+#elif PLATFORM_MAC
+	return "Mac";
+#else
+	return "Unknown";
+#endif
+}
+
+FString GetPrtThirdPartyPath()
+{
+	const FString BaseDir = FPaths::ConvertRelativePathToFull(IPluginManager::Get().FindPlugin("Vitruvio")->GetBaseDir());
+	const FString BinariesPath = FPaths::Combine(*BaseDir, TEXT("Source"), TEXT("ThirdParty"), TEXT("PRT"));
+	return BinariesPath;
+}
+
+FString GetEncoderExtensionPath()
+{
+	const FString BaseDir = FPaths::ConvertRelativePathToFull(IPluginManager::Get().FindPlugin("Vitruvio")->GetBaseDir());
+	const FString BinariesPath = FPaths::Combine(*BaseDir, TEXT("Source"), TEXT("ThirdParty"), TEXT("UnrealGeometryEncoderLib"), TEXT("lib"),
+												 GetPlatformName(), TEXT("Release"));
+	return BinariesPath;
+}
+
+FString GetPrtLibDir()
+{
+	const FString BaseDir = GetPrtThirdPartyPath();
+	const FString LibDir = FPaths::Combine(*BaseDir, TEXT("lib"), GetPlatformName(), TEXT("Release"));
+	return LibDir;
+}
+
+FString GetPrtBinDir()
+{
+	const FString BaseDir = GetPrtThirdPartyPath();
+	const FString BinDir = FPaths::Combine(*BaseDir, TEXT("bin"), GetPlatformName(), TEXT("Release"));
+	return BinDir;
+}
+
+FString GetPrtDllPath()
+{
+	const FString BaseDir = GetPrtBinDir();
+	return FPaths::Combine(*BaseDir, TEXT("com.esri.prt.core.dll"));
+}
+
 } // namespace
 
-void VitruvioModule::StartupModule()
+void VitruvioModule::InitializePrt()
 {
-	const FString BaseDir = FPaths::ConvertRelativePathToFull(IPluginManager::Get().FindPlugin("UnrealGeometryEncoder")->GetBaseDir());
-	const FString BinariesPath = FPaths::Combine(*BaseDir, TEXT("Binaries"), TEXT("Win64"));
-	const FString PrtLibPath = FPaths::Combine(*BinariesPath, TEXT("com.esri.prt.core.dll"));
+	const FString PrtLibPath = GetPrtDllPath();
+	const FString PrtBinDir = GetPrtBinDir();
+	const FString PrtLibDir = GetPrtLibDir();
 
+	FPlatformProcess::AddDllDirectory(*PrtBinDir);
+	FPlatformProcess::AddDllDirectory(*PrtLibDir);
 	PrtDllHandle = FPlatformProcess::GetDllHandle(*PrtLibPath);
 
 	TArray<wchar_t*> PRTPluginsPaths;
-	PRTPluginsPaths.Add(const_cast<wchar_t*>(TCHAR_TO_WCHAR(*BinariesPath)));
-
-	// TODO this cleanup should happen in a post build step. See DatasmithExporter Plugin from the Unreal source for more information
-	CleanupGeometryEncoderDlls(BinariesPath);
+	const FString EncoderExtensionPath = GetEncoderExtensionPath();
+	const FString PrtExtensionPaths = GetPrtLibDir();
+	PRTPluginsPaths.Add(const_cast<wchar_t*>(TCHAR_TO_WCHAR(*EncoderExtensionPath)));
+	PRTPluginsPaths.Add(const_cast<wchar_t*>(TCHAR_TO_WCHAR(*PrtExtensionPaths)));
 
 	LogHandler = new UnrealLogHandler;
 	prt::addLogHandler(LogHandler);
@@ -316,6 +264,11 @@ void VitruvioModule::StartupModule()
 	Initialized = Status == prt::STATUS_OK;
 
 	PrtCache.reset(prt::CacheObject::create(prt::CacheObject::CACHE_TYPE_DEFAULT));
+}
+
+void VitruvioModule::StartupModule()
+{
+	InitializePrt();
 }
 
 void VitruvioModule::ShutdownModule()
@@ -332,6 +285,8 @@ void VitruvioModule::ShutdownModule()
 		PrtLibrary->destroy();
 	}
 
+	CleanupTempRpkFolder();
+
 	delete LogHandler;
 }
 
@@ -344,7 +299,7 @@ TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const UStaticMesh* Initia
 
 	if (!Initialized)
 	{
-		UE_LOG(LogUnrealPrt, Error, TEXT("prt not initialized"))
+		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
 		return {};
 	}
 
@@ -362,9 +317,11 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 
 	if (!Initialized)
 	{
-		UE_LOG(LogUnrealPrt, Error, TEXT("prt not initialized"))
+		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
 		return {};
 	}
+
+	GenerateCallsCounter.Increment();
 
 	const InitialShapeBuilderUPtr InitialShapeBuilder(prt::InitialShapeBuilder::create());
 	SetInitialShapeGeometry(InitialShapeBuilder, InitialShape);
@@ -377,7 +334,7 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 	const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
 	const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
 
-	const AttributeMapUPtr AttributeMap = CreateAttributeMap(Attributes);
+	const AttributeMapUPtr AttributeMap = Vitruvio::CreateAttributeMap(Attributes);
 	InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", AttributeMap.get(), ResolveMap.get());
 
 	AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
@@ -396,8 +353,10 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 
 	if (GenerateStatus != prt::STATUS_OK)
 	{
-		UE_LOG(LogUnrealPrt, Error, TEXT("prt generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
+		UE_LOG(LogUnrealPrt, Error, TEXT("PRT generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
 	}
+
+	GenerateCallsCounter.Decrement();
 
 	return {OutputHandler->GetModel(), OutputHandler->GetInstances()};
 }
@@ -410,7 +369,7 @@ TFuture<FAttributeMap> VitruvioModule::LoadDefaultRuleAttributesAsync(const USta
 
 	if (!Initialized)
 	{
-		UE_LOG(LogUnrealPrt, Error, TEXT("prt not initialized"))
+		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
 		return {};
 	}
 
@@ -433,7 +392,7 @@ TFuture<FAttributeMap> VitruvioModule::LoadDefaultRuleAttributesAsync(const USta
 
 		const AttributeMapUPtr DefaultAttributeMap(
 			GetDefaultAttributeValues(RuleFile.c_str(), StartRule.c_str(), ResolveMap, InitialShape, RandomSeed));
-		return ConvertAttributeMap(DefaultAttributeMap, RuleInfo);
+		return Vitruvio::ConvertAttributeMap(DefaultAttributeMap, RuleInfo);
 	});
 }
 
@@ -476,15 +435,13 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(URulePackage* const 
 	}
 	else
 	{
+		RpkLoadingTasksCounter.Increment();
+
 		FGraphEventRef LoadTask;
 		{
-			const FString PathName = RulePackage->GetPathName();
-			const std::wstring PathUri = UnrealResolveMapProvider::SCHEME_UNREAL + L":" + TCHAR_TO_WCHAR(*PathName);
-			const FString Uri = WCHAR_TO_TCHAR(PathUri.c_str());
-
 			FScopeLock Lock(&LoadResolveMapLock);
 			// Task which does the actual resolve map loading which might take a long time
-			LoadTask = TGraphTask<FLoadResolveMapTask>::CreateTask().ConstructAndDispatchWhenReady(MoveTemp(Promise), LazyRulePackagePtr, Uri,
+			LoadTask = TGraphTask<FLoadResolveMapTask>::CreateTask().ConstructAndDispatchWhenReady(MoveTemp(Promise), LazyRulePackagePtr,
 																								   ResolveMapCache, LoadResolveMapLock);
 			ResolveMapEventGraphRefCache.Add(LazyRulePackagePtr, LoadTask);
 		}
@@ -493,6 +450,7 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(URulePackage* const 
 		FFunctionGraphTask::CreateAndDispatchWhenReady(
 			[this, LazyRulePackagePtr]() {
 				FScopeLock Lock(&LoadResolveMapLock);
+				RpkLoadingTasksCounter.Decrement();
 				ResolveMapEventGraphRefCache.Remove(LazyRulePackagePtr);
 			},
 			TStatId(), LoadTask, ENamedThreads::AnyThread);

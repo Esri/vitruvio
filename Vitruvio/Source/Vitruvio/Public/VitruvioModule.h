@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "AttributeMap.h"
 #include "PRTTypes.h"
 #include "RuleAttributes.h"
 #include "RulePackage.h"
@@ -9,6 +10,7 @@
 #include "prt/Object.h"
 
 #include "Engine/StaticMesh.h"
+#include "HAL/ThreadSafeCounter.h"
 #include "Modules/ModuleManager.h"
 #include "UnrealLogHandler.h"
 
@@ -22,29 +24,6 @@ struct FGenerateResult
 {
 	UStaticMesh* ShapeMesh;
 	TMap<UStaticMesh*, TArray<FTransform>> Instances;
-};
-
-class FAttributeMap final : public FGCObject
-{
-public:
-	TMap<FString, URuleAttribute*> Attributes;
-
-	void AddReferencedObjects(FReferenceCollector& Collector) override
-	{
-		TArray<URuleAttribute*> ReferencedObjects;
-		Attributes.GenerateValueArray(ReferencedObjects);
-		Collector.AddReferencedObjects(ReferencedObjects);
-	}
-
-	// This function has to be defined explicitly, otherwise it generates a compiler error because the parent operator= is not accessible.
-	FAttributeMap& operator=(const FAttributeMap& Other)
-	{
-		if (this != &Other)
-		{
-			this->Attributes = Other.Attributes;
-		}
-		return *this;
-	}
 };
 
 class VitruvioModule final : public IModuleInterface
@@ -96,20 +75,42 @@ public:
 	VITRUVIO_API TFuture<FAttributeMap> LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage,
 																	   const int32 RandomSeed) const;
 
+	/**
+	 * \return whether PRT is initialized meaning installed and ready to use. Before initialization generation is not possible and will
+	 * immediately return without results.
+	 */
+	VITRUVIO_API bool IsInitialized() const { return Initialized; }
+
+	/**
+	 * \return true if currently at least one generate call ongoing.
+	 */
+	VITRUVIO_API bool IsGenerating() const { return GenerateCallsCounter.GetValue() > 0; }
+
+	/**
+	 * \return true if currently at least one RPK is being loaded.
+	 */
+	VITRUVIO_API bool IsLoadingRpks() const { return RpkLoadingTasksCounter.GetValue() > 0; }
+
 	static VitruvioModule& Get() { return FModuleManager::LoadModuleChecked<VitruvioModule>("Vitruvio"); }
 
 private:
 	void* PrtDllHandle = nullptr;
 	prt::Object const* PrtLibrary = nullptr;
-	bool Initialized = false;
 	CacheObjectUPtr PrtCache;
 
 	UnrealLogHandler* LogHandler = nullptr;
+
+	bool Initialized = false;
 
 	mutable TMap<TLazyObjectPtr<URulePackage>, ResolveMapSPtr> ResolveMapCache;
 	mutable TMap<TLazyObjectPtr<URulePackage>, FGraphEventRef> ResolveMapEventGraphRefCache;
 
 	mutable FCriticalSection LoadResolveMapLock;
 
+	mutable FThreadSafeCounter GenerateCallsCounter;
+	mutable FThreadSafeCounter RpkLoadingTasksCounter;
+
 	TFuture<ResolveMapSPtr> LoadResolveMapAsync(URulePackage* RulePackage) const;
+
+	void InitializePrt();
 };
