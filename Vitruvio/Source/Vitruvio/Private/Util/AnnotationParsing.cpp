@@ -21,18 +21,25 @@ constexpr const wchar_t* MAX_KEY = L"max";
 constexpr const wchar_t* STEP_SIZE_KEY = L"stepsize";
 constexpr const wchar_t* RESTRICTED_KEY = L"restricted";
 
-prt::AnnotationArgumentType GetEnumAnnotationType(const prt::Annotation* Annotation)
+bool AreArgumentsOfSameType(const prt::Annotation* Annotation, prt::AnnotationArgumentType& OutType)
 {
-	prt::AnnotationArgumentType Type = prt::AAT_UNKNOWN;
-	for (size_t ArgumentIndex = 0; ArgumentIndex < Annotation->getNumArguments(); ArgumentIndex++)
+	if (Annotation->getNumArguments() == 0)
 	{
-		if (Type != prt::AAT_UNKNOWN && Type != Annotation->getArgument(ArgumentIndex)->getType())
-		{
-			return prt::AAT_UNKNOWN;
-		}
-		Type = Annotation->getArgument(ArgumentIndex)->getType();
+		OutType = prt::AAT_UNKNOWN;
+		return true;
 	}
-	return Type;
+
+	OutType = Annotation->getArgument(0)->getType();
+
+	for (size_t ArgumentIndex = 1; ArgumentIndex < Annotation->getNumArguments(); ArgumentIndex++)
+	{
+		if (OutType != Annotation->getArgument(ArgumentIndex)->getType())
+		{
+			OutType = prt::AAT_UNKNOWN;
+			return false;
+		}
+	}
+	return true;
 }
 
 void ParseValue(const prt::AnnotationArgument* Argument, double& Result)
@@ -153,11 +160,16 @@ void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, UR
 		const wchar_t* Name = CEAnnotation->getName();
 		if (std::wcscmp(Name, ANNOT_ENUM) == 0)
 		{
-			switch (GetEnumAnnotationType(CEAnnotation))
+			prt::AnnotationArgumentType Type;
+
+			if (AreArgumentsOfSameType(CEAnnotation, Type))
 			{
-			case prt::AAT_FLOAT: InAttribute.SetAnnotation(ParseEnumAnnotation<double>(CEAnnotation)); break;
-			case prt::AAT_STR: InAttribute.SetAnnotation(ParseEnumAnnotation<FString>(CEAnnotation)); break;
-			default: InAttribute.SetAnnotation({}); break;
+				switch (Type)
+				{
+				case prt::AAT_FLOAT: InAttribute.SetAnnotation(ParseEnumAnnotation<double>(CEAnnotation)); break;
+				case prt::AAT_STR: InAttribute.SetAnnotation(ParseEnumAnnotation<FString>(CEAnnotation)); break;
+				default: InAttribute.SetAnnotation({}); break;
+				}
 			}
 		}
 		else if (std::wcscmp(Name, ANNOT_RANGE) == 0)
