@@ -570,11 +570,11 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialSha
 		if (inst.getPrototypeIndex() != -1)
 		{
 			const prtx::MaterialPtrVector& instMaterials = inst.getMaterials();
-			prt::AttributeMap const* instanceMaterialMap = nullptr;
+			const prtx::GeometryPtr& instGeom = inst.getGeometry();
+			AttributeMapNOPtrVectorOwner instMaterialsAttributeMap;
 
 			if (serializedPrototypes.find(inst.getPrototypeIndex()) == serializedPrototypes.end())
 			{
-				const prtx::GeometryPtr& instGeom = inst.getGeometry();
 				const SerializedGeometry sg = serializeGeometry({instGeom}, {instMaterials});
 
 				encodeMesh(cb, sg, initialShape.getName(), inst.getPrototypeIndex(), {instGeom}, {instMaterials});
@@ -583,13 +583,19 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialSha
 			}
 			else
 			{
-				assert(instMaterials.size() == 1);
+				const prtx::MeshPtrVector& meshes = instGeom->getMeshes();
 
-				convertMaterialToAttributeMap(instanceMatAmb, *(instMaterials[0].get()), instMaterials[0]->getKeys());
-				instanceMaterialMap = instanceMatAmb->createAttributeMapAndReset();
+				for (size_t mi = 0; mi < meshes.size(); mi++)
+				{
+					const prtx::MaterialPtr& mat = instMaterials[mi];
+
+					convertMaterialToAttributeMap(instanceMatAmb, *(mat.get()), mat->getKeys());
+					instMaterialsAttributeMap.v.push_back(instanceMatAmb->createAttributeMapAndReset());
+				}
 			}
 
-			cb->addInstance(inst.getPrototypeIndex(), inst.getTransformation().data(), instanceMaterialMap);
+			cb->addInstance(inst.getPrototypeIndex(), inst.getTransformation().data(), instMaterialsAttributeMap.v.data(),
+							instMaterialsAttributeMap.v.size());
 		}
 		else
 		{

@@ -118,13 +118,13 @@ void AVitruvioActor::Generate()
 					StaticMeshActor->GetStaticMeshComponent()->SetStaticMesh(Result.ShapeMesh);
 					StaticMeshActor->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
 
-					for (const auto& Instance : Result.Instances)
+					for (const auto& MeshAndInstance : Result.Instances)
 					{
 						auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(StaticMeshActor);
-						InstancedComponent->SetStaticMesh(Instance.Key);
-						for (const FTransform& InstanceTransform : Instance.Value)
+						InstancedComponent->SetStaticMesh(MeshAndInstance.Key);
+						for (const FInstance& Instance : MeshAndInstance.Value)
 						{
-							InstancedComponent->AddInstance(InstanceTransform);
+							InstancedComponent->AddInstance(Instance.Transform);
 						}
 						InstancedComponent->AttachToComponent(StaticMeshActor->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
 						StaticMeshActor->AddInstanceComponent(InstancedComponent);

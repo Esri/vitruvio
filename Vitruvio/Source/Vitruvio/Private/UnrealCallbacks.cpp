@@ -178,7 +178,8 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 	}
 }
 
-void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform, const prt::AttributeMap* instanceMaterial)
+void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform, const prt::AttributeMap** instanceMaterials,
+								  size_t numInstanceMaterials)
 {
 	const FMatrix TransformationMat(GetColumn(transform, 0), GetColumn(transform, 1), GetColumn(transform, 2), GetColumn(transform, 3));
 	const int32 SignumDet = FMath::Sign(TransformationMat.Determinant());
@@ -199,10 +200,31 @@ void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform, 
 	const FVector CEScale = FVector(Scale.X, Scale.Z, Scale.Y);
 	const FVector CETranslation = FVector(Translation.X, Translation.Z, Translation.Y) * PRT_TO_UE_SCALE;
 
+	check(Meshes.Contains(prototypeId));
+
+	UStaticMesh* Mesh = Meshes[prototypeId];
 	const FTransform Transform(CERotation.GetNormalized(), CETranslation, CEScale);
 
-	check(Meshes.Contains(prototypeId));
-	Instances.FindOrAdd(Meshes[prototypeId]).Add(Transform);
+	if (instanceMaterials)
+	{
+		const TFuture<TArray<UMaterialInstanceDynamic*>> MaterialAddedFuture =
+			Vitruvio::ExecuteOnGameThread<TArray<UMaterialInstanceDynamic*>>([=]() {
+				QUICK_SCOPE_CYCLE_COUNTER(STAT_UnrealCallbacks_CreateMaterials);
+
+				TArray<UMaterialInstanceDynamic*> Materials;
+				for (size_t MatIndex = 0; MatIndex < numInstanceMaterials; ++MatIndex)
+				{
+					Materials.Add(Vitruvio::GameThread_CreateMaterialInstance(Mesh, OpaqueParent, MaskedParent, TranslucentParent,
+																			  instanceMaterials[MatIndex]));
+				}
+				return Materials;
+			});
+
+		MaterialAddedFuture.Wait();
+
+		const TArray<UMaterialInstanceDynamic*> Materials = MaterialAddedFuture.Get();
+		Instances.FindOrAdd(Mesh).Add({Transform, Materials});
+	}
 }
 
 prt::Status UnrealCallbacks::attrBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value)

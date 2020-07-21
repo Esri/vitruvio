@@ -3,6 +3,7 @@
 #pragma once
 
 #include "AttributeMap.h"
+#include "Instance.h"
 #include "PRTTypes.h"
 #include "RuleAttributes.h"
 #include "RulePackage.h"
@@ -23,7 +24,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogUnrealPrt, Log, All);
 struct FGenerateResult
 {
 	UStaticMesh* ShapeMesh;
-	TMap<UStaticMesh*, TArray<FTransform>> Instances;
+	TMap<UStaticMesh*, TArray<FInstance>> Instances;
 };
 
 class VitruvioModule final : public IModuleInterface
