@@ -178,7 +178,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 	}
 }
 
-void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform)
+void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform, const prt::AttributeMap* instanceMaterial)
 {
 	const FMatrix TransformationMat(GetColumn(transform, 0), GetColumn(transform, 1), GetColumn(transform, 2), GetColumn(transform, 3));
 	const int32 SignumDet = FMath::Sign(TransformationMat.Determinant());

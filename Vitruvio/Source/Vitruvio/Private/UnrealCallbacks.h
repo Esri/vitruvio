@@ -77,10 +77,14 @@ public:
 	// clang-format on
 
 	/**
-	 * @param prototypeId the prototype id of the instance, must be >= 0
-	 * @param transform the transformation matrix of the instance
+	 * Add a new instance with a given id, transform and optional set of overriding attributes for this instance
+	 *
+	 * @param prototypeId the id of the prorotype. An @ref addMesh call with the specified prorotypeId will be called before
+	 *                    the call to addInstance
+	 * @param transform the transformation matrix of this instance
+	 * @param instanceMaterial optional override materials for this instance (can be null)
 	 */
-	void addInstance(int32_t prototypeId, const double* transform) override;
+	virtual void addInstance(int32_t prototypeId, const double* transform, const prt::AttributeMap* instanceMaterial) override;
 
 	prt::Status generateError(size_t /*isIndex*/, prt::Status /*status*/, const wchar_t* message) override
 	{
