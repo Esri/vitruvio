@@ -8,12 +8,6 @@
 namespace Vitruvio
 {
 
-struct FInstance
-{
-	FTransform Transform;
-	TArray<UMaterialInstanceDynamic*> MaterialOverrides;
-};
-
 struct FMaterialContainer
 {
 	TMap<FString, FString> TextureProperties;
@@ -35,5 +29,21 @@ struct FMaterialContainer
 
 	friend uint32 GetTypeHash(const FMaterialContainer& Object);
 };
+
+struct FInstanceCacheKey
+{
+	UStaticMesh* Mesh;
+	TArray<UMaterialInstanceDynamic*> MaterialOverrides;
+
+	friend uint32 GetTypeHash(const FInstanceCacheKey& Object);
+
+	friend bool operator==(const FInstanceCacheKey& Lhs, const FInstanceCacheKey& RHS)
+	{
+		return Lhs.Mesh == RHS.Mesh && Lhs.MaterialOverrides == RHS.MaterialOverrides;
+	}
+
+	friend bool operator!=(const FInstanceCacheKey& Lhs, const FInstanceCacheKey& RHS) { return !(Lhs == RHS); }
+};
+using FInstanceMap = TMap<FInstanceCacheKey, TArray<FTransform>>;
 
 } // namespace Vitruvio

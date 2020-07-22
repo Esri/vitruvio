@@ -17,7 +17,7 @@ class UnrealCallbacks final : public IUnrealCallbacks, public FGCObject
 {
 	AttributeMapBuilderUPtr& AttributeMapBuilder;
 
-	TMap<UStaticMesh*, TArray<Vitruvio::FInstance>> Instances;
+	Vitruvio::FInstanceMap Instances;
 	TMap<int32, UStaticMesh*> Meshes;
 
 	TMap<Vitruvio::FMaterialContainer, UMaterialInstanceDynamic*> MaterialCache;
@@ -40,7 +40,7 @@ public:
 
 	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
-	const TMap<UStaticMesh*, TArray<Vitruvio::FInstance>>& GetInstances() const { return Instances; }
+	const Vitruvio::FInstanceMap& GetInstances() const { return Instances; }
 
 	UStaticMesh* GetModel() const { return Meshes.Contains(NO_PROTOTYPE_INDEX) ? Meshes[NO_PROTOTYPE_INDEX] : nullptr; }
 

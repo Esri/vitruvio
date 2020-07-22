@@ -67,6 +67,20 @@ uint32 GetMapHash(const TMap<K, V>& In)
 	return CombinedHash;
 }
 
+/**
+ * Hash function for TArray. Requires that the Value V supports GetTypeHash.
+ */
+template <typename V>
+uint32 GetArrayHash(const TArray<V>& In)
+{
+	uint32 CombinedHash = 0;
+	for (const auto& Entry : In)
+	{
+		CombinedHash += GetTypeHash(Entry);
+	}
+	return CombinedHash;
+}
+
 namespace Vitruvio
 {
 FMaterialContainer::FMaterialContainer(const prt::AttributeMap* AttributeMap)
@@ -106,6 +120,11 @@ uint32 GetTypeHash(const FMaterialContainer& Object)
 	Hash = HashCombine(Hash, GetMapHash<FString, double>(Object.ScalarProperties));
 	Hash = HashCombine(Hash, GetTypeHash(Object.BlendMode));
 	return Hash;
+}
+
+uint32 GetTypeHash(const FInstanceCacheKey& Object)
+{
+	return HashCombine(GetTypeHash(Object.Mesh), GetArrayHash(Object.MaterialOverrides));
 }
 
 } // namespace Vitruvio

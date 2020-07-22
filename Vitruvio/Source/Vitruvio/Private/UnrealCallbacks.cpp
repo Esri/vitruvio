@@ -220,10 +220,9 @@ void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform, 
 	UStaticMesh* Mesh = Meshes[prototypeId];
 	const FTransform Transform(CERotation.GetNormalized(), CETranslation, CEScale);
 
+	TArray<UMaterialInstanceDynamic*> MaterialOverrides;
 	if (instanceMaterials)
 	{
-		TArray<UMaterialInstanceDynamic*> Materials;
-
 		for (size_t MatIndex = 0; MatIndex < numInstanceMaterials; ++MatIndex)
 		{
 			Vitruvio::FMaterialContainer MaterialContainer(instanceMaterials[MatIndex]);
@@ -234,7 +233,7 @@ void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform, 
 			}
 			if (CachedMaterial)
 			{
-				Materials.Add(*CachedMaterial);
+				MaterialOverrides.Add(*CachedMaterial);
 			}
 			else
 			{
@@ -246,16 +245,16 @@ void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform, 
 
 				MaterialAddedFuture.Wait();
 				UMaterialInstanceDynamic* MaterialInstance = MaterialAddedFuture.Get();
-				Materials.Add(MaterialInstance);
+				MaterialOverrides.Add(MaterialInstance);
 				{
 					FScopeLock Lock(&MaterialCacheSection);
 					MaterialCache.Add(MaterialContainer, MaterialInstance);
 				}
 			}
 		}
-
-		Instances.FindOrAdd(Mesh).Add({Transform, Materials});
 	}
+
+	Instances.FindOrAdd({Mesh, MaterialOverrides}).Add(Transform);
 }
 
 prt::Status UnrealCallbacks::attrBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value)

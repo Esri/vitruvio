@@ -24,7 +24,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogUnrealPrt, Log, All);
 struct FGenerateResult
 {
 	UStaticMesh* ShapeMesh;
-	TMap<UStaticMesh*, TArray<Vitruvio::FInstance>> Instances;
+	Vitruvio::FInstanceMap Instances;
 };
 
 class VitruvioModule final : public IModuleInterface
