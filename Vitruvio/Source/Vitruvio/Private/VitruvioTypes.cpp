@@ -1,5 +1,8 @@
 #include "VitruvioTypes.h"
 
+#include "Core/Public/Containers/UnrealString.h"
+#include "Core/Public/Templates/TypeHash.h"
+
 namespace
 {
 enum class EMaterialPropertyType
@@ -46,7 +49,23 @@ FLinearColor GetLinearColor(const prt::AttributeMap* MaterialAttributes, wchar_t
 	const FColor Color(values[0] * 255.0, values[1] * 255.0, values[2] * 255.0);
 	return FLinearColor(Color);
 }
+
 } // namespace
+
+/**
+ * Hash function for TMap. Requires that the Key K and Value V support GetTypeHash.
+ */
+template <typename K, typename V>
+uint32 GetMapHash(const TMap<K, V>& In)
+{
+	uint32 CombinedHash = 0;
+	for (const auto& Entry : In)
+	{
+		const uint32 EntryHash = HashCombine(GetTypeHash(Entry.Key), GetTypeHash(Entry.Value));
+		CombinedHash += EntryHash;
+	}
+	return CombinedHash;
+}
 
 namespace Vitruvio
 {
@@ -78,4 +97,15 @@ FMaterialContainer::FMaterialContainer(const prt::AttributeMap* AttributeMap)
 		BlendMode = AttributeMap->getString(L"opacityMap.mode");
 	}
 }
+
+uint32 GetTypeHash(const FMaterialContainer& Object)
+{
+	uint32 Hash = 0x274110C5;
+	Hash = HashCombine(Hash, GetMapHash<FString, FString>(Object.TextureProperties));
+	Hash = HashCombine(Hash, GetMapHash<FString, FLinearColor>(Object.ColorProperties));
+	Hash = HashCombine(Hash, GetMapHash<FString, double>(Object.ScalarProperties));
+	Hash = HashCombine(Hash, GetTypeHash(Object.BlendMode));
+	return Hash;
+}
+
 } // namespace Vitruvio

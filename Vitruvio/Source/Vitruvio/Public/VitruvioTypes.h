@@ -32,6 +32,8 @@ struct FMaterialContainer
 	}
 
 	friend bool operator!=(const FMaterialContainer& Lhs, const FMaterialContainer& RHS) { return !(Lhs == RHS); }
+
+	friend uint32 GetTypeHash(const FMaterialContainer& Object);
 };
 
 } // namespace Vitruvio
