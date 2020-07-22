@@ -20,6 +20,9 @@ class UnrealCallbacks final : public IUnrealCallbacks, public FGCObject
 	TMap<UStaticMesh*, TArray<Vitruvio::FInstance>> Instances;
 	TMap<int32, UStaticMesh*> Meshes;
 
+	TMap<Vitruvio::FMaterialContainer, UMaterialInstanceDynamic*> MaterialCache;
+	FCriticalSection MaterialCacheSection;
+
 	UMaterial* OpaqueParent;
 	UMaterial* MaskedParent;
 	UMaterial* TranslucentParent;

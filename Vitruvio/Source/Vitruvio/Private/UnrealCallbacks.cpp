@@ -91,7 +91,6 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 	BaseUVIndex.Init(0, uvSets);
 
 	size_t PolygonGroupStartIndex = 0;
-	TArray<TFuture<void>> CreateMaterialFutures;
 	for (size_t PolygonGroupIndex = 0; PolygonGroupIndex < faceRangesSize; ++PolygonGroupIndex)
 	{
 		const size_t PolygonFaceCount = faceRanges[PolygonGroupIndex];
@@ -99,15 +98,34 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 		const FPolygonGroupID PolygonGroupId = Description.CreatePolygonGroup();
 
 		Vitruvio::FMaterialContainer MaterialContainer(materials[PolygonGroupIndex]);
-
-		// Create material in game thread
-		CreateMaterialFutures.Add(Vitruvio::ExecuteOnGameThread<void>([=, &Attributes]() {
-			QUICK_SCOPE_CYCLE_COUNTER(STAT_UnrealCallbacks_CreateMaterials);
-			UMaterialInstanceDynamic* MaterialInstance =
-				Vitruvio::GameThread_CreateMaterialInstance(Mesh, OpaqueParent, MaskedParent, TranslucentParent, MaterialContainer);
-			const FName MaterialSlot = Mesh->AddMaterial(MaterialInstance);
+		UMaterialInstanceDynamic** CachedMaterial;
+		{
+			FScopeLock Lock(&MaterialCacheSection);
+			CachedMaterial = MaterialCache.Find(MaterialContainer);
+		}
+		if (CachedMaterial)
+		{
+			const FName MaterialSlot = Mesh->AddMaterial(*CachedMaterial);
 			Attributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlot;
-		}));
+		}
+		else
+		{
+			// Create material in game thread
+			TFuture<void> MaterialFuture = Vitruvio::ExecuteOnGameThread<void>([=, &Attributes]() {
+				QUICK_SCOPE_CYCLE_COUNTER(STAT_UnrealCallbacks_CreateMaterials);
+				UMaterialInstanceDynamic* MaterialInstance =
+					Vitruvio::GameThread_CreateMaterialInstance(Mesh, OpaqueParent, MaskedParent, TranslucentParent, MaterialContainer);
+				const FName MaterialSlot = Mesh->AddMaterial(MaterialInstance);
+				Attributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlot;
+				{
+					FScopeLock Lock(&MaterialCacheSection);
+					MaterialCache.Add(MaterialContainer, MaterialInstance);
+				}
+			});
+
+			// We have to wait here because otherwise subsequent calls could result in cache misses
+			MaterialFuture.Wait();
+		}
 
 		// Create Geometry
 		const auto Normals = Attributes.GetVertexInstanceNormals();
@@ -157,10 +175,6 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 
 		PolygonGroupStartIndex += PolygonFaces;
 	}
-	for (const TFuture<void>& CreateMaterialFuture : CreateMaterialFutures)
-	{
-		CreateMaterialFuture.Wait();
-	}
 
 	// Build mesh in game thread
 	if (BaseVertexIndex > 0)
@@ -208,24 +222,38 @@ void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform, 
 
 	if (instanceMaterials)
 	{
-		const TFuture<TArray<UMaterialInstanceDynamic*>> MaterialAddedFuture =
-			Vitruvio::ExecuteOnGameThread<TArray<UMaterialInstanceDynamic*>>([=]() {
-				QUICK_SCOPE_CYCLE_COUNTER(STAT_UnrealCallbacks_CreateMaterials);
+		TArray<UMaterialInstanceDynamic*> Materials;
 
-				TArray<UMaterialInstanceDynamic*> Materials;
-				for (size_t MatIndex = 0; MatIndex < numInstanceMaterials; ++MatIndex)
+		for (size_t MatIndex = 0; MatIndex < numInstanceMaterials; ++MatIndex)
+		{
+			Vitruvio::FMaterialContainer MaterialContainer(instanceMaterials[MatIndex]);
+			UMaterialInstanceDynamic** CachedMaterial;
+			{
+				FScopeLock Lock(&MaterialCacheSection);
+				CachedMaterial = MaterialCache.Find(MaterialContainer);
+			}
+			if (CachedMaterial)
+			{
+				Materials.Add(*CachedMaterial);
+			}
+			else
+			{
+				const TFuture<UMaterialInstanceDynamic*> MaterialAddedFuture = Vitruvio::ExecuteOnGameThread<UMaterialInstanceDynamic*>([=]() {
+					QUICK_SCOPE_CYCLE_COUNTER(STAT_UnrealCallbacks_CreateMaterials);
+
+					return Vitruvio::GameThread_CreateMaterialInstance(Mesh, OpaqueParent, MaskedParent, TranslucentParent, MaterialContainer);
+				});
+
+				MaterialAddedFuture.Wait();
+				UMaterialInstanceDynamic* MaterialInstance = MaterialAddedFuture.Get();
+				Materials.Add(MaterialInstance);
 				{
-					Vitruvio::FMaterialContainer MaterialContainer(instanceMaterials[MatIndex]);
-
-					Materials.Add(
-						Vitruvio::GameThread_CreateMaterialInstance(Mesh, OpaqueParent, MaskedParent, TranslucentParent, MaterialContainer));
+					FScopeLock Lock(&MaterialCacheSection);
+					MaterialCache.Add(MaterialContainer, MaterialInstance);
 				}
-				return Materials;
-			});
+			}
+		}
 
-		MaterialAddedFuture.Wait();
-
-		const TArray<UMaterialInstanceDynamic*> Materials = MaterialAddedFuture.Get();
 		Instances.FindOrAdd(Mesh).Add({Transform, Materials});
 	}
 }
