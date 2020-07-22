@@ -122,7 +122,7 @@ void AVitruvioActor::Generate()
 					{
 						auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(StaticMeshActor);
 						InstancedComponent->SetStaticMesh(MeshAndInstance.Key);
-						for (const FInstance& Instance : MeshAndInstance.Value)
+						for (const Vitruvio::FInstance& Instance : MeshAndInstance.Value)
 						{
 							InstancedComponent->AddInstance(Instance.Transform);
 						}

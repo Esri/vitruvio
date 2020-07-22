@@ -5,7 +5,7 @@
 #include "PRTTypes.h"
 
 #include "Codec/Encoder/IUnrealCallbacks.h"
-#include "Instance.h"
+#include "VitruvioTypes.h"
 
 #include "Core.h"
 #include "Engine/StaticMesh.h"
@@ -17,7 +17,7 @@ class UnrealCallbacks final : public IUnrealCallbacks, public FGCObject
 {
 	AttributeMapBuilderUPtr& AttributeMapBuilder;
 
-	TMap<UStaticMesh*, TArray<FInstance>> Instances;
+	TMap<UStaticMesh*, TArray<Vitruvio::FInstance>> Instances;
 	TMap<int32, UStaticMesh*> Meshes;
 
 	UMaterial* OpaqueParent;
@@ -37,7 +37,7 @@ public:
 
 	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
-	const TMap<UStaticMesh*, TArray<FInstance>>& GetInstances() const { return Instances; }
+	const TMap<UStaticMesh*, TArray<Vitruvio::FInstance>>& GetInstances() const { return Instances; }
 
 	UStaticMesh* GetModel() const { return Meshes.Contains(NO_PROTOTYPE_INDEX) ? Meshes[NO_PROTOTYPE_INDEX] : nullptr; }
 

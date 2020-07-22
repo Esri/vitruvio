@@ -10,6 +10,7 @@
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
 #include "ImageCore/Public/ImageCore.h"
+#include "VitruvioTypes.h"
 
 #include <map>
 
@@ -151,19 +152,13 @@ UTexture2D* LoadTextureFromDisk(UObject* Outer, const FString& ImagePath, const 
 						 Settings, FName(*TextureBaseName));
 }
 
-UTexture2D* GetTexture(UObject* Outer, const prt::AttributeMap* MaterialAttributes, const TextureSettings& Settings, wchar_t const* Key)
+UTexture2D* GetTexture(UObject* Outer, const FString& TextureUri, const TextureSettings& Settings)
 {
-	size_t ValuesCount = 0;
-	wchar_t const* const* Values = MaterialAttributes->getStringArray(Key, &ValuesCount);
-	for (int ValueIndex = 0; ValueIndex < ValuesCount; ++ValueIndex)
+	if (TextureUri.IsEmpty())
 	{
-		std::wstring TextureUri(Values[ValueIndex]);
-		if (TextureUri.size() > 0)
-		{
-			return LoadTextureFromDisk(Outer, FString(WCHAR_TO_TCHAR(Values[ValueIndex])), Settings);
-		}
+		return nullptr;
 	}
-	return nullptr;
+	return LoadTextureFromDisk(Outer, TextureUri, Settings);
 }
 
 EBlendMode ChooseBlendModeFromOpacityMap(const UTexture2D& OpacityMap)
@@ -216,22 +211,17 @@ EBlendMode ChooseBlendMode(UTexture2D* OpacityMap, double Opacity, EBlendMode Bl
 	}
 }
 
-EBlendMode GetBlendMode(const prt::AttributeMap* MaterialAttributes)
+EBlendMode GetBlendMode(const FString& OpacityMapMode)
 {
-	const wchar_t* OpacityMapMode = MaterialAttributes->getString(L"opacityMap.mode");
-	if (OpacityMapMode)
+	if (OpacityMapMode == "mask")
 	{
-		const std::wstring ModeString(OpacityMapMode);
-		if (ModeString == L"mask")
-		{
-			return EBlendMode::BLEND_Masked;
-		}
-		else if (ModeString == L"blend")
-		{
-			return EBlendMode::BLEND_Translucent;
-		}
+		return BLEND_Masked;
 	}
-	return EBlendMode::BLEND_Opaque;
+	else if (OpacityMapMode == "blend")
+	{
+		return BLEND_Translucent;
+	}
+	return BLEND_Opaque;
 }
 
 UMaterialInterface* GetMaterialByBlendMode(EBlendMode Mode, UMaterialInterface* Opaque, UMaterialInterface* Masked, UMaterialInterface* Translucent)
@@ -244,24 +234,7 @@ UMaterialInterface* GetMaterialByBlendMode(EBlendMode Mode, UMaterialInterface* 
 	}
 }
 
-FLinearColor GetLinearColor(const prt::AttributeMap* MaterialAttributes, wchar_t const* Key)
-{
-	size_t count;
-	const double* values = MaterialAttributes->getFloatArray(Key, &count);
-	if (count < 3)
-	{
-		return FLinearColor();
-	}
-	const FColor Color(values[0] * 255.0, values[1] * 255.0, values[2] * 255.0);
-	return FLinearColor(Color);
-}
-
-double GetScalar(const prt::AttributeMap* MaterialAttributes, wchar_t const* Key)
-{
-	return MaterialAttributes->getFloat(Key);
-}
-
-TextureSettings GetTextureSettings(const std::wstring Key)
+TextureSettings GetTextureSettings(const FString& Key)
 {
 	if (Key == L"normalMap")
 	{
@@ -274,82 +247,36 @@ TextureSettings GetTextureSettings(const std::wstring Key)
 	return {true, TC_Default};
 }
 
-enum class MaterialPropertyType
-{
-	TEXTURE,
-	LINEAR_COLOR,
-	SCALAR
-};
-
-// see prtx/Material.h
-// clang-format off
-const std::map<std::wstring, MaterialPropertyType> KeyToTypeMap = {
-	{L"diffuseMap", 	MaterialPropertyType::TEXTURE},
-	{L"opacityMap", 	MaterialPropertyType::TEXTURE},
-	{L"emissiveMap", 	MaterialPropertyType::TEXTURE},
-	{L"metallicMap", 	MaterialPropertyType::TEXTURE},
-	{L"roughnessMap", 	MaterialPropertyType::TEXTURE},
-	{L"normalMap", 		MaterialPropertyType::TEXTURE},
-
-	{L"diffuseColor", 	MaterialPropertyType::LINEAR_COLOR},
-	{L"emissiveColor", 	MaterialPropertyType::LINEAR_COLOR},
-
-	{L"metallic", 		MaterialPropertyType::SCALAR},
-	{L"opacity", 		MaterialPropertyType::SCALAR},
-	{L"roughness", 		MaterialPropertyType::SCALAR},
-};
-// clang-format on
 } // namespace
 
 namespace Vitruvio
 {
 UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, UMaterialInterface* OpaqueParent, UMaterialInterface* MaskedParent,
-															UMaterialInterface* TranslucentParent, const prt::AttributeMap* MaterialAttributes)
+															UMaterialInterface* TranslucentParent, const FMaterialContainer& MaterialContainer)
 {
 	check(IsInGameThread());
 
 	TMap<FString, TFuture<UTexture2D*>> TextureProperties;
-	TMap<FString, FLinearColor> ColorProperties;
-	TMap<FString, double> ScalarProperties;
 
-	// Convert AttributeMap to material
-	size_t KeyCount = 0;
-	wchar_t const* const* Keys = MaterialAttributes->getKeys(&KeyCount);
-	for (size_t KeyIndex = 0; KeyIndex < KeyCount; KeyIndex++)
+	// Load Textures Asynchronously
+	for (const auto& TextureProperty : MaterialContainer.TextureProperties)
 	{
-		const wchar_t* Key = Keys[KeyIndex];
-		const std::wstring KeyString(Key);
-		const auto TypeIter = KeyToTypeMap.find(KeyString);
-		if (TypeIter != KeyToTypeMap.end())
-		{
-			const MaterialPropertyType Type = TypeIter->second;
-			switch (Type)
-			{
-			case MaterialPropertyType::TEXTURE:
-			{
-				// Load textures async in thread pool
-				// clang-format off
-				TFuture<UTexture2D*> Result = Async(EAsyncExecution::ThreadPool, [Outer, MaterialAttributes, Key]() {
-					QUICK_SCOPE_CYCLE_COUNTER(STAT_MaterialConversion_LoadTexture);
-					UTexture2D* Texture = GetTexture(Outer, MaterialAttributes, GetTextureSettings(Key), Key);
-					return Texture;
-				});
-				// clang-format on
+		// Load textures async in thread pool
+		// clang-format off
+		TFuture<UTexture2D*> Result = Async(EAsyncExecution::ThreadPool, [Outer, TextureProperty]() {
+            QUICK_SCOPE_CYCLE_COUNTER(STAT_MaterialConversion_LoadTexture);
+            UTexture2D* Texture = GetTexture(Outer, TextureProperty.Value, GetTextureSettings(TextureProperty.Key));
+            return Texture;
+        });
+		// clang-format on
 
-				TextureProperties.Add(Key, MoveTemp(Result));
-				break;
-			}
-			case MaterialPropertyType::LINEAR_COLOR: ColorProperties.Add(Key, GetLinearColor(MaterialAttributes, Key)); break;
-			case MaterialPropertyType::SCALAR: ScalarProperties.Add(Key, GetScalar(MaterialAttributes, Key)); break;
-			default:;
-			}
-		}
+		TextureProperties.Add(TextureProperty.Key, MoveTemp(Result));
 	}
 
-	const float Opacity = ScalarProperties["opacity"];
+	const float Opacity = MaterialContainer.ScalarProperties["opacity"];
 	UTexture2D* OpacityMap = TextureProperties.Contains("opacityMap") ? TextureProperties["opacityMap"].Get() : nullptr;
 
-	const EBlendMode ChosenBlendMode = ChooseBlendMode(OpacityMap, Opacity, GetBlendMode(MaterialAttributes));
+	const EBlendMode ChosenBlendMode = ChooseBlendMode(OpacityMap, Opacity, GetBlendMode(MaterialContainer.BlendMode));
 
 	const auto Parent = GetMaterialByBlendMode(ChosenBlendMode, OpaqueParent, MaskedParent, TranslucentParent);
 	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, Outer);
@@ -359,11 +286,11 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, UMat
 		const auto Result = TextureFuture.Value.Get();
 		MaterialInstance->SetTextureParameterValue(FName(TextureFuture.Key), Result);
 	}
-	for (const TPair<FString, double>& ScalarProperty : ScalarProperties)
+	for (const TPair<FString, double>& ScalarProperty : MaterialContainer.ScalarProperties)
 	{
 		MaterialInstance->SetScalarParameterValue(FName(ScalarProperty.Key), ScalarProperty.Value);
 	}
-	for (const TPair<FString, FLinearColor>& ColorProperty : ColorProperties)
+	for (const TPair<FString, FLinearColor>& ColorProperty : MaterialContainer.ColorProperties)
 	{
 		MaterialInstance->SetVectorParameterValue(FName(ColorProperty.Key), ColorProperty.Value);
 	}
