@@ -28,7 +28,7 @@ struct FMaterialContainer
 	{
 		return Lhs.TextureProperties.OrderIndependentCompareEqual(RHS.TextureProperties) &&
 			   Lhs.ColorProperties.OrderIndependentCompareEqual(RHS.ColorProperties) &&
-			   Lhs.ScalarProperties.OrderIndependentCompareEqual(RHS.ScalarProperties);
+			   Lhs.ScalarProperties.OrderIndependentCompareEqual(RHS.ScalarProperties) && Lhs.BlendMode == RHS.BlendMode;
 	}
 
 	friend bool operator!=(const FMaterialContainer& Lhs, const FMaterialContainer& RHS) { return !(Lhs == RHS); }
