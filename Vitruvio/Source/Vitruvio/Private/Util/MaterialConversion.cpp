@@ -331,7 +331,6 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, UMat
 	const auto Parent = GetMaterialByBlendMode(ChosenBlendMode, OpaqueParent, MaskedParent, TranslucentParent);
 	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, Outer);
 
-	// TODO implement in Material
 	MaterialInstance->SetScalarParameterValue(FName(TEXT("opacitySource")), UseAlphaChannelOpacity);
 
 	for (const TPair<FString, TFuture<UTexture2D*>>& TextureFuture : TextureProperties)
