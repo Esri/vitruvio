@@ -86,12 +86,13 @@ bool HasAlpha(const FColor* SrcColors, int32 SizeX, int32 SizeY)
 
 ERGBFormat GetRequestedFormat(ERGBFormat Format)
 {
+	// We handle textures similarly to Unreal handles non power of two images (which will not be DXT compressed) and always use
+	// the BGRA format (even for grayscale textures).
 	switch (Format)
 	{
-	case ERGBFormat::Invalid: return ERGBFormat::Invalid;
-	case ERGBFormat::RGBA: return ERGBFormat::BGRA; // return BGRA for RGBA input
-	case ERGBFormat::BGRA: return ERGBFormat::BGRA;
-	case ERGBFormat::Gray: return ERGBFormat::Gray;
+	case ERGBFormat::RGBA:
+	case ERGBFormat::BGRA:
+	case ERGBFormat::Gray: return ERGBFormat::BGRA;
 	default: return ERGBFormat::Invalid;
 	}
 }
@@ -136,8 +137,6 @@ UTexture2D* CreateTexture(UObject* Outer, const TArray64<uint8>& Data, int32 Siz
 	NewTexture->PlatformData->PixelFormat = PixelFormat;
 	NewTexture->CompressionSettings = Settings.Compression;
 	NewTexture->SRGB = Settings.SRGB;
-
-	// TODO implement DXT compression for proper handling of grayscale textures
 
 	// Allocate first mipmap and upload the pixel data
 	FTexture2DMipMap* Mip = new FTexture2DMipMap();
