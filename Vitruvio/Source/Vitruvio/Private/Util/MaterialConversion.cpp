@@ -209,7 +209,7 @@ EBlendMode ChooseBlendModeFromOpacityMap(const UTexture2D& OpacityMap, bool& Use
 	{
 	case PF_B8G8R8A8:
 	{
-		const FColor* ImageData = static_cast<const FColor*>(OpacityMap.PlatformData->Mips[0].BulkData.LockReadOnly());
+		const FColor* ImageData = reinterpret_cast<const FColor*>(OpacityMap.PlatformData->Mips[0].BulkData.LockReadOnly());
 
 		// First check if the alpha channel is not empty to see if we should use it to determine the blend mode or the R channel (for RBG opacity)
 		UseAlphaChannelOpacity = HasAlpha(ImageData, OpacityMap.GetSizeX(), OpacityMap.GetSizeY());
@@ -220,13 +220,13 @@ EBlendMode ChooseBlendModeFromOpacityMap(const UTexture2D& OpacityMap, bool& Use
 	}
 	case PF_G8:
 	{
-		const uint8* ImageData = static_cast<const uint8*>(OpacityMap.PlatformData->Mips[0].BulkData.LockReadOnly());
+		const uint8* ImageData = reinterpret_cast<const uint8*>(OpacityMap.PlatformData->Mips[0].BulkData.LockReadOnly());
 		CountOpacityMapPixels(ImageData, OpacityMap.GetSizeX(), OpacityMap.GetSizeY(), BlackPixels, WhitePixels);
 		break;
 	}
 	case PF_G16:
 	{
-		const uint16* ImageData = static_cast<const uint16*>(OpacityMap.PlatformData->Mips[0].BulkData.LockReadOnly());
+		const uint16* ImageData = reinterpret_cast<const uint16*>(OpacityMap.PlatformData->Mips[0].BulkData.LockReadOnly());
 		CountOpacityMapPixels(ImageData, OpacityMap.GetSizeX(), OpacityMap.GetSizeY(), BlackPixels, WhitePixels);
 		break;
 	}
