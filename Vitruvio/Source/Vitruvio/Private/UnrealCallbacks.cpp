@@ -97,7 +97,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 
 		const FPolygonGroupID PolygonGroupId = Description.CreatePolygonGroup();
 
-		Vitruvio::FMaterialContainer MaterialContainer(materials[PolygonGroupIndex]);
+		Vitruvio::FMaterialAttributeContainer MaterialContainer(materials[PolygonGroupIndex]);
 		UMaterialInstanceDynamic** CachedMaterial;
 		{
 			FScopeLock Lock(&MaterialCacheSection);
@@ -225,7 +225,7 @@ void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform, 
 	{
 		for (size_t MatIndex = 0; MatIndex < numInstanceMaterials; ++MatIndex)
 		{
-			Vitruvio::FMaterialContainer MaterialContainer(instanceMaterials[MatIndex]);
+			Vitruvio::FMaterialAttributeContainer MaterialContainer(instanceMaterials[MatIndex]);
 			UMaterialInstanceDynamic** CachedMaterial;
 			{
 				FScopeLock Lock(&MaterialCacheSection);

@@ -297,7 +297,8 @@ UMaterialInterface* GetMaterialByBlendMode(EBlendMode Mode, UMaterialInterface* 
 namespace Vitruvio
 {
 UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, UMaterialInterface* OpaqueParent, UMaterialInterface* MaskedParent,
-															UMaterialInterface* TranslucentParent, const FMaterialContainer& MaterialContainer)
+															UMaterialInterface* TranslucentParent,
+															const FMaterialAttributeContainer& MaterialContainer)
 {
 	check(IsInGameThread());
 

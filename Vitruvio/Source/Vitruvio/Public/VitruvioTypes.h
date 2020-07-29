@@ -8,7 +8,7 @@
 namespace Vitruvio
 {
 
-struct FMaterialContainer
+struct FMaterialAttributeContainer
 {
 	TMap<FString, FString> TextureProperties;
 	TMap<FString, FLinearColor> ColorProperties;
@@ -16,18 +16,18 @@ struct FMaterialContainer
 
 	FString BlendMode;
 
-	explicit FMaterialContainer(const prt::AttributeMap* AttributeMap);
+	explicit FMaterialAttributeContainer(const prt::AttributeMap* AttributeMap);
 
-	friend bool operator==(const FMaterialContainer& Lhs, const FMaterialContainer& RHS)
+	friend bool operator==(const FMaterialAttributeContainer& Lhs, const FMaterialAttributeContainer& RHS)
 	{
 		return Lhs.TextureProperties.OrderIndependentCompareEqual(RHS.TextureProperties) &&
 			   Lhs.ColorProperties.OrderIndependentCompareEqual(RHS.ColorProperties) &&
 			   Lhs.ScalarProperties.OrderIndependentCompareEqual(RHS.ScalarProperties) && Lhs.BlendMode == RHS.BlendMode;
 	}
 
-	friend bool operator!=(const FMaterialContainer& Lhs, const FMaterialContainer& RHS) { return !(Lhs == RHS); }
+	friend bool operator!=(const FMaterialAttributeContainer& Lhs, const FMaterialAttributeContainer& RHS) { return !(Lhs == RHS); }
 
-	friend uint32 GetTypeHash(const FMaterialContainer& Object);
+	friend uint32 GetTypeHash(const FMaterialAttributeContainer& Object);
 };
 
 struct FInstanceCacheKey

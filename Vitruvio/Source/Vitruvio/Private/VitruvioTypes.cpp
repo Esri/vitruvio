@@ -83,7 +83,7 @@ uint32 GetArrayHash(const TArray<V>& In)
 
 namespace Vitruvio
 {
-FMaterialContainer::FMaterialContainer(const prt::AttributeMap* AttributeMap)
+FMaterialAttributeContainer::FMaterialAttributeContainer(const prt::AttributeMap* AttributeMap)
 {
 	size_t KeyCount = 0;
 	wchar_t const* const* Keys = AttributeMap->getKeys(&KeyCount);
@@ -112,7 +112,7 @@ FMaterialContainer::FMaterialContainer(const prt::AttributeMap* AttributeMap)
 	}
 }
 
-uint32 GetTypeHash(const FMaterialContainer& Object)
+uint32 GetTypeHash(const FMaterialAttributeContainer& Object)
 {
 	uint32 Hash = 0x274110C5;
 	Hash = HashCombine(Hash, GetMapHash<FString, FString>(Object.TextureProperties));
