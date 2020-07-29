@@ -328,7 +328,7 @@ void forEachKey(prt::Attributable const* a, F f)
 
 void forwardGenericAttributes(IUnrealCallbacks* uc, size_t initialShapeIndex, const prtx::InitialShape& initialShape, const prtx::ShapePtr& shape)
 {
-	forEachKey(initialShape.getAttributeMap(), [&uc, &shape, &initialShapeIndex, &initialShape](prt::Attributable const* a, wchar_t const* key) {
+	forEachKey(initialShape.getAttributeMap(), [&uc, &shape, &initialShapeIndex, &initialShape](prt::Attributable const* /*a*/, wchar_t const* key) {
 		switch (shape->getType(key))
 		{
 		case prtx::Attributable::PT_STRING:
@@ -467,7 +467,6 @@ void encodeMesh(IUnrealCallbacks* cb, const SerializedGeometry& sg, wchar_t cons
 	auto puvCounts = toPtrVec(sg.uvCounts);
 	auto puvIndices = toPtrVec(sg.uvIndices);
 
-	uint32_t faceCount = 0;
 	std::vector<uint32_t> faceRanges;
 	AttributeMapNOPtrVectorOwner matAttrMaps;
 
