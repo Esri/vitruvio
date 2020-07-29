@@ -48,7 +48,7 @@ public:
 	// clang-format on
 
 	/**
-	 * Add a new instance with a given id, transform and optional set of overriding attributes for this instance
+	 * Add a new instance with the given id, transform and an optional set of overriding attributes for this instance
 	 *
 	 * @param prototypeId the id of the prorotype. An @ref addMesh call with the specified prorotypeId will be called before
 	 *                    the call to addInstance
