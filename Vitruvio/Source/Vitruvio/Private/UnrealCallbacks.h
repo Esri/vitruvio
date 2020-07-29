@@ -5,6 +5,7 @@
 #include "PRTTypes.h"
 
 #include "Codec/Encoder/IUnrealCallbacks.h"
+#include "VitruvioTypes.h"
 
 #include "Core.h"
 #include "Engine/StaticMesh.h"
@@ -16,8 +17,11 @@ class UnrealCallbacks final : public IUnrealCallbacks, public FGCObject
 {
 	AttributeMapBuilderUPtr& AttributeMapBuilder;
 
-	TMap<UStaticMesh*, TArray<FTransform>> Instances;
+	Vitruvio::FInstanceMap Instances;
 	TMap<int32, UStaticMesh*> Meshes;
+
+	TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*> MaterialCache;
+	FCriticalSection MaterialCacheSection;
 
 	UMaterial* OpaqueParent;
 	UMaterial* MaskedParent;
@@ -36,7 +40,7 @@ public:
 
 	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
-	const TMap<UStaticMesh*, TArray<FTransform>>& GetInstances() const { return Instances; }
+	const Vitruvio::FInstanceMap& GetInstances() const { return Instances; }
 
 	UStaticMesh* GetModel() const { return Meshes.Contains(NO_PROTOTYPE_INDEX) ? Meshes[NO_PROTOTYPE_INDEX] : nullptr; }
 
@@ -77,10 +81,17 @@ public:
 	// clang-format on
 
 	/**
-	 * @param prototypeId the prototype id of the instance, must be >= 0
-	 * @param transform the transformation matrix of the instance
+	 * Add a new instance with a given id, transform and optional set of overriding attributes for this instance
+	 *
+	 * @param prototypeId the id of the prorotype. An @ref addMesh call with the specified prorotypeId will be called before
+	 *                    the call to addInstance
+	 * @param transform the transformation matrix of this instance
+	 * @param instanceMaterial override materials for this instance
+	 * @param numInstanceMaterials number of instance material overrides. Is either 0 or is equal to the number
+	 *                             of materials of the original mesh (by prototypeId)
 	 */
-	void addInstance(int32_t prototypeId, const double* transform) override;
+	virtual void addInstance(int32_t prototypeId, const double* transform, const prt::AttributeMap** instanceMaterial,
+							 size_t numInstanceMaterials) override;
 
 	prt::Status generateError(size_t /*isIndex*/, prt::Status /*status*/, const wchar_t* message) override
 	{

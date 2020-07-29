@@ -9,6 +9,8 @@
 
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
+#include "ImageCore/Public/ImageCore.h"
+#include "VitruvioTypes.h"
 
 #include <map>
 
@@ -16,30 +18,123 @@ DEFINE_LOG_CATEGORY(LogMaterialConversion);
 
 namespace
 {
-struct TextureSettings
+
+constexpr double BLACK_COLOR_THRESHOLD = 0.02;
+constexpr double WHITE_COLOR_THRESHOLD = 1.0 - BLACK_COLOR_THRESHOLD;
+constexpr double OPACITY_THRESHOLD = 0.98;
+
+struct FTextureSettings
 {
 	bool SRGB;
 	TextureCompressionSettings Compression;
 };
 
-UTexture2D* CreateTexture(UObject* Outer, const TArray<uint8>& PixelData, int32 SizeX, int32 SizeY, const TextureSettings& Settings,
-						  EPixelFormat Format, FName BaseName)
+template <typename T, typename F>
+void CountOpacityMapPixels(const T* SrcColors, int32 SizeX, int32 SizeY, uint32& BlackPixels, uint32& WhitePixels, F Accessor)
 {
-	// Shamelessly copied from UTexture2D::CreateTransient with a few modifications
-	if (SizeX <= 0 || SizeY <= 0 || (SizeX % GPixelFormats[Format].BlockSizeX) != 0 || (SizeY % GPixelFormats[Format].BlockSizeY) != 0)
-	{
-		UE_LOG(LogMaterialConversion, Warning, TEXT("Invalid parameters"));
-		return nullptr;
-	}
+	BlackPixels = 0;
+	WhitePixels = 0;
 
-	// Most important difference with UTexture2D::CreateTransient: we provide the new texture with a name and an owner
+	const T* LastColor = SrcColors + (SizeX * SizeY);
+	while (SrcColors < LastColor)
+	{
+		const float Value = Accessor(SrcColors);
+
+		if (Value < BLACK_COLOR_THRESHOLD)
+		{
+			BlackPixels++;
+		}
+		else if (Value > WHITE_COLOR_THRESHOLD)
+		{
+			WhitePixels++;
+		}
+		++SrcColors;
+	}
+}
+
+void CountOpacityMapPixels(const FColor* SrcColors, bool UseAlphaChannel, int32 SizeX, int32 SizeY, uint32& BlackPixels, uint32& WhitePixels)
+{
+	return CountOpacityMapPixels(SrcColors, SizeX, SizeY, BlackPixels, WhitePixels,
+								 [UseAlphaChannel](const FColor* Color) { return static_cast<float>(UseAlphaChannel ? Color->A : Color->R) / 0xFF; });
+}
+
+void CountOpacityMapPixels(const uint8* SrcColors, int32 SizeX, int32 SizeY, uint32& BlackPixels, uint32& WhitePixels)
+{
+	return CountOpacityMapPixels(SrcColors, SizeX, SizeY, BlackPixels, WhitePixels,
+								 [](const uint8* Color) { return static_cast<float>(*Color) / 0xFF; });
+}
+
+void CountOpacityMapPixels(const uint16* SrcColors, int32 SizeX, int32 SizeY, uint32& BlackPixels, uint32& WhitePixels)
+{
+	return CountOpacityMapPixels(SrcColors, SizeX, SizeY, BlackPixels, WhitePixels,
+								 [](const uint16* Color) { return static_cast<float>(*Color) / 0xFFFF; });
+}
+
+bool HasAlpha(const FColor* SrcColors, int32 SizeX, int32 SizeY)
+{
+	const FColor* LastColor = SrcColors + (SizeX * SizeY);
+	while (SrcColors < LastColor)
+	{
+		if ((static_cast<float>(SrcColors->A) / 0xFF) < (1.0f - SMALL_NUMBER))
+		{
+			return true;
+		}
+		++SrcColors;
+	}
+	return false;
+}
+
+ERGBFormat GetRequestedFormat(ERGBFormat Format)
+{
+	// We handle textures similarly to Unreal handles non power of two images (which will not be DXT compressed) and always use
+	// the BGRA format (even for grayscale textures).
+	switch (Format)
+	{
+	case ERGBFormat::RGBA:
+	case ERGBFormat::BGRA:
+	case ERGBFormat::Gray: return ERGBFormat::BGRA;
+	default: return ERGBFormat::Invalid;
+	}
+}
+
+EPixelFormat PixelFormatFromRGB(ERGBFormat Format, int32 BitDepth)
+{
+	check(BitDepth == 8 || BitDepth == 16) check(Format != ERGBFormat::RGBA)
+
+		switch (Format)
+	{
+	case ERGBFormat::BGRA: return PF_B8G8R8A8;
+	case ERGBFormat::Gray: return BitDepth == 8 ? PF_G8 : PF_G16;
+	default: return PF_Unknown;
+	}
+}
+
+FTextureSettings GetTextureSettings(const FString& Key, ERGBFormat Format)
+{
+	if (Key == L"normalMap")
+	{
+		return {false, TC_Normalmap};
+	}
+	if (Key == L"roughnessMap" || Key == L"metallicMap")
+	{
+		return {false, TC_Masks};
+	}
+	return {Format == ERGBFormat::Gray ? false : true, TC_Default};
+}
+
+UTexture2D* CreateTexture(UObject* Outer, const TArray64<uint8>& Data, int32 SizeX, int32 SizeY, ERGBFormat Format, int32 BitDepth,
+						  const FString& TextureKey, const FName& BaseName)
+{
+	const EPixelFormat PixelFormat = PixelFormatFromRGB(Format, BitDepth);
+	const FTextureSettings Settings = GetTextureSettings(TextureKey, Format);
+
 	const FName TextureName = MakeUniqueObjectName(Outer, UTexture2D::StaticClass(), BaseName);
 	UTexture2D* NewTexture = NewObject<UTexture2D>(Outer, TextureName, RF_Transient);
 
 	NewTexture->PlatformData = new FTexturePlatformData();
 	NewTexture->PlatformData->SizeX = SizeX;
 	NewTexture->PlatformData->SizeY = SizeY;
-	NewTexture->PlatformData->PixelFormat = Format;
+	NewTexture->PlatformData->PixelFormat = PixelFormat;
 	NewTexture->CompressionSettings = Settings.Compression;
 	NewTexture->SRGB = Settings.SRGB;
 
@@ -49,26 +144,15 @@ UTexture2D* CreateTexture(UObject* Outer, const TArray<uint8>& PixelData, int32 
 	Mip->SizeX = SizeX;
 	Mip->SizeY = SizeY;
 	Mip->BulkData.Lock(LOCK_READ_WRITE);
-	void* TextureData = Mip->BulkData.Realloc(CalculateImageBytes(SizeX, SizeY, 0, Format));
-	FMemory::Memcpy(TextureData, PixelData.GetData(), PixelData.Num());
+	void* TextureData = Mip->BulkData.Realloc(CalculateImageBytes(SizeX, SizeY, 0, PixelFormat));
+	FMemory::Memcpy(TextureData, Data.GetData(), Data.Num());
 	Mip->BulkData.Unlock();
 
 	NewTexture->UpdateResource();
 	return NewTexture;
 }
 
-EPixelFormat GetPixelFormatFromRGBFormat(ERGBFormat Format)
-{
-	switch (Format)
-	{
-	case ERGBFormat::RGBA: return PF_R8G8B8A8;
-	case ERGBFormat::BGRA: return PF_B8G8R8A8;
-	case ERGBFormat::Gray: return PF_G8;
-	default: return PF_Unknown;
-	}
-}
-
-UTexture2D* LoadImageFromDisk(UObject* Outer, const FString& ImagePath, const TextureSettings& Settings)
+UTexture2D* LoadTextureFromDisk(UObject* Outer, const FString& ImagePath, const FString& TextureKey)
 {
 	static IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(TEXT("ImageWrapper"));
 
@@ -100,47 +184,102 @@ UTexture2D* LoadImageFromDisk(UObject* Outer, const FString& ImagePath, const Te
 	}
 
 	// Decompress the image data
-	TArray<uint8> RawData;
+	TArray64<uint8> RawData;
 	ImageWrapper->SetCompressed(FileData.GetData(), FileData.Num());
-	ImageWrapper->GetRaw(ImageWrapper->GetFormat(), ImageWrapper->GetBitDepth(), RawData);
+	const ERGBFormat Format = GetRequestedFormat(ImageWrapper->GetFormat());
+	ImageWrapper->GetRaw(Format, ImageWrapper->GetBitDepth(), RawData);
 
 	// Create the texture and upload the uncompressed image data
 	const FString TextureBaseName = TEXT("T_") + FPaths::GetBaseFilename(ImagePath);
-	return CreateTexture(Outer, RawData, ImageWrapper->GetWidth(), ImageWrapper->GetHeight(), Settings,
-						 GetPixelFormatFromRGBFormat(ImageWrapper->GetFormat()), FName(*TextureBaseName));
+	return CreateTexture(Outer, RawData, ImageWrapper->GetWidth(), ImageWrapper->GetHeight(), Format, ImageWrapper->GetBitDepth(), TextureKey,
+						 FName(*TextureBaseName));
 }
 
-UTexture2D* GetTexture(UObject* Outer, const prt::AttributeMap* MaterialAttributes, const TextureSettings& Settings, wchar_t const* Key)
+EBlendMode ChooseBlendModeFromOpacityMap(const UTexture2D& OpacityMap, bool& UseAlphaChannelOpacity)
 {
-	size_t ValuesCount = 0;
-	wchar_t const* const* Values = MaterialAttributes->getStringArray(Key, &ValuesCount);
-	for (int ValueIndex = 0; ValueIndex < ValuesCount; ++ValueIndex)
+	UseAlphaChannelOpacity = false;
+
+	const EPixelFormat PixelFormat = OpacityMap.GetPixelFormat();
+	check(PixelFormat == PF_B8G8R8A8 || PixelFormat == PF_G8 || PixelFormat == PF_G16);
+
+	uint32 BlackPixels = 0;
+	uint32 WhitePixels = 0;
+
+	switch (PixelFormat)
 	{
-		std::wstring TextureUri(Values[ValueIndex]);
-		if (TextureUri.size() > 0)
-		{
-			return LoadImageFromDisk(Outer, FString(WCHAR_TO_TCHAR(Values[ValueIndex])), Settings);
-		}
+	case PF_B8G8R8A8:
+	{
+		const FColor* ImageData = reinterpret_cast<const FColor*>(OpacityMap.PlatformData->Mips[0].BulkData.LockReadOnly());
+
+		// First check if the alpha channel is not empty to see if we should use it to determine the blend mode or the R channel (for RBG opacity)
+		UseAlphaChannelOpacity = HasAlpha(ImageData, OpacityMap.GetSizeX(), OpacityMap.GetSizeY());
+
+		// Now count the black and white pixels of the appropriate opacity map channel to determine the opacity mode
+		CountOpacityMapPixels(ImageData, UseAlphaChannelOpacity, OpacityMap.GetSizeX(), OpacityMap.GetSizeY(), BlackPixels, WhitePixels);
+		break;
 	}
-	return nullptr;
+	case PF_G8:
+	{
+		const uint8* ImageData = reinterpret_cast<const uint8*>(OpacityMap.PlatformData->Mips[0].BulkData.LockReadOnly());
+		CountOpacityMapPixels(ImageData, OpacityMap.GetSizeX(), OpacityMap.GetSizeY(), BlackPixels, WhitePixels);
+		break;
+	}
+	case PF_G16:
+	{
+		const uint16* ImageData = reinterpret_cast<const uint16*>(OpacityMap.PlatformData->Mips[0].BulkData.LockReadOnly());
+		CountOpacityMapPixels(ImageData, OpacityMap.GetSizeX(), OpacityMap.GetSizeY(), BlackPixels, WhitePixels);
+		break;
+	}
+	default: check(0)
+	}
+
+	OpacityMap.PlatformData->Mips[0].BulkData.Unlock();
+
+	const uint32 TotalPixels = OpacityMap.GetSizeX() * OpacityMap.GetSizeY();
+	if (WhitePixels >= TotalPixels * OPACITY_THRESHOLD)
+	{
+		return BLEND_Opaque;
+	}
+	if (WhitePixels + BlackPixels >= TotalPixels * OPACITY_THRESHOLD)
+	{
+		return BLEND_Masked;
+	}
+	return BLEND_Translucent;
 }
 
-EBlendMode GetBlendMode(const prt::AttributeMap* MaterialAttributes)
+EBlendMode ChooseBlendMode(UTexture2D* OpacityMap, double Opacity, EBlendMode BlendMode, bool& UseAlphaChannelOpacity)
 {
-	const wchar_t* OpacityMapMode = MaterialAttributes->getString(L"opacityMap.mode");
-	if (OpacityMapMode)
+	if (Opacity < OPACITY_THRESHOLD)
 	{
-		const std::wstring ModeString(OpacityMapMode);
-		if (ModeString == L"mask")
-		{
-			return EBlendMode::BLEND_Masked;
-		}
-		else if (ModeString == L"blend")
-		{
-			return EBlendMode::BLEND_Translucent;
-		}
+		return BLEND_Translucent;
 	}
-	return EBlendMode::BLEND_Opaque;
+	else if (BlendMode == BLEND_Masked)
+	{
+		return BLEND_Masked;
+	}
+	else if (BlendMode == BLEND_Translucent && OpacityMap)
+	{
+		// OpacityMap exists and opacitymap.mode is blend (which is the default value) so we need to check the content of the OpacityMap
+		// to really decide which material we need for Unreal
+		return ChooseBlendModeFromOpacityMap(*OpacityMap, UseAlphaChannelOpacity);
+	}
+	else
+	{
+		return BLEND_Opaque;
+	}
+}
+
+EBlendMode GetBlendMode(const FString& OpacityMapMode)
+{
+	if (OpacityMapMode == "mask")
+	{
+		return BLEND_Masked;
+	}
+	else if (OpacityMapMode == "blend")
+	{
+		return BLEND_Translucent;
+	}
+	return BLEND_Opaque;
 }
 
 UMaterialInterface* GetMaterialByBlendMode(EBlendMode Mode, UMaterialInterface* Opaque, UMaterialInterface* Masked, UMaterialInterface* Translucent)
@@ -153,119 +292,60 @@ UMaterialInterface* GetMaterialByBlendMode(EBlendMode Mode, UMaterialInterface* 
 	}
 }
 
-FLinearColor GetLinearColor(const prt::AttributeMap* MaterialAttributes, wchar_t const* Key)
-{
-	size_t count;
-	const double* values = MaterialAttributes->getFloatArray(Key, &count);
-	if (count < 3)
-	{
-		return FLinearColor();
-	}
-	const FColor Color(values[0] * 255.0, values[1] * 255.0, values[2] * 255.0);
-	return FLinearColor(Color);
-}
-
-float GetScalar(const prt::AttributeMap* MaterialAttributes, wchar_t const* Key)
-{
-	return MaterialAttributes->getFloat(Key);
-}
-
-TextureSettings GetTextureSettings(const std::wstring Key)
-{
-	if (Key == L"normalMap")
-	{
-		return {false, TC_Normalmap};
-	}
-	if (Key == L"roughnessMap" || Key == L"metallicMap")
-	{
-		return {false, TC_Masks};
-	}
-	return {true, TC_Default};
-}
-
-enum class MaterialPropertyType
-{
-	TEXTURE,
-	LINEAR_COLOR,
-	SCALAR
-};
-
-// see prtx/Material.h
-// clang-format off
-	const std::map<std::wstring, MaterialPropertyType> KeyToTypeMap = {
-		{L"diffuseMap", 	MaterialPropertyType::TEXTURE},
-		{L"opacityMap", 	MaterialPropertyType::TEXTURE},
-		{L"emissiveMap", 	MaterialPropertyType::TEXTURE},
-		{L"metallicMap", 	MaterialPropertyType::TEXTURE},
-		{L"roughnessMap", 	MaterialPropertyType::TEXTURE},
-		{L"normalMap", 		MaterialPropertyType::TEXTURE},
-
-		{L"diffuseColor", 	MaterialPropertyType::LINEAR_COLOR},
-		{L"emissiveColor", 	MaterialPropertyType::LINEAR_COLOR},
-
-		{L"metallic", 		MaterialPropertyType::SCALAR},
-		{L"opacity", 		MaterialPropertyType::SCALAR},
-		{L"roughness", 		MaterialPropertyType::SCALAR},
-	};
-// clang-format on
 } // namespace
 
 namespace Vitruvio
 {
 UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, UMaterialInterface* OpaqueParent, UMaterialInterface* MaskedParent,
-															UMaterialInterface* TranslucentParent, const prt::AttributeMap* MaterialAttributes)
+															UMaterialInterface* TranslucentParent,
+															const FMaterialAttributeContainer& MaterialContainer)
 {
 	check(IsInGameThread());
 
-	const auto BlendMode = GetBlendMode(MaterialAttributes);
-	const auto Parent = GetMaterialByBlendMode(BlendMode, OpaqueParent, MaskedParent, TranslucentParent);
-	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, Outer);
+	TMap<FString, TFuture<UTexture2D*>> TextureProperties;
 
-	using TTextureAsyncResult = TFuture<TTuple<const wchar_t*, UTexture*>>;
-	TArray<TTextureAsyncResult> LoadTextureResult;
-
-	// Convert AttributeMap to material
-	size_t KeyCount = 0;
-	wchar_t const* const* Keys = MaterialAttributes->getKeys(&KeyCount);
-	for (size_t KeyIndex = 0; KeyIndex < KeyCount; KeyIndex++)
+	// Load Textures Asynchronously
+	for (const auto& TextureProperty : MaterialContainer.TextureProperties)
 	{
-		const wchar_t* Key = Keys[KeyIndex];
-		const std::wstring KeyString(Key);
-		const auto TypeIter = KeyToTypeMap.find(KeyString);
-		if (TypeIter != KeyToTypeMap.end())
-		{
-			const MaterialPropertyType Type = TypeIter->second;
-			switch (Type)
+		// Load textures async in thread pool
+		// clang-format off
+		TFuture<UTexture2D*> Result = Async(EAsyncExecution::ThreadPool, [Outer, TextureProperty]() -> UTexture2D* {
+            QUICK_SCOPE_CYCLE_COUNTER(STAT_MaterialConversion_LoadTexture);
+			if (TextureProperty.Value.IsEmpty())
 			{
-			case MaterialPropertyType::TEXTURE:
-			{
-				// Load textures async in thread pool
-				// clang-format off
-					TTextureAsyncResult Result = Async(EAsyncExecution::ThreadPool, [MaterialInstance, Outer, MaterialAttributes, Key]() {
-						QUICK_SCOPE_CYCLE_COUNTER(STAT_MaterialConversion_LoadTexture);
-						UTexture* Texture = GetTexture(Outer, MaterialAttributes, GetTextureSettings(Key), Key);
-						return TTuple<const wchar_t*, UTexture*>(Key, Texture);
-						});
-				// clang-format on
+                return nullptr;
+            }
+            UTexture2D* Texture = LoadTextureFromDisk(Outer, TextureProperty.Value, TextureProperty.Key);
+            return Texture;
+        });
+		// clang-format on
 
-				LoadTextureResult.Add(MoveTemp(Result));
-
-				break;
-			}
-			case MaterialPropertyType::LINEAR_COLOR:
-				MaterialInstance->SetVectorParameterValue(FName(Key), GetLinearColor(MaterialAttributes, Key));
-				break;
-			case MaterialPropertyType::SCALAR: MaterialInstance->SetScalarParameterValue(FName(Key), GetScalar(MaterialAttributes, Key)); break;
-			default:;
-			}
-		}
+		TextureProperties.Add(TextureProperty.Key, MoveTemp(Result));
 	}
 
-	// Apply textures in Game Thread
-	for (const TTextureAsyncResult& TextureFutureResult : LoadTextureResult)
+	const float Opacity = MaterialContainer.ScalarProperties["opacity"];
+	UTexture2D* OpacityMap = TextureProperties.Contains("opacityMap") ? TextureProperties["opacityMap"].Get() : nullptr;
+
+	bool UseAlphaChannelOpacity = false;
+	const EBlendMode ChosenBlendMode = ChooseBlendMode(OpacityMap, Opacity, GetBlendMode(MaterialContainer.BlendMode), UseAlphaChannelOpacity);
+
+	const auto Parent = GetMaterialByBlendMode(ChosenBlendMode, OpaqueParent, MaskedParent, TranslucentParent);
+	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, Outer);
+
+	MaterialInstance->SetScalarParameterValue(FName(TEXT("opacitySource")), UseAlphaChannelOpacity);
+
+	for (const TPair<FString, TFuture<UTexture2D*>>& TextureFuture : TextureProperties)
 	{
-		const auto Result = TextureFutureResult.Get();
-		MaterialInstance->SetTextureParameterValue(FName(Result.Key), Result.Value);
+		const auto Result = TextureFuture.Value.Get();
+		MaterialInstance->SetTextureParameterValue(FName(TextureFuture.Key), Result);
+	}
+	for (const TPair<FString, double>& ScalarProperty : MaterialContainer.ScalarProperties)
+	{
+		MaterialInstance->SetScalarParameterValue(FName(ScalarProperty.Key), ScalarProperty.Value);
+	}
+	for (const TPair<FString, FLinearColor>& ColorProperty : MaterialContainer.ColorProperties)
+	{
+		MaterialInstance->SetVectorParameterValue(FName(ColorProperty.Key), ColorProperty.Value);
 	}
 
 	return MaterialInstance;

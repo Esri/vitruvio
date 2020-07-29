@@ -118,14 +118,25 @@ void AVitruvioActor::Generate()
 					StaticMeshActor->GetStaticMeshComponent()->SetStaticMesh(Result.ShapeMesh);
 					StaticMeshActor->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
 
-					for (const auto& Instance : Result.Instances)
+					for (const TTuple<Vitruvio::FInstanceCacheKey, TArray<FTransform>> & MeshAndInstance : Result.Instances)
 					{
 						auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(StaticMeshActor);
-						InstancedComponent->SetStaticMesh(Instance.Key);
-						for (const FTransform& InstanceTransform : Instance.Value)
+						const TArray<FTransform>& Instances = MeshAndInstance.Value;
+						const Vitruvio::FInstanceCacheKey& CacheKey = MeshAndInstance.Key;
+						InstancedComponent->SetStaticMesh(CacheKey.Mesh);
+
+						// Add all instance transforms
+						for (const FTransform& Transform : Instances)
 						{
-							InstancedComponent->AddInstance(InstanceTransform);
+							InstancedComponent->AddInstance(Transform);
 						}
+
+						// Apply override materials
+						for (int32 MaterialIndex = 0; MaterialIndex < CacheKey.MaterialOverrides.Num(); ++MaterialIndex)
+						{
+							InstancedComponent->SetMaterial(MaterialIndex, CacheKey.MaterialOverrides[MaterialIndex]);
+						}
+						
 						InstancedComponent->AttachToComponent(StaticMeshActor->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
 						StaticMeshActor->AddInstanceComponent(InstancedComponent);
 					}

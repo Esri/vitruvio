@@ -6,11 +6,13 @@
 
 #include "CoreUObject.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "VitruvioTypes.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMaterialConversion, Log, All);
 
 namespace Vitruvio
 {
 UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, UMaterialInterface* OpaqueParent, UMaterialInterface* MaskedParent,
-															UMaterialInterface* TranslucentParent, const prt::AttributeMap* MaterialAttributes);
+															UMaterialInterface* TranslucentParent,
+															const FMaterialAttributeContainer& MaterialAttributes);
 }

@@ -13,6 +13,7 @@
 #include "HAL/ThreadSafeCounter.h"
 #include "Modules/ModuleManager.h"
 #include "UnrealLogHandler.h"
+#include "VitruvioTypes.h"
 
 #include <map>
 #include <memory>
@@ -23,7 +24,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogUnrealPrt, Log, All);
 struct FGenerateResult
 {
 	UStaticMesh* ShapeMesh;
-	TMap<UStaticMesh*, TArray<FTransform>> Instances;
+	Vitruvio::FInstanceMap Instances;
 };
 
 class VitruvioModule final : public IModuleInterface

@@ -328,7 +328,7 @@ void forEachKey(prt::Attributable const* a, F f)
 
 void forwardGenericAttributes(IUnrealCallbacks* uc, size_t initialShapeIndex, const prtx::InitialShape& initialShape, const prtx::ShapePtr& shape)
 {
-	forEachKey(initialShape.getAttributeMap(), [&uc, &shape, &initialShapeIndex, &initialShape](prt::Attributable const* a, wchar_t const* key) {
+	forEachKey(initialShape.getAttributeMap(), [&uc, &shape, &initialShapeIndex, &initialShape](prt::Attributable const* /*a*/, wchar_t const* key) {
 		switch (shape->getType(key))
 		{
 		case prtx::Attributable::PT_STRING:
@@ -467,7 +467,6 @@ void encodeMesh(IUnrealCallbacks* cb, const SerializedGeometry& sg, wchar_t cons
 	auto puvCounts = toPtrVec(sg.uvCounts);
 	auto puvIndices = toPtrVec(sg.uvIndices);
 
-	uint32_t faceCount = 0;
 	std::vector<uint32_t> faceRanges;
 	AttributeMapNOPtrVectorOwner matAttrMaps;
 
@@ -563,22 +562,38 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialSha
 
 	prtx::GeometryPtrVector geometries;
 	std::vector<prtx::MaterialPtrVector> materials;
+	prtx::PRTUtils::AttributeMapBuilderPtr instanceMatAmb(prt::AttributeMapBuilder::create());
 	for (const auto& inst : instances)
 	{
 		if (inst.getPrototypeIndex() != -1)
 		{
+			const prtx::MaterialPtrVector& instMaterials = inst.getMaterials();
+			const prtx::GeometryPtr& instGeom = inst.getGeometry();
+			AttributeMapNOPtrVectorOwner instMaterialsAttributeMap;
+
 			if (serializedPrototypes.find(inst.getPrototypeIndex()) == serializedPrototypes.end())
 			{
-				const prtx::GeometryPtr& instGeom = inst.getGeometry();
-				const prtx::MaterialPtrVector& instMaterials = inst.getMaterials();
 				const SerializedGeometry sg = serializeGeometry({instGeom}, {instMaterials});
 
 				encodeMesh(cb, sg, initialShape.getName(), inst.getPrototypeIndex(), {instGeom}, {instMaterials});
 
 				serializedPrototypes.insert(inst.getPrototypeIndex());
 			}
+			else
+			{
+				const prtx::MeshPtrVector& meshes = instGeom->getMeshes();
 
-			cb->addInstance(inst.getPrototypeIndex(), inst.getTransformation().data());
+				for (size_t mi = 0; mi < meshes.size(); mi++)
+				{
+					const prtx::MaterialPtr& mat = instMaterials[mi];
+
+					convertMaterialToAttributeMap(instanceMatAmb, *(mat.get()), mat->getKeys());
+					instMaterialsAttributeMap.v.push_back(instanceMatAmb->createAttributeMapAndReset());
+				}
+			}
+
+			cb->addInstance(inst.getPrototypeIndex(), inst.getTransformation().data(), instMaterialsAttributeMap.v.data(),
+							instMaterialsAttributeMap.v.size());
 		}
 		else
 		{
