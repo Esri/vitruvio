@@ -12,16 +12,23 @@ enum class EMaterialPropertyType
 	SCALAR
 };
 
+// clang-format off
 const TMap<FString, EMaterialPropertyType> KeyToTypeMap = {
-	{TEXT("diffuseMap"), EMaterialPropertyType::TEXTURE},		 {TEXT("opacityMap"), EMaterialPropertyType::TEXTURE},
-	{TEXT("emissiveMap"), EMaterialPropertyType::TEXTURE},		 {TEXT("metallicMap"), EMaterialPropertyType::TEXTURE},
-	{TEXT("roughnessMap"), EMaterialPropertyType::TEXTURE},		 {TEXT("normalMap"), EMaterialPropertyType::TEXTURE},
+	{TEXT("diffuseMap"), EMaterialPropertyType::TEXTURE},
+	{TEXT("opacityMap"), EMaterialPropertyType::TEXTURE},
+	{TEXT("emissiveMap"), EMaterialPropertyType::TEXTURE},
+	{TEXT("metallicMap"), EMaterialPropertyType::TEXTURE},
+	{TEXT("roughnessMap"), EMaterialPropertyType::TEXTURE},
+	{TEXT("normalMap"), EMaterialPropertyType::TEXTURE},
+	
+	{TEXT("diffuseColor"), EMaterialPropertyType::LINEAR_COLOR},
+	{TEXT("emissiveColor"), EMaterialPropertyType::LINEAR_COLOR},
 
-	{TEXT("diffuseColor"), EMaterialPropertyType::LINEAR_COLOR}, {TEXT("emissiveColor"), EMaterialPropertyType::LINEAR_COLOR},
-
-	{TEXT("metallic"), EMaterialPropertyType::SCALAR},			 {TEXT("opacity"), EMaterialPropertyType::SCALAR},
+	{TEXT("metallic"), EMaterialPropertyType::SCALAR},
+	{TEXT("opacity"), EMaterialPropertyType::SCALAR},
 	{TEXT("roughness"), EMaterialPropertyType::SCALAR},
 };
+// clang-format on
 
 FString FirstValidTextureUri(const prt::AttributeMap* MaterialAttributes, wchar_t const* Key)
 {
