@@ -105,7 +105,7 @@ public class PRT : ModuleRules
 		{
 			Console.WriteLine("PRT found");
 		}
-
+		
 		// 2. Copy libraries to module binaries directory and add dependencies
 		string ModuleBinariesDir = Path.GetFullPath(Path.Combine(ModuleDirectory, "../../..", "Binaries", Platform.Name));
 
