@@ -563,10 +563,9 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialSha
 
 	prtx::GeometryPtrVector geometries;
 	std::vector<prtx::MaterialPtrVector> materials;
+	prtx::PRTUtils::AttributeMapBuilderPtr instanceMatAmb(prt::AttributeMapBuilder::create());
 	for (const auto& inst : instances)
 	{
-		prtx::PRTUtils::AttributeMapBuilderPtr instanceMatAmb(prt::AttributeMapBuilder::create());
-
 		if (inst.getPrototypeIndex() != -1)
 		{
 			const prtx::MaterialPtrVector& instMaterials = inst.getMaterials();
