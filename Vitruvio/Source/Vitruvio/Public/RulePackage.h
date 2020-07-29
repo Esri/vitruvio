@@ -24,4 +24,25 @@ public:
 		// but it will mark the object as dirty and require a save.
 		FUniqueObjectGuid::GetOrCreateIDForObject(this);
 	}
+
+	virtual void Serialize(FArchive& Ar) override
+	{
+		// We can not use TArray#BulkSerialize as it does not use the fast path if we are not cooking
+		// This is an adapted version of bulk serialize without that limitation
+		Data.CountBytes(Ar);
+		if (Ar.IsLoading())
+		{
+			int32 NewArrayNum = 0;
+			Ar << NewArrayNum;
+			Data.Empty(NewArrayNum);
+			Data.AddUninitialized(NewArrayNum);
+			Ar.Serialize(Data.GetData(), NewArrayNum);
+		}
+		else if (Ar.IsSaving())
+		{
+			int32 ArrayCount = Data.Num();
+			Ar << ArrayCount;
+			Ar.Serialize(Data.GetData(), ArrayCount);
+		}
+	}
 };
