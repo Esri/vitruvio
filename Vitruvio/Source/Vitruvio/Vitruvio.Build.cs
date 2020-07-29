@@ -38,6 +38,11 @@ public class Vitruvio : ModuleRules
 				"UnrealGeometryEncoderLib"
 			}
 		);
+		
+		AddEngineThirdPartyPrivateStaticDependencies(Target,
+			"zlib",
+			"UElibPNG"
+		);
 
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
