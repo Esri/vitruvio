@@ -16,8 +16,8 @@ public class PRT : ModuleRules
 
 	// PRT version and toolchain (needs to be correct for download URL)
 	private const int PrtMajor = 2;
-	private const int PrtMinor = 1;
-	private const int PrtBuild = 5705;
+	private const int PrtMinor = 2;
+	private const int PrtBuild = 6332;
 
 	private const string PrtCoreDllName = "com.esri.prt.core.dll";
 	private static string[] ExtensionLibraries = { "com.esri.prt.adaptors.dll", "com.esri.prt.codecs.dll", "VueExport.dll" };
@@ -146,6 +146,12 @@ public class PRT : ModuleRules
 					PublicDelayLoadDLLs.Add(FileName);
 				}
 			}
+		}
+		
+		// Delete all sub directories from the extensions
+		foreach (string DirectoryPath in Directory.GetDirectories(LibDir))
+		{
+			Directory.Delete(DirectoryPath, true);
 		}
 
 		// Add include search path
@@ -291,7 +297,7 @@ public class PRT : ModuleRules
 		public override AbstractZipExtractor ZipExtractor { get { return new WindowsZipExtractor(); } }
 
 		public override string Name { get { return "Win64"; } }
-		public override string PrtPlatform { get { return "win10-vc141-x86_64-rel-opt"; } }
+		public override string PrtPlatform { get { return "win10-vc142-x86_64-rel-opt"; } }
 		public override string DynamicLibExtension { get { return ".dll"; } }
 
 		public override void AddPrtCoreLibrary(string LibraryPath, string LibraryName, ModuleRules Rules)

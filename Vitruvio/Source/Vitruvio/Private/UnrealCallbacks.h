@@ -123,7 +123,9 @@ public:
 	prt::Status attrBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value) override;
 	prt::Status attrFloat(size_t isIndex, int32_t shapeID, const wchar_t* key, double value) override;
 	prt::Status attrString(size_t isIndex, int32_t shapeID, const wchar_t* key, const wchar_t* value) override;
-	prt::Status attrBoolArray(size_t isIndex, int32_t shapeID, const wchar_t* key, const bool* ptr, size_t size) override;
-	prt::Status attrFloatArray(size_t isIndex, int32_t shapeID, const wchar_t* key, const double* ptr, size_t size) override;
-	prt::Status attrStringArray(size_t isIndex, int32_t shapeID, const wchar_t* key, const wchar_t* const* ptr, size_t size) override;
+
+	prt::Status attrBoolArray(size_t isIndex, int32_t shapeID, const wchar_t* key, const bool* values, size_t size, size_t nRows) override;
+	prt::Status attrFloatArray(size_t isIndex, ::int32_t shapeID, const wchar_t* key, const double* values, size_t size, size_t nRows) override;
+	prt::Status attrStringArray(size_t isIndex, ::int32_t shapeID, const wchar_t* key, const wchar_t* const* values, size_t size,
+								size_t nRows) override;
 };
