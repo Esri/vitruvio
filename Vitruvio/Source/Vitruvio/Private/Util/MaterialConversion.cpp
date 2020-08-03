@@ -24,6 +24,9 @@ constexpr double BLACK_COLOR_THRESHOLD = 0.02;
 constexpr double WHITE_COLOR_THRESHOLD = 1.0 - BLACK_COLOR_THRESHOLD;
 constexpr double OPACITY_THRESHOLD = 0.98;
 
+const FString CE_DEFAULT_SHADER_NAME = TEXT("CityEngineShader");
+const FString CE_PBR_SHADER_NAME = TEXT("CityEnginePBRShader");
+
 struct FTextureSettings
 {
 	bool SRGB;
@@ -324,7 +327,20 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, UMat
 	const bool UseAlphaAsOpacity = OpacityMapData.Texture && OpacityMapData.NumChannels == 4 ? true : false;
 	const EBlendMode ChosenBlendMode = ChooseBlendMode(OpacityMapData, Opacity, GetBlendMode(MaterialContainer.BlendMode), UseAlphaAsOpacity);
 
-	const auto Parent = GetMaterialByBlendMode(ChosenBlendMode, OpaqueParent, MaskedParent, TranslucentParent);
+	const FString Shader = MaterialContainer.StringProperties["shader"];
+	UMaterialInterface* Parent = nullptr;
+
+	if (!Shader.IsEmpty() && Shader != CE_DEFAULT_SHADER_NAME && Shader != CE_PBR_SHADER_NAME)
+	{
+		const FString FileName = FPaths::GetBaseFilename(Shader);
+		const FString ParentMaterialPath = Shader + TEXT(".") + FileName;
+		Parent = LoadObject<UMaterial>(Outer, *ParentMaterialPath);
+	}
+	if (!Parent)
+	{
+		Parent = GetMaterialByBlendMode(ChosenBlendMode, OpaqueParent, MaskedParent, TranslucentParent);
+	}
+
 	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, Outer);
 
 	MaterialInstance->SetScalarParameterValue(FName(TEXT("opacitySource")), UseAlphaAsOpacity);
