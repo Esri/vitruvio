@@ -13,6 +13,7 @@ struct FMaterialAttributeContainer
 	TMap<FString, FString> TextureProperties;
 	TMap<FString, FLinearColor> ColorProperties;
 	TMap<FString, double> ScalarProperties;
+	TMap<FString, FString> StringProperties;
 
 	FString BlendMode;
 
@@ -20,9 +21,13 @@ struct FMaterialAttributeContainer
 
 	friend bool operator==(const FMaterialAttributeContainer& Lhs, const FMaterialAttributeContainer& RHS)
 	{
+		// clang-format off
 		return Lhs.TextureProperties.OrderIndependentCompareEqual(RHS.TextureProperties) &&
 			   Lhs.ColorProperties.OrderIndependentCompareEqual(RHS.ColorProperties) &&
-			   Lhs.ScalarProperties.OrderIndependentCompareEqual(RHS.ScalarProperties) && Lhs.BlendMode == RHS.BlendMode;
+			   Lhs.ScalarProperties.OrderIndependentCompareEqual(RHS.ScalarProperties) &&
+			   Lhs.StringProperties.OrderIndependentCompareEqual(RHS.StringProperties) && 
+			   Lhs.BlendMode == RHS.BlendMode;
+		// clang-format on
 	}
 
 	friend bool operator!=(const FMaterialAttributeContainer& Lhs, const FMaterialAttributeContainer& RHS) { return !(Lhs == RHS); }

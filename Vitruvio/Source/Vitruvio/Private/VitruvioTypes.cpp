@@ -9,7 +9,8 @@ enum class EMaterialPropertyType
 {
 	TEXTURE,
 	LINEAR_COLOR,
-	SCALAR
+	SCALAR,
+	STRING
 };
 
 // clang-format off
@@ -27,6 +28,8 @@ const TMap<FString, EMaterialPropertyType> KeyToTypeMap = {
 	{TEXT("metallic"), EMaterialPropertyType::SCALAR},
 	{TEXT("opacity"), EMaterialPropertyType::SCALAR},
 	{TEXT("roughness"), EMaterialPropertyType::SCALAR},
+
+	{TEXT("shader"), EMaterialPropertyType::STRING},
 };
 // clang-format on
 
@@ -109,6 +112,7 @@ FMaterialAttributeContainer::FMaterialAttributeContainer(const prt::AttributeMap
 		case EMaterialPropertyType::TEXTURE: TextureProperties.Add(KeyString, FirstValidTextureUri(AttributeMap, Key)); break;
 		case EMaterialPropertyType::LINEAR_COLOR: ColorProperties.Add(KeyString, GetLinearColor(AttributeMap, Key)); break;
 		case EMaterialPropertyType::SCALAR: ScalarProperties.Add(KeyString, AttributeMap->getFloat(Key)); break;
+		case EMaterialPropertyType::STRING: StringProperties.Add(KeyString, AttributeMap->getString(Key)); break;
 		default:;
 		}
 	}
@@ -125,6 +129,7 @@ uint32 GetTypeHash(const FMaterialAttributeContainer& Object)
 	Hash = HashCombine(Hash, GetMapHash<FString, FString>(Object.TextureProperties));
 	Hash = HashCombine(Hash, GetMapHash<FString, FLinearColor>(Object.ColorProperties));
 	Hash = HashCombine(Hash, GetMapHash<FString, double>(Object.ScalarProperties));
+	Hash = HashCombine(Hash, GetMapHash<FString, FString>(Object.StringProperties));
 	Hash = HashCombine(Hash, GetTypeHash(Object.BlendMode));
 	return Hash;
 }
