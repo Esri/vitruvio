@@ -40,9 +40,9 @@ public:
 		}
 		else if (Ar.IsSaving())
 		{
-			int32 ArrayCount = Data.Num();
-			Ar << ArrayCount;
-			Ar.Serialize(Data.GetData(), ArrayCount);
+			int32 ArrayNum = Data.Num();
+			Ar << ArrayNum;
+			Ar.Serialize(Data.GetData(), ArrayNum);
 		}
 	}
 };
