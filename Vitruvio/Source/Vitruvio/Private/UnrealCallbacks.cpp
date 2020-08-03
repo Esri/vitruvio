@@ -275,19 +275,20 @@ prt::Status UnrealCallbacks::attrString(size_t isIndex, int32_t shapeID, const w
 	return prt::STATUS_OK;
 }
 
-prt::Status UnrealCallbacks::attrBoolArray(size_t isIndex, int32_t shapeID, const wchar_t* key, const bool* values, size_t size)
+prt::Status UnrealCallbacks::attrBoolArray(size_t isIndex, int32_t shapeID, const wchar_t* key, const bool* values, size_t size, size_t nRows)
 {
 	AttributeMapBuilder->setBoolArray(key, values, size);
 	return prt::STATUS_OK;
 }
 
-prt::Status UnrealCallbacks::attrFloatArray(size_t isIndex, int32_t shapeID, const wchar_t* key, const double* values, size_t size)
+prt::Status UnrealCallbacks::attrFloatArray(size_t isIndex, int32_t shapeID, const wchar_t* key, const double* values, size_t size, size_t nRows)
 {
 	AttributeMapBuilder->setFloatArray(key, values, size);
 	return prt::STATUS_OK;
 }
 
-prt::Status UnrealCallbacks::attrStringArray(size_t isIndex, int32_t shapeID, const wchar_t* key, const wchar_t* const* values, size_t size)
+prt::Status UnrealCallbacks::attrStringArray(size_t isIndex, int32_t shapeID, const wchar_t* key, const wchar_t* const* values, size_t size,
+											 size_t nRows)
 {
 	AttributeMapBuilder->setStringArray(key, values, size);
 	return prt::STATUS_OK;
