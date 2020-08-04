@@ -392,7 +392,6 @@ TFuture<FAttributeMapPtr> VitruvioModule::LoadDefaultRuleAttributesAsync(const U
 		AttributeMapUPtr DefaultAttributeMap(GetDefaultAttributeValues(RuleFile.c_str(), StartRule.c_str(), ResolveMap, InitialShape, RandomSeed));
 
 		return MakeShared<FAttributeMap>(std::move(DefaultAttributeMap), std::move(RuleInfo));
-		;
 	});
 }
 

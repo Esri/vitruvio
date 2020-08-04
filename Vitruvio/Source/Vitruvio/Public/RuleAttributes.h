@@ -86,6 +86,8 @@ public:
 	bool Hidden;
 
 	void SetAnnotation(TSharedPtr<AttributeAnnotation> InAnnotation) { this->Annotation = MoveTemp(InAnnotation); }
+
+	virtual void CopyValue(const URuleAttribute* FromAttribute){};
 };
 
 UCLASS()
@@ -94,6 +96,7 @@ class VITRUVIO_API UStringAttribute final : public URuleAttribute
 	GENERATED_BODY()
 
 public:
+	UPROPERTY()
 	FString Value;
 
 	TSharedPtr<EnumAnnotation<FString>> GetEnumAnnotation() const
@@ -107,6 +110,15 @@ public:
 		return Annotation && Annotation->GetAnnotationType() == AnnotationType::Color ? StaticCastSharedPtr<ColorAnnotation>(Annotation)
 																					  : TSharedPtr<ColorAnnotation>();
 	}
+
+	void CopyValue(const URuleAttribute* FromAttribute) override
+	{
+		const UStringAttribute* FromStringAttribute = Cast<UStringAttribute>(FromAttribute);
+		if (FromStringAttribute)
+		{
+			Value = FromStringAttribute->Value;
+		};
+	};
 };
 
 UCLASS()
@@ -115,6 +127,7 @@ class VITRUVIO_API UFloatAttribute final : public URuleAttribute
 	GENERATED_BODY()
 
 public:
+	UPROPERTY()
 	double Value;
 
 	TSharedPtr<EnumAnnotation<double>> GetEnumAnnotation() const
@@ -128,6 +141,15 @@ public:
 		return Annotation && Annotation->GetAnnotationType() == AnnotationType::Range ? StaticCastSharedPtr<RangeAnnotation>(Annotation)
 																					  : TSharedPtr<RangeAnnotation>();
 	}
+
+	void CopyValue(const URuleAttribute* FromAttribute) override
+	{
+		const UFloatAttribute* FromFloatAttribute = Cast<UFloatAttribute>(FromAttribute);
+		if (FromFloatAttribute)
+		{
+			Value = FromFloatAttribute->Value;
+		};
+	};
 };
 
 UCLASS()
@@ -136,5 +158,15 @@ class VITRUVIO_API UBoolAttribute final : public URuleAttribute
 	GENERATED_BODY()
 
 public:
+	UPROPERTY()
 	bool Value;
+
+	void CopyValue(const URuleAttribute* FromAttribute) override
+	{
+		const UBoolAttribute* FromBoolAttribute = Cast<UBoolAttribute>(FromAttribute);
+		if (FromBoolAttribute)
+		{
+			Value = FromBoolAttribute->Value;
+		};
+	};
 };
