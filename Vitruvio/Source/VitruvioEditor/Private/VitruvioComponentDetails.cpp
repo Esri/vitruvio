@@ -1,8 +1,8 @@
 // Copyright 2019 - 2020 Esri. All Rights Reserved.
 
-#include "VitruvioActorDetails.h"
+#include "VitruvioComponentDetails.h"
 
-#include "VitruvioActor.h"
+#include "VitruvioComponent.h"
 
 #include "Algo/Transform.h"
 #include "DetailCategoryBuilder.h"
@@ -34,7 +34,7 @@ FString ValueToString(const TSharedPtr<bool>& In)
 }
 
 template <typename A, typename V>
-void UpdateAttributeValue(AVitruvioActor* VitruvioActor, A* Attribute, const V& Value)
+void UpdateAttributeValue(UVitruvioComponent* VitruvioActor, A* Attribute, const V& Value)
 {
 	Attribute->Value = Value;
 	if (VitruvioActor->GenerateAutomatically)
@@ -44,7 +44,7 @@ void UpdateAttributeValue(AVitruvioActor* VitruvioActor, A* Attribute, const V& 
 }
 
 template <typename A, typename V>
-TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Attribute, TSharedPtr<EnumAnnotation<V>> Annotation, AVitruvioActor* VitruvioActor)
+TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Attribute, TSharedPtr<EnumAnnotation<V>> Annotation, UVitruvioComponent* VitruvioActor)
 {
 	TArray<TSharedPtr<V>> SharedPtrValues;
 	Algo::Transform(Annotation->Values, SharedPtrValues, [](const V& Value) { return MakeShared<V>(Value); });
@@ -61,7 +61,7 @@ TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Attribute, TSharedPtr<EnumA
 	return ValueWidget;
 }
 
-void CreateColorPicker(UStringAttribute* Attribute, AVitruvioActor* VitruvioActor)
+void CreateColorPicker(UStringAttribute* Attribute, UVitruvioComponent* VitruvioActor)
 {
 	FColorPickerArgs PickerArgs;
 	{
@@ -78,7 +78,7 @@ void CreateColorPicker(UStringAttribute* Attribute, AVitruvioActor* VitruvioActo
 	OpenColorPicker(PickerArgs);
 }
 
-TSharedPtr<SHorizontalBox> CreateColorInputWidget(UStringAttribute* Attribute, AVitruvioActor* VitruvioActor)
+TSharedPtr<SHorizontalBox> CreateColorInputWidget(UStringAttribute* Attribute, UVitruvioComponent* VitruvioActor)
 {
 	// clang-format off
 		return SNew(SHorizontalBox)
@@ -110,7 +110,7 @@ TSharedPtr<SHorizontalBox> CreateColorInputWidget(UStringAttribute* Attribute, A
 	// clang-format on
 }
 
-TSharedPtr<SCheckBox> CreateBoolInputWidget(UBoolAttribute* Attribute, AVitruvioActor* VitruvioActor)
+TSharedPtr<SCheckBox> CreateBoolInputWidget(UBoolAttribute* Attribute, UVitruvioComponent* VitruvioActor)
 {
 	auto OnCheckStateChanged = [VitruvioActor, Attribute](ECheckBoxState CheckBoxState) -> void {
 		UpdateAttributeValue(VitruvioActor, Attribute, CheckBoxState == ECheckBoxState::Checked);
@@ -123,7 +123,7 @@ TSharedPtr<SCheckBox> CreateBoolInputWidget(UBoolAttribute* Attribute, AVitruvio
 	return ValueWidget;
 }
 
-TSharedPtr<SHorizontalBox> CreateTextInputWidget(UStringAttribute* Attribute, AVitruvioActor* VitruvioActor)
+TSharedPtr<SHorizontalBox> CreateTextInputWidget(UStringAttribute* Attribute, UVitruvioComponent* VitruvioActor)
 {
 	auto OnTextChanged = [VitruvioActor, Attribute](const FText& Text, ETextCommit::Type) -> void {
 		UpdateAttributeValue(VitruvioActor, Attribute, Text.ToString());
@@ -151,7 +151,7 @@ TSharedPtr<SHorizontalBox> CreateTextInputWidget(UStringAttribute* Attribute, AV
 	// clang-format on
 }
 
-TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(UFloatAttribute* Attribute, AVitruvioActor* VitruvioActor)
+TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(UFloatAttribute* Attribute, UVitruvioComponent* VitruvioActor)
 {
 	auto Annotation = Attribute->GetRangeAnnotation();
 	auto OnCommit = [VitruvioActor, Attribute](double Value, ETextCommit::Type Type) -> void {
@@ -220,7 +220,7 @@ IDetailGroup* GetOrCreateGroups(IDetailGroup& Root, const FAttributeGroups& Grou
 	return CurrentGroup;
 }
 
-void BuildAttributeEditor(IDetailLayoutBuilder& DetailBuilder, AVitruvioActor* VitruvioActor)
+void BuildAttributeEditor(IDetailLayoutBuilder& DetailBuilder, UVitruvioComponent* VitruvioActor)
 {
 	if (!VitruvioActor || !VitruvioActor->Rpk)
 	{
@@ -309,58 +309,58 @@ TSharedRef<SWidget> SPropertyComboBox<T>::OnGenerateComboWidget(TSharedPtr<T> In
 	return SNew(STextBlock).Text(FText::FromString(ValueToString(InValue)));
 }
 
-FVitruvioActorDetails::FVitruvioActorDetails()
+FVitruvioComponentDetails::FVitruvioComponentDetails()
 {
-	FCoreUObjectDelegates::OnObjectPropertyChanged.AddRaw(this, &FVitruvioActorDetails::OnAttributesChanged);
+	FCoreUObjectDelegates::OnObjectPropertyChanged.AddRaw(this, &FVitruvioComponentDetails::OnAttributesChanged);
 }
 
-FVitruvioActorDetails::~FVitruvioActorDetails()
+FVitruvioComponentDetails::~FVitruvioComponentDetails()
 {
 	FCoreUObjectDelegates::OnObjectPropertyChanged.RemoveAll(this);
 }
 
-TSharedRef<IDetailCustomization> FVitruvioActorDetails::MakeInstance()
+TSharedRef<IDetailCustomization> FVitruvioComponentDetails::MakeInstance()
 {
-	return MakeShareable(new FVitruvioActorDetails);
+	return MakeShareable(new FVitruvioComponentDetails);
 }
 
-void FVitruvioActorDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
+void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
 	ObjectsBeingCustomized.Empty();
 	DetailBuilder.GetObjectsBeingCustomized(ObjectsBeingCustomized);
 
-	AVitruvioActor* VitruvioActor = nullptr;
+	UVitruvioComponent* VitruvioComponent = nullptr;
 	for (size_t ObjectIndex = 0; ObjectIndex < ObjectsBeingCustomized.Num(); ++ObjectIndex)
 	{
 		const TWeakObjectPtr<UObject>& CurrentObject = ObjectsBeingCustomized[ObjectIndex];
 		if (CurrentObject.IsValid())
 		{
-			VitruvioActor = Cast<AVitruvioActor>(CurrentObject.Get());
+			VitruvioComponent = Cast<UVitruvioComponent>(CurrentObject.Get());
 		}
 	}
 
-	if (!VitruvioActor)
+	if (!VitruvioComponent)
 	{
 		return;
 	}
 
-	DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(AVitruvioActor, Attributes))->MarkHiddenByCustomization();
+	DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Attributes))->MarkHiddenByCustomization();
 
-	if (VitruvioActor)
+	if (VitruvioComponent)
 	{
-		BuildAttributeEditor(DetailBuilder, VitruvioActor);
+		BuildAttributeEditor(DetailBuilder, VitruvioComponent);
 	}
 }
 
-void FVitruvioActorDetails::CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& DetailBuilder)
+void FVitruvioComponentDetails::CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& DetailBuilder)
 {
 	CachedDetailBuilder = DetailBuilder;
 	CustomizeDetails(*DetailBuilder);
 }
 
-void FVitruvioActorDetails::OnAttributesChanged(UObject* Object, struct FPropertyChangedEvent& Event)
+void FVitruvioComponentDetails::OnAttributesChanged(UObject* Object, struct FPropertyChangedEvent& Event)
 {
-	if (Event.Property && Event.Property->GetFName() == GET_MEMBER_NAME_CHECKED(AVitruvioActor, Attributes))
+	if (Event.Property && Event.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Attributes))
 	{
 		const auto DetailBuilder = CachedDetailBuilder.Pin().Get();
 		if (DetailBuilder)

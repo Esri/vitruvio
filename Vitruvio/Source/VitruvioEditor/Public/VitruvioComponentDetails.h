@@ -3,13 +3,13 @@
 #pragma once
 
 #include "IDetailCustomization.h"
-#include "VitruvioActor.h"
+#include "VitruvioComponent.h"
 
-class FVitruvioActorDetails final : public IDetailCustomization
+class FVitruvioComponentDetails final : public IDetailCustomization
 {
 public:
-	FVitruvioActorDetails();
-	~FVitruvioActorDetails();
+	FVitruvioComponentDetails();
+	~FVitruvioComponentDetails();
 
 	static TSharedRef<IDetailCustomization> MakeInstance();
 
@@ -19,7 +19,7 @@ public:
 	void OnAttributesChanged(UObject* Object, struct FPropertyChangedEvent& Event);
 
 private:
-	TArray<TWeakObjectPtr<>> ObjectsBeingCustomized;
+	TArray<TWeakObjectPtr<UObject>> ObjectsBeingCustomized;
 	TWeakPtr<IDetailLayoutBuilder> CachedDetailBuilder;
 	TSharedPtr<SWidget> ColorPickerParentWidget;
 };
