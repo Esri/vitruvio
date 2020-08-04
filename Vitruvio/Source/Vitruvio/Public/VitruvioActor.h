@@ -2,13 +2,8 @@
 
 #pragma once
 
-#include "RuleAttributes.h"
-#include "RulePackage.h"
-#include "VitruvioModule.h"
-
 #include "CoreMinimal.h"
 #include "Engine/StaticMeshActor.h"
-#include "Materials/Material.h"
 #include "VitruvioComponent.h"
 #include "VitruvioActor.generated.h"
 

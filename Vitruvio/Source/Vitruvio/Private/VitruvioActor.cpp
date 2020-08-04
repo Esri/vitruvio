@@ -7,5 +7,4 @@
 AVitruvioActor::AVitruvioActor()
 {
 	VitruvioComponent = CreateDefaultSubobject<UVitruvioComponent>(TEXT("VitruvioComponent"));
-	AddOwnedComponent(VitruvioComponent);
 }

@@ -106,8 +106,8 @@ void UVitruvioComponent::Generate()
 				AActor* Owner = GetOwner();
 				if (Owner == nullptr)
 				{
-                    return;
-                }
+					return;
+				}
 				
 				// If we need a regenerate (eg there has been a generate request while there 
 				if (bNeedsRegenerate)
