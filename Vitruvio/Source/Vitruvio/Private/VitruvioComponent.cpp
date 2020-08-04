@@ -237,9 +237,9 @@ void UVitruvioComponent::LoadDefaultAttributes(UStaticMesh* InitialShape)
 
 	AttributesReady = false;
 
-	TFuture<FAttributeMap> AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk, RandomSeed);
-	AttributesFuture.Next([this](const FAttributeMap& Result) {
-		Attributes = Result.Attributes;
+	TFuture<FAttributeMapPtr> AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk, RandomSeed);
+	AttributesFuture.Next([this](const FAttributeMapPtr& Result) {
+		Attributes = Result->ConvertToUnrealAttributeMap(this);
 		AttributesReady = true;
 
 		FPlatformMisc::MemoryBarrier();

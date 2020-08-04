@@ -6,7 +6,6 @@
 #include "PRTUtils.h"
 #include "UnrealCallbacks.h"
 
-#include "Util/AnnotationParsing.h"
 #include "Util/AttributeConversion.h"
 #include "Util/PolygonWindings.h"
 
@@ -361,8 +360,8 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 	return {OutputHandler->GetModel(), OutputHandler->GetInstances()};
 }
 
-TFuture<FAttributeMap> VitruvioModule::LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage,
-																	  const int32 RandomSeed) const
+TFuture<FAttributeMapPtr> VitruvioModule::LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage,
+																		 const int32 RandomSeed) const
 {
 	check(InitialShape);
 	check(RulePackage);
@@ -373,7 +372,7 @@ TFuture<FAttributeMap> VitruvioModule::LoadDefaultRuleAttributesAsync(const USta
 		return {};
 	}
 
-	return Async(EAsyncExecution::Thread, [=]() -> FAttributeMap {
+	return Async(EAsyncExecution::Thread, [=]() -> TSharedPtr<FAttributeMap> {
 		const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(RulePackage).Get();
 
 		const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
@@ -383,16 +382,17 @@ TFuture<FAttributeMap> VitruvioModule::LoadDefaultRuleAttributesAsync(const USta
 		const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
 
 		prt::Status InfoStatus;
-		const RuleFileInfoUPtr RuleInfo(prt::createRuleFileInfo(RuleFileUri, nullptr, &InfoStatus));
+		RuleFileInfoUPtr RuleInfo(prt::createRuleFileInfo(RuleFileUri, nullptr, &InfoStatus));
 		if (!RuleInfo || InfoStatus != prt::STATUS_OK)
 		{
 			UE_LOG(LogUnrealPrt, Error, TEXT("could not get rule file info from rule file %s"), RuleFileUri)
 			return {};
 		}
 
-		const AttributeMapUPtr DefaultAttributeMap(
-			GetDefaultAttributeValues(RuleFile.c_str(), StartRule.c_str(), ResolveMap, InitialShape, RandomSeed));
-		return Vitruvio::ConvertAttributeMap(DefaultAttributeMap, RuleInfo);
+		AttributeMapUPtr DefaultAttributeMap(GetDefaultAttributeValues(RuleFile.c_str(), StartRule.c_str(), ResolveMap, InitialShape, RandomSeed));
+
+		return MakeShared<FAttributeMap>(std::move(DefaultAttributeMap), std::move(RuleInfo));
+		;
 	});
 }
 

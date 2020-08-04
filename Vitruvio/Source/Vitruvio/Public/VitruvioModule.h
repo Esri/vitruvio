@@ -73,8 +73,8 @@ public:
 	 * \param RandomSeed
 	 * \return
 	 */
-	VITRUVIO_API TFuture<FAttributeMap> LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage,
-																	   const int32 RandomSeed) const;
+	VITRUVIO_API TFuture<FAttributeMapPtr> LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage,
+																		  const int32 RandomSeed) const;
 
 	/**
 	 * \return whether PRT is initialized meaning installed and ready to use. Before initialization generation is not possible and will
