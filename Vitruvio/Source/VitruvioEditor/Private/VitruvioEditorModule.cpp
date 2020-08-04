@@ -3,7 +3,7 @@
 #include "VitruvioEditorModule.h"
 
 #include "RulePackageAssetTypeActions.h"
-#include "VitruvioActorDetails.h"
+#include "VitruvioComponentDetails.h"
 
 #include "AssetToolsModule.h"
 #include "Core.h"
@@ -18,14 +18,14 @@ void VitruvioEditorModule::StartupModule()
 	AssetTools.RegisterAssetTypeActions(MakeShareable(new FRulePackageAssetTypeActions()));
 
 	FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	PropertyModule.RegisterCustomClassLayout(AVitruvioActor::StaticClass()->GetFName(),
-											 FOnGetDetailCustomizationInstance::CreateStatic(&FVitruvioActorDetails::MakeInstance));
+	PropertyModule.RegisterCustomClassLayout(UVitruvioComponent::StaticClass()->GetFName(),
+											 FOnGetDetailCustomizationInstance::CreateStatic(&FVitruvioComponentDetails::MakeInstance));
 }
 
 void VitruvioEditorModule::ShutdownModule()
 {
 	FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	PropertyModule.UnregisterCustomClassLayout(AVitruvioActor::StaticClass()->GetFName());
+	PropertyModule.UnregisterCustomClassLayout(UVitruvioComponent::StaticClass()->GetFName());
 }
 
 #undef LOCTEXT_NAMESPACE
