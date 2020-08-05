@@ -117,8 +117,8 @@ public:
 		if (FromStringAttribute)
 		{
 			Value = FromStringAttribute->Value;
-		};
-	};
+		}
+	}
 };
 
 UCLASS()
@@ -148,8 +148,8 @@ public:
 		if (FromFloatAttribute)
 		{
 			Value = FromFloatAttribute->Value;
-		};
-	};
+		}
+	}
 };
 
 UCLASS()
@@ -167,6 +167,6 @@ public:
 		if (FromBoolAttribute)
 		{
 			Value = FromBoolAttribute->Value;
-		};
-	};
+		}
+	}
 };
