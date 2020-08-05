@@ -4,13 +4,12 @@
 
 #include "PRTTypes.h"
 #include "RuleAttributes.h"
-#include "Vitruvio/Public/AttributeMap.h"
 
 #include "CoreUObject.h"
 
 namespace Vitruvio
 {
-FAttributeMap ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo);
+TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo, UObject* Outer);
 
 AttributeMapUPtr CreateAttributeMap(const TMap<FString, URuleAttribute*>& Attributes);
 } // namespace Vitruvio

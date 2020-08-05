@@ -14,27 +14,27 @@ namespace
 {
 const FString DEFAULT_STYLE = TEXT("Default");
 
-URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt::RuleFileInfo::Entry* AttrInfo)
+URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt::RuleFileInfo::Entry* AttrInfo, UObject* const Outer)
 {
 	const std::wstring Name(AttrInfo->getName());
 	switch (AttrInfo->getReturnType())
 	{
 	case prt::AAT_BOOL:
 	{
-		UBoolAttribute* BoolAttribute = NewObject<UBoolAttribute>();
+		UBoolAttribute* BoolAttribute = NewObject<UBoolAttribute>(Outer);
 		BoolAttribute->Value = AttributeMap->getBool(Name.c_str());
 		return BoolAttribute;
 	}
 	case prt::AAT_INT:
 	case prt::AAT_FLOAT:
 	{
-		UFloatAttribute* FloatAttribute = NewObject<UFloatAttribute>();
+		UFloatAttribute* FloatAttribute = NewObject<UFloatAttribute>(Outer);
 		FloatAttribute->Value = AttributeMap->getFloat(Name.c_str());
 		return FloatAttribute;
 	}
 	case prt::AAT_STR:
 	{
-		UStringAttribute* StringAttribute = NewObject<UStringAttribute>();
+		UStringAttribute* StringAttribute = NewObject<UStringAttribute>(Outer);
 		StringAttribute->Value = WCHAR_TO_TCHAR(AttributeMap->getString(Name.c_str()));
 		return StringAttribute;
 	}
@@ -50,9 +50,9 @@ URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt:
 
 namespace Vitruvio
 {
-FAttributeMap ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo)
+TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo, UObject* const Outer)
 {
-	FAttributeMap UnrealAttributeMap;
+	TMap<FString, URuleAttribute*> UnrealAttributeMap;
 	for (size_t AttributeIndex = 0; AttributeIndex < RuleInfo->getNumAttributes(); AttributeIndex++)
 	{
 		const prt::RuleFileInfo::Entry* AttrInfo = RuleInfo->getAttribute(AttributeIndex);
@@ -69,30 +69,25 @@ FAttributeMap ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const Ru
 		}
 
 		const std::wstring Name(AttrInfo->getName());
-		if (UnrealAttributeMap.Attributes.Contains(WCHAR_TO_TCHAR(Name.c_str())))
+		if (UnrealAttributeMap.Contains(WCHAR_TO_TCHAR(Name.c_str())))
 		{
 			continue;
 		}
 
+		URuleAttribute* Attribute = CreateAttribute(AttributeMap, AttrInfo, Outer);
+
+		if (Attribute)
 		{
-			// CreateAttribute creates new UObjects and requires that the garbage collector is currently not running
-			FGCScopeGuard GCGuard;
-			URuleAttribute* Attribute = CreateAttribute(AttributeMap, AttrInfo);
+			const FString AttributeName = WCHAR_TO_TCHAR(Name.c_str());
+			const FString DisplayName = WCHAR_TO_TCHAR(prtu::removeImport(prtu::removeStyle(Name.c_str())).c_str());
+			Attribute->Name = AttributeName;
+			Attribute->DisplayName = DisplayName;
 
-			if (Attribute)
+			ParseAttributeAnnotations(AttrInfo, *Attribute);
+
+			if (!Attribute->Hidden)
 			{
-				const FString AttributeName = WCHAR_TO_TCHAR(Name.c_str());
-				const FString DisplayName = WCHAR_TO_TCHAR(prtu::removeImport(prtu::removeStyle(Name.c_str())).c_str());
-				Attribute->Name = AttributeName;
-				Attribute->DisplayName = DisplayName;
-
-				ParseAttributeAnnotations(AttrInfo, *Attribute);
-
-				if (!Attribute->Hidden)
-				{
-					// By adding the UObject to the attribute map, it is saved from being garbage collected
-					UnrealAttributeMap.Attributes.Add(AttributeName, Attribute);
-				}
+				UnrealAttributeMap.Add(AttributeName, Attribute);
 			}
 		}
 	}

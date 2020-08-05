@@ -74,6 +74,6 @@ public:
 #endif
 
 private:
-	void LoadDefaultAttributes(UStaticMesh* InitialShape);
+	void LoadDefaultAttributes(UStaticMesh* InitialShape, bool KeepOldAttributeValues = false);
 	UStaticMeshComponent* GetStaticMeshComponent() const;
 };

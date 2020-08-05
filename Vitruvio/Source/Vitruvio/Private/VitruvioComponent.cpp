@@ -67,7 +67,7 @@ void UVitruvioComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 		UStaticMesh* InitialShape = GetStaticMeshComponent() ? GetStaticMeshComponent()->GetStaticMesh() : nullptr;
 		if (Rpk && InitialShape)
 		{
-			LoadDefaultAttributes(InitialShape);
+			LoadDefaultAttributes(InitialShape, true);
 			Initialized = true;
 		}
 	}
@@ -230,33 +230,48 @@ void UVitruvioComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 
 #endif // WITH_EDITOR
 
-void UVitruvioComponent::LoadDefaultAttributes(UStaticMesh* InitialShape)
+void UVitruvioComponent::LoadDefaultAttributes(UStaticMesh* InitialShape, const bool KeepOldAttributeValues)
 {
 	check(InitialShape);
 	check(Rpk);
 
 	AttributesReady = false;
 
-	TFuture<FAttributeMap> AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk, RandomSeed);
-	AttributesFuture.Next([this](const FAttributeMap& Result) {
-		Attributes = Result.Attributes;
-		AttributesReady = true;
+	TFuture<FAttributeMapPtr> AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk, RandomSeed);
+	AttributesFuture.Next([this, KeepOldAttributeValues](const FAttributeMapPtr& Result) {
+		FFunctionGraphTask::CreateAndDispatchWhenReady(
+			[this, Result, KeepOldAttributeValues]() {
+				if (KeepOldAttributeValues)
+				{
+					TMap<FString, URuleAttribute*> OldAttributes = Attributes;
+					Attributes = Result->ConvertToUnrealAttributeMap(this);
 
-		FPlatformMisc::MemoryBarrier();
+					for (auto Attribute : Attributes)
+					{
+						if (OldAttributes.Contains(Attribute.Key))
+						{
+							Attribute.Value->CopyValue(OldAttributes[Attribute.Key]);
+						}
+					}
+				}
+				else
+				{
+					Attributes = Result->ConvertToUnrealAttributeMap(this);
+				}
+
+				AttributesReady = true;
 
 #if WITH_EDITOR
-		// Notify possible listeners (eg. Details panel) about changes to the Attributes
-		FFunctionGraphTask::CreateAndDispatchWhenReady(
-			[this, &Result]() {
+				// Notify possible listeners (eg. Details panel) about changes to the Attributes
 				FPropertyChangedEvent PropertyEvent(GetClass()->FindPropertyByName(GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Attributes)));
 				FCoreUObjectDelegates::OnObjectPropertyChanged.Broadcast(this, PropertyEvent);
-			},
-			TStatId(), nullptr, ENamedThreads::GameThread);
 #endif // WITH_EDITOR
 
-		if (GenerateAutomatically)
-		{
-			Generate();
-		}
+				if (GenerateAutomatically)
+				{
+					Generate();
+				}
+			},
+			TStatId(), nullptr, ENamedThreads::GameThread);
 	});
 }

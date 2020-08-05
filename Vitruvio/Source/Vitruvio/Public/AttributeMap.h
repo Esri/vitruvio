@@ -5,26 +5,20 @@
 #include "RuleAttributes.h"
 
 #include "CoreUObject.h"
+#include "PRTTypes.h"
 
-class VITRUVIO_API FAttributeMap final : public FGCObject
+class VITRUVIO_API FAttributeMap
 {
 public:
-	TMap<FString, URuleAttribute*> Attributes;
+	FAttributeMap() {}
 
-	void AddReferencedObjects(FReferenceCollector& Collector) override
-	{
-		TArray<URuleAttribute*> ReferencedObjects;
-		Attributes.GenerateValueArray(ReferencedObjects);
-		Collector.AddReferencedObjects(ReferencedObjects);
-	}
+	FAttributeMap(AttributeMapUPtr AttributeMap, RuleFileInfoUPtr RuleInfo) : AttributeMap(std::move(AttributeMap)), RuleInfo(std::move(RuleInfo)) {}
 
-	// This function has to be defined explicitly, otherwise it generates a compiler error because the parent operator= is not accessible.
-	FAttributeMap& operator=(const FAttributeMap& Other)
-	{
-		if (this != &Other)
-		{
-			this->Attributes = Other.Attributes;
-		}
-		return *this;
-	}
+	TMap<FString, URuleAttribute*> ConvertToUnrealAttributeMap(UObject* const Outer);
+
+private:
+	const AttributeMapUPtr AttributeMap;
+	const RuleFileInfoUPtr RuleInfo;
 };
+
+using FAttributeMapPtr = TSharedPtr<FAttributeMap>;
