@@ -5,25 +5,104 @@
 #include "VitruvioModule.h"
 
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
+#include "Engine/StaticMeshActor.h"
 #include "ObjectEditorUtils.h"
+#include "PolygonWindings.h"
+#include "VitruvioTypes.h"
 
 namespace
 {
-int32 CalculateRandomSeed(const FTransform Transform, UStaticMesh* const InitialShape)
+
+class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 {
-	FVector Centroid = FVector::ZeroVector;
-	if (InitialShape->RenderData != nullptr && InitialShape->RenderData->LODResources.IsValidIndex(0))
+	virtual TSharedPtr<Vitruvio::FInitialShape> CreateInitialShape(UVitruvioComponent* Component) const override
 	{
-		const FStaticMeshLODResources& LOD = InitialShape->RenderData->LODResources[0];
-		for (auto SectionIndex = 0; SectionIndex < LOD.Sections.Num(); ++SectionIndex)
+		AActor* Owner = Component->GetOwner();
+		UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Owner->GetComponentByClass(UStaticMeshComponent::StaticClass()));
+		UStaticMesh* StaticMesh = StaticMeshComponent->GetStaticMesh();
+		if (StaticMesh == nullptr)
 		{
-			for (uint32 VertexIndex = 0; VertexIndex < LOD.VertexBuffers.PositionVertexBuffer.GetNumVertices(); ++VertexIndex)
+			return nullptr;
+		}
+
+		StaticMesh->bAllowCPUAccess = true;
+
+		TArray<FVector> MeshVertices;
+		TArray<int32> MeshIndices;
+
+		if (StaticMesh->RenderData != nullptr && StaticMesh->RenderData->LODResources.IsValidIndex(0))
+		{
+			const FStaticMeshLODResources& LOD = StaticMesh->RenderData->LODResources[0];
+
+			for (auto SectionIndex = 0; SectionIndex < LOD.Sections.Num(); ++SectionIndex)
 			{
-				Centroid += LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(VertexIndex);
+				for (uint32 VertexIndex = 0; VertexIndex < LOD.VertexBuffers.PositionVertexBuffer.GetNumVertices(); ++VertexIndex)
+				{
+					FVector Vertex = LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(VertexIndex);
+					MeshVertices.Add(Vertex);
+				}
+
+				const FStaticMeshSection& Section = LOD.Sections[SectionIndex];
+				FIndexArrayView IndicesView = LOD.IndexBuffer.GetArrayView();
+
+				for (uint32 Triangle = 0; Triangle < Section.NumTriangles; ++Triangle)
+				{
+					for (uint32 TriangleVertexIndex = 0; TriangleVertexIndex < 3; ++TriangleVertexIndex)
+					{
+						const uint32 MeshVertIndex = IndicesView[Section.FirstIndex + Triangle * 3 + TriangleVertexIndex];
+						MeshIndices.Add(MeshVertIndex);
+					}
+				}
 			}
 		}
-		Centroid = Centroid / LOD.GetNumVertices();
+
+		const TArray<TArray<FVector>> Windings = Vitruvio::GetOutsideWindings(MeshVertices, MeshIndices);
+
+		return MakeShared<Vitruvio::FInitialShape>(Windings);
 	}
+
+	virtual bool CanCreateFrom(UVitruvioComponent* Component) const override
+	{
+		AActor* Owner = Component->GetOwner();
+		if (Owner)
+		{
+			UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Owner->GetComponentByClass(UStaticMeshComponent::StaticClass()));
+			return StaticMeshComponent != nullptr;
+		}
+		return false;
+	}
+
+	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) override
+	{
+		if (Object && Object->IsA(UStaticMeshComponent::StaticClass()))
+		{
+			return Property && Property->GetFName() == TEXT("StaticMesh");
+		}
+		return false;
+	}
+};
+
+class FSplineInitialShapeFactory : public FInitialShapeFactory
+{
+	virtual TSharedPtr<Vitruvio::FInitialShape> CreateInitialShape(UVitruvioComponent* Component) const override { return nullptr; }
+
+	virtual bool CanCreateFrom(UVitruvioComponent* Component) const override { return false; }
+
+	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) override { return false; }
+};
+
+TArray<FInitialShapeFactory*> GInitialShapeFactories = {new FStaticMeshInitialShapeFactory, new FSplineInitialShapeFactory};
+
+int32 CalculateRandomSeed(const FTransform Transform, const TSharedPtr<Vitruvio::FInitialShape>& InitialShape)
+{
+	FVector Centroid = FVector::ZeroVector;
+	TArray<FVector> Vertices = InitialShape->GetVertices();
+	for (const FVector& Vertex : Vertices)
+	{
+		Centroid += Vertex;
+	}
+	Centroid /= FMath::Max(1, Vertices.Num());
+
 	return GetTypeHash(Transform.TransformPosition(Centroid));
 }
 } // namespace
@@ -41,41 +120,42 @@ UVitruvioComponent::UVitruvioComponent()
 	bTickInEditor = true;
 }
 
-UStaticMeshComponent* UVitruvioComponent::GetStaticMeshComponent() const
+void UVitruvioComponent::OnRegister()
 {
-	AActor* Owner = GetOwner();
-	if (Owner)
+	Super::OnRegister();
+
+	// Try to create the initial shape on first register
+	for (FInitialShapeFactory* Factory : GInitialShapeFactories)
 	{
-		return Cast<UStaticMeshComponent>(Owner->GetComponentByClass(UStaticMeshComponent::StaticClass()));
-	}
-	return nullptr;
-}
-
-void UVitruvioComponent::BeginPlay()
-{
-	Super::BeginPlay();
-}
-
-void UVitruvioComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	// Note that we also tick in editor for initialization
-	if (!Initialized)
-	{
-		// Load default values for generate attributes if they have not been set
-		UStaticMesh* InitialShape = GetStaticMeshComponent() ? GetStaticMeshComponent()->GetStaticMesh() : nullptr;
-		if (Rpk && InitialShape)
+		if (Factory->CanCreateFrom(this))
 		{
-			LoadDefaultAttributes(InitialShape, true);
-			Initialized = true;
+			InitialShape = Factory->CreateInitialShape(this);
+			InitialShapeFactory = Factory;
+			break;
 		}
 	}
+
+	if (InitialShape && Rpk)
+	{
+		LoadDefaultAttributes(true);
+	}
+#if WITH_EDITOR
+	PropertyChangeDelegate = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &UVitruvioComponent::OnPropertyChanged);
+#endif
+}
+
+void UVitruvioComponent::OnUnregister()
+{
+	Super::OnUnregister();
+
+#if WITH_EDITOR
+	FCoreUObjectDelegates::OnObjectPropertyChanged.Remove(PropertyChangeDelegate);
+#endif
 }
 
 void UVitruvioComponent::Generate()
 {
-	if (!Rpk || !AttributesReady || !GetStaticMeshComponent())
+	if (!Rpk || !AttributesReady || !InitialShape)
 	{
 		return;
 	}
@@ -88,8 +168,6 @@ void UVitruvioComponent::Generate()
 	}
 
 	bIsGenerating = true;
-
-	UStaticMesh* InitialShape = GetStaticMeshComponent()->GetStaticMesh();
 
 	if (InitialShape)
 	{
@@ -158,12 +236,6 @@ void UVitruvioComponent::Generate()
 					}
 					StaticMeshActor->RegisterAllComponents();
 
-					if (HideAfterGeneration)
-					{
-						GetStaticMeshComponent()->SetVisibility(false);
-						Owner->SetActorHiddenInGame(true);
-					}
-					
 					bNeedsRegenerate = false;
 				}
 				
@@ -178,69 +250,99 @@ void UVitruvioComponent::Generate()
 
 #if WITH_EDITOR
 
+FInitialShapeFactory* UVitruvioComponent::FindFactory(UObject* Object, FProperty* Property)
+{
+	for (FInitialShapeFactory* Factory : GInitialShapeFactories)
+	{
+		if (Factory->IsRelevantProperty(Object, Property))
+		{
+			return Factory;
+		}
+	}
+
+	return nullptr;
+}
+
 void UVitruvioComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
-	bool bGenerate = GenerateAutomatically; // allow control over generate() in case we trigger it in LoadDefaultAttributes()
+	OnPropertyChanged(this, PropertyChangedEvent);
+}
 
-	if (PropertyChangedEvent.Property && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Rpk))
+void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEvent& PropertyChangedEvent)
+{
+	if (Object == this && PropertyChangedEvent.Property)
 	{
-		Attributes.Empty();
-
-		UStaticMesh* InitialShape = GetStaticMeshComponent()->GetStaticMesh();
-		if (Rpk && InitialShape)
+		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Rpk))
 		{
-			LoadDefaultAttributes(InitialShape);
-			bGenerate = false;
+			Attributes.Empty();
+			AttributesReady = false;
+		}
+
+		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, RandomSeed))
+		{
+			bValidRandomSeed = true;
 		}
 	}
 
-	if (PropertyChangedEvent.Property && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, RandomSeed))
+	bool bRecreateInitialShape = false;
+	// If we have not create the initial shape or we can not create it anymore (eg a required component has been deleted)
+	// we need to reinitialize the factory and recreate the initial shape
+	if (!InitialShapeFactory || !InitialShapeFactory->CanCreateFrom(this))
 	{
-		bValidRandomSeed = true;
+		InitialShapeFactory = FindFactory(Object, PropertyChangedEvent.Property);
+		InitialShape = nullptr;
+		bRecreateInitialShape = InitialShapeFactory && InitialShapeFactory->CanCreateFrom(this);
+	}
+	// If a property has changed which is used for creating the initial shape we have to recreate it
+	else if (InitialShapeFactory && InitialShapeFactory->IsRelevantProperty(Object, PropertyChangedEvent.Property))
+	{
+		bRecreateInitialShape = true;
 	}
 
-	if (PropertyChangedEvent.Property && PropertyChangedEvent.Property->GetFName() == TEXT("StaticMeshComponent"))
+	if (bRecreateInitialShape)
 	{
-		UStaticMesh* InitialShape = GetStaticMeshComponent()->GetStaticMesh();
-		AActor* Owner = GetOwner();
-		if (InitialShape && Owner)
-		{
-			InitialShape->bAllowCPUAccess = true;
-			if (Rpk)
-			{
-				LoadDefaultAttributes(InitialShape);
-				bGenerate = false;
-			}
+		InitialShape = InitialShapeFactory->CreateInitialShape(this);
 
-			if (!bValidRandomSeed)
-			{
-				RandomSeed = CalculateRandomSeed(Owner->GetActorTransform(), InitialShape);
-				bValidRandomSeed = true;
-			}
+		if (!bValidRandomSeed && InitialShape)
+		{
+			RandomSeed = CalculateRandomSeed(GetOwner()->GetActorTransform(), InitialShape);
+			bValidRandomSeed = true;
+		}
+
+		if (AttributesReady)
+		{
+			Generate();
 		}
 	}
 
-	if (bGenerate)
+	if (InitialShape && Rpk && !AttributesReady)
 	{
-		Generate();
+		LoadDefaultAttributes();
 	}
 }
 
 #endif // WITH_EDITOR
 
-void UVitruvioComponent::LoadDefaultAttributes(UStaticMesh* InitialShape, const bool KeepOldAttributeValues)
+void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues)
 {
-	check(InitialShape);
 	check(Rpk);
+	check(InitialShape);
+
+	if (LoadingAttributes)
+	{
+		return;
+	}
 
 	AttributesReady = false;
+	LoadingAttributes = true;
 
 	TFuture<FAttributeMapPtr> AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk, RandomSeed);
 	AttributesFuture.Next([this, KeepOldAttributeValues](const FAttributeMapPtr& Result) {
 		FFunctionGraphTask::CreateAndDispatchWhenReady(
 			[this, Result, KeepOldAttributeValues]() {
+				LoadingAttributes = false;
 				if (KeepOldAttributeValues)
 				{
 					TMap<FString, URuleAttribute*> OldAttributes = Attributes;

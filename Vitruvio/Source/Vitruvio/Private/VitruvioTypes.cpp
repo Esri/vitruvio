@@ -123,6 +123,16 @@ FMaterialAttributeContainer::FMaterialAttributeContainer(const prt::AttributeMap
 	}
 }
 
+TArray<FVector> FInitialShape::GetVertices()
+{
+	TArray<FVector> AllVertices;
+	for (const TArray<FVector>& Vertices : FaceVertices)
+	{
+		AllVertices.Append(Vertices);
+	}
+	return AllVertices;
+}
+
 uint32 GetTypeHash(const FMaterialAttributeContainer& Object)
 {
 	uint32 Hash = 0x274110C5;

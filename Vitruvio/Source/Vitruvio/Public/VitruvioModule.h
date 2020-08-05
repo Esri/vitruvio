@@ -9,7 +9,6 @@
 
 #include "prt/Object.h"
 
-#include "Engine/StaticMesh.h"
 #include "HAL/ThreadSafeCounter.h"
 #include "Modules/ModuleManager.h"
 #include "UnrealLogHandler.h"
@@ -45,8 +44,8 @@ public:
 	 * \param RandomSeed
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API TFuture<FGenerateResult> GenerateAsync(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
-														UMaterial* TranslucentParent, URulePackage* RulePackage,
+	VITRUVIO_API TFuture<FGenerateResult> GenerateAsync(TSharedPtr<Vitruvio::FInitialShape> InitialShape, UMaterial* OpaqueParent,
+														UMaterial* MaskedParent, UMaterial* TranslucentParent, URulePackage* RulePackage,
 														const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const;
 
 	/**
@@ -61,7 +60,7 @@ public:
 	 * \param RandomSeed
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API FGenerateResult Generate(const UStaticMesh* InitialShape, ::UMaterial* OpaqueParent, UMaterial* MaskedParent,
+	VITRUVIO_API FGenerateResult Generate(TSharedPtr<Vitruvio::FInitialShape> InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
 										  UMaterial* TranslucentParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes,
 										  const int32 RandomSeed) const;
 
@@ -73,7 +72,7 @@ public:
 	 * \param RandomSeed
 	 * \return
 	 */
-	VITRUVIO_API TFuture<FAttributeMapPtr> LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage,
+	VITRUVIO_API TFuture<FAttributeMapPtr> LoadDefaultRuleAttributesAsync(TSharedPtr<Vitruvio::FInitialShape> InitialShape, URulePackage* RulePackage,
 																		  const int32 RandomSeed) const;
 
 	/**
