@@ -239,7 +239,6 @@ void UVitruvioComponent::LoadDefaultAttributes(UStaticMesh* InitialShape, const 
 
 	TFuture<FAttributeMapPtr> AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk, RandomSeed);
 	AttributesFuture.Next([this, KeepOldAttributeValues](const FAttributeMapPtr& Result) {
-		// Notify possible listeners (eg. Details panel) about changes to the Attributes
 		FFunctionGraphTask::CreateAndDispatchWhenReady(
 			[this, Result, KeepOldAttributeValues]() {
 				if (KeepOldAttributeValues)
@@ -263,6 +262,7 @@ void UVitruvioComponent::LoadDefaultAttributes(UStaticMesh* InitialShape, const 
 				AttributesReady = true;
 
 #if WITH_EDITOR
+				// Notify possible listeners (eg. Details panel) about changes to the Attributes
 				FPropertyChangedEvent PropertyEvent(GetClass()->FindPropertyByName(GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Attributes)));
 				FCoreUObjectDelegates::OnObjectPropertyChanged.Broadcast(this, PropertyEvent);
 #endif // WITH_EDITOR
