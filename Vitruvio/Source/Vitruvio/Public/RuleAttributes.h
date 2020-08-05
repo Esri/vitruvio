@@ -66,7 +66,7 @@ public:
 	AnnotationType GetAnnotationType() override { return AnnotationType::Enum; }
 };
 
-UCLASS()
+UCLASS(Abstract)
 class VITRUVIO_API URuleAttribute : public UObject
 {
 	GENERATED_BODY()
