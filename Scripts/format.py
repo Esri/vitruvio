@@ -22,15 +22,13 @@ clang.ensure_valid()
 
 # Get the changed files in the repository.
 repository = git.current_repository()
-uprojects = unreal.load_projects(repository)
+uprojects = unreal.load_projects(repository, include_plugins=args.plugins)
 
 for uproject in uprojects:
     log.info('{}: Unreal Engine Project found!'.format(uproject.name))
     log.info('{}: Formatting C++ source files!'.format(uproject.name))
 
-    for file in uproject.get_cpp_files(
-            include_plugins=args.plugins,
-            include_third_party=args.third_party):
+    for file in uproject.get_cpp_files(include_third_party=args.third_party):
         clang.format_file(file)
         copyright.fix(file)
 

@@ -7,12 +7,13 @@ from utilities import git
 log = log.getLogger(__name__)
 
 
-def load_projects(repository: git.Repository = None):
+def load_projects(repository: git.Repository = None, include_plugins=False):
     """
     Loads all Unreal Engine projects for a repository.
 
     :param repository: If not None, the repository in which to look for projects.
     :param repository: If None, the global repository based on the path file.
+    :param include_plugins: If true, loads plugins as well.
 
     :return: A list of unreal projects in the repository.
     """
@@ -21,8 +22,9 @@ def load_projects(repository: git.Repository = None):
     for project in repo_path.rglob('*.uproject'):
         yield UnrealProject(path=project)
 
-    for plugin in repo_path.rglob('*.uplugin'):
-        yield UnrealProject(path=project, is_plugin=True)
+    if include_plugins:
+        for plugin in repo_path.rglob('*.uplugin'):
+            yield UnrealProject(path=plugin, is_plugin=True)
 
 
 class UnrealProject:
@@ -59,12 +61,11 @@ class UnrealProject:
         self.PATH_SOURCE = self.PATH_ROOT / 'Source'
         self.PATH_EXTRAS = self.PATH_ROOT / 'Extras'
 
-    def get_cpp_files(self, include_third_party=False, include_plugins=False):
+    def get_cpp_files(self, include_third_party=False):
         """
         Gets all C++ files in the source directory.
 
         :param include_third_party: If true, includes files in the third party directory.
-        :param include_plugins: If true, includes files in the plugins directory.
         :return: A list of paths to C++ header files in the project.
         """
         from functools import reduce
@@ -73,13 +74,6 @@ class UnrealProject:
             self.PATH_SOURCE.rglob('*.hpp'),
             self.PATH_SOURCE.rglob('*.cpp')
         )
-
-        if include_plugins:
-            all_files = all_files.union(
-                self.PATH_PLUGINS.rglob('*.h'),
-                self.PATH_PLUGINS.rglob('*.hpp'),
-                self.PATH_PLUGINS.rglob('*.cpp')
-            )
 
         if not include_third_party:
             third_party_files = set().union(
