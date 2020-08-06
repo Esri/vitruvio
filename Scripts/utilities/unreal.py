@@ -55,11 +55,12 @@ class UnrealProject:
         self.PATH_SOURCE = self.PATH_ROOT / 'Source'
         self.PATH_EXTRAS = self.PATH_ROOT / 'Extras'
 
-    def get_cpp_files(self, include_third_party=False):
+    def get_cpp_files(self, include_third_party=False, include_plugins=False):
         """
         Gets all C++ files in the source directory.
 
-        :param include_third_party: If true, includes headers in the third party directory.
+        :param include_third_party: If true, includes files in the third party directory.
+        :param include_plugins: If true, includes files in the plugins directory.
         :return: A list of paths to C++ header files in the project.
         """
         from functools import reduce
@@ -68,6 +69,13 @@ class UnrealProject:
             self.PATH_SOURCE.rglob('*.hpp'),
             self.PATH_SOURCE.rglob('*.cpp')
         )
+
+        if include_plugins:
+            all_files = all_files.union(
+                self.PATH_PLUGINS.rglob('*.h'),
+                self.PATH_PLUGINS.rglob('*.hpp'),
+                self.PATH_PLUGINS.rglob('*.cpp')
+            )
 
         if not include_third_party:
             third_party_files = set().union(

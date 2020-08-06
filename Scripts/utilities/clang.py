@@ -49,17 +49,19 @@ def ensure_valid():
         sys.exit(-1)
 
 
-def format_file(file : Path):
+def format_file(file: Path, full_path=False):
     """
     Runs clang-format on the specified file.
 
     :note: Will run from the root directory.
     :param file: The absolute path of the file to run clang-format on.
+    :param full_path: If true, prints the full path of the file.
 
     :return: True, if the file was formatted.
     :return: False, otherwise.
     """
     relative = file.relative_to(paths.GLOBAL.PATH_ROOT)
+    output = relative if full_path else relative.name
 
     if not file.exists() or file.suffix not in ['.cpp', '.h', '.hpp']:
         return False
@@ -74,6 +76,6 @@ def format_file(file : Path):
             log.warning('Aborting')
             return False
 
-        log.info('Formatted file "{}"...'.format(relative))
+        log.info('File {}: Formatted.'.format(output))
         return True
 
