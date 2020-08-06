@@ -21,14 +21,18 @@ def load_projects(repository: git.Repository = None):
     for project in repo_path.rglob('*.uproject'):
         yield UnrealProject(path=project)
 
+    for plugin in repo_path.rglob('*.uplugin'):
+        yield UnrealProject(path=project, is_plugin=True)
+
 
 class UnrealProject:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, is_plugin=False):
         import json
 
         # Default to 4.25, override if specified differently.
         self.version = '4.25'
         self.name = path.parent.name
+        self.plugin = is_plugin
 
         with path.open() as project_file:
             data = json.load(project_file)
@@ -154,6 +158,10 @@ class UnrealProject:
         from os import getenv
         from pathlib import Path
         from utilities.commands import run
+
+        if self.plugin:
+            log.warning('{}: Can not generate project files for a plugin.'.format(self.name))
+            return False
 
         log.info('{}: Generating.'.format(self.name))
 
