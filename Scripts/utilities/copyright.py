@@ -69,6 +69,7 @@ def fix_missing(path: Path, lines: [str], full_path=False):
         elif 'copyright' in header or 'Copyright' in header:
             log.warning('File {}: Found an unknown copyright notice.'.format(output))
             log.warning('File {}: "{}"'.format(output, header.strip()))
+            return
 
         lines = [copyright_header] + lines
 
