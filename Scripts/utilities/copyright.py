@@ -7,7 +7,11 @@ from datetime import date
 
 log = log.getLogger(__name__)
 copyright_reminder = compile(r'^//\s*Fill out your copyright notice')
-copyright_regex = compile(r'^//\s*Copyright\s*©?\s*(?P<start>\d{4})(\s*-\s*(?P<end>\d{4}))? Esri( R&D Center Zurich)?\. All [Rr]ights [Rr]eserved\.')
+copyright_regex = compile(r'^//\s*Copyright\s*©?\s*'
+                          r'(?P<start>\d{4})'
+                          r'(\s*-\s*(?P<end>\d{4}))?\s*'
+                          r'Esri( R&D Center Zurich)?\.\s*'
+                          r'All [Rr]ights [Rr]eserved\.')
 copyright_header = '// Copyright © 2017-{} Esri R&D Center Zurich. All rights reserved.\n\n'.format(date.today().year)
 
 
@@ -68,7 +72,7 @@ def fix_missing(path: Path, lines: [str], full_path=False):
 
         lines = [copyright_header] + lines
 
-        with path.open('w') as file:
+        with path.open('w', encoding='utf-8') as file:
             file.writelines(lines)
 
 
@@ -85,7 +89,7 @@ def fix_out_of_date(path: Path, lines: [str], full_path=False):
     log.info('File {}: Copyright notice is out of date. Adding a new one.'.format(output))
     lines = [copyright_header] + lines[1:]
 
-    with path.open('w') as file:
+    with path.open('w', encoding='utf-8') as file:
         file.writelines(lines)
 
 
@@ -112,9 +116,9 @@ def fix(path: Path, full_path=False):
         return False
 
     # Read lines of the file.
-    with path.open('r') as file:
+    with path.open('r', encoding='utf-8-sig') as file:
         content = file.readlines()
-        header = content[0] if len(content) > 0 else ''
+        header = content[0].strip() if len(content) > 0 else ''
 
     # Prepare data necessary to make copyright decision.
     copyright_date = parse_dates(header)
