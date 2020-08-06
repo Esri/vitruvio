@@ -35,10 +35,12 @@ class UnrealProject:
         self.version = '4.25'
         self.name = path.parent.name
         self.plugin = is_plugin
+        self.version = None
 
-        with path.open() as project_file:
-            data = json.load(project_file)
-            self.version = data['EngineAssociation']
+        if not is_plugin:
+            with path.open() as project_file:
+                data = json.load(project_file)
+                self.version = data['EngineAssociation']
 
         self.PATH_ROOT = path.parent
         self.PATH_PROJECT = path
