@@ -7,7 +7,7 @@ from datetime import date
 
 log = log.getLogger(__name__)
 copyright_reminder = compile(r'^//\s*Fill out your copyright notice')
-copyright_regex = compile(r'^//\s*Copyright\s*©?\s*(?P<start>\d{4})(\s*-\s*(?P<end>\d{4}))? Esri( R&D Center Zurich)?\. All Rights Reserved\.')
+copyright_regex = compile(r'^//\s*Copyright\s*©?\s*(?P<start>\d{4})(\s*-\s*(?P<end>\d{4}))? Esri( R&D Center Zurich)?\. All [Rr]ights [Rr]eserved\.')
 copyright_header = '// Copyright © 2017-{} Esri R&D Center Zurich. All rights reserved.\n\n'.format(date.today().year)
 
 
