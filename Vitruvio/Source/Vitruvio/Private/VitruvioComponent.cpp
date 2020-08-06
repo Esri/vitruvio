@@ -5,6 +5,7 @@
 #include "VitruvioModule.h"
 
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
+#include "Components/SplineComponent.h"
 #include "Engine/StaticMeshActor.h"
 #include "ObjectEditorUtils.h"
 #include "PolygonWindings.h"
@@ -12,6 +13,17 @@
 
 namespace
 {
+
+FVector GetCentroid(const TArray<FVector>& Vertices)
+{
+	FVector Centroid = FVector::ZeroVector;
+	for (const FVector& Vertex : Vertices)
+	{
+		Centroid += Vertex;
+	}
+	Centroid /= FMath::Max(1, Vertices.Num());
+	return Centroid;
+}
 
 class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 {
@@ -84,25 +96,113 @@ class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 
 class FSplineInitialShapeFactory : public FInitialShapeFactory
 {
-	virtual TSharedPtr<Vitruvio::FInitialShape> CreateInitialShape(UVitruvioComponent* Component) const override { return nullptr; }
+	// Adapted from https://stackoverflow.com/a/6989383
+	static void OrderClockwise(TArray<FVector>& Vertices)
+	{
+		const FVector Center = GetCentroid(Vertices);
+		Vertices.Sort([Center](const FVector& A, const FVector& B) {
+			if (A.X - Center.X >= 0 && B.X - Center.X < 0)
+			{
+				return true;
+			}
 
-	virtual bool CanCreateFrom(UVitruvioComponent* Component) const override { return false; }
+			if (A.X - Center.X < 0 && B.X - Center.X >= 0)
+			{
+				return false;
+			}
 
-	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) override { return false; }
+			if (A.X - Center.X == 0 && B.X - Center.X == 0)
+			{
+				if (A.Y - Center.Y >= 0 || B.Y - Center.Y >= 0)
+				{
+					return A.Y > B.Y;
+				}
+
+				return B.Y > A.Y;
+			}
+
+			// compute the cross product of vectors (center -> a) x (center -> b)
+			const int Det = (A.X - Center.X) * (B.Y - Center.Y) - (B.X - Center.X) * (A.Y - Center.Y);
+			if (Det < 0)
+			{
+				return true;
+			}
+
+			if (Det > 0)
+			{
+				return false;
+			}
+
+			// points a and b are on the same line from the center
+			// check which point is closer to the center
+			const int D1 = (A.X - Center.X) * (A.X - Center.X) + (A.Y - Center.Y) * (A.Y - Center.Y);
+			const int D2 = (B.X - Center.X) * (B.X - Center.X) + (B.Y - Center.Y) * (B.Y - Center.Y);
+			return D1 > D2;
+		});
+	}
+
+	virtual TSharedPtr<Vitruvio::FInitialShape> CreateInitialShape(UVitruvioComponent* Component) const override
+	{
+		static const int32 MAX_SPLINE_POINTS = 15;
+
+		AActor* Owner = Component->GetOwner();
+		USplineComponent* SplineComponent = Cast<USplineComponent>(Owner->GetComponentByClass(USplineComponent::StaticClass()));
+
+		TArray<FVector> Vertices;
+		const int32 NumPoints = SplineComponent->GetNumberOfSplinePoints();
+		for (int32 SplinePointIndex = 0; SplinePointIndex < NumPoints; ++SplinePointIndex)
+		{
+			const ESplinePointType::Type SplineType = SplineComponent->GetSplinePointType(SplinePointIndex);
+			if (SplineType == ESplinePointType::Linear)
+			{
+				Vertices.Add(SplineComponent->GetLocationAtSplinePoint(SplinePointIndex, ESplineCoordinateSpace::Local));
+			}
+			else
+			{
+				const int32 NextPointIndex = SplinePointIndex + 1;
+				float Position = SplineComponent->GetDistanceAlongSplineAtSplinePoint(SplinePointIndex);
+				const float EndDistance = NextPointIndex < NumPoints ? SplineComponent->GetDistanceAlongSplineAtSplinePoint(NextPointIndex)
+																	 : SplineComponent->GetSplineLength();
+				const float Distance = SplineComponent->GetSplineLength() / MAX_SPLINE_POINTS;
+				while (Position < EndDistance)
+				{
+					Vertices.Add(SplineComponent->GetLocationAtDistanceAlongSpline(Position, ESplineCoordinateSpace::Local));
+					Position += Distance;
+				}
+			}
+		}
+
+		OrderClockwise(Vertices);
+
+		return MakeShared<Vitruvio::FInitialShape>(TArray<TArray<FVector>>{Vertices});
+	}
+
+	virtual bool CanCreateFrom(UVitruvioComponent* Component) const override
+	{
+		AActor* Owner = Component->GetOwner();
+		if (Owner)
+		{
+			USplineComponent* SplineComponent = Cast<USplineComponent>(Owner->GetComponentByClass(USplineComponent::StaticClass()));
+			return SplineComponent != nullptr;
+		}
+		return false;
+	}
+
+	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) override
+	{
+		if (Object && Object->IsA(USplineComponent::StaticClass()))
+		{
+			return Property && Property->GetFName() == TEXT("SplineCurves");
+		}
+		return false;
+	}
 };
 
 TArray<FInitialShapeFactory*> GInitialShapeFactories = {new FStaticMeshInitialShapeFactory, new FSplineInitialShapeFactory};
 
 int32 CalculateRandomSeed(const FTransform Transform, const TSharedPtr<Vitruvio::FInitialShape>& InitialShape)
 {
-	FVector Centroid = FVector::ZeroVector;
-	TArray<FVector> Vertices = InitialShape->GetVertices();
-	for (const FVector& Vertex : Vertices)
-	{
-		Centroid += Vertex;
-	}
-	Centroid /= FMath::Max(1, Vertices.Num());
-
+	const FVector Centroid = GetCentroid(InitialShape->GetVertices());
 	return GetTypeHash(Transform.TransformPosition(Centroid));
 }
 } // namespace
