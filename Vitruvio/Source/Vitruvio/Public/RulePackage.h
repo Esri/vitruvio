@@ -12,7 +12,7 @@ class VITRUVIO_API URulePackage final : public UObject
 {
 	GENERATED_BODY()
 public:
-	UPROPERTY()
+	UPROPERTY(Transient)
 	TArray<uint8> Data;
 
 	void PreSave(const ITargetPlatform* TargetPlatform) override
@@ -27,6 +27,8 @@ public:
 
 	virtual void Serialize(FArchive& Ar) override
 	{
+		Super::Serialize(Ar);
+
 		// We can not use TArray#BulkSerialize as it does not use the fast path if we are not cooking
 		// This is an adapted version of bulk serialize without that limitation
 		Data.CountBytes(Ar);
