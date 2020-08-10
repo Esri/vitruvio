@@ -158,7 +158,7 @@ void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder,
 }
 
 AttributeMapUPtr GetDefaultAttributeValues(const std::wstring& RuleFile, const std::wstring& StartRule, const ResolveMapSPtr& ResolveMapPtr,
-										   const UStaticMesh* InitialShape, const int32 RandomSeed)
+										   const UStaticMesh* InitialShape, prt::Cache* Cache, const int32 RandomSeed)
 {
 	AttributeMapBuilderUPtr UnrealCallbacksAttributeBuilder(prt::AttributeMapBuilder::create());
 	UnrealCallbacks UnrealCallbacks(UnrealCallbacksAttributeBuilder, nullptr, nullptr, nullptr);
@@ -178,7 +178,7 @@ AttributeMapUPtr GetDefaultAttributeValues(const std::wstring& RuleFile, const s
 	const AttributeMapNOPtrVector EncoderOptions = {AttributeEncodeOptions.get()};
 
 	prt::generate(InitialShapes.data(), InitialShapes.size(), nullptr, EncoderIds.data(), EncoderIds.size(), EncoderOptions.data(), &UnrealCallbacks,
-				  nullptr, nullptr);
+				  Cache, nullptr);
 
 	return AttributeMapUPtr(UnrealCallbacksAttributeBuilder->createAttributeMap());
 }
@@ -262,7 +262,7 @@ void VitruvioModule::InitializePrt()
 	PrtLibrary = prt::init(PRTPluginsPaths.GetData(), PRTPluginsPaths.Num(), prt::LogLevel::LOG_TRACE, &Status);
 	Initialized = Status == prt::STATUS_OK;
 
-	PrtCache.reset(prt::CacheObject::create(prt::CacheObject::CACHE_TYPE_DEFAULT));
+	PrtCache.reset(prt::CacheObject::create(prt::CacheObject::CACHE_TYPE_NONREDUNDANT));
 }
 
 void VitruvioModule::StartupModule()
@@ -382,14 +382,15 @@ TFuture<FAttributeMapPtr> VitruvioModule::LoadDefaultRuleAttributesAsync(const U
 		const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
 
 		prt::Status InfoStatus;
-		RuleFileInfoUPtr RuleInfo(prt::createRuleFileInfo(RuleFileUri, nullptr, &InfoStatus));
+		RuleFileInfoUPtr RuleInfo(prt::createRuleFileInfo(RuleFileUri, PrtCache.get(), &InfoStatus));
 		if (!RuleInfo || InfoStatus != prt::STATUS_OK)
 		{
 			UE_LOG(LogUnrealPrt, Error, TEXT("could not get rule file info from rule file %s"), RuleFileUri)
 			return {};
 		}
 
-		AttributeMapUPtr DefaultAttributeMap(GetDefaultAttributeValues(RuleFile.c_str(), StartRule.c_str(), ResolveMap, InitialShape, RandomSeed));
+		AttributeMapUPtr DefaultAttributeMap(
+			GetDefaultAttributeValues(RuleFile.c_str(), StartRule.c_str(), ResolveMap, InitialShape, PrtCache.get(), RandomSeed));
 
 		return MakeShared<FAttributeMap>(std::move(DefaultAttributeMap), std::move(RuleInfo));
 	});
