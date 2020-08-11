@@ -91,6 +91,7 @@ class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 		return false;
 	}
 
+#if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) override
 	{
 		if (Object && Object->IsA(UStaticMeshComponent::StaticClass()))
@@ -99,6 +100,7 @@ class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 		}
 		return false;
 	}
+#endif
 };
 
 class FSplineInitialShapeFactory : public FInitialShapeFactory
@@ -203,6 +205,7 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 		return false;
 	}
 
+#if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) override
 	{
 		if (Object && Object->IsA(USplineComponent::StaticClass()))
@@ -211,6 +214,7 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 		}
 		return false;
 	}
+#endif
 };
 
 TArray<FInitialShapeFactory*> GInitialShapeFactories = {new FStaticMeshInitialShapeFactory, new FSplineInitialShapeFactory};
