@@ -76,7 +76,7 @@ class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 
 		const TArray<TArray<FVector>> Windings = Vitruvio::GetOutsideWindings(MeshVertices, MeshIndices);
 		UInitialShape* InitialShape = NewObject<UInitialShape>(Owner);
-		InitialShape->FaceVertices = Windings;
+		InitialShape->SetInitialShapeData(FInitialShapeData(Windings));
 		return InitialShape;
 	}
 
@@ -188,7 +188,7 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 		}
 
 		OrderClockwise(Vertices);
-		InitialShape->FaceVertices = {Vertices};
+		InitialShape->SetInitialShapeData(FInitialShapeData({Vertices}));
 		return InitialShape;
 	}
 
@@ -217,7 +217,7 @@ TArray<FInitialShapeFactory*> GInitialShapeFactories = {new FStaticMeshInitialSh
 
 int32 CalculateRandomSeed(const FTransform Transform, const UInitialShape* InitialShape)
 {
-	const FVector Centroid = GetCentroid(InitialShape->GetVertices());
+	const FVector Centroid = GetCentroid(InitialShape->GetInitialShapeData().GetVertices());
 	return GetTypeHash(Transform.TransformPosition(Centroid));
 }
 } // namespace
@@ -286,8 +286,8 @@ void UVitruvioComponent::Generate()
 
 	if (InitialShape)
 	{
-		TFuture<FGenerateResult> GenerateFuture =
-			VitruvioModule::Get().GenerateAsync(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, Rpk, Attributes, RandomSeed);
+		TFuture<FGenerateResult> GenerateFuture = VitruvioModule::Get().GenerateAsync(InitialShape->GetInitialShapeData(), OpaqueParent, MaskedParent,
+																					  TranslucentParent, Rpk, Attributes, RandomSeed);
 
 		// clang-format off
 		GenerateFuture.Next([=](const FGenerateResult& Result)
@@ -453,7 +453,8 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 	AttributesReady = false;
 	LoadingAttributes = true;
 
-	TFuture<FAttributeMapPtr> AttributesFuture = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape, Rpk, RandomSeed);
+	TFuture<FAttributeMapPtr> AttributesFuture =
+		VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape->GetInitialShapeData(), Rpk, RandomSeed);
 	AttributesFuture.Next([this, KeepOldAttributeValues](const FAttributeMapPtr& Result) {
 		FFunctionGraphTask::CreateAndDispatchWhenReady(
 			[this, Result, KeepOldAttributeValues]() {

@@ -16,6 +16,7 @@
 #include "Interfaces/IPluginManager.h"
 #include "MeshDescription.h"
 #include "Modules/ModuleManager.h"
+#include "UObject/GCObjectScopeGuard.h"
 #include "UObject/UObjectBaseUtility.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioModule"
@@ -88,16 +89,14 @@ public:
 	}
 };
 
-void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder, UInitialShape const* InitialShape)
+void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder, const FInitialShapeData& InitialShape)
 {
-	check(InitialShape);
-
 	std::vector<double> vertexCoords;
 	std::vector<uint32_t> indices;
 	std::vector<uint32_t> faceCounts;
 
 	uint32_t CurrentIndex = 0;
-	for (const TArray<FVector>& FaceVertices : InitialShape->FaceVertices)
+	for (const TArray<FVector>& FaceVertices : InitialShape.GetFaceVertices())
 	{
 		faceCounts.push_back(FaceVertices.Num());
 		for (const FVector& Vertex : FaceVertices)
@@ -121,7 +120,7 @@ void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder,
 }
 
 AttributeMapUPtr GetDefaultAttributeValues(const std::wstring& RuleFile, const std::wstring& StartRule, const ResolveMapSPtr& ResolveMapPtr,
-										   UInitialShape const* InitialShape, prt::Cache* Cache, const int32 RandomSeed)
+										   const FInitialShapeData& InitialShape, prt::Cache* Cache, const int32 RandomSeed)
 {
 	AttributeMapBuilderUPtr UnrealCallbacksAttributeBuilder(prt::AttributeMapBuilder::create());
 	UnrealCallbacks UnrealCallbacks(UnrealCallbacksAttributeBuilder, nullptr, nullptr, nullptr);
@@ -252,11 +251,10 @@ void VitruvioModule::ShutdownModule()
 	delete LogHandler;
 }
 
-TFuture<FGenerateResult> VitruvioModule::GenerateAsync(UInitialShape const* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
+TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
 													   UMaterial* TranslucentParent, URulePackage* RulePackage,
 													   const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const
 {
-	check(InitialShape);
 	check(RulePackage);
 
 	if (!Initialized)
@@ -266,15 +264,15 @@ TFuture<FGenerateResult> VitruvioModule::GenerateAsync(UInitialShape const* Init
 	}
 
 	return Async(EAsyncExecution::Thread, [=]() -> FGenerateResult {
-		return Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, Attributes, RandomSeed);
+		FGenerateResult Result = Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, Attributes, RandomSeed);
+		return Result;
 	});
 }
 
-FGenerateResult VitruvioModule::Generate(UInitialShape const* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
+FGenerateResult VitruvioModule::Generate(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
 										 UMaterial* TranslucentParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes,
 										 const int32 RandomSeed) const
 {
-	check(InitialShape);
 	check(RulePackage);
 
 	if (!Initialized)
@@ -323,10 +321,9 @@ FGenerateResult VitruvioModule::Generate(UInitialShape const* InitialShape, UMat
 	return {OutputHandler->GetModel(), OutputHandler->GetInstances()};
 }
 
-TFuture<FAttributeMapPtr> VitruvioModule::LoadDefaultRuleAttributesAsync(UInitialShape const* InitialShape, URulePackage* RulePackage,
+TFuture<FAttributeMapPtr> VitruvioModule::LoadDefaultRuleAttributesAsync(const FInitialShapeData& InitialShape, URulePackage* RulePackage,
 																		 const int32 RandomSeed) const
 {
-	check(InitialShape);
 	check(RulePackage);
 
 	if (!Initialized)
