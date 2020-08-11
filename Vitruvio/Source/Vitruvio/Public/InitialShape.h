@@ -23,5 +23,5 @@ public:
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, Meta = (UIMin = 5, UIMax = 50))
-	int32 NumberOfPoints;
+	int32 SplineApproximationPoints;
 };

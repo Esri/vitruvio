@@ -70,7 +70,7 @@ public:
 
 	FInitialShapeFactory* InitialShapeFactory;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, Instanced, Category = "Vitruvio")
 	UInitialShape* InitialShape;
 
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
@@ -101,11 +101,10 @@ class FInitialShapeFactory
 public:
 	virtual ~FInitialShapeFactory() = default;
 
-	virtual UInitialShape* CreateInitialShape(UVitruvioComponent* Component) const = 0;
+	virtual UInitialShape* CreateInitialShape(UVitruvioComponent* Component, UInitialShape* OldInitialShape) const = 0;
 	virtual bool CanCreateFrom(UVitruvioComponent* Component) const = 0;
 
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) = 0;
-	virtual bool HasCustomEditor() { return false; }
 #endif
 };

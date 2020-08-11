@@ -33,7 +33,7 @@ FVector GetCentroid(const TArray<FVector>& Vertices)
 
 class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 {
-	virtual UInitialShape* CreateInitialShape(UVitruvioComponent* Component) const override
+	virtual UInitialShape* CreateInitialShape(UVitruvioComponent* Component, UInitialShape* OldInitialShape) const override
 	{
 		AActor* Owner = Component->GetOwner();
 		UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Owner->GetComponentByClass(UStaticMeshComponent::StaticClass()));
@@ -75,7 +75,7 @@ class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 		}
 
 		const TArray<TArray<FVector>> Windings = Vitruvio::GetOutsideWindings(MeshVertices, MeshIndices);
-		UInitialShape* InitialShape = NewObject<UInitialShape>();
+		UInitialShape* InitialShape = NewObject<UInitialShape>(Owner);
 		InitialShape->FaceVertices = Windings;
 		return InitialShape;
 	}
@@ -148,12 +148,20 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 		});
 	}
 
-	virtual USplineInitialShape* CreateInitialShape(UVitruvioComponent* Component) const override
+	virtual USplineInitialShape* CreateInitialShape(UVitruvioComponent* Component, UInitialShape* OldInitialShape) const override
 	{
 		AActor* Owner = Component->GetOwner();
 		USplineComponent* SplineComponent = Cast<USplineComponent>(Owner->GetComponentByClass(USplineComponent::StaticClass()));
-		USplineInitialShape* InitialShape = NewObject<USplineInitialShape>();
-		InitialShape->NumberOfPoints = 15;
+		USplineInitialShape* InitialShape = NewObject<USplineInitialShape>(Owner);
+
+		if (USplineInitialShape* OldSplineInitialShape = Cast<USplineInitialShape>(OldInitialShape))
+		{
+			InitialShape->SplineApproximationPoints = OldSplineInitialShape->SplineApproximationPoints;
+		}
+		else
+		{
+			InitialShape->SplineApproximationPoints = 15;
+		}
 
 		TArray<FVector> Vertices;
 		const int32 NumPoints = SplineComponent->GetNumberOfSplinePoints();
@@ -170,7 +178,7 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 				float Position = SplineComponent->GetDistanceAlongSplineAtSplinePoint(SplinePointIndex);
 				const float EndDistance = NextPointIndex < NumPoints ? SplineComponent->GetDistanceAlongSplineAtSplinePoint(NextPointIndex)
 																	 : SplineComponent->GetSplineLength();
-				const float Distance = SplineComponent->GetSplineLength() / InitialShape->NumberOfPoints;
+				const float Distance = SplineComponent->GetSplineLength() / InitialShape->SplineApproximationPoints;
 				while (Position < EndDistance)
 				{
 					Vertices.Add(SplineComponent->GetLocationAtDistanceAlongSpline(Position, ESplineCoordinateSpace::Local));
@@ -203,8 +211,6 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 		}
 		return false;
 	}
-
-	virtual bool HasCustomEditor() override { return true; }
 };
 
 TArray<FInitialShapeFactory*> GInitialShapeFactories = {new FStaticMeshInitialShapeFactory, new FSplineInitialShapeFactory};
@@ -238,7 +244,7 @@ void UVitruvioComponent::OnRegister()
 	{
 		if (Factory->CanCreateFrom(this))
 		{
-			InitialShape = Factory->CreateInitialShape(this);
+			InitialShape = Factory->CreateInitialShape(this, InitialShape);
 			InitialShapeFactory = Factory;
 			break;
 		}
@@ -412,7 +418,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 
 	if (bRecreateInitialShape)
 	{
-		InitialShape = InitialShapeFactory->CreateInitialShape(this);
+		InitialShape = InitialShapeFactory->CreateInitialShape(this, InitialShape);
 
 		if (!bValidRandomSeed && InitialShape)
 		{
