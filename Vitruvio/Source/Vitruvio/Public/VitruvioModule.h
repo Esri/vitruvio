@@ -45,7 +45,7 @@ public:
 	 * \param RandomSeed
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API TFuture<FGenerateResult> GenerateAsync(UInitialShape* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
+	VITRUVIO_API TFuture<FGenerateResult> GenerateAsync(UInitialShape const* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
 														UMaterial* TranslucentParent, URulePackage* RulePackage,
 														const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const;
 
@@ -61,8 +61,9 @@ public:
 	 * \param RandomSeed
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API FGenerateResult Generate(UInitialShape* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
-										  URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const;
+	VITRUVIO_API FGenerateResult Generate(UInitialShape const* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
+										  UMaterial* TranslucentParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes,
+										  const int32 RandomSeed) const;
 
 	/**
 	 * \brief Asynchronously loads the default attribute values for the given initial shape and rule package
@@ -72,7 +73,7 @@ public:
 	 * \param RandomSeed
 	 * \return
 	 */
-	VITRUVIO_API TFuture<FAttributeMapPtr> LoadDefaultRuleAttributesAsync(UInitialShape* InitialShape, URulePackage* RulePackage,
+	VITRUVIO_API TFuture<FAttributeMapPtr> LoadDefaultRuleAttributesAsync(UInitialShape const* InitialShape, URulePackage* RulePackage,
 																		  const int32 RandomSeed) const;
 
 	/**
