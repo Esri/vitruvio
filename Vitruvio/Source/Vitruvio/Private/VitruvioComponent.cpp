@@ -11,6 +11,12 @@
 #include "PolygonWindings.h"
 #include "VitruvioTypes.h"
 
+#if WITH_EDITOR
+#include "DetailLayoutBuilder.h"
+#include "DetailWidgetRow.h"
+#include "Widgets/Input/SSpinBox.h"
+#endif
+
 namespace
 {
 
@@ -27,7 +33,7 @@ FVector GetCentroid(const TArray<FVector>& Vertices)
 
 class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 {
-	virtual TSharedPtr<Vitruvio::FInitialShape> CreateInitialShape(UVitruvioComponent* Component) const override
+	virtual UInitialShape* CreateInitialShape(UVitruvioComponent* Component) const override
 	{
 		AActor* Owner = Component->GetOwner();
 		UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Owner->GetComponentByClass(UStaticMeshComponent::StaticClass()));
@@ -69,8 +75,9 @@ class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 		}
 
 		const TArray<TArray<FVector>> Windings = Vitruvio::GetOutsideWindings(MeshVertices, MeshIndices);
-
-		return MakeShared<Vitruvio::FInitialShape>(Windings);
+		UInitialShape* InitialShape = NewObject<UInitialShape>();
+		InitialShape->FaceVertices = Windings;
+		return InitialShape;
 	}
 
 	virtual bool CanCreateFrom(UVitruvioComponent* Component) const override
@@ -141,12 +148,12 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 		});
 	}
 
-	virtual TSharedPtr<Vitruvio::FInitialShape> CreateInitialShape(UVitruvioComponent* Component) const override
+	virtual USplineInitialShape* CreateInitialShape(UVitruvioComponent* Component) const override
 	{
-		static const int32 MAX_SPLINE_POINTS = 15;
-
 		AActor* Owner = Component->GetOwner();
 		USplineComponent* SplineComponent = Cast<USplineComponent>(Owner->GetComponentByClass(USplineComponent::StaticClass()));
+		USplineInitialShape* InitialShape = NewObject<USplineInitialShape>();
+		InitialShape->NumberOfPoints = 15;
 
 		TArray<FVector> Vertices;
 		const int32 NumPoints = SplineComponent->GetNumberOfSplinePoints();
@@ -163,7 +170,7 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 				float Position = SplineComponent->GetDistanceAlongSplineAtSplinePoint(SplinePointIndex);
 				const float EndDistance = NextPointIndex < NumPoints ? SplineComponent->GetDistanceAlongSplineAtSplinePoint(NextPointIndex)
 																	 : SplineComponent->GetSplineLength();
-				const float Distance = SplineComponent->GetSplineLength() / MAX_SPLINE_POINTS;
+				const float Distance = SplineComponent->GetSplineLength() / InitialShape->NumberOfPoints;
 				while (Position < EndDistance)
 				{
 					Vertices.Add(SplineComponent->GetLocationAtDistanceAlongSpline(Position, ESplineCoordinateSpace::Local));
@@ -173,8 +180,8 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 		}
 
 		OrderClockwise(Vertices);
-
-		return MakeShared<Vitruvio::FInitialShape>(TArray<TArray<FVector>>{Vertices});
+		InitialShape->FaceVertices = {Vertices};
+		return InitialShape;
 	}
 
 	virtual bool CanCreateFrom(UVitruvioComponent* Component) const override
@@ -196,11 +203,13 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 		}
 		return false;
 	}
+
+	virtual bool HasCustomEditor() override { return true; }
 };
 
 TArray<FInitialShapeFactory*> GInitialShapeFactories = {new FStaticMeshInitialShapeFactory, new FSplineInitialShapeFactory};
 
-int32 CalculateRandomSeed(const FTransform Transform, const TSharedPtr<Vitruvio::FInitialShape>& InitialShape)
+int32 CalculateRandomSeed(const FTransform Transform, const UInitialShape* InitialShape)
 {
 	const FVector Centroid = GetCentroid(InitialShape->GetVertices());
 	return GetTypeHash(Transform.TransformPosition(Centroid));

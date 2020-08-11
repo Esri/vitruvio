@@ -88,7 +88,7 @@ public:
 	}
 };
 
-void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder, const TSharedPtr<Vitruvio::FInitialShape>& InitialShape)
+void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder, UInitialShape* InitialShape)
 {
 	check(InitialShape);
 
@@ -121,7 +121,7 @@ void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder,
 }
 
 AttributeMapUPtr GetDefaultAttributeValues(const std::wstring& RuleFile, const std::wstring& StartRule, const ResolveMapSPtr& ResolveMapPtr,
-										   const TSharedPtr<Vitruvio::FInitialShape>& InitialShape, prt::Cache* Cache, const int32 RandomSeed)
+										   UInitialShape* InitialShape, prt::Cache* Cache, const int32 RandomSeed)
 {
 	AttributeMapBuilderUPtr UnrealCallbacksAttributeBuilder(prt::AttributeMapBuilder::create());
 	UnrealCallbacks UnrealCallbacks(UnrealCallbacksAttributeBuilder, nullptr, nullptr, nullptr);
@@ -252,8 +252,8 @@ void VitruvioModule::ShutdownModule()
 	delete LogHandler;
 }
 
-TFuture<FGenerateResult> VitruvioModule::GenerateAsync(TSharedPtr<Vitruvio::FInitialShape> InitialShape, UMaterial* OpaqueParent,
-													   UMaterial* MaskedParent, UMaterial* TranslucentParent, URulePackage* RulePackage,
+TFuture<FGenerateResult> VitruvioModule::GenerateAsync(UInitialShape* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
+													   UMaterial* TranslucentParent, URulePackage* RulePackage,
 													   const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const
 {
 	check(InitialShape);
@@ -270,9 +270,8 @@ TFuture<FGenerateResult> VitruvioModule::GenerateAsync(TSharedPtr<Vitruvio::FIni
 	});
 }
 
-FGenerateResult VitruvioModule::Generate(TSharedPtr<Vitruvio::FInitialShape> InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
-										 UMaterial* TranslucentParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes,
-										 const int32 RandomSeed) const
+FGenerateResult VitruvioModule::Generate(UInitialShape* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
+										 URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const
 {
 	check(InitialShape);
 	check(RulePackage);
@@ -323,7 +322,7 @@ FGenerateResult VitruvioModule::Generate(TSharedPtr<Vitruvio::FInitialShape> Ini
 	return {OutputHandler->GetModel(), OutputHandler->GetInstances()};
 }
 
-TFuture<FAttributeMapPtr> VitruvioModule::LoadDefaultRuleAttributesAsync(TSharedPtr<Vitruvio::FInitialShape> InitialShape, URulePackage* RulePackage,
+TFuture<FAttributeMapPtr> VitruvioModule::LoadDefaultRuleAttributesAsync(UInitialShape* InitialShape, URulePackage* RulePackage,
 																		 const int32 RandomSeed) const
 {
 	check(InitialShape);

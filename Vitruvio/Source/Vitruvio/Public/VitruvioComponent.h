@@ -7,12 +7,17 @@
 #include "VitruvioModule.h"
 
 #include "CoreMinimal.h"
+#include "InitialShape.h"
 #include "VitruvioTypes.h"
 
-#include "Materials/Material.h"
+#if WITH_EDITOR
+#include "IDetailGroup.h"
+#endif
+
 #include "VitruvioComponent.generated.h"
 
 class FInitialShapeFactory;
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class VITRUVIO_API UVitruvioComponent : public UActorComponent
 {
@@ -63,6 +68,11 @@ public:
 	UPROPERTY(EditAnywhere, DisplayName = "Translucent Parent", Category = "Vitruvio Default Materials")
 	UMaterial* TranslucentParent;
 
+	FInitialShapeFactory* InitialShapeFactory;
+
+	UPROPERTY()
+	UInitialShape* InitialShape;
+
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	void Generate();
 
@@ -84,10 +94,6 @@ private:
 #if WITH_EDITOR
 	FDelegateHandle PropertyChangeDelegate;
 #endif
-
-	TSharedPtr<Vitruvio::FInitialShape> InitialShape;
-
-	FInitialShapeFactory* InitialShapeFactory;
 };
 
 class FInitialShapeFactory
@@ -95,10 +101,11 @@ class FInitialShapeFactory
 public:
 	virtual ~FInitialShapeFactory() = default;
 
-	virtual TSharedPtr<Vitruvio::FInitialShape> CreateInitialShape(UVitruvioComponent* Component) const = 0;
+	virtual UInitialShape* CreateInitialShape(UVitruvioComponent* Component) const = 0;
 	virtual bool CanCreateFrom(UVitruvioComponent* Component) const = 0;
 
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) = 0;
+	virtual bool HasCustomEditor() { return false; }
 #endif
 };

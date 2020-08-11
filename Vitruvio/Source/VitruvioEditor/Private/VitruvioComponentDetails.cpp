@@ -220,15 +220,78 @@ IDetailGroup* GetOrCreateGroups(IDetailGroup& Root, const FAttributeGroups& Grou
 	return CurrentGroup;
 }
 
-void BuildAttributeEditor(IDetailLayoutBuilder& DetailBuilder, UVitruvioComponent* VitruvioActor)
+void BuildInitialShapeEditor(IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioComponent)
+{
+	if (!VitruvioComponent || !VitruvioComponent->InitialShape)
+	{
+		return;
+	}
+
+	FInitialShapeFactory* Factory = VitruvioComponent->InitialShapeFactory;
+	if (!Factory || !Factory->HasCustomEditor())
+	{
+		return;
+	}
+
+	IDetailGroup& InitialShapeGroup = RootCategory.AddGroup("InitialShape", FText::FromString("Initial Shape"), true, true);
+
+	UClass* Class = VitruvioComponent->InitialShape->GetClass();
+	for (TFieldIterator<FProperty> PropertyIterator(Class); PropertyIterator; ++PropertyIterator)
+	{
+		FProperty* Property = *PropertyIterator;
+		FDetailWidgetRow& Row = InitialShapeGroup.AddWidgetRow();
+
+		// clang-format off
+		Row.NameContent()[
+            SNew(SBox)
+            .Content()
+            [
+                SNew(STextBlock)
+                .Text(Property->GetDisplayNameText())
+                .Font(IDetailLayoutBuilder::GetDetailFont())
+            ]
+        ];
+		// clang-format on
+
+		if (FIntProperty* IntProperty = CastField<FIntProperty>(Property))
+		{
+			int32* ValuePtr = IntProperty->ContainerPtrToValuePtr<int32>(VitruvioComponent->InitialShape);
+			auto OnCommit = [IntProperty, VitruvioComponent, ValuePtr](int32 Value, ETextCommit::Type Type) -> void {
+				IntProperty->SetIntPropertyValue(ValuePtr, static_cast<int64>(Value));
+				if (VitruvioComponent->GenerateAutomatically)
+				{
+					VitruvioComponent->Generate();
+				}
+			};
+
+			const FString& UIMin = Property->GetMetaData("UIMin");
+			const FString& UIMax = Property->GetMetaData("UIMax");
+
+			// clang-format off
+			Row.ValueContent()[
+				SNew(SSpinBox<int32>)
+					.Font(IDetailLayoutBuilder::GetDetailFont())
+					.MinValue(UIMin.IsEmpty() ? TOptional<int32>() : FCString::Atoi(*UIMin))
+					.MaxValue(UIMax.IsEmpty() ? TOptional<int32>() : FCString::Atoi(*UIMax))
+					.OnValueCommitted_Lambda(OnCommit)
+					.SliderExponent(1)
+					.Value(IntProperty->GetPropertyValue(ValuePtr))
+		    ];
+			// clang-format on
+		}
+		else
+		{
+			// TODO implement other property types
+		}
+	}
+}
+
+void BuildAttributeEditor(IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioActor)
 {
 	if (!VitruvioActor || !VitruvioActor->Rpk)
 	{
 		return;
 	}
-
-	IDetailCategoryBuilder& RootCategory = DetailBuilder.EditCategory("Vitruvio");
-	RootCategory.SetShowAdvanced(true);
 
 	IDetailGroup& RootGroup = RootCategory.AddGroup("Attributes", FText::FromString("Attributes"), true, true);
 	TMap<FString, IDetailGroup*> GroupCache;
@@ -346,9 +409,13 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 
 	DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Attributes))->MarkHiddenByCustomization();
 
+	IDetailCategoryBuilder& RootCategory = DetailBuilder.EditCategory("Vitruvio");
+	RootCategory.SetShowAdvanced(true);
+
 	if (VitruvioComponent)
 	{
-		BuildAttributeEditor(DetailBuilder, VitruvioComponent);
+		BuildAttributeEditor(RootCategory, VitruvioComponent);
+		BuildInitialShapeEditor(RootCategory, VitruvioComponent);
 	}
 }
 

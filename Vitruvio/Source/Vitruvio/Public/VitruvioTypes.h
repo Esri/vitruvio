@@ -8,18 +8,6 @@
 namespace Vitruvio
 {
 
-class FInitialShape
-{
-
-public:
-	explicit FInitialShape(const TArray<TArray<FVector>>& FaceVertices) : FaceVertices(FaceVertices) {}
-
-	// Non triangulated vertices per face
-	TArray<TArray<FVector>> FaceVertices;
-
-	TArray<FVector> GetVertices();
-};
-
 struct FMaterialAttributeContainer
 {
 	TMap<FString, FString> TextureProperties;
