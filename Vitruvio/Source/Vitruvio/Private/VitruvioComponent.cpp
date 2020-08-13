@@ -385,11 +385,11 @@ void UVitruvioComponent::Generate()
 
 #if WITH_EDITOR
 
-FInitialShapeFactory* UVitruvioComponent::FindFactory(UObject* Object, FProperty* Property)
+FInitialShapeFactory* UVitruvioComponent::FindFactory(UVitruvioComponent* VitruvioComponent)
 {
 	for (FInitialShapeFactory* Factory : GInitialShapeFactories)
 	{
-		if (Factory->IsRelevantProperty(Object, Property))
+		if (Factory->CanCreateFrom(VitruvioComponent))
 		{
 			return Factory;
 		}
@@ -428,9 +428,9 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 	// we need to reinitialize the factory and recreate the initial shape
 	if (!InitialShapeFactory || !InitialShapeFactory->CanCreateFrom(this))
 	{
-		InitialShapeFactory = FindFactory(Object, PropertyChangedEvent.Property);
+		InitialShapeFactory = FindFactory(this);
 		InitialShape = nullptr;
-		bRecreateInitialShape = InitialShapeFactory && InitialShapeFactory->CanCreateFrom(this);
+		bRecreateInitialShape = InitialShapeFactory != nullptr;
 	}
 	// If a property has changed which is used for creating the initial shape we have to recreate it
 	else if (InitialShapeFactory && InitialShapeFactory->IsRelevantProperty(Object, PropertyChangedEvent.Property))

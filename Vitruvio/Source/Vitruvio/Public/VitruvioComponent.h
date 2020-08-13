@@ -81,7 +81,7 @@ public:
 	virtual void OnUnregister() override;
 
 #if WITH_EDITOR
-	static FInitialShapeFactory* FindFactory(UObject* Object, FProperty* Property);
+	static FInitialShapeFactory* FindFactory(UVitruvioComponent* VitruvioComponent);
 
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
