@@ -81,32 +81,32 @@ void CreateColorPicker(UStringAttribute* Attribute, UVitruvioComponent* Vitruvio
 TSharedPtr<SHorizontalBox> CreateColorInputWidget(UStringAttribute* Attribute, UVitruvioComponent* VitruvioActor)
 {
 	// clang-format off
-		return SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot()
-			.VAlign(VAlign_Center)
-			.Padding(0.0f, 2.0f)
-			[
-				// Displays the color without alpha
-				SNew(SColorBlock)
-				.Color_Lambda([Attribute]()
+	return SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot()
+		.VAlign(VAlign_Center)
+		.Padding(0.0f, 2.0f)
+		[
+			// Displays the color without alpha
+			SNew(SColorBlock)
+			.Color_Lambda([Attribute]()
+			{
+				return FLinearColor(FColor::FromHex(Attribute->Value));
+			})
+			.ShowBackgroundForAlpha(false)
+			.OnMouseButtonDown_Lambda([Attribute, VitruvioActor](const FGeometry& Geometry, const FPointerEvent& Event) -> FReply
+			{
+				if (Event.GetEffectingButton() != EKeys::LeftMouseButton)
 				{
-					return FLinearColor(FColor::FromHex(Attribute->Value));
-				})
-				.ShowBackgroundForAlpha(false)
-				.OnMouseButtonDown_Lambda([Attribute, VitruvioActor](const FGeometry& Geometry, const FPointerEvent& Event) -> FReply
-				{
-					if (Event.GetEffectingButton() != EKeys::LeftMouseButton)
-					{
-						return FReply::Unhandled();
-					}
+					return FReply::Unhandled();
+				}
 
-					CreateColorPicker(Attribute, VitruvioActor);
-					return FReply::Handled();
-				})
-				.UseSRGB(true)
-				.IgnoreAlpha(true)
-				.Size(FVector2D(35.0f, 12.0f))
-			];
+				CreateColorPicker(Attribute, VitruvioActor);
+				return FReply::Handled();
+			})
+			.UseSRGB(true)
+			.IgnoreAlpha(true)
+			.Size(FVector2D(35.0f, 12.0f))
+		];
 	// clang-format on
 }
 
@@ -130,24 +130,24 @@ TSharedPtr<SHorizontalBox> CreateTextInputWidget(UStringAttribute* Attribute, UV
 	};
 
 	// clang-format off
-		auto ValueWidget = SNew(SEditableTextBox)
-			.Font(IDetailLayoutBuilder::GetDetailFont())
-			.IsReadOnly(false)
-			.SelectAllTextWhenFocused(true)
-			.OnTextCommitted_Lambda(OnTextChanged);
+	auto ValueWidget = SNew(SEditableTextBox)
+		.Font(IDetailLayoutBuilder::GetDetailFont())
+		.IsReadOnly(false)
+		.SelectAllTextWhenFocused(true)
+		.OnTextCommitted_Lambda(OnTextChanged);
 	// clang-format on
 
 	ValueWidget->SetText(FText::FromString(Attribute->Value));
 
 	// clang-format off
-		return SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot()
-			.VAlign(VAlign_Fill)
-			.HAlign(HAlign_Fill)
-			.FillWidth(1)
-			[
-				ValueWidget
-			];
+	return SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot()
+		.VAlign(VAlign_Fill)
+		.HAlign(HAlign_Fill)
+		.FillWidth(1)
+		[
+			ValueWidget
+		];
 	// clang-format on
 }
 
@@ -159,12 +159,12 @@ TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(UFloatAttribute* Attribute
 	};
 
 	// clang-format off
-		auto ValueWidget = SNew(SSpinBox<double>)
-            .Font(IDetailLayoutBuilder::GetDetailFont())
-			.MinValue(Annotation ? Annotation->Min : TOptional<double>())
-			.MaxValue(Annotation ? Annotation->Max : TOptional<double>())
-			.OnValueCommitted_Lambda(OnCommit)
-			.SliderExponent(1);
+	auto ValueWidget = SNew(SSpinBox<double>)
+		.Font(IDetailLayoutBuilder::GetDetailFont())
+		.MinValue(Annotation ? Annotation->Min : TOptional<double>())
+		.MaxValue(Annotation ? Annotation->Max : TOptional<double>())
+		.OnValueCommitted_Lambda(OnCommit)
+		.SliderExponent(1);
 	// clang-format on
 
 	if (Annotation)
@@ -180,13 +180,13 @@ TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(UFloatAttribute* Attribute
 TSharedPtr<SBox> CreateNameWidget(URuleAttribute* Attribute)
 {
 	// clang-format off
-		auto NameWidget = SNew(SBox)
-			.Content()
-			[
-				SNew(STextBlock)
-				.Text(FText::FromString(Attribute->DisplayName))
-				.Font(IDetailLayoutBuilder::GetDetailFont())
-			];
+	auto NameWidget = SNew(SBox)
+		.Content()
+		[
+			SNew(STextBlock)
+			.Text(FText::FromString(Attribute->DisplayName))
+			.Font(IDetailLayoutBuilder::GetDetailFont())
+		];
 	// clang-format on
 	return NameWidget;
 }
