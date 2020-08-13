@@ -281,10 +281,27 @@ void UVitruvioComponent::NotifyAttributesChanged()
 #endif // WITH_EDITOR
 }
 
+void UVitruvioComponent::RemoveGeneratedMeshes()
+{
+	AActor* Owner = GetOwner();
+	if (Owner == nullptr)
+	{
+		return;
+	}
+
+	TArray<AActor*> GeneratedMeshes;
+	Owner->GetAttachedActors(GeneratedMeshes);
+	for (const auto& Child : GeneratedMeshes)
+	{
+		Child->Destroy();
+	}
+}
+
 void UVitruvioComponent::Generate()
 {
 	if (!Rpk || !AttributesReady || !InitialShape)
 	{
+		RemoveGeneratedMeshes();
 		return;
 	}
 
@@ -323,13 +340,7 @@ void UVitruvioComponent::Generate()
 				}
 				else
 				{
-					// Remove previously generated actors
-					TArray<AActor*> GeneratedMeshes;
-					Owner->GetAttachedActors(GeneratedMeshes);
-					for (const auto& Child : GeneratedMeshes)
-					{
-						Child->Destroy();
-					}
+					RemoveGeneratedMeshes();
 
 					// Create actors for generated meshes
 					QUICK_SCOPE_CYCLE_COUNTER(STAT_VitruvioActor_CreateActors);
@@ -445,6 +456,11 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		{
 			Generate();
 		}
+	}
+
+	if (!InitialShape || !Rpk)
+	{
+		RemoveGeneratedMeshes();
 	}
 
 	if (InitialShape && Rpk && !AttributesReady)

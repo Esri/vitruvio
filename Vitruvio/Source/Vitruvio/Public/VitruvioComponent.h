@@ -93,6 +93,8 @@ private:
 
 	void NotifyAttributesChanged();
 
+	void RemoveGeneratedMeshes();
+
 #if WITH_EDITOR
 	FDelegateHandle PropertyChangeDelegate;
 #endif
