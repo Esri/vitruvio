@@ -36,7 +36,7 @@ class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 	virtual UInitialShape* CreateInitialShape(UVitruvioComponent* Component, UInitialShape* OldInitialShape) const override
 	{
 		AActor* Owner = Component->GetOwner();
-		UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Owner->GetComponentByClass(UStaticMeshComponent::StaticClass()));
+		UStaticMeshComponent* StaticMeshComponent = Owner->FindComponentByClass<UStaticMeshComponent>();
 		UStaticMesh* StaticMesh = StaticMeshComponent->GetStaticMesh();
 		if (StaticMesh == nullptr)
 		{
@@ -85,7 +85,7 @@ class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 		AActor* Owner = Component->GetOwner();
 		if (Owner)
 		{
-			UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Owner->GetComponentByClass(UStaticMeshComponent::StaticClass()));
+			UStaticMeshComponent* StaticMeshComponent = Owner->FindComponentByClass<UStaticMeshComponent>();
 			return StaticMeshComponent != nullptr;
 		}
 		return false;
@@ -153,7 +153,7 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 	virtual USplineInitialShape* CreateInitialShape(UVitruvioComponent* Component, UInitialShape* OldInitialShape) const override
 	{
 		AActor* Owner = Component->GetOwner();
-		USplineComponent* SplineComponent = Cast<USplineComponent>(Owner->GetComponentByClass(USplineComponent::StaticClass()));
+		USplineComponent* SplineComponent = Owner->FindComponentByClass<USplineComponent>();
 		USplineInitialShape* InitialShape = NewObject<USplineInitialShape>(Owner);
 
 		if (USplineInitialShape* OldSplineInitialShape = Cast<USplineInitialShape>(OldInitialShape))
@@ -195,7 +195,7 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 		AActor* Owner = Component->GetOwner();
 		if (Owner)
 		{
-			USplineComponent* SplineComponent = Cast<USplineComponent>(Owner->GetComponentByClass(USplineComponent::StaticClass()));
+			USplineComponent* SplineComponent = Owner->FindComponentByClass<USplineComponent>();
 			return SplineComponent != nullptr;
 		}
 		return false;
