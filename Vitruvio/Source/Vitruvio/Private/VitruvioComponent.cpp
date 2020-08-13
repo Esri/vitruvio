@@ -160,10 +160,6 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 		{
 			InitialShape->SplineApproximationPoints = OldSplineInitialShape->SplineApproximationPoints;
 		}
-		else
-		{
-			InitialShape->SplineApproximationPoints = 15;
-		}
 
 		TArray<FVector> Vertices;
 		const int32 NumPoints = SplineComponent->GetNumberOfSplinePoints();
