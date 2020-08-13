@@ -3,13 +3,13 @@
 #pragma once
 
 #include "AttributeMap.h"
+#include "InitialShape.h"
 #include "PRTTypes.h"
 #include "RuleAttributes.h"
 #include "RulePackage.h"
 
 #include "prt/Object.h"
 
-#include "Engine/StaticMesh.h"
 #include "HAL/ThreadSafeCounter.h"
 #include "Modules/ModuleManager.h"
 #include "UnrealLogHandler.h"
@@ -45,7 +45,7 @@ public:
 	 * \param RandomSeed
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API TFuture<FGenerateResult> GenerateAsync(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
+	VITRUVIO_API TFuture<FGenerateResult> GenerateAsync(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
 														UMaterial* TranslucentParent, URulePackage* RulePackage,
 														const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const;
 
@@ -61,7 +61,7 @@ public:
 	 * \param RandomSeed
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API FGenerateResult Generate(const UStaticMesh* InitialShape, ::UMaterial* OpaqueParent, UMaterial* MaskedParent,
+	VITRUVIO_API FGenerateResult Generate(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
 										  UMaterial* TranslucentParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes,
 										  const int32 RandomSeed) const;
 
@@ -73,7 +73,7 @@ public:
 	 * \param RandomSeed
 	 * \return
 	 */
-	VITRUVIO_API TFuture<FAttributeMapPtr> LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage,
+	VITRUVIO_API TFuture<FAttributeMapPtr> LoadDefaultRuleAttributesAsync(const FInitialShapeData& InitialShape, URulePackage* RulePackage,
 																		  const int32 RandomSeed) const;
 
 	/**

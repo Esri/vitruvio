@@ -13,7 +13,7 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogUnrealCallbacks, Log, All);
 
-class UnrealCallbacks final : public IUnrealCallbacks, public FGCObject
+class UnrealCallbacks final : public IUnrealCallbacks
 {
 	AttributeMapBuilderUPtr& AttributeMapBuilder;
 
@@ -37,8 +37,6 @@ public:
 		: AttributeMapBuilder(AttributeMapBuilder), OpaqueParent(OpaqueParent), MaskedParent(MaskedParent), TranslucentParent(TranslucentParent)
 	{
 	}
-
-	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	const Vitruvio::FInstanceMap& GetInstances() const { return Instances; }
 

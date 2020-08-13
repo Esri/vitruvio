@@ -16,6 +16,7 @@
 #include "Interfaces/IPluginManager.h"
 #include "MeshDescription.h"
 #include "Modules/ModuleManager.h"
+#include "UObject/GCObjectScopeGuard.h"
 #include "UObject/UObjectBaseUtility.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioModule"
@@ -88,56 +89,17 @@ public:
 	}
 };
 
-void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder, const UStaticMesh* InitialShape)
+void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder, const FInitialShapeData& InitialShape)
 {
-	check(InitialShape);
-
-	if (!InitialShape->bAllowCPUAccess)
-	{
-		UE_LOG(LogUnrealPrt, Error, TEXT("Can not access static mesh geometry because bAllowCPUAccess is false"));
-		return;
-	}
-
-	TArray<FVector> MeshVertices;
-	TArray<int32> MeshIndices;
-
-	if (InitialShape->RenderData != nullptr && InitialShape->RenderData->LODResources.IsValidIndex(0))
-	{
-		const FStaticMeshLODResources& LOD = InitialShape->RenderData->LODResources[0];
-
-		for (auto SectionIndex = 0; SectionIndex < LOD.Sections.Num(); ++SectionIndex)
-		{
-			for (uint32 VertexIndex = 0; VertexIndex < LOD.VertexBuffers.PositionVertexBuffer.GetNumVertices(); ++VertexIndex)
-			{
-				FVector Vertex = LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(VertexIndex);
-				MeshVertices.Add(Vertex);
-			}
-
-			const FStaticMeshSection& Section = LOD.Sections[SectionIndex];
-			FIndexArrayView IndicesView = LOD.IndexBuffer.GetArrayView();
-
-			for (uint32 Triangle = 0; Triangle < Section.NumTriangles; ++Triangle)
-			{
-				for (uint32 TriangleVertexIndex = 0; TriangleVertexIndex < 3; ++TriangleVertexIndex)
-				{
-					const uint32 MeshVertIndex = IndicesView[Section.FirstIndex + Triangle * 3 + TriangleVertexIndex];
-					MeshIndices.Add(MeshVertIndex);
-				}
-			}
-		}
-	}
-
-	const TArray<TArray<FVector>> Windings = Vitruvio::GetOutsideWindings(MeshVertices, MeshIndices);
-
 	std::vector<double> vertexCoords;
 	std::vector<uint32_t> indices;
 	std::vector<uint32_t> faceCounts;
 
 	uint32_t CurrentIndex = 0;
-	for (const TArray<FVector>& Winding : Windings)
+	for (const TArray<FVector>& FaceVertices : InitialShape.GetFaceVertices())
 	{
-		faceCounts.push_back(Winding.Num());
-		for (const FVector& Vertex : Winding)
+		faceCounts.push_back(FaceVertices.Num());
+		for (const FVector& Vertex : FaceVertices)
 		{
 			indices.push_back(CurrentIndex++);
 
@@ -158,7 +120,7 @@ void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder,
 }
 
 AttributeMapUPtr GetDefaultAttributeValues(const std::wstring& RuleFile, const std::wstring& StartRule, const ResolveMapSPtr& ResolveMapPtr,
-										   const UStaticMesh* InitialShape, prt::Cache* Cache, const int32 RandomSeed)
+										   const FInitialShapeData& InitialShape, prt::Cache* Cache, const int32 RandomSeed)
 {
 	AttributeMapBuilderUPtr UnrealCallbacksAttributeBuilder(prt::AttributeMapBuilder::create());
 	UnrealCallbacks UnrealCallbacks(UnrealCallbacksAttributeBuilder, nullptr, nullptr, nullptr);
@@ -289,11 +251,10 @@ void VitruvioModule::ShutdownModule()
 	delete LogHandler;
 }
 
-TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
+TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
 													   UMaterial* TranslucentParent, URulePackage* RulePackage,
 													   const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const
 {
-	check(InitialShape);
 	check(RulePackage);
 
 	if (!Initialized)
@@ -307,11 +268,10 @@ TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const UStaticMesh* Initia
 	});
 }
 
-FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
+FGenerateResult VitruvioModule::Generate(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
 										 UMaterial* TranslucentParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes,
 										 const int32 RandomSeed) const
 {
-	check(InitialShape);
 	check(RulePackage);
 
 	if (!Initialized)
@@ -360,10 +320,9 @@ FGenerateResult VitruvioModule::Generate(const UStaticMesh* InitialShape, UMater
 	return {OutputHandler->GetModel(), OutputHandler->GetInstances()};
 }
 
-TFuture<FAttributeMapPtr> VitruvioModule::LoadDefaultRuleAttributesAsync(const UStaticMesh* InitialShape, URulePackage* RulePackage,
+TFuture<FAttributeMapPtr> VitruvioModule::LoadDefaultRuleAttributesAsync(const FInitialShapeData& InitialShape, URulePackage* RulePackage,
 																		 const int32 RandomSeed) const
 {
-	check(InitialShape);
 	check(RulePackage);
 
 	if (!Initialized)

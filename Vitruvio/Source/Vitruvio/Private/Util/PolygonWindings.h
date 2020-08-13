@@ -5,8 +5,8 @@
 namespace Vitruvio
 {
 /**
- * Takes a set of polygons and returns a vertex array representing the outside winding
- * for them. This will work for convex or concave sets of polygons but not for concave polygons with holes.
+ * Takes a set of polygons and returns a vertex array representing the outside winding.
+ * This will work for convex or concave sets of polygons but not for concave polygons with holes.
  *
  * Note: This function is adapted from FPoly#GetOutsideWindings.
  *

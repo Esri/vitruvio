@@ -7,9 +7,16 @@
 #include "VitruvioModule.h"
 
 #include "CoreMinimal.h"
-#include "Engine/StaticMeshActor.h"
-#include "Materials/Material.h"
+#include "InitialShape.h"
+#include "VitruvioTypes.h"
+
+#if WITH_EDITOR
+#include "IDetailGroup.h"
+#endif
+
 #include "VitruvioComponent.generated.h"
+
+class FInitialShapeFactory;
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class VITRUVIO_API UVitruvioComponent : public UActorComponent
@@ -18,6 +25,7 @@ class VITRUVIO_API UVitruvioComponent : public UActorComponent
 
 	TAtomic<bool> Initialized = false;
 	TAtomic<bool> AttributesReady = false;
+	TAtomic<bool> LoadingAttributes = false;
 
 	UPROPERTY()
 	bool bValidRandomSeed = false;
@@ -60,20 +68,47 @@ public:
 	UPROPERTY(EditAnywhere, DisplayName = "Translucent Parent", Category = "Vitruvio Default Materials")
 	UMaterial* TranslucentParent;
 
+	FInitialShapeFactory* InitialShapeFactory;
+
+	UPROPERTY(VisibleAnywhere, Instanced, Category = "Vitruvio")
+	UInitialShape* InitialShape;
+
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	void Generate();
 
-protected:
-	void BeginPlay() override;
+	virtual void OnRegister() override;
 
-public:
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	virtual void OnUnregister() override;
 
 #if WITH_EDITOR
-	void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+	static FInitialShapeFactory* FindFactory(UVitruvioComponent* VitruvioComponent);
+
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+
+	void OnPropertyChanged(UObject* Object, FPropertyChangedEvent& PropertyChangedEvent);
 #endif
 
 private:
-	void LoadDefaultAttributes(UStaticMesh* InitialShape, bool KeepOldAttributeValues = false);
-	UStaticMeshComponent* GetStaticMeshComponent() const;
+	void LoadDefaultAttributes(bool KeepOldAttributeValues = false);
+
+	void NotifyAttributesChanged();
+
+	void RemoveGeneratedMeshes();
+
+#if WITH_EDITOR
+	FDelegateHandle PropertyChangeDelegate;
+#endif
+};
+
+class FInitialShapeFactory
+{
+public:
+	virtual ~FInitialShapeFactory() = default;
+
+	virtual UInitialShape* CreateInitialShape(UVitruvioComponent* Component, UInitialShape* OldInitialShape) const = 0;
+	virtual bool CanCreateFrom(UVitruvioComponent* Component) const = 0;
+
+#if WITH_EDITOR
+	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) = 0;
+#endif
 };
