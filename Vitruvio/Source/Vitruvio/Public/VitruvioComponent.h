@@ -91,6 +91,8 @@ public:
 private:
 	void LoadDefaultAttributes(bool KeepOldAttributeValues = false);
 
+	void NotifyAttributesChanged();
+
 #if WITH_EDITOR
 	FDelegateHandle PropertyChangeDelegate;
 #endif

@@ -272,6 +272,15 @@ void UVitruvioComponent::OnUnregister()
 #endif
 }
 
+void UVitruvioComponent::NotifyAttributesChanged()
+{
+#if WITH_EDITOR
+	// Notify possible listeners (eg. Details panel) about changes to the Attributes
+	FPropertyChangedEvent PropertyEvent(GetClass()->FindPropertyByName(GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Attributes)));
+	FCoreUObjectDelegates::OnObjectPropertyChanged.Broadcast(this, PropertyEvent);
+#endif // WITH_EDITOR
+}
+
 void UVitruvioComponent::Generate()
 {
 	if (!Rpk || !AttributesReady || !InitialShape)
@@ -397,6 +406,8 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		{
 			Attributes.Empty();
 			AttributesReady = false;
+
+			NotifyAttributesChanged();
 		}
 
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, RandomSeed))
@@ -483,11 +494,7 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 
 				AttributesReady = true;
 
-#if WITH_EDITOR
-				// Notify possible listeners (eg. Details panel) about changes to the Attributes
-				FPropertyChangedEvent PropertyEvent(GetClass()->FindPropertyByName(GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Attributes)));
-				FCoreUObjectDelegates::OnObjectPropertyChanged.Broadcast(this, PropertyEvent);
-#endif // WITH_EDITOR
+				NotifyAttributesChanged();
 
 				if (GenerateAutomatically)
 				{
