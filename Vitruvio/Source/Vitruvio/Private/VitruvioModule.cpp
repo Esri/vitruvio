@@ -264,8 +264,7 @@ TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const FInitialShapeData& 
 	}
 
 	return Async(EAsyncExecution::Thread, [=]() -> FGenerateResult {
-		FGenerateResult Result = Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, Attributes, RandomSeed);
-		return Result;
+		return Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, Attributes, RandomSeed);
 	});
 }
 
