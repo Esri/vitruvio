@@ -2,11 +2,13 @@
 
 #include "VitruvioModule.h"
 
+#include "AsyncHelpers.h"
 #include "PRTTypes.h"
 #include "PRTUtils.h"
 #include "UnrealCallbacks.h"
 
 #include "Util/AttributeConversion.h"
+#include "Util/MaterialConversion.h"
 #include "Util/PolygonWindings.h"
 
 #include "prt/API.h"
@@ -16,6 +18,7 @@
 #include "Interfaces/IPluginManager.h"
 #include "MeshDescription.h"
 #include "Modules/ModuleManager.h"
+#include "StaticMeshAttributes.h"
 #include "UObject/GCObjectScopeGuard.h"
 #include "UObject/UObjectBaseUtility.h"
 
@@ -201,6 +204,79 @@ FString GetPrtDllPath()
 
 } // namespace
 
+FGenerateResult ConvertResult_GameThread(VitruvioModule const* Module, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
+										 TSharedPtr<UnrealCallbacks> OutputHandler,
+										 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache)
+{
+	const TFuture<FGenerateResult> GenerateResultFuture =
+		Vitruvio::ExecuteOnGameThread<FGenerateResult>([=, &OutputHandler, &MaterialCache]() -> FGenerateResult {
+			TMap<int32, UStaticMesh*> MeshMap;
+			TMap<int32, TArray<Vitruvio::FMaterialAttributeContainer>> Materials = OutputHandler->GetMaterials();
+
+			auto CachedMaterial = [OpaqueParent, MaskedParent, TranslucentParent, &MaterialCache](
+									  const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name, UObject* Outer) {
+				if (MaterialCache.Contains(MaterialAttributes))
+				{
+					return MaterialCache[MaterialAttributes];
+				}
+				else
+				{
+					UMaterialInstanceDynamic* Material =
+						Vitruvio::GameThread_CreateMaterialInstance(Outer, Name, OpaqueParent, MaskedParent, TranslucentParent, MaterialAttributes);
+					MaterialCache.Add(MaterialAttributes, Material);
+					return Material;
+				}
+			};
+
+			// convert all meshes
+			TMap<int32, FMeshDescription> Meshes = OutputHandler->GetMeshes();
+			for (auto& IdAndMesh : Meshes)
+			{
+				UStaticMesh* StaticMesh = NewObject<UStaticMesh>();
+
+				const TArray<Vitruvio::FMaterialAttributeContainer>& MeshMaterials = Materials[IdAndMesh.Key];
+				FStaticMeshAttributes Attributes(IdAndMesh.Value);
+				const auto PolygonGroups = IdAndMesh.Value.PolygonGroups();
+				size_t MaterialIndex = 0;
+				for (const auto& PolygonId : PolygonGroups.GetElementIDs())
+				{
+					const FName MaterialName = Attributes.GetPolygonGroupMaterialSlotNames()[PolygonId];
+					const FName SlotName = StaticMesh->AddMaterial(CachedMaterial(MeshMaterials[MaterialIndex], MaterialName, StaticMesh));
+					Attributes.GetPolygonGroupMaterialSlotNames()[PolygonId] = SlotName;
+
+					++MaterialIndex;
+				}
+
+				TArray<const FMeshDescription*> MeshDescriptionPtrs;
+				MeshDescriptionPtrs.Emplace(&IdAndMesh.Value);
+				StaticMesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
+				MeshMap.Add(IdAndMesh.Key, StaticMesh);
+			}
+
+			// convert materials
+			TArray<FInstance> Instances;
+			for (const auto& Instance : OutputHandler->GetInstances())
+			{
+				UStaticMesh* Mesh = MeshMap[Instance.Key.PrototypeId];
+				TArray<UMaterialInstanceDynamic*> OverrideMaterials;
+				for (size_t MaterialIndex = 0; MaterialIndex < Instance.Key.MaterialOverrides.Num(); ++MaterialIndex)
+				{
+					const Vitruvio::FMaterialAttributeContainer& MaterialContainer = Instance.Key.MaterialOverrides[MaterialIndex];
+					FName MaterialName = FName(MaterialContainer.StringProperties["name"]);
+					OverrideMaterials.Add(CachedMaterial(MaterialContainer, MaterialName, Mesh));
+				}
+
+				Instances.Add({Mesh, OverrideMaterials, Instance.Value});
+			}
+
+			UStaticMesh* ShapeMesh = MeshMap.Contains(UnrealCallbacks::NO_PROTOTYPE_INDEX) ? MeshMap[UnrealCallbacks::NO_PROTOTYPE_INDEX] : nullptr;
+			return {true, ShapeMesh, Instances};
+		});
+
+	GenerateResultFuture.Wait();
+	return GenerateResultFuture.Get();
+}
+
 void VitruvioModule::InitializePrt()
 {
 	const FString PrtLibPath = GetPrtDllPath();
@@ -277,7 +353,7 @@ FGenerateResult VitruvioModule::Generate(const FInitialShapeData& InitialShape, 
 	if (!Initialized)
 	{
 		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
-		return {};
+		return {false};
 	}
 
 	GenerateCallsCounter.Increment();
@@ -297,7 +373,7 @@ FGenerateResult VitruvioModule::Generate(const FInitialShapeData& InitialShape, 
 	InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", AttributeMap.get(), ResolveMap.get());
 
 	AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
-	const std::unique_ptr<UnrealCallbacks> OutputHandler(new UnrealCallbacks(AttributeMapBuilder, OpaqueParent, MaskedParent, TranslucentParent));
+	const TSharedPtr<UnrealCallbacks> OutputHandler(new UnrealCallbacks(AttributeMapBuilder, OpaqueParent, MaskedParent, TranslucentParent));
 
 	const InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShapeAndReset());
 
@@ -308,7 +384,7 @@ FGenerateResult VitruvioModule::Generate(const FInitialShapeData& InitialShape, 
 	InitialShapeNOPtrVector Shapes = {Shape.get()};
 
 	const prt::Status GenerateStatus = prt::generate(Shapes.data(), Shapes.size(), nullptr, EncoderIds.data(), EncoderIds.size(),
-													 EncoderOptions.data(), OutputHandler.get(), PrtCache.get(), nullptr);
+													 EncoderOptions.data(), OutputHandler.Get(), PrtCache.get(), nullptr);
 
 	if (GenerateStatus != prt::STATUS_OK)
 	{
@@ -317,7 +393,10 @@ FGenerateResult VitruvioModule::Generate(const FInitialShapeData& InitialShape, 
 
 	GenerateCallsCounter.Decrement();
 
-	return {OutputHandler->GetModel(), OutputHandler->GetInstances()};
+	// Convert result in GameThread
+	FGenerateResult GenerateResult = ConvertResult_GameThread(this, OpaqueParent, MaskedParent, TranslucentParent, OutputHandler, MaterialCache);
+
+	return GenerateResult;
 }
 
 TFuture<FAttributeMapPtr> VitruvioModule::LoadDefaultRuleAttributesAsync(const FInitialShapeData& InitialShape, URulePackage* RulePackage,
@@ -390,7 +469,10 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(URulePackage* const 
 					FScopeLock Lock(&LoadResolveMapLock);
 					return ResolveMapCache[LazyRulePackagePtr];
 				},
-				MoveTemp(Promise), ENamedThreads::AnyThread);
+				MoveTemp(Promise),
+				ENamedThreads::
+					AnyThread); // TODO AnyThread could ben GameThread
+								// https://forums.unrealengine.com/development-discussion/c-gameplay-programming/14071-multithreading-creating-a-task-hangs-the-game
 	}
 	else
 	{

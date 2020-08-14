@@ -320,6 +320,11 @@ void UVitruvioComponent::Generate()
 		{
 			const FGraphEventRef CreateMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this, &Result]()
 			{
+				if (!Result.IsValid)
+				{
+					return;
+				}
+				
 				bIsGenerating = false;
 
 				AActor* Owner = GetOwner();
@@ -347,23 +352,22 @@ void UVitruvioComponent::Generate()
 					StaticMeshActor->GetStaticMeshComponent()->SetStaticMesh(Result.ShapeMesh);
 					StaticMeshActor->AttachToActor(Owner, FAttachmentTransformRules::KeepRelativeTransform);
 
-					for (const TTuple<Vitruvio::FInstanceCacheKey, TArray<FTransform>> & MeshAndInstance : Result.Instances)
+					for (const FInstance& Instance : Result.Instances)
 					{
 						auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(StaticMeshActor);
-						const TArray<FTransform>& Instances = MeshAndInstance.Value;
-						const Vitruvio::FInstanceCacheKey& CacheKey = MeshAndInstance.Key;
-						InstancedComponent->SetStaticMesh(CacheKey.Mesh);
+						const TArray<FTransform>& Transforms = Instance.Transforms;
+						InstancedComponent->SetStaticMesh(Instance.Mesh);
 
 						// Add all instance transforms
-						for (const FTransform& Transform : Instances)
+						for (const FTransform& Transform : Transforms)
 						{
 							InstancedComponent->AddInstance(Transform);
 						}
 
 						// Apply override materials
-						for (int32 MaterialIndex = 0; MaterialIndex < CacheKey.MaterialOverrides.Num(); ++MaterialIndex)
+						for (int32 MaterialIndex = 0; MaterialIndex < Instance.OverrideMaterials.Num(); ++MaterialIndex)
 						{
-							InstancedComponent->SetMaterial(MaterialIndex, CacheKey.MaterialOverrides[MaterialIndex]);
+							InstancedComponent->SetMaterial(MaterialIndex, Instance.OverrideMaterials[MaterialIndex]);
 						}
 						
 						InstancedComponent->AttachToComponent(StaticMeshActor->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
@@ -485,6 +489,11 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 	AttributesFuture.Next([this, KeepOldAttributeValues](const FAttributeMapPtr& Result) {
 		FFunctionGraphTask::CreateAndDispatchWhenReady(
 			[this, Result, KeepOldAttributeValues]() {
+				if (!Result)
+				{
+					return;
+				}
+
 				LoadingAttributes = false;
 				if (KeepOldAttributeValues)
 				{

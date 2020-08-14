@@ -4,6 +4,7 @@
 
 #include "AttributeMap.h"
 #include "InitialShape.h"
+#include "MeshDescription.h"
 #include "PRTTypes.h"
 #include "RuleAttributes.h"
 #include "RulePackage.h"
@@ -21,10 +22,18 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogUnrealPrt, Log, All);
 
+struct FInstance
+{
+	UStaticMesh* Mesh;
+	TArray<UMaterialInstanceDynamic*> OverrideMaterials;
+	TArray<FTransform> Transforms;
+};
+
 struct FGenerateResult
 {
+	bool IsValid;
 	UStaticMesh* ShapeMesh;
-	Vitruvio::FInstanceMap Instances;
+	TArray<FInstance> Instances;
 };
 
 class VitruvioModule final : public IModuleInterface
@@ -101,7 +110,7 @@ private:
 
 	UnrealLogHandler* LogHandler = nullptr;
 
-	bool Initialized = false;
+	TAtomic<bool> Initialized = false;
 
 	mutable TMap<TLazyObjectPtr<URulePackage>, ResolveMapSPtr> ResolveMapCache;
 	mutable TMap<TLazyObjectPtr<URulePackage>, FGraphEventRef> ResolveMapEventGraphRefCache;
@@ -111,7 +120,8 @@ private:
 	mutable FThreadSafeCounter GenerateCallsCounter;
 	mutable FThreadSafeCounter RpkLoadingTasksCounter;
 
-	TFuture<ResolveMapSPtr> LoadResolveMapAsync(URulePackage* RulePackage) const;
+	mutable TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*> MaterialCache;
 
+	TFuture<ResolveMapSPtr> LoadResolveMapAsync(URulePackage* RulePackage) const;
 	void InitializePrt();
 };
