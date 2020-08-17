@@ -36,12 +36,13 @@ class FLoadResolveMapTask
 	TPromise<ResolveMapSPtr> Promise;
 	TMap<TLazyObjectPtr<URulePackage>, ResolveMapSPtr>& ResolveMapCache;
 	FCriticalSection& LoadResolveMapLock;
+	FString RpkFolder;
 
 public:
-	FLoadResolveMapTask(TPromise<ResolveMapSPtr>&& InPromise, const TLazyObjectPtr<URulePackage> LazyRulePackagePtr,
+	FLoadResolveMapTask(TPromise<ResolveMapSPtr>&& InPromise, const FString RpkFolder, const TLazyObjectPtr<URulePackage> LazyRulePackagePtr,
 						TMap<TLazyObjectPtr<URulePackage>, ResolveMapSPtr>& ResolveMapCache, FCriticalSection& LoadResolveMapLock)
 		: LazyRulePackagePtr(LazyRulePackagePtr), Promise(MoveTemp(InPromise)), ResolveMapCache(ResolveMapCache),
-		  LoadResolveMapLock(LoadResolveMapLock)
+		  LoadResolveMapLock(LoadResolveMapLock), RpkFolder(RpkFolder)
 	{
 	}
 
@@ -58,8 +59,7 @@ public:
 
 		// Create rpk on disk for PRT
 		IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-		FString TempDir(WCHAR_TO_TCHAR(prtu::temp_directory_path().c_str()));
-		const FString RpkFolder = FPaths::Combine(TempDir, TEXT("PRT"), TEXT("UnrealGeometryEncoder"), FPaths::GetPath(UriPath.Mid(1)));
+
 		const FString RpkFile = FPaths::GetBaseFilename(UriPath, true) + TEXT(".rpk");
 		const FString RpkPath = FPaths::Combine(RpkFolder, RpkFile);
 		PlatformFile.CreateDirectoryTree(*RpkFolder);
@@ -301,6 +301,9 @@ void VitruvioModule::InitializePrt()
 	Initialized = Status == prt::STATUS_OK;
 
 	PrtCache.reset(prt::CacheObject::create(prt::CacheObject::CACHE_TYPE_NONREDUNDANT));
+
+	const FString TempDir(WCHAR_TO_TCHAR(prtu::temp_directory_path().c_str()));
+	RpkFolder = FPaths::CreateTempFilename(*TempDir, TEXT("Vitruvio_"), TEXT(""));
 }
 
 void VitruvioModule::StartupModule()
@@ -482,7 +485,7 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(URulePackage* const 
 		{
 			FScopeLock Lock(&LoadResolveMapLock);
 			// Task which does the actual resolve map loading which might take a long time
-			LoadTask = TGraphTask<FLoadResolveMapTask>::CreateTask().ConstructAndDispatchWhenReady(MoveTemp(Promise), LazyRulePackagePtr,
+			LoadTask = TGraphTask<FLoadResolveMapTask>::CreateTask().ConstructAndDispatchWhenReady(MoveTemp(Promise), RpkFolder, LazyRulePackagePtr,
 																								   ResolveMapCache, LoadResolveMapLock);
 			ResolveMapEventGraphRefCache.Add(LazyRulePackagePtr, LoadTask);
 		}
