@@ -308,12 +308,35 @@ void VitruvioModule::InitializePrt()
 
 void VitruvioModule::StartupModule()
 {
+	// During cooking we do not start Vitruvio
+	if (IsRunningCommandlet())
+	{
+		return;
+	}
+	
 	InitializePrt();
 }
 
 void VitruvioModule::ShutdownModule()
 {
-	// TODO: what happens if we still have threads busy with generation?
+	if (!Initialized)
+	{
+		return;
+	}
+	
+	Initialized = false;
+
+	UE_LOG(LogUnrealPrt, Display, 
+		TEXT("Shutting down Vitruvio. Waiting for ongoing generate calls (%d), RPK loading tasks (%d) and attribute loading tasks (%d)"), 
+		GenerateCallsCounter.GetValue(), RpkLoadingTasksCounter.GetValue(), LoadAttributesCounter.GetValue())
+
+	// Wait until no more PRT calls are ongoing
+	FGenericPlatformProcess::ConditionalSleep([this]()
+		{
+			return GenerateCallsCounter.GetValue() == 0 && RpkLoadingTasksCounter.GetValue() == 0 && LoadAttributesCounter.GetValue() == 0;
+		}, 0); // Yield to other threads
+
+	UE_LOG(LogUnrealPrt, Display, TEXT("PRT calls finished. Shutting down."))
 
 	if (PrtDllHandle)
 	{
@@ -326,6 +349,8 @@ void VitruvioModule::ShutdownModule()
 	}
 
 	CleanupTempRpkFolder();
+
+	UE_LOG(LogUnrealPrt, Display, TEXT("Shutdown complete"))
 
 	delete LogHandler;
 }

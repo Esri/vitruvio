@@ -239,6 +239,11 @@ void UVitruvioComponent::OnRegister()
 {
 	Super::OnRegister();
 
+	// Ignore generation during cooking
+	if (GIsCookerLoadingPackage)
+	{
+		return;
+	}
 	// Try to create the initial shape on first register
 	for (FInitialShapeFactory* Factory : GInitialShapeFactories)
 	{
