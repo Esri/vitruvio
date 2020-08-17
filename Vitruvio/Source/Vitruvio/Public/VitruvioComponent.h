@@ -18,6 +18,19 @@
 
 class FInitialShapeFactory;
 
+struct FInstance
+{
+	UStaticMesh* Mesh;
+	TArray<UMaterialInstanceDynamic*> OverrideMaterials;
+	TArray<FTransform> Transforms;
+};
+
+struct FConvertedGenerateResult
+{
+	UStaticMesh* ShapeMesh;
+	TArray<FInstance> Instances;
+};
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class VITRUVIO_API UVitruvioComponent : public UActorComponent
 {
@@ -80,6 +93,8 @@ public:
 
 	virtual void OnUnregister() override;
 
+	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
 #if WITH_EDITOR
 	static FInitialShapeFactory* FindFactory(UVitruvioComponent* VitruvioComponent);
 
@@ -89,11 +104,16 @@ public:
 #endif
 
 private:
+	TQueue<FGenerateResultDescription> GenerateQueue;
+
 	void LoadDefaultAttributes(bool KeepOldAttributeValues = false);
 
 	void NotifyAttributesChanged();
 
 	void RemoveGeneratedMeshes();
+
+	FConvertedGenerateResult BuildResult(FGenerateResultDescription& GenerateResult,
+										 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache);
 
 #if WITH_EDITOR
 	FDelegateHandle PropertyChangeDelegate;

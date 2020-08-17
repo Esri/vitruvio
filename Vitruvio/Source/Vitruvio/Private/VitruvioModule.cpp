@@ -204,79 +204,6 @@ FString GetPrtDllPath()
 
 } // namespace
 
-FGenerateResult ConvertResult_GameThread(VitruvioModule const* Module, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
-										 TSharedPtr<UnrealCallbacks> OutputHandler,
-										 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache)
-{
-	const TFuture<FGenerateResult> GenerateResultFuture =
-		Vitruvio::ExecuteOnGameThread<FGenerateResult>([=, &OutputHandler, &MaterialCache]() -> FGenerateResult {
-			TMap<int32, UStaticMesh*> MeshMap;
-			TMap<int32, TArray<Vitruvio::FMaterialAttributeContainer>> Materials = OutputHandler->GetMaterials();
-
-			auto CachedMaterial = [OpaqueParent, MaskedParent, TranslucentParent, &MaterialCache](
-									  const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name, UObject* Outer) {
-				if (MaterialCache.Contains(MaterialAttributes))
-				{
-					return MaterialCache[MaterialAttributes];
-				}
-				else
-				{
-					UMaterialInstanceDynamic* Material =
-						Vitruvio::GameThread_CreateMaterialInstance(Outer, Name, OpaqueParent, MaskedParent, TranslucentParent, MaterialAttributes);
-					MaterialCache.Add(MaterialAttributes, Material);
-					return Material;
-				}
-			};
-
-			// convert all meshes
-			TMap<int32, FMeshDescription> Meshes = OutputHandler->GetMeshes();
-			for (auto& IdAndMesh : Meshes)
-			{
-				UStaticMesh* StaticMesh = NewObject<UStaticMesh>();
-
-				const TArray<Vitruvio::FMaterialAttributeContainer>& MeshMaterials = Materials[IdAndMesh.Key];
-				FStaticMeshAttributes Attributes(IdAndMesh.Value);
-				const auto PolygonGroups = IdAndMesh.Value.PolygonGroups();
-				size_t MaterialIndex = 0;
-				for (const auto& PolygonId : PolygonGroups.GetElementIDs())
-				{
-					const FName MaterialName = Attributes.GetPolygonGroupMaterialSlotNames()[PolygonId];
-					const FName SlotName = StaticMesh->AddMaterial(CachedMaterial(MeshMaterials[MaterialIndex], MaterialName, StaticMesh));
-					Attributes.GetPolygonGroupMaterialSlotNames()[PolygonId] = SlotName;
-
-					++MaterialIndex;
-				}
-
-				TArray<const FMeshDescription*> MeshDescriptionPtrs;
-				MeshDescriptionPtrs.Emplace(&IdAndMesh.Value);
-				StaticMesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
-				MeshMap.Add(IdAndMesh.Key, StaticMesh);
-			}
-
-			// convert materials
-			TArray<FInstance> Instances;
-			for (const auto& Instance : OutputHandler->GetInstances())
-			{
-				UStaticMesh* Mesh = MeshMap[Instance.Key.PrototypeId];
-				TArray<UMaterialInstanceDynamic*> OverrideMaterials;
-				for (size_t MaterialIndex = 0; MaterialIndex < Instance.Key.MaterialOverrides.Num(); ++MaterialIndex)
-				{
-					const Vitruvio::FMaterialAttributeContainer& MaterialContainer = Instance.Key.MaterialOverrides[MaterialIndex];
-					FName MaterialName = FName(MaterialContainer.StringProperties["name"]);
-					OverrideMaterials.Add(CachedMaterial(MaterialContainer, MaterialName, Mesh));
-				}
-
-				Instances.Add({Mesh, OverrideMaterials, Instance.Value});
-			}
-
-			UStaticMesh* ShapeMesh = MeshMap.Contains(UnrealCallbacks::NO_PROTOTYPE_INDEX) ? MeshMap[UnrealCallbacks::NO_PROTOTYPE_INDEX] : nullptr;
-			return {true, ShapeMesh, Instances};
-		});
-
-	GenerateResultFuture.Wait();
-	return GenerateResultFuture.Get();
-}
-
 void VitruvioModule::InitializePrt()
 {
 	const FString PrtLibPath = GetPrtDllPath();
@@ -313,7 +240,7 @@ void VitruvioModule::StartupModule()
 	{
 		return;
 	}
-	
+
 	InitializePrt();
 }
 
@@ -323,18 +250,17 @@ void VitruvioModule::ShutdownModule()
 	{
 		return;
 	}
-	
+
 	Initialized = false;
 
-	UE_LOG(LogUnrealPrt, Display, 
-		TEXT("Shutting down Vitruvio. Waiting for ongoing generate calls (%d), RPK loading tasks (%d) and attribute loading tasks (%d)"), 
-		GenerateCallsCounter.GetValue(), RpkLoadingTasksCounter.GetValue(), LoadAttributesCounter.GetValue())
+	UE_LOG(LogUnrealPrt, Display,
+		   TEXT("Shutting down Vitruvio. Waiting for ongoing generate calls (%d), RPK loading tasks (%d) and attribute loading tasks (%d)"),
+		   GenerateCallsCounter.GetValue(), RpkLoadingTasksCounter.GetValue(), LoadAttributesCounter.GetValue())
 
 	// Wait until no more PRT calls are ongoing
-	FGenericPlatformProcess::ConditionalSleep([this]()
-		{
-			return GenerateCallsCounter.GetValue() == 0 && RpkLoadingTasksCounter.GetValue() == 0 && LoadAttributesCounter.GetValue() == 0;
-		}, 0); // Yield to other threads
+	FGenericPlatformProcess::ConditionalSleep(
+		[this]() { return GenerateCallsCounter.GetValue() == 0 && RpkLoadingTasksCounter.GetValue() == 0 && LoadAttributesCounter.GetValue() == 0; },
+		0); // Yield to other threads
 
 	UE_LOG(LogUnrealPrt, Display, TEXT("PRT calls finished. Shutting down."))
 
@@ -355,26 +281,28 @@ void VitruvioModule::ShutdownModule()
 	delete LogHandler;
 }
 
-TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
-													   UMaterial* TranslucentParent, URulePackage* RulePackage,
-													   const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const
+TFuture<FGenerateResultDescription> VitruvioModule::GenerateAsync(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent,
+																  UMaterial* MaskedParent, UMaterial* TranslucentParent, URulePackage* RulePackage,
+																  const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const
 {
 	check(RulePackage);
 
 	if (!Initialized)
 	{
 		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
-		return {};
+		TPromise<FGenerateResultDescription> Result;
+		Result.SetValue({false});
+		return Result.GetFuture();
 	}
 
-	return Async(EAsyncExecution::Thread, [=]() -> FGenerateResult {
+	return Async(EAsyncExecution::Thread, [=]() -> FGenerateResultDescription {
 		return Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, Attributes, RandomSeed);
 	});
 }
 
-FGenerateResult VitruvioModule::Generate(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
-										 UMaterial* TranslucentParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes,
-										 const int32 RandomSeed) const
+FGenerateResultDescription VitruvioModule::Generate(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
+													UMaterial* TranslucentParent, URulePackage* RulePackage,
+													const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const
 {
 	check(RulePackage);
 
@@ -421,10 +349,7 @@ FGenerateResult VitruvioModule::Generate(const FInitialShapeData& InitialShape, 
 
 	GenerateCallsCounter.Decrement();
 
-	// Convert result in GameThread
-	FGenerateResult GenerateResult = ConvertResult_GameThread(this, OpaqueParent, MaskedParent, TranslucentParent, OutputHandler, MaterialCache);
-
-	return GenerateResult;
+	return {true, OutputHandler->GetInstances(), OutputHandler->GetMeshes(), OutputHandler->GetMaterials()};
 }
 
 TFuture<FAttributeMapPtr> VitruvioModule::LoadDefaultRuleAttributesAsync(const FInitialShapeData& InitialShape, URulePackage* RulePackage,
@@ -435,8 +360,12 @@ TFuture<FAttributeMapPtr> VitruvioModule::LoadDefaultRuleAttributesAsync(const F
 	if (!Initialized)
 	{
 		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
-		return {};
+		TPromise<FAttributeMapPtr> Result;
+		Result.SetValue(nullptr);
+		return Result.GetFuture();
 	}
+
+	LoadAttributesCounter.Increment();
 
 	return Async(EAsyncExecution::Thread, [=]() -> TSharedPtr<FAttributeMap> {
 		const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(RulePackage).Get();
@@ -458,6 +387,13 @@ TFuture<FAttributeMapPtr> VitruvioModule::LoadDefaultRuleAttributesAsync(const F
 		AttributeMapUPtr DefaultAttributeMap(
 			GetDefaultAttributeValues(RuleFile.c_str(), StartRule.c_str(), ResolveMap, InitialShape, PrtCache.get(), RandomSeed));
 
+		LoadAttributesCounter.Decrement();
+
+		if (!Initialized)
+		{
+			return {};
+		}
+
 		return MakeShared<FAttributeMap>(std::move(DefaultAttributeMap), std::move(RuleInfo));
 	});
 }
@@ -466,6 +402,12 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(URulePackage* const 
 {
 	TPromise<ResolveMapSPtr> Promise;
 	TFuture<ResolveMapSPtr> Future = Promise.GetFuture();
+
+	if (!Initialized)
+	{
+		Promise.SetValue({});
+		return Future;
+	}
 
 	const TLazyObjectPtr<URulePackage> LazyRulePackagePtr(RulePackage);
 
@@ -497,10 +439,7 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(URulePackage* const 
 					FScopeLock Lock(&LoadResolveMapLock);
 					return ResolveMapCache[LazyRulePackagePtr];
 				},
-				MoveTemp(Promise),
-				ENamedThreads::
-					AnyThread); // TODO AnyThread could ben GameThread
-								// https://forums.unrealengine.com/development-discussion/c-gameplay-programming/14071-multithreading-creating-a-task-hangs-the-game
+				MoveTemp(Promise), ENamedThreads::AnyThread);
 	}
 	else
 	{
