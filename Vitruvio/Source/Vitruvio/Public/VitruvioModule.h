@@ -27,7 +27,7 @@ struct FGenerateResultDescription
 	bool IsValid;
 
 	Vitruvio::FInstanceMap Instances;
-	TMap<int32, FMeshDescription> MesheDescriptions;
+	TMap<int32, FMeshDescription> MeshDescriptions;
 	TMap<int32, TArray<Vitruvio::FMaterialAttributeContainer>> Materials;
 };
 

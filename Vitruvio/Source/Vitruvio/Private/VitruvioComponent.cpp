@@ -373,7 +373,7 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 	};
 
 	// convert all meshes
-	for (auto& IdAndMesh : GenerateResult.MesheDescriptions)
+	for (auto& IdAndMesh : GenerateResult.MeshDescriptions)
 	{
 		UStaticMesh* StaticMesh = NewObject<UStaticMesh>();
 
