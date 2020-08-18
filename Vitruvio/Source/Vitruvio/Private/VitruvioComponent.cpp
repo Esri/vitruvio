@@ -224,15 +224,6 @@ int32 CalculateRandomSeed(const FTransform Transform, const UInitialShape* Initi
 	return GetTypeHash(Transform.TransformPosition(Centroid));
 }
 
-void InvalidateToken(const FInvalidationTokenPtr& Token)
-{
-	if (Token)
-	{
-		FScopeLock Lock(&Token->CriticalSection);
-		Token->Invalidate();
-	}
-}
-
 } // namespace
 
 UVitruvioComponent::UVitruvioComponent()
@@ -429,8 +420,15 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 
 void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 {
-	InvalidateToken(GenerateInvalidationToken);
-	InvalidateToken(LoadAttributesInvalidationToken);
+	if (GenerateInvalidationToken)
+	{
+		GenerateInvalidationToken->Invalidate();
+	}
+
+	if (LoadAttributesInvalidationToken)
+	{
+		LoadAttributesInvalidationToken->Invalidate();
+	}
 }
 
 void UVitruvioComponent::Generate()
@@ -461,9 +459,9 @@ void UVitruvioComponent::Generate()
 		// clang-format off
 		GenerateResult.Result.Next([this](const FInvalidatableGenerateResult::ResultType& Result)
 		{
-			FScopeLock Lock(&Result.InvalidationToken->CriticalSection);
+			FScopeLock Lock(&Result.InvalidationToken->Lock);
 			
-			if (Result.InvalidationToken->IsInvalid) {
+			if (Result.InvalidationToken->IsInvalid()) {
 				return;
 			}
 			
@@ -581,9 +579,9 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 	AttributesResult.Result.Next([this, KeepOldAttributeValues](const FInvalidatableAttributeMapResult::ResultType& Result) {
 		FFunctionGraphTask::CreateAndDispatchWhenReady(
 			[this, Result, KeepOldAttributeValues]() {
-				FScopeLock(&Result.InvalidationToken->CriticalSection);
+				FScopeLock(&Result.InvalidationToken->Lock);
 
-				if (Result.InvalidationToken->IsInvalid)
+				if (Result.InvalidationToken->IsInvalid())
 				{
 					return;
 				}

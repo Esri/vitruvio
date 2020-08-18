@@ -32,12 +32,21 @@ struct FGenerateResultDescription
 class FInvalidationToken
 {
 public:
-	FThreadSafeBool IsInvalid = false;
-	FCriticalSection CriticalSection;
+	mutable FCriticalSection Lock;
 
-	void Invalidate() { IsInvalid = true; }
+	void Invalidate()
+	{
+		FScopeLock InvalidationLock(&Lock);
+		bIsInvalid = true;
+	}
+	
+	bool IsInvalid() const { return bIsInvalid; }
+
+private:
+	FThreadSafeBool bIsInvalid = false;
 };
 using FInvalidationTokenPtr = TSharedPtr<FInvalidationToken>;
+using FInvalidationTokenConstPtr = TSharedPtr<const FInvalidationToken>;
 
 template <typename R>
 class TInvalidatableResult
@@ -45,7 +54,7 @@ class TInvalidatableResult
 public:
 	struct ResultType
 	{
-		FInvalidationTokenPtr InvalidationToken;
+		FInvalidationTokenConstPtr InvalidationToken;
 		R Value;
 	};
 	using FutureType = TFuture<ResultType>;
