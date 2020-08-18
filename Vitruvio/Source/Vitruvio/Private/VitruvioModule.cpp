@@ -292,11 +292,12 @@ FInvalidatableGenerateResult VitruvioModule::GenerateAsync(const FInitialShapeDa
 	if (!Initialized)
 	{
 		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
+
 		TPromise<FInvalidatableGenerateResult::ResultType> Result;
 		Result.SetValue({InvalidationToken, {}});
 		return {
 			Result.GetFuture(),
-			{},
+			InvalidationToken,
 		};
 	}
 
