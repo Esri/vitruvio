@@ -304,7 +304,7 @@ void UVitruvioComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 
 		for (const FInstance& Instance : ConvertedResult.Instances)
 		{
-			auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>();
+			auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(StaticMeshActor);
 			const TArray<FTransform>& Transforms = Instance.Transforms;
 			InstancedComponent->SetStaticMesh(Instance.Mesh);
 
@@ -321,7 +321,7 @@ void UVitruvioComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 			}
 
 			InstancedComponent->AttachToComponent(StaticMeshActor->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
-			StaticMeshActor->AddInstanceComponent(InstancedComponent);
+			InstancedComponent->RegisterComponent();
 		}
 
 		bNeedsRegenerate = false;
