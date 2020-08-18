@@ -24,12 +24,39 @@ DECLARE_LOG_CATEGORY_EXTERN(LogUnrealPrt, Log, All);
 
 struct FGenerateResultDescription
 {
-	bool IsValid;
-
 	Vitruvio::FInstanceMap Instances;
 	TMap<int32, FMeshDescription> MeshDescriptions;
 	TMap<int32, TArray<Vitruvio::FMaterialAttributeContainer>> Materials;
 };
+
+class FInvalidationToken
+{
+public:
+	FThreadSafeBool IsInvalid = false;
+	FCriticalSection CriticalSection;
+
+	void Invalidate() { IsInvalid = true; }
+};
+using FInvalidationTokenPtr = TSharedPtr<FInvalidationToken>;
+
+template <typename R>
+class TInvalidatableResult
+{
+public:
+	struct ResultType
+	{
+		FInvalidationTokenPtr InvalidationToken;
+		R Value;
+	};
+	using FutureType = TFuture<ResultType>;
+
+	FutureType Result;
+	FInvalidationTokenPtr InvalidationToken;
+};
+
+using FInvalidatableGenerateResult = TInvalidatableResult<FGenerateResultDescription>;
+
+using FInvalidatableAttributeMapResult = TInvalidatableResult<FAttributeMapPtr>;
 
 class VitruvioModule final : public IModuleInterface, public FGCObject
 {
@@ -49,9 +76,9 @@ public:
 	 * \param RandomSeed
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API TFuture<FGenerateResultDescription> GenerateAsync(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent,
-																   UMaterial* MaskedParent, UMaterial* TranslucentParent, URulePackage* RulePackage,
-																   const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const;
+	VITRUVIO_API FInvalidatableGenerateResult GenerateAsync(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
+															UMaterial* TranslucentParent, URulePackage* RulePackage,
+															const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const;
 
 	/**
 	 * \brief Generate the models with the given InitialShape, RulePackage and Attributes.
@@ -77,8 +104,8 @@ public:
 	 * \param RandomSeed
 	 * \return
 	 */
-	VITRUVIO_API TFuture<FAttributeMapPtr> LoadDefaultRuleAttributesAsync(const FInitialShapeData& InitialShape, URulePackage* RulePackage,
-																		  const int32 RandomSeed) const;
+	VITRUVIO_API FInvalidatableAttributeMapResult LoadDefaultRuleAttributesAsync(const FInitialShapeData& InitialShape, URulePackage* RulePackage,
+																				 const int32 RandomSeed) const;
 
 	/**
 	 * \return whether PRT is initialized meaning installed and ready to use. Before initialization generation is not possible and will

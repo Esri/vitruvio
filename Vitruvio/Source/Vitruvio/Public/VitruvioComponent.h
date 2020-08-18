@@ -93,6 +93,8 @@ public:
 
 	virtual void OnUnregister() override;
 
+	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
+
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 #if WITH_EDITOR
@@ -105,6 +107,9 @@ public:
 
 private:
 	TQueue<FGenerateResultDescription> GenerateQueue;
+
+	FInvalidationTokenPtr GenerateInvalidationToken;
+	FInvalidationTokenPtr LoadAttributesInvalidationToken;
 
 	void LoadDefaultAttributes(bool KeepOldAttributeValues = false);
 

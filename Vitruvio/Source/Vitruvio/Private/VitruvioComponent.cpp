@@ -223,6 +223,16 @@ int32 CalculateRandomSeed(const FTransform Transform, const UInitialShape* Initi
 	const FVector Centroid = GetCentroid(InitialShape->GetInitialShapeData().GetVertices());
 	return GetTypeHash(Transform.TransformPosition(Centroid));
 }
+
+void InvalidateToken(const FInvalidationTokenPtr& Token)
+{
+	if (Token)
+	{
+		FScopeLock Lock(&Token->CriticalSection);
+		Token->Invalidate();
+	}
+}
+
 } // namespace
 
 UVitruvioComponent::UVitruvioComponent()
@@ -326,6 +336,11 @@ void UVitruvioComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 
 		bNeedsRegenerate = false;
 	}
+
+	if (bNeedsRegenerate)
+	{
+		Generate();
+	}
 }
 
 void UVitruvioComponent::NotifyAttributesChanged()
@@ -416,6 +431,12 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 	return {ShapeMesh, Instances};
 }
 
+void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
+{
+	InvalidateToken(GenerateInvalidationToken);
+	InvalidateToken(LoadAttributesInvalidationToken);
+}
+
 void UVitruvioComponent::Generate()
 {
 	if (!Rpk || !AttributesReady || !InitialShape)
@@ -424,55 +445,38 @@ void UVitruvioComponent::Generate()
 		return;
 	}
 
-	// Since we can not abort an ongoing generate call from PRT, we just regenerate after the current generate call has completed.
-	if (bIsGenerating)
+	// Since we can not abort an ongoing generate call from PRT, we invalidate the result and regenerate after the current generate call has
+	// completed.
+	if (GenerateInvalidationToken)
 	{
-		bNeedsRegenerate = true;
-		return;
-	}
+		GenerateInvalidationToken->Invalidate();
+		GenerateInvalidationToken = nullptr;
 
-	bIsGenerating = true;
+		bNeedsRegenerate = true;
+	}
 
 	if (InitialShape)
 	{
-		TFuture<FGenerateResultDescription> GenerateFuture = VitruvioModule::Get().GenerateAsync(
+		FInvalidatableGenerateResult GenerateResult = VitruvioModule::Get().GenerateAsync(
 			InitialShape->GetInitialShapeData(), OpaqueParent, MaskedParent, TranslucentParent, Rpk, Attributes, RandomSeed);
 
+		GenerateInvalidationToken = GenerateResult.InvalidationToken;
+
 		// clang-format off
-		GenerateFuture.Next([=](const FGenerateResultDescription& Result)
+		GenerateResult.Result.Next([=](const FInvalidatableGenerateResult::ResultType& Result)
 		{
-			const FGraphEventRef CreateMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this, &Result]()
-			{
-				if (!Result.IsValid)
-				{
-					return;
-				}
-				
-				bIsGenerating = false;
-
-				AActor* Owner = GetOwner();
-				if (Owner == nullptr)
-				{
-					return;
-				}
-				
-				// If we need a regenerate (there has been a generate request during another generate call)
-				if (bNeedsRegenerate)
-				{
-					bNeedsRegenerate = false;
-					Generate();
-				}
-				else
-				{
-					GenerateQueue.Enqueue(Result);
-				}
-				
-			},
-			TStatId(), nullptr, ENamedThreads::GameThread);
-
-			FTaskGraphInterface::Get().WaitUntilTaskCompletes(CreateMeshTask);
+			FScopeLock Lock(&Result.InvalidationToken->CriticalSection);
+			
+			if (Result.InvalidationToken->IsInvalid) {
+				return;
+			}
+			
+			GenerateInvalidationToken = nullptr;
+			GenerateQueue.Enqueue(Result.Value);
 		});
 		// clang-format on
+
+		bNeedsRegenerate = false;
 	}
 }
 
@@ -573,12 +577,17 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 	AttributesReady = false;
 	LoadingAttributes = true;
 
-	TFuture<FAttributeMapPtr> AttributesFuture =
+	FInvalidatableAttributeMapResult AttributesResult =
 		VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape->GetInitialShapeData(), Rpk, RandomSeed);
-	AttributesFuture.Next([this, KeepOldAttributeValues](const FAttributeMapPtr& Result) {
+
+	LoadAttributesInvalidationToken = AttributesResult.InvalidationToken;
+
+	AttributesResult.Result.Next([this, KeepOldAttributeValues](const FInvalidatableAttributeMapResult::ResultType& Result) {
 		FFunctionGraphTask::CreateAndDispatchWhenReady(
 			[this, Result, KeepOldAttributeValues]() {
-				if (!Result || IsEngineExitRequested())
+				FScopeLock(&Result.InvalidationToken->CriticalSection);
+
+				if (Result.InvalidationToken->IsInvalid)
 				{
 					return;
 				}
@@ -587,7 +596,7 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 				if (KeepOldAttributeValues)
 				{
 					TMap<FString, URuleAttribute*> OldAttributes = Attributes;
-					Attributes = Result->ConvertToUnrealAttributeMap(this);
+					Attributes = Result.Value->ConvertToUnrealAttributeMap(this);
 
 					for (auto Attribute : Attributes)
 					{
@@ -599,7 +608,7 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 				}
 				else
 				{
-					Attributes = Result->ConvertToUnrealAttributeMap(this);
+					Attributes = Result.Value->ConvertToUnrealAttributeMap(this);
 				}
 
 				AttributesReady = true;
