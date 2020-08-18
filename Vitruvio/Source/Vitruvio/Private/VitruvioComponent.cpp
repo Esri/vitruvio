@@ -463,7 +463,7 @@ void UVitruvioComponent::Generate()
 		GenerateInvalidationToken = GenerateResult.InvalidationToken;
 
 		// clang-format off
-		GenerateResult.Result.Next([=](const FInvalidatableGenerateResult::ResultType& Result)
+		GenerateResult.Result.Next([this](const FInvalidatableGenerateResult::ResultType& Result)
 		{
 			FScopeLock Lock(&Result.InvalidationToken->CriticalSection);
 			
