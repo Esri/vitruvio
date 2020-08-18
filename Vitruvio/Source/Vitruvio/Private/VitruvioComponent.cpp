@@ -97,9 +97,9 @@ class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) override
 	{
-		if (Object && Object->IsA(UStaticMeshComponent::StaticClass()))
+		if (Object)
 		{
-			return Property && Property->GetFName() == TEXT("StaticMesh");
+			return Property && (Property->GetFName() == TEXT("StaticMesh") || Property->GetFName() == TEXT("StaticMeshComponent"));
 		}
 		return false;
 	}
@@ -207,7 +207,7 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) override
 	{
-		if (Object && Object->IsA(USplineComponent::StaticClass()))
+		if (Object)
 		{
 			return Property && Property->GetFName() == TEXT("SplineCurves");
 		}
@@ -268,15 +268,11 @@ void UVitruvioComponent::OnRegister()
 		}
 	}
 
-	if (InitialShape)
+	if (Rpk && InitialShape)
 	{
-		RandomSeed = CalculateRandomSeed(GetOwner()->GetActorTransform(), InitialShape);
-
-		if (Rpk)
-		{
-			LoadDefaultAttributes(true);
-		}
+		LoadDefaultAttributes(true);
 	}
+
 #if WITH_EDITOR
 	PropertyChangeDelegate = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &UVitruvioComponent::OnPropertyChanged);
 #endif
