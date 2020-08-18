@@ -30,6 +30,7 @@ const TMap<FString, EMaterialPropertyType> KeyToTypeMap = {
 	{TEXT("roughness"), EMaterialPropertyType::SCALAR},
 
 	{TEXT("shader"), EMaterialPropertyType::STRING},
+	{TEXT("name"), EMaterialPropertyType::STRING},
 };
 // clang-format on
 
@@ -136,7 +137,7 @@ uint32 GetTypeHash(const FMaterialAttributeContainer& Object)
 
 uint32 GetTypeHash(const FInstanceCacheKey& Object)
 {
-	return HashCombine(GetTypeHash(Object.Mesh), GetArrayHash(Object.MaterialOverrides));
+	return HashCombine(Object.PrototypeId, GetArrayHash(Object.MaterialOverrides));
 }
 
 } // namespace Vitruvio

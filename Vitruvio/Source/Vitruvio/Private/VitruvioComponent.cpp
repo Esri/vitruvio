@@ -2,6 +2,7 @@
 
 #include "VitruvioComponent.h"
 
+#include "MaterialConversion.h"
 #include "VitruvioModule.h"
 
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
@@ -9,6 +10,8 @@
 #include "Engine/StaticMeshActor.h"
 #include "ObjectEditorUtils.h"
 #include "PolygonWindings.h"
+#include "StaticMeshAttributes.h"
+#include "UnrealCallbacks.h"
 #include "VitruvioTypes.h"
 
 #if WITH_EDITOR
@@ -94,9 +97,9 @@ class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) override
 	{
-		if (Object && Object->IsA(UStaticMeshComponent::StaticClass()))
+		if (Object)
 		{
-			return Property && Property->GetFName() == TEXT("StaticMesh");
+			return Property && (Property->GetFName() == TEXT("StaticMesh") || Property->GetFName() == TEXT("StaticMeshComponent"));
 		}
 		return false;
 	}
@@ -204,7 +207,7 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) override
 	{
-		if (Object && Object->IsA(USplineComponent::StaticClass()))
+		if (Object)
 		{
 			return Property && Property->GetFName() == TEXT("SplineCurves");
 		}
@@ -220,6 +223,7 @@ int32 CalculateRandomSeed(const FTransform Transform, const UInitialShape* Initi
 	const FVector Centroid = GetCentroid(InitialShape->GetInitialShapeData().GetVertices());
 	return GetTypeHash(Transform.TransformPosition(Centroid));
 }
+
 } // namespace
 
 UVitruvioComponent::UVitruvioComponent()
@@ -239,6 +243,11 @@ void UVitruvioComponent::OnRegister()
 {
 	Super::OnRegister();
 
+	// Ignore generation during cooking
+	if (GIsCookerLoadingPackage)
+	{
+		return;
+	}
 	// Try to create the initial shape on first register
 	for (FInitialShapeFactory* Factory : GInitialShapeFactories)
 	{
@@ -250,10 +259,11 @@ void UVitruvioComponent::OnRegister()
 		}
 	}
 
-	if (InitialShape && Rpk)
+	if (Rpk && InitialShape)
 	{
 		LoadDefaultAttributes(true);
 	}
+
 #if WITH_EDITOR
 	PropertyChangeDelegate = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &UVitruvioComponent::OnPropertyChanged);
 #endif
@@ -266,6 +276,99 @@ void UVitruvioComponent::OnUnregister()
 #if WITH_EDITOR
 	FCoreUObjectDelegates::OnObjectPropertyChanged.Remove(PropertyChangeDelegate);
 #endif
+}
+
+void UVitruvioComponent::ProcessGenerateQueue()
+{
+	if (!GenerateQueue.IsEmpty())
+	{
+		// Get from queue and build meshes
+		FGenerateResultDescription Result;
+		GenerateQueue.Dequeue(Result);
+
+		FConvertedGenerateResult ConvertedResult = BuildResult(Result, VitruvioModule::Get().GetMaterialCache());
+
+		RemoveGeneratedMeshes();
+
+		// Create actors for generated meshes
+		QUICK_SCOPE_CYCLE_COUNTER(STAT_VitruvioActor_CreateActors);
+		FActorSpawnParameters Parameters;
+		Parameters.Owner = GetOwner();
+		AStaticMeshActor* StaticMeshActor = GetWorld()->SpawnActor<AStaticMeshActor>(Parameters);
+		StaticMeshActor->SetMobility(EComponentMobility::Movable);
+		StaticMeshActor->GetStaticMeshComponent()->SetStaticMesh(ConvertedResult.ShapeMesh);
+		StaticMeshActor->AttachToActor(GetOwner(), FAttachmentTransformRules::KeepRelativeTransform);
+
+		for (const FInstance& Instance : ConvertedResult.Instances)
+		{
+			auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(StaticMeshActor);
+			const TArray<FTransform>& Transforms = Instance.Transforms;
+			InstancedComponent->SetStaticMesh(Instance.Mesh);
+
+			// Add all instance transforms
+			for (const FTransform& Transform : Transforms)
+			{
+				InstancedComponent->AddInstance(Transform);
+			}
+
+			// Apply override materials
+			for (int32 MaterialIndex = 0; MaterialIndex < Instance.OverrideMaterials.Num(); ++MaterialIndex)
+			{
+				InstancedComponent->SetMaterial(MaterialIndex, Instance.OverrideMaterials[MaterialIndex]);
+			}
+
+			InstancedComponent->AttachToComponent(StaticMeshActor->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+			InstancedComponent->RegisterComponent();
+		}
+
+		bNeedsRegenerate = false;
+	}
+
+	if (bNeedsRegenerate)
+	{
+		Generate();
+	}
+}
+
+void UVitruvioComponent::ProcessLoadAttributesQueue()
+{
+	if (!LoadAttributesQueue.IsEmpty())
+	{
+		FLoadAttributes LoadAttributes;
+		LoadAttributesQueue.Dequeue(LoadAttributes);
+		if (LoadAttributes.bKeepOldAttributes)
+		{
+			TMap<FString, URuleAttribute*> OldAttributes = Attributes;
+			Attributes = LoadAttributes.AttributeMap->ConvertToUnrealAttributeMap(this);
+
+			for (auto Attribute : Attributes)
+			{
+				if (OldAttributes.Contains(Attribute.Key))
+				{
+					Attribute.Value->CopyValue(OldAttributes[Attribute.Key]);
+				}
+			}
+		}
+		else
+		{
+			Attributes = LoadAttributes.AttributeMap->ConvertToUnrealAttributeMap(this);
+		}
+
+		AttributesReady = true;
+
+		NotifyAttributesChanged();
+
+		if (GenerateAutomatically)
+		{
+			Generate();
+		}
+	}
+}
+
+void UVitruvioComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	ProcessGenerateQueue();
+	ProcessLoadAttributesQueue();
 }
 
 void UVitruvioComponent::NotifyAttributesChanged()
@@ -293,6 +396,82 @@ void UVitruvioComponent::RemoveGeneratedMeshes()
 	}
 }
 
+FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescription& GenerateResult,
+														 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& Cache)
+{
+	TMap<int32, UStaticMesh*> MeshMap;
+
+	auto CachedMaterial = [this, &Cache](const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name, UObject* Outer) {
+		if (Cache.Contains(MaterialAttributes))
+		{
+			return Cache[MaterialAttributes];
+		}
+		else
+		{
+			UMaterialInstanceDynamic* Material =
+				Vitruvio::GameThread_CreateMaterialInstance(Outer, Name, OpaqueParent, MaskedParent, TranslucentParent, MaterialAttributes);
+			Cache.Add(MaterialAttributes, Material);
+			return Material;
+		}
+	};
+
+	// convert all meshes
+	for (auto& IdAndMesh : GenerateResult.MeshDescriptions)
+	{
+		UStaticMesh* StaticMesh = NewObject<UStaticMesh>();
+
+		const TArray<Vitruvio::FMaterialAttributeContainer>& MeshMaterials = GenerateResult.Materials[IdAndMesh.Key];
+		FStaticMeshAttributes MeshAttributes(IdAndMesh.Value);
+		const auto PolygonGroups = IdAndMesh.Value.PolygonGroups();
+		size_t MaterialIndex = 0;
+		for (const auto& PolygonId : PolygonGroups.GetElementIDs())
+		{
+			const FName MaterialName = MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonId];
+			const FName SlotName = StaticMesh->AddMaterial(CachedMaterial(MeshMaterials[MaterialIndex], MaterialName, StaticMesh));
+			MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonId] = SlotName;
+
+			++MaterialIndex;
+		}
+
+		TArray<const FMeshDescription*> MeshDescriptionPtrs;
+		MeshDescriptionPtrs.Emplace(&IdAndMesh.Value);
+		StaticMesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
+		MeshMap.Add(IdAndMesh.Key, StaticMesh);
+	}
+
+	// convert materials
+	TArray<FInstance> Instances;
+	for (const auto& Instance : GenerateResult.Instances)
+	{
+		UStaticMesh* Mesh = MeshMap[Instance.Key.PrototypeId];
+		TArray<UMaterialInstanceDynamic*> OverrideMaterials;
+		for (size_t MaterialIndex = 0; MaterialIndex < Instance.Key.MaterialOverrides.Num(); ++MaterialIndex)
+		{
+			const Vitruvio::FMaterialAttributeContainer& MaterialContainer = Instance.Key.MaterialOverrides[MaterialIndex];
+			FName MaterialName = FName(MaterialContainer.StringProperties["name"]);
+			OverrideMaterials.Add(CachedMaterial(MaterialContainer, MaterialName, GetTransientPackage()));
+		}
+
+		Instances.Add({Mesh, OverrideMaterials, Instance.Value});
+	}
+
+	UStaticMesh* ShapeMesh = MeshMap.Contains(UnrealCallbacks::NO_PROTOTYPE_INDEX) ? MeshMap[UnrealCallbacks::NO_PROTOTYPE_INDEX] : nullptr;
+	return {ShapeMesh, Instances};
+}
+
+void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
+{
+	if (GenerateInvalidationToken)
+	{
+		GenerateInvalidationToken->Invalidate();
+	}
+
+	if (LoadAttributesInvalidationToken)
+	{
+		LoadAttributesInvalidationToken->Invalidate();
+	}
+}
+
 void UVitruvioComponent::Generate()
 {
 	if (!Rpk || !AttributesReady || !InitialShape)
@@ -301,85 +480,38 @@ void UVitruvioComponent::Generate()
 		return;
 	}
 
-	// Since we can not abort an ongoing generate call from PRT, we just regenerate after the current generate call has completed.
-	if (bIsGenerating)
+	// Since we can not abort an ongoing generate call from PRT, we invalidate the result and regenerate after the current generate call has
+	// completed.
+	if (GenerateInvalidationToken)
 	{
-		bNeedsRegenerate = true;
-		return;
-	}
+		GenerateInvalidationToken->Invalidate();
+		GenerateInvalidationToken = nullptr;
 
-	bIsGenerating = true;
+		bNeedsRegenerate = true;
+	}
 
 	if (InitialShape)
 	{
-		TFuture<FGenerateResult> GenerateFuture = VitruvioModule::Get().GenerateAsync(InitialShape->GetInitialShapeData(), OpaqueParent, MaskedParent,
-																					  TranslucentParent, Rpk, Attributes, RandomSeed);
+		FInvalidatableGenerateResult GenerateResult = VitruvioModule::Get().GenerateAsync(
+			InitialShape->GetInitialShapeData(), OpaqueParent, MaskedParent, TranslucentParent, Rpk, Attributes, RandomSeed);
+
+		GenerateInvalidationToken = GenerateResult.InvalidationToken;
 
 		// clang-format off
-		GenerateFuture.Next([=](const FGenerateResult& Result)
+		GenerateResult.Result.Next([this](const FInvalidatableGenerateResult::ResultType& Result)
 		{
-			const FGraphEventRef CreateMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this, &Result]()
-			{
-				bIsGenerating = false;
-
-				AActor* Owner = GetOwner();
-				if (Owner == nullptr)
-				{
-					return;
-				}
-				
-				// If we need a regenerate (eg there has been a generate request while there 
-				if (bNeedsRegenerate)
-				{
-					bNeedsRegenerate = false;
-					Generate();
-				}
-				else
-				{
-					RemoveGeneratedMeshes();
-
-					// Create actors for generated meshes
-					QUICK_SCOPE_CYCLE_COUNTER(STAT_VitruvioActor_CreateActors);
-					FActorSpawnParameters Parameters;
-					Parameters.Owner = Owner;
-					AStaticMeshActor* StaticMeshActor = GetWorld()->SpawnActor<AStaticMeshActor>(Parameters);
-					StaticMeshActor->SetMobility(EComponentMobility::Movable);
-					StaticMeshActor->GetStaticMeshComponent()->SetStaticMesh(Result.ShapeMesh);
-					StaticMeshActor->AttachToActor(Owner, FAttachmentTransformRules::KeepRelativeTransform);
-
-					for (const TTuple<Vitruvio::FInstanceCacheKey, TArray<FTransform>> & MeshAndInstance : Result.Instances)
-					{
-						auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(StaticMeshActor);
-						const TArray<FTransform>& Instances = MeshAndInstance.Value;
-						const Vitruvio::FInstanceCacheKey& CacheKey = MeshAndInstance.Key;
-						InstancedComponent->SetStaticMesh(CacheKey.Mesh);
-
-						// Add all instance transforms
-						for (const FTransform& Transform : Instances)
-						{
-							InstancedComponent->AddInstance(Transform);
-						}
-
-						// Apply override materials
-						for (int32 MaterialIndex = 0; MaterialIndex < CacheKey.MaterialOverrides.Num(); ++MaterialIndex)
-						{
-							InstancedComponent->SetMaterial(MaterialIndex, CacheKey.MaterialOverrides[MaterialIndex]);
-						}
-						
-						InstancedComponent->AttachToComponent(StaticMeshActor->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
-						StaticMeshActor->AddInstanceComponent(InstancedComponent);
-					}
-					StaticMeshActor->RegisterAllComponents();
-
-					bNeedsRegenerate = false;
-				}
-				
-			},
-			TStatId(), nullptr, ENamedThreads::GameThread);
-
-			FTaskGraphInterface::Get().WaitUntilTaskCompletes(CreateMeshTask);
+			FScopeLock Lock(&Result.InvalidationToken->Lock);
+			
+			if (Result.InvalidationToken->IsInvalid()) {
+				return;
+			}
+			
+			GenerateInvalidationToken = nullptr;
+			GenerateQueue.Enqueue(Result.Value);
 		});
 		// clang-format on
+
+		bNeedsRegenerate = false;
 	}
 }
 
@@ -480,39 +612,21 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 	AttributesReady = false;
 	LoadingAttributes = true;
 
-	TFuture<FAttributeMapPtr> AttributesFuture =
+	FInvalidatableAttributeMapResult AttributesResult =
 		VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape->GetInitialShapeData(), Rpk, RandomSeed);
-	AttributesFuture.Next([this, KeepOldAttributeValues](const FAttributeMapPtr& Result) {
-		FFunctionGraphTask::CreateAndDispatchWhenReady(
-			[this, Result, KeepOldAttributeValues]() {
-				LoadingAttributes = false;
-				if (KeepOldAttributeValues)
-				{
-					TMap<FString, URuleAttribute*> OldAttributes = Attributes;
-					Attributes = Result->ConvertToUnrealAttributeMap(this);
 
-					for (auto Attribute : Attributes)
-					{
-						if (OldAttributes.Contains(Attribute.Key))
-						{
-							Attribute.Value->CopyValue(OldAttributes[Attribute.Key]);
-						}
-					}
-				}
-				else
-				{
-					Attributes = Result->ConvertToUnrealAttributeMap(this);
-				}
+	LoadAttributesInvalidationToken = AttributesResult.InvalidationToken;
 
-				AttributesReady = true;
+	AttributesResult.Result.Next([this, KeepOldAttributeValues](const FInvalidatableAttributeMapResult::ResultType& Result) {
+		FScopeLock(&Result.InvalidationToken->Lock);
 
-				NotifyAttributesChanged();
+		if (Result.InvalidationToken->IsInvalid())
+		{
+			return;
+		}
 
-				if (GenerateAutomatically)
-				{
-					Generate();
-				}
-			},
-			TStatId(), nullptr, ENamedThreads::GameThread);
+		LoadingAttributes = false;
+
+		LoadAttributesQueue.Enqueue({Result.Value, KeepOldAttributeValues});
 	});
 }

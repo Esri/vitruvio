@@ -12,7 +12,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogMaterialConversion, Log, All);
 
 namespace Vitruvio
 {
-UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, UMaterialInterface* OpaqueParent, UMaterialInterface* MaskedParent,
-															UMaterialInterface* TranslucentParent,
+UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, const FName& Name, UMaterialInterface* OpaqueParent,
+															UMaterialInterface* MaskedParent, UMaterialInterface* TranslucentParent,
 															const FMaterialAttributeContainer& MaterialAttributes);
 }

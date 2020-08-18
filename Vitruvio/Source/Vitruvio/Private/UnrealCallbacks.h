@@ -9,6 +9,7 @@
 
 #include "Core.h"
 #include "Engine/StaticMesh.h"
+#include "MeshDescription.h"
 #include "Modules/ModuleManager.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogUnrealCallbacks, Log, All);
@@ -18,18 +19,12 @@ class UnrealCallbacks final : public IUnrealCallbacks
 	AttributeMapBuilderUPtr& AttributeMapBuilder;
 
 	Vitruvio::FInstanceMap Instances;
-	TMap<int32, UStaticMesh*> Meshes;
-
-	TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*> MaterialCache;
-	FCriticalSection MaterialCacheSection;
+	TMap<int32, FMeshDescription> Meshes;
+	TMap<int32, TArray<Vitruvio::FMaterialAttributeContainer>> Materials;
 
 	UMaterial* OpaqueParent;
 	UMaterial* MaskedParent;
 	UMaterial* TranslucentParent;
-
-	static const int32 NO_PROTOTYPE_INDEX = -1;
-
-	TArray<UObject*> ReferencedUObjects;
 
 public:
 	~UnrealCallbacks() override = default;
@@ -38,9 +33,15 @@ public:
 	{
 	}
 
+	static const int32 NO_PROTOTYPE_INDEX = -1;
+
 	const Vitruvio::FInstanceMap& GetInstances() const { return Instances; }
 
-	UStaticMesh* GetModel() const { return Meshes.Contains(NO_PROTOTYPE_INDEX) ? Meshes[NO_PROTOTYPE_INDEX] : nullptr; }
+	const TMap<int32, FMeshDescription>& GetMeshes() const { return Meshes; }
+
+	const TMap<int32, TArray<Vitruvio::FMaterialAttributeContainer>>& GetMaterials() const { return Materials; }
+
+	const FMeshDescription& GetMeshById(int32 PrototypId) const { return Meshes[PrototypId]; }
 
 	/**
 	 * @param name initial shape name, optionally used to create primitive groups on output

@@ -2,11 +2,13 @@
 
 #include "VitruvioModule.h"
 
+#include "AsyncHelpers.h"
 #include "PRTTypes.h"
 #include "PRTUtils.h"
 #include "UnrealCallbacks.h"
 
 #include "Util/AttributeConversion.h"
+#include "Util/MaterialConversion.h"
 #include "Util/PolygonWindings.h"
 
 #include "prt/API.h"
@@ -16,6 +18,7 @@
 #include "Interfaces/IPluginManager.h"
 #include "MeshDescription.h"
 #include "Modules/ModuleManager.h"
+#include "StaticMeshAttributes.h"
 #include "UObject/GCObjectScopeGuard.h"
 #include "UObject/UObjectBaseUtility.h"
 
@@ -33,12 +36,13 @@ class FLoadResolveMapTask
 	TPromise<ResolveMapSPtr> Promise;
 	TMap<TLazyObjectPtr<URulePackage>, ResolveMapSPtr>& ResolveMapCache;
 	FCriticalSection& LoadResolveMapLock;
+	FString RpkFolder;
 
 public:
-	FLoadResolveMapTask(TPromise<ResolveMapSPtr>&& InPromise, const TLazyObjectPtr<URulePackage> LazyRulePackagePtr,
+	FLoadResolveMapTask(TPromise<ResolveMapSPtr>&& InPromise, const FString RpkFolder, const TLazyObjectPtr<URulePackage> LazyRulePackagePtr,
 						TMap<TLazyObjectPtr<URulePackage>, ResolveMapSPtr>& ResolveMapCache, FCriticalSection& LoadResolveMapLock)
 		: LazyRulePackagePtr(LazyRulePackagePtr), Promise(MoveTemp(InPromise)), ResolveMapCache(ResolveMapCache),
-		  LoadResolveMapLock(LoadResolveMapLock)
+		  LoadResolveMapLock(LoadResolveMapLock), RpkFolder(RpkFolder)
 	{
 	}
 
@@ -55,8 +59,7 @@ public:
 
 		// Create rpk on disk for PRT
 		IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-		FString TempDir(WCHAR_TO_TCHAR(prtu::temp_directory_path().c_str()));
-		const FString RpkFolder = FPaths::Combine(TempDir, TEXT("PRT"), TEXT("UnrealGeometryEncoder"), FPaths::GetPath(UriPath.Mid(1)));
+
 		const FString RpkFile = FPaths::GetBaseFilename(UriPath, true) + TEXT(".rpk");
 		const FString RpkPath = FPaths::Combine(RpkFolder, RpkFile);
 		PlatformFile.CreateDirectoryTree(*RpkFolder);
@@ -225,16 +228,41 @@ void VitruvioModule::InitializePrt()
 	Initialized = Status == prt::STATUS_OK;
 
 	PrtCache.reset(prt::CacheObject::create(prt::CacheObject::CACHE_TYPE_NONREDUNDANT));
+
+	const FString TempDir(WCHAR_TO_TCHAR(prtu::temp_directory_path().c_str()));
+	RpkFolder = FPaths::CreateTempFilename(*TempDir, TEXT("Vitruvio_"), TEXT(""));
 }
 
 void VitruvioModule::StartupModule()
 {
+	// During cooking we do not start Vitruvio
+	if (IsRunningCommandlet())
+	{
+		return;
+	}
+
 	InitializePrt();
 }
 
 void VitruvioModule::ShutdownModule()
 {
-	// TODO: what happens if we still have threads busy with generation?
+	if (!Initialized)
+	{
+		return;
+	}
+
+	Initialized = false;
+
+	UE_LOG(LogUnrealPrt, Display,
+		   TEXT("Shutting down Vitruvio. Waiting for ongoing generate calls (%d), RPK loading tasks (%d) and attribute loading tasks (%d)"),
+		   GenerateCallsCounter.GetValue(), RpkLoadingTasksCounter.GetValue(), LoadAttributesCounter.GetValue())
+
+	// Wait until no more PRT calls are ongoing
+	FGenericPlatformProcess::ConditionalSleep(
+		[this]() { return GenerateCallsCounter.GetValue() == 0 && RpkLoadingTasksCounter.GetValue() == 0 && LoadAttributesCounter.GetValue() == 0; },
+		0); // Yield to other threads
+
+	UE_LOG(LogUnrealPrt, Display, TEXT("PRT calls finished. Shutting down."))
 
 	if (PrtDllHandle)
 	{
@@ -248,29 +276,43 @@ void VitruvioModule::ShutdownModule()
 
 	CleanupTempRpkFolder();
 
+	UE_LOG(LogUnrealPrt, Display, TEXT("Shutdown complete"))
+
 	delete LogHandler;
 }
 
-TFuture<FGenerateResult> VitruvioModule::GenerateAsync(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
-													   UMaterial* TranslucentParent, URulePackage* RulePackage,
-													   const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const
+FInvalidatableGenerateResult VitruvioModule::GenerateAsync(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
+														   UMaterial* TranslucentParent, URulePackage* RulePackage,
+														   const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const
 {
 	check(RulePackage);
+
+	const FInvalidationTokenPtr InvalidationToken = MakeShared<FInvalidationToken>();
 
 	if (!Initialized)
 	{
 		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
-		return {};
+
+		TPromise<FInvalidatableGenerateResult::ResultType> Result;
+		Result.SetValue({InvalidationToken, {}});
+		return {
+			Result.GetFuture(),
+			InvalidationToken,
+		};
 	}
 
-	return Async(EAsyncExecution::Thread, [=]() -> FGenerateResult {
-		return Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, Attributes, RandomSeed);
+	FInvalidatableGenerateResult::FutureType ResultFuture = Async(EAsyncExecution::Thread, [=]() {
+		FGenerateResultDescription Result =
+			Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, Attributes, RandomSeed);
+		return FInvalidatableGenerateResult::ResultType{InvalidationToken, MoveTemp(Result)};
 	});
+
+	return FInvalidatableGenerateResult{MoveTemp(ResultFuture), InvalidationToken};
 }
 
-FGenerateResult VitruvioModule::Generate(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
-										 UMaterial* TranslucentParent, URulePackage* RulePackage, const TMap<FString, URuleAttribute*>& Attributes,
-										 const int32 RandomSeed) const
+FGenerateResultDescription VitruvioModule::Generate(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
+													UMaterial* TranslucentParent, URulePackage* RulePackage,
+													const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const
 {
 	check(RulePackage);
 
@@ -297,7 +339,7 @@ FGenerateResult VitruvioModule::Generate(const FInitialShapeData& InitialShape, 
 	InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", AttributeMap.get(), ResolveMap.get());
 
 	AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
-	const std::unique_ptr<UnrealCallbacks> OutputHandler(new UnrealCallbacks(AttributeMapBuilder, OpaqueParent, MaskedParent, TranslucentParent));
+	const TSharedPtr<UnrealCallbacks> OutputHandler(new UnrealCallbacks(AttributeMapBuilder, OpaqueParent, MaskedParent, TranslucentParent));
 
 	const InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShapeAndReset());
 
@@ -308,7 +350,7 @@ FGenerateResult VitruvioModule::Generate(const FInitialShapeData& InitialShape, 
 	InitialShapeNOPtrVector Shapes = {Shape.get()};
 
 	const prt::Status GenerateStatus = prt::generate(Shapes.data(), Shapes.size(), nullptr, EncoderIds.data(), EncoderIds.size(),
-													 EncoderOptions.data(), OutputHandler.get(), PrtCache.get(), nullptr);
+													 EncoderOptions.data(), OutputHandler.Get(), PrtCache.get(), nullptr);
 
 	if (GenerateStatus != prt::STATUS_OK)
 	{
@@ -317,21 +359,27 @@ FGenerateResult VitruvioModule::Generate(const FInitialShapeData& InitialShape, 
 
 	GenerateCallsCounter.Decrement();
 
-	return {OutputHandler->GetModel(), OutputHandler->GetInstances()};
+	return {OutputHandler->GetInstances(), OutputHandler->GetMeshes(), OutputHandler->GetMaterials()};
 }
 
-TFuture<FAttributeMapPtr> VitruvioModule::LoadDefaultRuleAttributesAsync(const FInitialShapeData& InitialShape, URulePackage* RulePackage,
-																		 const int32 RandomSeed) const
+FInvalidatableAttributeMapResult VitruvioModule::LoadDefaultRuleAttributesAsync(const FInitialShapeData& InitialShape, URulePackage* RulePackage,
+																				const int32 RandomSeed) const
 {
 	check(RulePackage);
+
+	FInvalidationTokenPtr InvalidationToken = MakeShared<FInvalidationToken>();
 
 	if (!Initialized)
 	{
 		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
-		return {};
+		TPromise<FInvalidatableAttributeMapResult::ResultType> Result;
+		Result.SetValue({InvalidationToken, nullptr});
+		return {Result.GetFuture(), InvalidationToken};
 	}
 
-	return Async(EAsyncExecution::Thread, [=]() -> TSharedPtr<FAttributeMap> {
+	LoadAttributesCounter.Increment();
+
+	FInvalidatableAttributeMapResult::FutureType AttributeMapPtrFuture = Async(EAsyncExecution::Thread, [=]() {
 		const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(RulePackage).Get();
 
 		const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
@@ -345,20 +393,39 @@ TFuture<FAttributeMapPtr> VitruvioModule::LoadDefaultRuleAttributesAsync(const F
 		if (!RuleInfo || InfoStatus != prt::STATUS_OK)
 		{
 			UE_LOG(LogUnrealPrt, Error, TEXT("could not get rule file info from rule file %s"), RuleFileUri)
-			return {};
+			return FInvalidatableAttributeMapResult::ResultType{
+				InvalidationToken,
+				nullptr,
+			};
 		}
 
 		AttributeMapUPtr DefaultAttributeMap(
 			GetDefaultAttributeValues(RuleFile.c_str(), StartRule.c_str(), ResolveMap, InitialShape, PrtCache.get(), RandomSeed));
 
-		return MakeShared<FAttributeMap>(std::move(DefaultAttributeMap), std::move(RuleInfo));
+		LoadAttributesCounter.Decrement();
+
+		if (!Initialized)
+		{
+			return FInvalidatableAttributeMapResult::ResultType{InvalidationToken, nullptr};
+		}
+
+		const TSharedPtr<FAttributeMap> AttributeMap = MakeShared<FAttributeMap>(std::move(DefaultAttributeMap), std::move(RuleInfo));
+		return FInvalidatableAttributeMapResult::ResultType{InvalidationToken, AttributeMap};
 	});
+
+	return {MoveTemp(AttributeMapPtrFuture), InvalidationToken};
 }
 
 TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(URulePackage* const RulePackage) const
 {
 	TPromise<ResolveMapSPtr> Promise;
 	TFuture<ResolveMapSPtr> Future = Promise.GetFuture();
+
+	if (!Initialized)
+	{
+		Promise.SetValue({});
+		return Future;
+	}
 
 	const TLazyObjectPtr<URulePackage> LazyRulePackagePtr(RulePackage);
 
@@ -400,7 +467,7 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(URulePackage* const 
 		{
 			FScopeLock Lock(&LoadResolveMapLock);
 			// Task which does the actual resolve map loading which might take a long time
-			LoadTask = TGraphTask<FLoadResolveMapTask>::CreateTask().ConstructAndDispatchWhenReady(MoveTemp(Promise), LazyRulePackagePtr,
+			LoadTask = TGraphTask<FLoadResolveMapTask>::CreateTask().ConstructAndDispatchWhenReady(MoveTemp(Promise), RpkFolder, LazyRulePackagePtr,
 																								   ResolveMapCache, LoadResolveMapLock);
 			ResolveMapEventGraphRefCache.Add(LazyRulePackagePtr, LoadTask);
 		}
