@@ -31,6 +31,12 @@ struct FConvertedGenerateResult
 	TArray<FInstance> Instances;
 };
 
+struct FLoadAttributes
+{
+	FAttributeMapPtr AttributeMap;
+	bool bKeepOldAttributes;
+};
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class VITRUVIO_API UVitruvioComponent : public UActorComponent
 {
@@ -107,6 +113,7 @@ public:
 
 private:
 	TQueue<FGenerateResultDescription> GenerateQueue;
+	TQueue<FLoadAttributes> LoadAttributesQueue;
 
 	FInvalidationTokenPtr GenerateInvalidationToken;
 	FInvalidationTokenPtr LoadAttributesInvalidationToken;
@@ -116,6 +123,9 @@ private:
 	void NotifyAttributesChanged();
 
 	void RemoveGeneratedMeshes();
+
+	void ProcessGenerateQueue();
+	void ProcessLoadAttributesQueue();
 
 	FConvertedGenerateResult BuildResult(FGenerateResultDescription& GenerateResult,
 										 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache);

@@ -278,7 +278,7 @@ void UVitruvioComponent::OnUnregister()
 #endif
 }
 
-void UVitruvioComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void UVitruvioComponent::ProcessGenerateQueue()
 {
 	if (!GenerateQueue.IsEmpty())
 	{
@@ -328,6 +328,47 @@ void UVitruvioComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 	{
 		Generate();
 	}
+}
+
+void UVitruvioComponent::ProcessLoadAttributesQueue()
+{
+	if (!LoadAttributesQueue.IsEmpty())
+	{
+		FLoadAttributes LoadAttributes;
+		LoadAttributesQueue.Dequeue(LoadAttributes);
+		if (LoadAttributes.bKeepOldAttributes)
+		{
+			TMap<FString, URuleAttribute*> OldAttributes = Attributes;
+			Attributes = LoadAttributes.AttributeMap->ConvertToUnrealAttributeMap(this);
+
+			for (auto Attribute : Attributes)
+			{
+				if (OldAttributes.Contains(Attribute.Key))
+				{
+					Attribute.Value->CopyValue(OldAttributes[Attribute.Key]);
+				}
+			}
+		}
+		else
+		{
+			Attributes = LoadAttributes.AttributeMap->ConvertToUnrealAttributeMap(this);
+		}
+
+		AttributesReady = true;
+
+		NotifyAttributesChanged();
+
+		if (GenerateAutomatically)
+		{
+			Generate();
+		}
+	}
+}
+
+void UVitruvioComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	ProcessGenerateQueue();
+	ProcessLoadAttributesQueue();
 }
 
 void UVitruvioComponent::NotifyAttributesChanged()
@@ -577,43 +618,15 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 	LoadAttributesInvalidationToken = AttributesResult.InvalidationToken;
 
 	AttributesResult.Result.Next([this, KeepOldAttributeValues](const FInvalidatableAttributeMapResult::ResultType& Result) {
-		FFunctionGraphTask::CreateAndDispatchWhenReady(
-			[this, Result, KeepOldAttributeValues]() {
-				FScopeLock(&Result.InvalidationToken->Lock);
+		FScopeLock(&Result.InvalidationToken->Lock);
 
-				if (Result.InvalidationToken->IsInvalid())
-				{
-					return;
-				}
+		if (Result.InvalidationToken->IsInvalid())
+		{
+			return;
+		}
 
-				LoadingAttributes = false;
-				if (KeepOldAttributeValues)
-				{
-					TMap<FString, URuleAttribute*> OldAttributes = Attributes;
-					Attributes = Result.Value->ConvertToUnrealAttributeMap(this);
+		LoadingAttributes = false;
 
-					for (auto Attribute : Attributes)
-					{
-						if (OldAttributes.Contains(Attribute.Key))
-						{
-							Attribute.Value->CopyValue(OldAttributes[Attribute.Key]);
-						}
-					}
-				}
-				else
-				{
-					Attributes = Result.Value->ConvertToUnrealAttributeMap(this);
-				}
-
-				AttributesReady = true;
-
-				NotifyAttributesChanged();
-
-				if (GenerateAutomatically)
-				{
-					Generate();
-				}
-			},
-			TStatId(), nullptr, ENamedThreads::GameThread);
+		LoadAttributesQueue.Enqueue({Result.Value, KeepOldAttributeValues});
 	});
 }
