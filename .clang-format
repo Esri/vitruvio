@@ -12,6 +12,7 @@ ReflowComments                                : true
 FixNamespaceComments                          : true
 AlwaysBreakTemplateDeclarations               : Yes
 NamespaceIndentation                          : Inner
+AllowShortFunctionsOnASingleLine              : Empty
 AllowShortLambdasOnASingleLine                : Inline
 IncludeCategories:
   - Regex:           'generated.h'
