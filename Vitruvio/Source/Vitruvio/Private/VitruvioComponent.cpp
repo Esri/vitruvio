@@ -89,7 +89,7 @@ class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 		if (Owner)
 		{
 			UStaticMeshComponent* StaticMeshComponent = Owner->FindComponentByClass<UStaticMeshComponent>();
-			return StaticMeshComponent != nullptr;
+			return StaticMeshComponent != nullptr && StaticMeshComponent->GetStaticMesh() != nullptr;
 		}
 		return false;
 	}
@@ -199,7 +199,7 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 		if (Owner)
 		{
 			USplineComponent* SplineComponent = Owner->FindComponentByClass<USplineComponent>();
-			return SplineComponent != nullptr;
+			return SplineComponent != nullptr && SplineComponent->GetNumberOfSplinePoints() > 0;
 		}
 		return false;
 	}
@@ -243,20 +243,23 @@ void UVitruvioComponent::OnRegister()
 {
 	Super::OnRegister();
 
-	// Ignore generation during cooking
+	// Ignore during cooking (as we do not want to generate during cooking)
 	if (GIsCookerLoadingPackage)
 	{
 		return;
 	}
 
-	// Setup factory
-	for (FInitialShapeFactory* Factory : GInitialShapeFactories)
+	// Try to setup factory if not initialized
+	if (InitialShapeFactory == nullptr)
 	{
-		if (Factory->CanCreateFrom(this))
+		for (FInitialShapeFactory* Factory : GInitialShapeFactories)
 		{
-			InitialShape = Factory->CreateInitialShape(this, InitialShape);
-			InitialShapeFactory = Factory;
-			break;
+			if (Factory->CanCreateFrom(this))
+			{
+				InitialShape = Factory->CreateInitialShape(this, InitialShape);
+				InitialShapeFactory = Factory;
+				break;
+			}
 		}
 	}
 
