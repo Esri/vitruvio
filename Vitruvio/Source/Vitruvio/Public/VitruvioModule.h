@@ -39,33 +39,44 @@ public:
 		FScopeLock InvalidationLock(&Lock);
 		bIsInvalid = true;
 	}
-	
+
 	bool IsInvalid() const { return bIsInvalid; }
 
 private:
 	FThreadSafeBool bIsInvalid = false;
 };
-using FInvalidationTokenPtr = TSharedPtr<FInvalidationToken>;
-using FInvalidationTokenConstPtr = TSharedPtr<const FInvalidationToken>;
 
-template <typename R>
-class TInvalidatableResult
+class FGenerateToken : public FInvalidationToken
 {
 public:
-	struct ResultType
-	{
-		FInvalidationTokenConstPtr InvalidationToken;
-		R Value;
-	};
-	using FutureType = TFuture<ResultType>;
+	void RequestRegenerate() { bRequestRegenerate = true; }
 
-	FutureType Result;
-	FInvalidationTokenPtr InvalidationToken;
+	bool IsRegenerateRequested() const { return bRequestRegenerate; }
+
+private:
+	FThreadSafeBool bRequestRegenerate = false;
 };
 
-using FInvalidatableGenerateResult = TInvalidatableResult<FGenerateResultDescription>;
+template <typename R, typename T>
+class TResult
+{
+public:
+	using FTokenConstPtr = TSharedPtr<const T>;
+	using FTokenPtr = TSharedPtr<T>;
 
-using FInvalidatableAttributeMapResult = TInvalidatableResult<FAttributeMapPtr>;
+	struct ResultType
+	{
+		FTokenConstPtr Token;
+		R Value;
+	};
+	using FFutureType = TFuture<ResultType>;
+
+	FFutureType Result;
+	FTokenPtr Token;
+};
+
+using FGenerateResult = TResult<FGenerateResultDescription, FGenerateToken>;
+using FAttributeMapResult = TResult<FAttributeMapPtr, FInvalidationToken>;
 
 class VitruvioModule final : public IModuleInterface, public FGCObject
 {
@@ -85,9 +96,9 @@ public:
 	 * \param RandomSeed
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API FInvalidatableGenerateResult GenerateAsync(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
-															UMaterial* TranslucentParent, URulePackage* RulePackage,
-															const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const;
+	VITRUVIO_API FGenerateResult GenerateAsync(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
+											   UMaterial* TranslucentParent, URulePackage* RulePackage,
+											   const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const;
 
 	/**
 	 * \brief Generate the models with the given InitialShape, RulePackage and Attributes.
@@ -113,8 +124,8 @@ public:
 	 * \param RandomSeed
 	 * \return
 	 */
-	VITRUVIO_API FInvalidatableAttributeMapResult LoadDefaultRuleAttributesAsync(const FInitialShapeData& InitialShape, URulePackage* RulePackage,
-																				 const int32 RandomSeed) const;
+	VITRUVIO_API FAttributeMapResult LoadDefaultRuleAttributesAsync(const FInitialShapeData& InitialShape, URulePackage* RulePackage,
+																	const int32 RandomSeed) const;
 
 	/**
 	 * \return whether PRT is initialized meaning installed and ready to use. Before initialization generation is not possible and will

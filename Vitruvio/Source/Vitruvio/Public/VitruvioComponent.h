@@ -49,7 +49,6 @@ class VITRUVIO_API UVitruvioComponent : public UActorComponent
 	UPROPERTY()
 	bool bValidRandomSeed = false;
 
-	bool bNeedsRegenerate = false;
 	bool bIsGenerating = false;
 
 public:
@@ -115,8 +114,8 @@ private:
 	TQueue<FGenerateResultDescription> GenerateQueue;
 	TQueue<FLoadAttributes> LoadAttributesQueue;
 
-	FInvalidationTokenPtr GenerateInvalidationToken;
-	FInvalidationTokenPtr LoadAttributesInvalidationToken;
+	FGenerateResult::FTokenPtr GenerateToken;
+	FAttributeMapResult::FTokenPtr LoadAttributesInvalidationToken;
 
 	void LoadDefaultAttributes(bool KeepOldAttributeValues = false);
 

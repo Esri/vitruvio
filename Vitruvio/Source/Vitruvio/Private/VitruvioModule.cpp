@@ -281,33 +281,33 @@ void VitruvioModule::ShutdownModule()
 	delete LogHandler;
 }
 
-FInvalidatableGenerateResult VitruvioModule::GenerateAsync(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
-														   UMaterial* TranslucentParent, URulePackage* RulePackage,
-														   const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const
+FGenerateResult VitruvioModule::GenerateAsync(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
+											  UMaterial* TranslucentParent, URulePackage* RulePackage,
+											  const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const
 {
 	check(RulePackage);
 
-	const FInvalidationTokenPtr InvalidationToken = MakeShared<FInvalidationToken>();
+	const FGenerateResult::FTokenPtr Token = MakeShared<FGenerateToken>();
 
 	if (!Initialized)
 	{
 		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
 
-		TPromise<FInvalidatableGenerateResult::ResultType> Result;
-		Result.SetValue({InvalidationToken, {}});
+		TPromise<FGenerateResult::ResultType> Result;
+		Result.SetValue({Token, {}});
 		return {
 			Result.GetFuture(),
-			InvalidationToken,
+			Token,
 		};
 	}
 
-	FInvalidatableGenerateResult::FutureType ResultFuture = Async(EAsyncExecution::Thread, [=]() {
+	FGenerateResult::FFutureType ResultFuture = Async(EAsyncExecution::Thread, [=]() {
 		FGenerateResultDescription Result =
 			Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, Attributes, RandomSeed);
-		return FInvalidatableGenerateResult::ResultType{InvalidationToken, MoveTemp(Result)};
+		return FGenerateResult::ResultType{Token, MoveTemp(Result)};
 	});
 
-	return FInvalidatableGenerateResult{MoveTemp(ResultFuture), InvalidationToken};
+	return FGenerateResult{MoveTemp(ResultFuture), Token};
 }
 
 FGenerateResultDescription VitruvioModule::Generate(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
@@ -362,24 +362,24 @@ FGenerateResultDescription VitruvioModule::Generate(const FInitialShapeData& Ini
 	return {OutputHandler->GetInstances(), OutputHandler->GetMeshes(), OutputHandler->GetMaterials()};
 }
 
-FInvalidatableAttributeMapResult VitruvioModule::LoadDefaultRuleAttributesAsync(const FInitialShapeData& InitialShape, URulePackage* RulePackage,
-																				const int32 RandomSeed) const
+FAttributeMapResult VitruvioModule::LoadDefaultRuleAttributesAsync(const FInitialShapeData& InitialShape, URulePackage* RulePackage,
+																   const int32 RandomSeed) const
 {
 	check(RulePackage);
 
-	FInvalidationTokenPtr InvalidationToken = MakeShared<FInvalidationToken>();
+	FAttributeMapResult::FTokenPtr InvalidationToken = MakeShared<FInvalidationToken>();
 
 	if (!Initialized)
 	{
 		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
-		TPromise<FInvalidatableAttributeMapResult::ResultType> Result;
+		TPromise<FAttributeMapResult::ResultType> Result;
 		Result.SetValue({InvalidationToken, nullptr});
 		return {Result.GetFuture(), InvalidationToken};
 	}
 
 	LoadAttributesCounter.Increment();
 
-	FInvalidatableAttributeMapResult::FutureType AttributeMapPtrFuture = Async(EAsyncExecution::Thread, [=]() {
+	FAttributeMapResult::FFutureType AttributeMapPtrFuture = Async(EAsyncExecution::Thread, [=]() {
 		const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(RulePackage).Get();
 
 		const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
@@ -393,7 +393,7 @@ FInvalidatableAttributeMapResult VitruvioModule::LoadDefaultRuleAttributesAsync(
 		if (!RuleInfo || InfoStatus != prt::STATUS_OK)
 		{
 			UE_LOG(LogUnrealPrt, Error, TEXT("could not get rule file info from rule file %s"), RuleFileUri)
-			return FInvalidatableAttributeMapResult::ResultType{
+			return FAttributeMapResult::ResultType{
 				InvalidationToken,
 				nullptr,
 			};
@@ -406,11 +406,11 @@ FInvalidatableAttributeMapResult VitruvioModule::LoadDefaultRuleAttributesAsync(
 
 		if (!Initialized)
 		{
-			return FInvalidatableAttributeMapResult::ResultType{InvalidationToken, nullptr};
+			return FAttributeMapResult::ResultType{InvalidationToken, nullptr};
 		}
 
 		const TSharedPtr<FAttributeMap> AttributeMap = MakeShared<FAttributeMap>(std::move(DefaultAttributeMap), std::move(RuleInfo));
-		return FInvalidatableAttributeMapResult::ResultType{InvalidationToken, AttributeMap};
+		return FAttributeMapResult::ResultType{InvalidationToken, AttributeMap};
 	});
 
 	return {MoveTemp(AttributeMapPtrFuture), InvalidationToken};

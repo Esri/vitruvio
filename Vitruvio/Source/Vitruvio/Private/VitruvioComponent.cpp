@@ -320,13 +320,6 @@ void UVitruvioComponent::ProcessGenerateQueue()
 			InstancedComponent->AttachToComponent(StaticMeshActor->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
 			InstancedComponent->RegisterComponent();
 		}
-
-		bNeedsRegenerate = false;
-	}
-
-	if (bNeedsRegenerate)
-	{
-		Generate();
 	}
 }
 
@@ -461,9 +454,9 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 
 void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 {
-	if (GenerateInvalidationToken)
+	if (GenerateToken)
 	{
-		GenerateInvalidationToken->Invalidate();
+		GenerateToken->Invalidate();
 	}
 
 	if (LoadAttributesInvalidationToken)
@@ -482,36 +475,40 @@ void UVitruvioComponent::Generate()
 
 	// Since we can not abort an ongoing generate call from PRT, we invalidate the result and regenerate after the current generate call has
 	// completed.
-	if (GenerateInvalidationToken)
+	if (GenerateToken)
 	{
-		GenerateInvalidationToken->Invalidate();
-		GenerateInvalidationToken = nullptr;
+		GenerateToken->RequestRegenerate();
 
-		bNeedsRegenerate = true;
+		return;
 	}
 
 	if (InitialShape)
 	{
-		FInvalidatableGenerateResult GenerateResult = VitruvioModule::Get().GenerateAsync(
-			InitialShape->GetInitialShapeData(), OpaqueParent, MaskedParent, TranslucentParent, Rpk, Attributes, RandomSeed);
+		FGenerateResult GenerateResult = VitruvioModule::Get().GenerateAsync(InitialShape->GetInitialShapeData(), OpaqueParent, MaskedParent,
+																			 TranslucentParent, Rpk, Attributes, RandomSeed);
 
-		GenerateInvalidationToken = GenerateResult.InvalidationToken;
+		GenerateToken = GenerateResult.Token;
 
 		// clang-format off
-		GenerateResult.Result.Next([this](const FInvalidatableGenerateResult::ResultType& Result)
+		GenerateResult.Result.Next([this](const FGenerateResult::ResultType& Result)
 		{
-			FScopeLock Lock(&Result.InvalidationToken->Lock);
-			
-			if (Result.InvalidationToken->IsInvalid()) {
+			FScopeLock Lock(&Result.Token->Lock);
+
+			if (Result.Token->IsInvalid()) {
 				return;
 			}
-			
-			GenerateInvalidationToken = nullptr;
-			GenerateQueue.Enqueue(Result.Value);
+
+			GenerateToken.Reset();
+			if (Result.Token->IsRegenerateRequested())
+			{
+				Generate();
+			}
+			else
+			{
+				GenerateQueue.Enqueue(Result.Value);
+			}
 		});
 		// clang-format on
-
-		bNeedsRegenerate = false;
 	}
 }
 
@@ -612,15 +609,14 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 	AttributesReady = false;
 	LoadingAttributes = true;
 
-	FInvalidatableAttributeMapResult AttributesResult =
-		VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape->GetInitialShapeData(), Rpk, RandomSeed);
+	FAttributeMapResult AttributesResult = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape->GetInitialShapeData(), Rpk, RandomSeed);
 
-	LoadAttributesInvalidationToken = AttributesResult.InvalidationToken;
+	LoadAttributesInvalidationToken = AttributesResult.Token;
 
-	AttributesResult.Result.Next([this, KeepOldAttributeValues](const FInvalidatableAttributeMapResult::ResultType& Result) {
-		FScopeLock(&Result.InvalidationToken->Lock);
+	AttributesResult.Result.Next([this, KeepOldAttributeValues](const FAttributeMapResult::ResultType& Result) {
+		FScopeLock(&Result.Token->Lock);
 
-		if (Result.InvalidationToken->IsInvalid())
+		if (Result.Token->IsInvalid())
 		{
 			return;
 		}
