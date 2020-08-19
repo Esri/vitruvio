@@ -248,7 +248,8 @@ void UVitruvioComponent::OnRegister()
 	{
 		return;
 	}
-	// Try to create the initial shape on first register
+
+	// Setup factory
 	for (FInitialShapeFactory* Factory : GInitialShapeFactories)
 	{
 		if (Factory->CanCreateFrom(this))
@@ -259,13 +260,18 @@ void UVitruvioComponent::OnRegister()
 		}
 	}
 
-	if (Rpk && InitialShape)
+	// Generate once (used for example for copy paste to regenerate the model)
+	if (bAttributesReady && !bFirstGenerate)
 	{
-		LoadDefaultAttributes(true);
+		Generate();
+		bFirstGenerate = true;
 	}
 
 #if WITH_EDITOR
-	PropertyChangeDelegate = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &UVitruvioComponent::OnPropertyChanged);
+	if (!PropertyChangeDelegate.IsValid())
+	{
+		PropertyChangeDelegate = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &UVitruvioComponent::OnPropertyChanged);
+	}
 #endif
 }
 
@@ -275,6 +281,7 @@ void UVitruvioComponent::OnUnregister()
 
 #if WITH_EDITOR
 	FCoreUObjectDelegates::OnObjectPropertyChanged.Remove(PropertyChangeDelegate);
+	PropertyChangeDelegate.Reset();
 #endif
 }
 
@@ -347,7 +354,7 @@ void UVitruvioComponent::ProcessLoadAttributesQueue()
 			Attributes = LoadAttributes.AttributeMap->ConvertToUnrealAttributeMap(this);
 		}
 
-		AttributesReady = true;
+		bAttributesReady = true;
 
 		NotifyAttributesChanged();
 
@@ -467,7 +474,7 @@ void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 
 void UVitruvioComponent::Generate()
 {
-	if (!Rpk || !AttributesReady || !InitialShape)
+	if (!Rpk || !bAttributesReady || !InitialShape)
 	{
 		RemoveGeneratedMeshes();
 		return;
@@ -541,7 +548,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Rpk))
 		{
 			Attributes.Empty();
-			AttributesReady = false;
+			bAttributesReady = false;
 
 			NotifyAttributesChanged();
 		}
@@ -577,7 +584,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 			bValidRandomSeed = true;
 		}
 
-		if (AttributesReady)
+		if (bAttributesReady)
 		{
 			Generate();
 		}
@@ -588,7 +595,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		RemoveGeneratedMeshes();
 	}
 
-	if (InitialShape && Rpk && !AttributesReady)
+	if (InitialShape && Rpk && !bAttributesReady)
 	{
 		LoadDefaultAttributes();
 	}
@@ -606,7 +613,7 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 		return;
 	}
 
-	AttributesReady = false;
+	bAttributesReady = false;
 	LoadingAttributes = true;
 
 	FAttributeMapResult AttributesResult = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape->GetInitialShapeData(), Rpk, RandomSeed);

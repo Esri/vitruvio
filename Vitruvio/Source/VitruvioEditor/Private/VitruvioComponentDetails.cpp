@@ -43,8 +43,8 @@ void UpdateAttributeValue(UVitruvioComponent* VitruvioActor, A* Attribute, const
 	}
 }
 
-template <typename A, typename V>
-TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Attribute, TSharedPtr<EnumAnnotation<V>> Annotation, UVitruvioComponent* VitruvioActor)
+template <typename Attr, typename V, typename An>
+TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(Attr* Attribute, An* Annotation, UVitruvioComponent* VitruvioActor)
 {
 	TArray<TSharedPtr<V>> SharedPtrValues;
 	Algo::Transform(Annotation->Values, SharedPtrValues, [](const V& Value) { return MakeShared<V>(Value); });
@@ -161,8 +161,8 @@ TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(UFloatAttribute* Attribute
 	// clang-format off
 	auto ValueWidget = SNew(SSpinBox<double>)
 		.Font(IDetailLayoutBuilder::GetDetailFont())
-		.MinValue(Annotation ? Annotation->Min : TOptional<double>())
-		.MaxValue(Annotation ? Annotation->Max : TOptional<double>())
+		.MinValue(Annotation && !FMath::IsNaN(Annotation->Min) ? Annotation->Min : TOptional<double>())
+		.MaxValue(Annotation && !FMath::IsNaN(Annotation->Max) ? Annotation->Max : TOptional<double>())
 		.OnValueCommitted_Lambda(OnCommit)
 		.SliderExponent(1);
 	// clang-format on
@@ -191,7 +191,7 @@ TSharedPtr<SBox> CreateNameWidget(URuleAttribute* Attribute)
 	return NameWidget;
 }
 
-IDetailGroup* GetOrCreateGroups(IDetailGroup& Root, const FAttributeGroups& Groups, TMap<FString, IDetailGroup*>& GroupCache)
+IDetailGroup* GetOrCreateGroups(IDetailGroup& Root, const TArray<FString>& Groups, TMap<FString, IDetailGroup*>& GroupCache)
 {
 	if (Groups.Num() == 0)
 	{
@@ -245,7 +245,9 @@ void BuildAttributeEditor(IDetailCategoryBuilder& RootCategory, UVitruvioCompone
 		{
 			if (FloatAttribute->GetEnumAnnotation())
 			{
-				Row.ValueContent()[CreateEnumWidget(FloatAttribute, FloatAttribute->GetEnumAnnotation(), VitruvioActor).ToSharedRef()];
+				Row.ValueContent()[CreateEnumWidget<UFloatAttribute, double, UFloatEnumAnnotation>(FloatAttribute,
+																								   FloatAttribute->GetEnumAnnotation(), VitruvioActor)
+									   .ToSharedRef()];
 			}
 			else
 			{
@@ -256,7 +258,9 @@ void BuildAttributeEditor(IDetailCategoryBuilder& RootCategory, UVitruvioCompone
 		{
 			if (StringAttribute->GetEnumAnnotation())
 			{
-				Row.ValueContent()[CreateEnumWidget(StringAttribute, StringAttribute->GetEnumAnnotation(), VitruvioActor).ToSharedRef()];
+				Row.ValueContent()[CreateEnumWidget<UStringAttribute, FString, UStringEnumAnnotation>(
+									   StringAttribute, StringAttribute->GetEnumAnnotation(), VitruvioActor)
+									   .ToSharedRef()];
 			}
 			else if (StringAttribute->GetColorAnnotation())
 			{

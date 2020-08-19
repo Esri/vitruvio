@@ -52,12 +52,12 @@ void ParseValue(const prt::AnnotationArgument* Argument, FString& Result)
 	Result = FString(WCHAR_TO_TCHAR(Argument->getStr()));
 }
 
-template <typename T>
-TSharedPtr<EnumAnnotation<T>> ParseEnumAnnotation(const prt::Annotation* Annotation)
+template <typename T, typename V>
+T* ParseEnumAnnotation(const prt::Annotation* Annotation, UObject* const Outer)
 {
 	prt::AnnotationArgumentType Type = prt::AAT_UNKNOWN;
 
-	auto Result = MakeShared<EnumAnnotation<T>>();
+	auto Result = NewObject<T>(Outer);
 
 	for (size_t ArgumentIndex = 0; ArgumentIndex < Annotation->getNumArguments(); ArgumentIndex++)
 	{
@@ -71,22 +71,26 @@ TSharedPtr<EnumAnnotation<T>> ParseEnumAnnotation(const prt::Annotation* Annotat
 			continue;
 		}
 
-		T Val;
+		V Val;
 		ParseValue(Annotation->getArgument(ArgumentIndex), Val);
 		Result->Values.Add(Val);
 	}
 	return Result;
 }
 
-TSharedPtr<RangeAnnotation> ParseRangeAnnotation(const prt::Annotation* Annotation)
+URangeAnnotation* ParseRangeAnnotation(const prt::Annotation* Annotation, UObject* const Outer)
 {
-	auto Result = MakeShared<RangeAnnotation>();
+	auto Result = NewObject<URangeAnnotation>(Outer);
 	Result->StepSize = 0.1;
 
 	for (int ArgIndex = 0; ArgIndex < Annotation->getNumArguments(); ArgIndex++)
 	{
 		const prt::AnnotationArgument* Argument = Annotation->getArgument(ArgIndex);
 		const wchar_t* Key = Argument->getKey();
+
+		Result->Min = 0;
+		Result->Max = 0;
+
 		if (std::wcscmp(Key, MIN_KEY) == 0)
 		{
 			Result->Min = Argument->getFloat();
@@ -107,7 +111,7 @@ TSharedPtr<RangeAnnotation> ParseRangeAnnotation(const prt::Annotation* Annotati
 	return Result;
 }
 
-TSharedPtr<FilesystemAnnotation> ParseFileAnnotation(const prt::Annotation* Annotation)
+UFilesystemAnnotation* ParseFileAnnotation(const prt::Annotation* Annotation, UObject* const Outer)
 {
 	FString Extensions;
 	for (size_t ArgumentIndex = 0; ArgumentIndex < Annotation->getNumArguments(); ArgumentIndex++)
@@ -122,8 +126,8 @@ TSharedPtr<FilesystemAnnotation> ParseFileAnnotation(const prt::Annotation* Anno
 	}
 	Extensions += TEXT("All Files (*.*)");
 
-	auto Result = MakeShared<FilesystemAnnotation>();
-	Result->Mode = FilesystemMode::File;
+	auto Result = NewObject<UFilesystemAnnotation>(Outer);
+	Result->Mode = EFilesystemMode::File;
 	Result->Extensions = Extensions;
 	return Result;
 }
@@ -151,7 +155,7 @@ void ParseGroups(const prt::Annotation* Annotation, URuleAttribute& InAttribute)
 
 namespace Vitruvio
 {
-void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, URuleAttribute& InAttribute)
+void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, URuleAttribute& InAttribute, UObject* const Outer)
 {
 	for (size_t AnnotationIndex = 0; AnnotationIndex < AttributeInfo->getNumAnnotations(); ++AnnotationIndex)
 	{
@@ -166,29 +170,29 @@ void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, UR
 			{
 				switch (Type)
 				{
-				case prt::AAT_FLOAT: InAttribute.SetAnnotation(ParseEnumAnnotation<double>(CEAnnotation)); break;
-				case prt::AAT_STR: InAttribute.SetAnnotation(ParseEnumAnnotation<FString>(CEAnnotation)); break;
+				case prt::AAT_FLOAT: InAttribute.SetAnnotation(ParseEnumAnnotation<UFloatEnumAnnotation, double>(CEAnnotation, Outer)); break;
+				case prt::AAT_STR: InAttribute.SetAnnotation(ParseEnumAnnotation<UStringEnumAnnotation, FString>(CEAnnotation, Outer)); break;
 				default: InAttribute.SetAnnotation({}); break;
 				}
 			}
 		}
 		else if (std::wcscmp(Name, ANNOT_RANGE) == 0)
 		{
-			InAttribute.SetAnnotation(ParseRangeAnnotation(CEAnnotation));
+			InAttribute.SetAnnotation(ParseRangeAnnotation(CEAnnotation, Outer));
 		}
 		else if (std::wcscmp(Name, ANNOT_DIR) == 0)
 		{
-			auto Annotation = MakeShared<FilesystemAnnotation>();
-			Annotation->Mode = FilesystemMode::Directory;
+			auto Annotation = NewObject<UFilesystemAnnotation>(Outer);
+			Annotation->Mode = EFilesystemMode::Directory;
 			InAttribute.SetAnnotation(Annotation);
 		}
 		else if (std::wcscmp(Name, ANNOT_FILE) == 0)
 		{
-			InAttribute.SetAnnotation(ParseFileAnnotation(CEAnnotation));
+			InAttribute.SetAnnotation(ParseFileAnnotation(CEAnnotation, Outer));
 		}
 		else if (std::wcscmp(Name, ANNOT_COLOR) == 0)
 		{
-			InAttribute.SetAnnotation(MakeShared<ColorAnnotation>());
+			InAttribute.SetAnnotation(NewObject<UColorAnnotation>(Outer));
 		}
 
 		if (!std::wcscmp(Name, ANNOT_HIDDEN))

@@ -42,12 +42,13 @@ class VITRUVIO_API UVitruvioComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
-	TAtomic<bool> Initialized = false;
-	TAtomic<bool> AttributesReady = false;
 	TAtomic<bool> LoadingAttributes = false;
 
 	UPROPERTY()
 	bool bValidRandomSeed = false;
+
+	UPROPERTY()
+	bool bAttributesReady = false;
 
 	bool bIsGenerating = false;
 
@@ -116,6 +117,8 @@ private:
 
 	FGenerateResult::FTokenPtr GenerateToken;
 	FAttributeMapResult::FTokenPtr LoadAttributesInvalidationToken;
+
+	bool bFirstGenerate = false;
 
 	void LoadDefaultAttributes(bool KeepOldAttributeValues = false);
 
