@@ -39,7 +39,7 @@ void FVitruvioEditorNotification::SetNotificationText(const TSharedPtr<SNotifica
 	{
 		if (Vitruvio->IsGenerating())
 		{
-			InNotificationItem->SetText(FText::FromString("Generating Models"));
+			InNotificationItem->SetText(FText::FromString(FString::Printf(TEXT("Generating %d Models"), Vitruvio->GetNumGenerateCalls())));
 		}
 		else if (Vitruvio->IsLoadingRpks())
 		{

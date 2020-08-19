@@ -128,6 +128,11 @@ public:
 	VITRUVIO_API bool IsGenerating() const { return GenerateCallsCounter.GetValue() > 0; }
 
 	/**
+	 * \return the number of active generate calls.
+	 */
+	VITRUVIO_API int32 GetNumGenerateCalls() const { return GenerateCallsCounter.GetValue(); }
+
+	/**
 	 * \return true if currently at least one RPK is being loaded.
 	 */
 	VITRUVIO_API bool IsLoadingRpks() const { return RpkLoadingTasksCounter.GetValue() > 0; }
