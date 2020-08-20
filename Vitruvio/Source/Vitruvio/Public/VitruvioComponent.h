@@ -42,12 +42,13 @@ class VITRUVIO_API UVitruvioComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
-	TAtomic<bool> Initialized = false;
-	TAtomic<bool> AttributesReady = false;
 	TAtomic<bool> LoadingAttributes = false;
 
 	UPROPERTY()
 	bool bValidRandomSeed = false;
+
+	UPROPERTY()
+	bool bAttributesReady = false;
 
 	bool bIsGenerating = false;
 
@@ -86,17 +87,17 @@ public:
 	UPROPERTY(EditAnywhere, DisplayName = "Translucent Parent", Category = "Vitruvio Default Materials")
 	UMaterial* TranslucentParent;
 
-	FInitialShapeFactory* InitialShapeFactory;
+	FInitialShapeFactory* InitialShapeFactory = nullptr;
 
 	UPROPERTY(VisibleAnywhere, Instanced, Category = "Vitruvio")
-	UInitialShape* InitialShape;
+	UInitialShape* InitialShape = nullptr;
 
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	void Generate();
 
-	virtual void OnRegister() override;
+	virtual void PostLoad() override;
 
-	virtual void OnUnregister() override;
+	virtual void OnComponentCreated() override;
 
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
 
@@ -144,5 +145,6 @@ public:
 
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) = 0;
+	virtual bool IsRelevantObject(UVitruvioComponent* Component, UObject* Object);
 #endif
 };

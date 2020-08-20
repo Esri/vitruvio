@@ -7,63 +7,79 @@
 
 #include "RuleAttributes.generated.h"
 
-using FAttributeGroups = TArray<FString>;
-
-enum class FilesystemMode
+UENUM()
+enum class EFilesystemMode
 {
 	File,
 	Directory,
 	None
 };
 
-enum class AnnotationType
+UCLASS()
+class UAttributeAnnotation : public UObject
 {
-	FileSystem,
-	Range,
-	Enum,
-	Color
-};
+	GENERATED_BODY()
 
-class AttributeAnnotation
-{
 public:
-	virtual ~AttributeAnnotation() = default;
-	virtual AnnotationType GetAnnotationType() = 0;
+	virtual ~UAttributeAnnotation() = default;
 };
 
-class ColorAnnotation final : public AttributeAnnotation
+UCLASS()
+class UColorAnnotation final : public UAttributeAnnotation
 {
-	AnnotationType GetAnnotationType() override { return AnnotationType::Color; }
+	GENERATED_BODY()
 };
 
-class FilesystemAnnotation final : public AttributeAnnotation
+UCLASS()
+class UFilesystemAnnotation final : public UAttributeAnnotation
 {
+	GENERATED_BODY()
+
 public:
-	FilesystemMode Mode = FilesystemMode::None;
+	UPROPERTY()
+	EFilesystemMode Mode = EFilesystemMode::None;
+	UPROPERTY()
 	FString Extensions;
-
-	AnnotationType GetAnnotationType() override { return AnnotationType::FileSystem; }
 };
 
-class RangeAnnotation final : public AttributeAnnotation
+UCLASS()
+class URangeAnnotation final : public UAttributeAnnotation
 {
+	GENERATED_BODY()
+
 public:
-	TOptional<double> Min;
-	TOptional<double> Max;
+	UPROPERTY()
+	double Min = NAN;
+	UPROPERTY()
+	double Max = NAN;
+	UPROPERTY()
 	double StepSize = 0.1;
+	UPROPERTY()
 	bool Restricted = true;
-
-	AnnotationType GetAnnotationType() override { return AnnotationType::Range; }
 };
 
-template <typename T>
-class EnumAnnotation final : public AttributeAnnotation
+UCLASS()
+class UStringEnumAnnotation final : public UAttributeAnnotation
 {
-public:
-	TArray<T> Values;
-	bool Restricted = true;
+	GENERATED_BODY()
 
-	AnnotationType GetAnnotationType() override { return AnnotationType::Enum; }
+public:
+	UPROPERTY()
+	TArray<FString> Values;
+	UPROPERTY()
+	bool Restricted = true;
+};
+
+UCLASS()
+class UFloatEnumAnnotation final : public UAttributeAnnotation
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY()
+	TArray<double> Values;
+	UPROPERTY()
+	bool Restricted = true;
 };
 
 UCLASS(Abstract)
@@ -72,20 +88,28 @@ class VITRUVIO_API URuleAttribute : public UObject
 	GENERATED_BODY()
 
 protected:
-	TSharedPtr<AttributeAnnotation> Annotation;
+	UPROPERTY()
+	UAttributeAnnotation* Annotation;
 
 public:
+	UPROPERTY()
 	FString Name;
+	UPROPERTY()
 	FString DisplayName;
 
+	UPROPERTY()
 	FString Description;
-	FAttributeGroups Groups;
+	UPROPERTY()
+	TArray<FString> Groups;
+	UPROPERTY()
 	int Order;
+	UPROPERTY()
 	int GroupOrder;
 
+	UPROPERTY()
 	bool Hidden;
 
-	void SetAnnotation(TSharedPtr<AttributeAnnotation> InAnnotation) { this->Annotation = MoveTemp(InAnnotation); }
+	void SetAnnotation(UAttributeAnnotation* InAnnotation) { Annotation = InAnnotation; }
 
 	virtual void CopyValue(const URuleAttribute* FromAttribute){};
 };
@@ -99,17 +123,9 @@ public:
 	UPROPERTY()
 	FString Value;
 
-	TSharedPtr<EnumAnnotation<FString>> GetEnumAnnotation() const
-	{
-		return Annotation && Annotation->GetAnnotationType() == AnnotationType::Enum ? StaticCastSharedPtr<EnumAnnotation<FString>>(Annotation)
-																					 : TSharedPtr<EnumAnnotation<FString>>();
-	}
+	UStringEnumAnnotation* GetEnumAnnotation() const { return Cast<UStringEnumAnnotation>(Annotation); }
 
-	TSharedPtr<ColorAnnotation> GetColorAnnotation() const
-	{
-		return Annotation && Annotation->GetAnnotationType() == AnnotationType::Color ? StaticCastSharedPtr<ColorAnnotation>(Annotation)
-																					  : TSharedPtr<ColorAnnotation>();
-	}
+	UColorAnnotation* GetColorAnnotation() const { return Cast<UColorAnnotation>(Annotation); }
 
 	void CopyValue(const URuleAttribute* FromAttribute) override
 	{
@@ -130,17 +146,9 @@ public:
 	UPROPERTY()
 	double Value;
 
-	TSharedPtr<EnumAnnotation<double>> GetEnumAnnotation() const
-	{
-		return Annotation && Annotation->GetAnnotationType() == AnnotationType::Enum ? StaticCastSharedPtr<EnumAnnotation<double>>(Annotation)
-																					 : TSharedPtr<EnumAnnotation<double>>();
-	}
+	UFloatEnumAnnotation* GetEnumAnnotation() const { return Cast<UFloatEnumAnnotation>(Annotation); }
 
-	TSharedPtr<RangeAnnotation> GetRangeAnnotation() const
-	{
-		return Annotation && Annotation->GetAnnotationType() == AnnotationType::Range ? StaticCastSharedPtr<RangeAnnotation>(Annotation)
-																					  : TSharedPtr<RangeAnnotation>();
-	}
+	URangeAnnotation* GetRangeAnnotation() const { return Cast<URangeAnnotation>(Annotation); }
 
 	void CopyValue(const URuleAttribute* FromAttribute) override
 	{

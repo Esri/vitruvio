@@ -83,7 +83,7 @@ TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& Attri
 			Attribute->Name = AttributeName;
 			Attribute->DisplayName = DisplayName;
 
-			ParseAttributeAnnotations(AttrInfo, *Attribute);
+			ParseAttributeAnnotations(AttrInfo, *Attribute, Outer);
 
 			if (!Attribute->Hidden)
 			{

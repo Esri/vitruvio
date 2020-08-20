@@ -4,19 +4,13 @@
 
 #include "InitialShape.generated.h"
 
-struct FInitialShapeData
+USTRUCT()
+struct FInitialShapeFace
 {
-public:
-	FInitialShapeData() : FaceVertices({}) {}
-	explicit FInitialShapeData(const TArray<TArray<FVector>>& FaceVertices) : FaceVertices(FaceVertices) {}
+	GENERATED_BODY()
 
-	TArray<FVector> GetVertices() const;
-
-	const TArray<TArray<FVector>>& GetFaceVertices() const { return FaceVertices; }
-
-private:
-	// Non triangulated vertices per face
-	TArray<TArray<FVector>> FaceVertices;
+	UPROPERTY()
+	TArray<FVector> Vertices;
 };
 
 UCLASS()
@@ -24,13 +18,16 @@ class UInitialShape : public UObject
 {
 	GENERATED_BODY()
 
-private:
-	FInitialShapeData Data;
+	// Non triangulated vertices per face
+	UPROPERTY()
+	TArray<FInitialShapeFace> Faces;
 
 public:
-	const FInitialShapeData& GetInitialShapeData() const { return Data; }
+	const TArray<FInitialShapeFace>& GetInitialShapeData() const { return Faces; }
 
-	void SetInitialShapeData(const FInitialShapeData& InitialShapeData) { Data = InitialShapeData; }
+	TArray<FVector> GetVertices() const;
+
+	void SetInitialShapeData(const TArray<FInitialShapeFace>& InFaces) { Faces = InFaces; }
 };
 
 UCLASS()

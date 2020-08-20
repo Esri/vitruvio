@@ -96,7 +96,7 @@ public:
 	 * \param RandomSeed
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API FGenerateResult GenerateAsync(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
+	VITRUVIO_API FGenerateResult GenerateAsync(const TArray<FInitialShapeFace>& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
 											   UMaterial* TranslucentParent, URulePackage* RulePackage,
 											   const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const;
 
@@ -112,7 +112,7 @@ public:
 	 * \param RandomSeed
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API FGenerateResultDescription Generate(const FInitialShapeData& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
+	VITRUVIO_API FGenerateResultDescription Generate(const TArray<FInitialShapeFace>& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
 													 UMaterial* TranslucentParent, URulePackage* RulePackage,
 													 const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const;
 
@@ -124,7 +124,7 @@ public:
 	 * \param RandomSeed
 	 * \return
 	 */
-	VITRUVIO_API FAttributeMapResult LoadDefaultRuleAttributesAsync(const FInitialShapeData& InitialShape, URulePackage* RulePackage,
+	VITRUVIO_API FAttributeMapResult LoadDefaultRuleAttributesAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage,
 																	const int32 RandomSeed) const;
 
 	/**

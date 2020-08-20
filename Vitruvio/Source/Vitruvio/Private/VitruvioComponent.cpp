@@ -79,7 +79,13 @@ class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 
 		const TArray<TArray<FVector>> Windings = Vitruvio::GetOutsideWindings(MeshVertices, MeshIndices);
 		UInitialShape* InitialShape = NewObject<UInitialShape>(Owner);
-		InitialShape->SetInitialShapeData(FInitialShapeData(Windings));
+
+		TArray<FInitialShapeFace> InitialShapeFaces;
+		for (const TArray<FVector>& FaceVertices : Windings)
+		{
+			InitialShapeFaces.Push(FInitialShapeFace{FaceVertices});
+		}
+		InitialShape->SetInitialShapeData(InitialShapeFaces);
 		return InitialShape;
 	}
 
@@ -89,7 +95,7 @@ class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 		if (Owner)
 		{
 			UStaticMeshComponent* StaticMeshComponent = Owner->FindComponentByClass<UStaticMeshComponent>();
-			return StaticMeshComponent != nullptr;
+			return StaticMeshComponent != nullptr && StaticMeshComponent->GetStaticMesh() != nullptr;
 		}
 		return false;
 	}
@@ -189,7 +195,7 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 		}
 
 		OrderClockwise(Vertices);
-		InitialShape->SetInitialShapeData(FInitialShapeData({Vertices}));
+		InitialShape->SetInitialShapeData({FInitialShapeFace{Vertices}});
 		return InitialShape;
 	}
 
@@ -199,7 +205,7 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 		if (Owner)
 		{
 			USplineComponent* SplineComponent = Owner->FindComponentByClass<USplineComponent>();
-			return SplineComponent != nullptr;
+			return SplineComponent != nullptr && SplineComponent->GetNumberOfSplinePoints() > 0;
 		}
 		return false;
 	}
@@ -209,7 +215,7 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 	{
 		if (Object)
 		{
-			return Property && Property->GetFName() == TEXT("SplineCurves");
+			return Property && (Property->GetFName() == TEXT("SplineCurves") || Property->GetFName() == TEXT("SplineApproximationPoints"));
 		}
 		return false;
 	}
@@ -220,11 +226,37 @@ TArray<FInitialShapeFactory*> GInitialShapeFactories = {new FStaticMeshInitialSh
 
 int32 CalculateRandomSeed(const FTransform Transform, const UInitialShape* InitialShape)
 {
-	const FVector Centroid = GetCentroid(InitialShape->GetInitialShapeData().GetVertices());
+	const FVector Centroid = GetCentroid(InitialShape->GetVertices());
 	return GetTypeHash(Transform.TransformPosition(Centroid));
 }
 
 } // namespace
+
+#if WITH_EDITOR
+bool FInitialShapeFactory::IsRelevantObject(UVitruvioComponent* VitruvioComponent, UObject* Object)
+{
+	if (VitruvioComponent == Object || VitruvioComponent->InitialShape == Object)
+	{
+		return true;
+	}
+	AActor* Owner = VitruvioComponent->GetOwner();
+	if (!Owner)
+	{
+		return false;
+	}
+
+	const TSet<UActorComponent*>& Components = Owner->GetComponents();
+	for (UActorComponent* ChildComponent : Components)
+	{
+		if (ChildComponent == Object)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+#endif
 
 UVitruvioComponent::UVitruvioComponent()
 {
@@ -239,16 +271,28 @@ UVitruvioComponent::UVitruvioComponent()
 	bTickInEditor = true;
 }
 
-void UVitruvioComponent::OnRegister()
+void UVitruvioComponent::PostLoad()
 {
-	Super::OnRegister();
+	Super::PostLoad();
 
-	// Ignore generation during cooking
-	if (GIsCookerLoadingPackage)
+#if WITH_EDITOR
+	if (!PropertyChangeDelegate.IsValid())
 	{
-		return;
+		PropertyChangeDelegate = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &UVitruvioComponent::OnPropertyChanged);
 	}
-	// Try to create the initial shape on first register
+#endif
+
+	// Check if we can load the attributes and then generate (eg during play)
+	if (InitialShape && Rpk && bAttributesReady)
+	{
+		Generate();
+	}
+}
+
+void UVitruvioComponent::OnComponentCreated()
+{
+	Super::OnComponentCreated();
+
 	for (FInitialShapeFactory* Factory : GInitialShapeFactories)
 	{
 		if (Factory->CanCreateFrom(this))
@@ -259,22 +303,17 @@ void UVitruvioComponent::OnRegister()
 		}
 	}
 
-	if (Rpk && InitialShape)
+	// If everything is ready we can generate (used for example for copy paste to regenerate the model)
+	if (bAttributesReady)
 	{
-		LoadDefaultAttributes(true);
+		Generate();
 	}
 
 #if WITH_EDITOR
-	PropertyChangeDelegate = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &UVitruvioComponent::OnPropertyChanged);
-#endif
-}
-
-void UVitruvioComponent::OnUnregister()
-{
-	Super::OnUnregister();
-
-#if WITH_EDITOR
-	FCoreUObjectDelegates::OnObjectPropertyChanged.Remove(PropertyChangeDelegate);
+	if (!PropertyChangeDelegate.IsValid())
+	{
+		PropertyChangeDelegate = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &UVitruvioComponent::OnPropertyChanged);
+	}
 #endif
 }
 
@@ -347,7 +386,7 @@ void UVitruvioComponent::ProcessLoadAttributesQueue()
 			Attributes = LoadAttributes.AttributeMap->ConvertToUnrealAttributeMap(this);
 		}
 
-		AttributesReady = true;
+		bAttributesReady = true;
 
 		NotifyAttributesChanged();
 
@@ -463,11 +502,16 @@ void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 	{
 		LoadAttributesInvalidationToken->Invalidate();
 	}
+
+#if WITH_EDITOR
+	FCoreUObjectDelegates::OnObjectPropertyChanged.Remove(PropertyChangeDelegate);
+	PropertyChangeDelegate.Reset();
+#endif
 }
 
 void UVitruvioComponent::Generate()
 {
-	if (!Rpk || !AttributesReady || !InitialShape)
+	if (!Rpk || !bAttributesReady || !InitialShape)
 	{
 		RemoveGeneratedMeshes();
 		return;
@@ -536,12 +580,18 @@ void UVitruvioComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 
 void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEvent& PropertyChangedEvent)
 {
+	// Happens during import eg from copy paste
+	if (!PropertyChangedEvent.Property)
+	{
+		return;
+	}
+
 	if (Object == this && PropertyChangedEvent.Property)
 	{
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Rpk))
 		{
 			Attributes.Empty();
-			AttributesReady = false;
+			bAttributesReady = false;
 
 			NotifyAttributesChanged();
 		}
@@ -562,7 +612,8 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		bRecreateInitialShape = InitialShapeFactory != nullptr;
 	}
 	// If a property has changed which is used for creating the initial shape we have to recreate it
-	else if (InitialShapeFactory && InitialShapeFactory->IsRelevantProperty(Object, PropertyChangedEvent.Property))
+	else if (InitialShapeFactory && InitialShapeFactory->IsRelevantObject(this, Object) &&
+			 InitialShapeFactory->IsRelevantProperty(Object, PropertyChangedEvent.Property))
 	{
 		bRecreateInitialShape = true;
 	}
@@ -577,7 +628,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 			bValidRandomSeed = true;
 		}
 
-		if (AttributesReady)
+		if (bAttributesReady)
 		{
 			Generate();
 		}
@@ -588,7 +639,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		RemoveGeneratedMeshes();
 	}
 
-	if (InitialShape && Rpk && !AttributesReady)
+	if (InitialShape && Rpk && !bAttributesReady)
 	{
 		LoadDefaultAttributes();
 	}
@@ -606,7 +657,7 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 		return;
 	}
 
-	AttributesReady = false;
+	bAttributesReady = false;
 	LoadingAttributes = true;
 
 	FAttributeMapResult AttributesResult = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape->GetInitialShapeData(), Rpk, RandomSeed);
