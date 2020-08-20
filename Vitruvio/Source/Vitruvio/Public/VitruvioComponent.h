@@ -87,10 +87,10 @@ public:
 	UPROPERTY(EditAnywhere, DisplayName = "Translucent Parent", Category = "Vitruvio Default Materials")
 	UMaterial* TranslucentParent;
 
-	FInitialShapeFactory* InitialShapeFactory;
+	FInitialShapeFactory* InitialShapeFactory = nullptr;
 
 	UPROPERTY(VisibleAnywhere, Instanced, Category = "Vitruvio")
-	UInitialShape* InitialShape;
+	UInitialShape* InitialShape = nullptr;
 
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	void Generate();
@@ -98,6 +98,8 @@ public:
 	virtual void OnRegister() override;
 
 	virtual void OnUnregister() override;
+
+	virtual void OnComponentCreated() override;
 
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
 
@@ -117,8 +119,6 @@ private:
 
 	FGenerateResult::FTokenPtr GenerateToken;
 	FAttributeMapResult::FTokenPtr LoadAttributesInvalidationToken;
-
-	bool bFirstGenerate = false;
 
 	void LoadDefaultAttributes(bool KeepOldAttributeValues = false);
 

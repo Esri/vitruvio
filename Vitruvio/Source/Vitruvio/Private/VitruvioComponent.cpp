@@ -209,7 +209,7 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 	{
 		if (Object)
 		{
-			return Property && Property->GetFName() == TEXT("SplineCurves");
+			return Property && (Property->GetFName() == TEXT("SplineCurves") || Property->GetFName() == TEXT("SplineApproximationPoints"));
 		}
 		return false;
 	}
@@ -243,33 +243,6 @@ void UVitruvioComponent::OnRegister()
 {
 	Super::OnRegister();
 
-	// Ignore during cooking (as we do not want to generate during cooking)
-	if (GIsCookerLoadingPackage)
-	{
-		return;
-	}
-
-	// Try to setup factory if not initialized
-	if (InitialShapeFactory == nullptr)
-	{
-		for (FInitialShapeFactory* Factory : GInitialShapeFactories)
-		{
-			if (Factory->CanCreateFrom(this))
-			{
-				InitialShape = Factory->CreateInitialShape(this, InitialShape);
-				InitialShapeFactory = Factory;
-				break;
-			}
-		}
-	}
-
-	// Generate once (used for example for copy paste to regenerate the model)
-	if (bAttributesReady && !bFirstGenerate)
-	{
-		Generate();
-		bFirstGenerate = true;
-	}
-
 #if WITH_EDITOR
 	if (!PropertyChangeDelegate.IsValid())
 	{
@@ -281,11 +254,27 @@ void UVitruvioComponent::OnRegister()
 void UVitruvioComponent::OnUnregister()
 {
 	Super::OnUnregister();
+}
 
-#if WITH_EDITOR
-	FCoreUObjectDelegates::OnObjectPropertyChanged.Remove(PropertyChangeDelegate);
-	PropertyChangeDelegate.Reset();
-#endif
+void UVitruvioComponent::OnComponentCreated()
+{
+	Super::OnComponentCreated();
+
+	for (FInitialShapeFactory* Factory : GInitialShapeFactories)
+	{
+		if (Factory->CanCreateFrom(this))
+		{
+			InitialShape = Factory->CreateInitialShape(this, InitialShape);
+			InitialShapeFactory = Factory;
+			break;
+		}
+	}
+
+	// Generate once (used for example for copy paste to regenerate the model)
+	if (bAttributesReady)
+	{
+		Generate();
+	}
 }
 
 void UVitruvioComponent::ProcessGenerateQueue()
@@ -473,6 +462,11 @@ void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 	{
 		LoadAttributesInvalidationToken->Invalidate();
 	}
+
+#if WITH_EDITOR
+	FCoreUObjectDelegates::OnObjectPropertyChanged.Remove(PropertyChangeDelegate);
+	PropertyChangeDelegate.Reset();
+#endif
 }
 
 void UVitruvioComponent::Generate()
