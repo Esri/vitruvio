@@ -88,9 +88,6 @@ URangeAnnotation* ParseRangeAnnotation(const prt::Annotation* Annotation, UObjec
 		const prt::AnnotationArgument* Argument = Annotation->getArgument(ArgIndex);
 		const wchar_t* Key = Argument->getKey();
 
-		Result->Min = 0;
-		Result->Max = 0;
-
 		if (std::wcscmp(Key, MIN_KEY) == 0)
 		{
 			Result->Min = Argument->getFloat();
