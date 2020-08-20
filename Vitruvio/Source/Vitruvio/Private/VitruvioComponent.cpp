@@ -265,9 +265,9 @@ UVitruvioComponent::UVitruvioComponent()
 	bTickInEditor = true;
 }
 
-void UVitruvioComponent::OnRegister()
+void UVitruvioComponent::PostLoad()
 {
-	Super::OnRegister();
+	Super::PostLoad();
 
 #if WITH_EDITOR
 	if (!PropertyChangeDelegate.IsValid())
@@ -275,11 +275,6 @@ void UVitruvioComponent::OnRegister()
 		PropertyChangeDelegate = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &UVitruvioComponent::OnPropertyChanged);
 	}
 #endif
-}
-
-void UVitruvioComponent::OnUnregister()
-{
-	Super::OnUnregister();
 }
 
 void UVitruvioComponent::OnComponentCreated()
@@ -301,6 +296,13 @@ void UVitruvioComponent::OnComponentCreated()
 	{
 		Generate();
 	}
+
+#if WITH_EDITOR
+	if (!PropertyChangeDelegate.IsValid())
+	{
+		PropertyChangeDelegate = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &UVitruvioComponent::OnPropertyChanged);
+	}
+#endif
 }
 
 void UVitruvioComponent::ProcessGenerateQueue()
@@ -566,6 +568,12 @@ void UVitruvioComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 
 void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEvent& PropertyChangedEvent)
 {
+	// Happens during import eg from copy paste
+	if (!PropertyChangedEvent.Property)
+	{
+		return;
+	}
+
 	if (Object == this && PropertyChangedEvent.Property)
 	{
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Rpk))

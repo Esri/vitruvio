@@ -95,9 +95,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	void Generate();
 
-	virtual void OnRegister() override;
-
-	virtual void OnUnregister() override;
+	virtual void PostLoad() override;
 
 	virtual void OnComponentCreated() override;
 
