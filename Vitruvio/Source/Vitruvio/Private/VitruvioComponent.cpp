@@ -226,6 +226,30 @@ int32 CalculateRandomSeed(const FTransform Transform, const UInitialShape* Initi
 
 } // namespace
 
+bool FInitialShapeFactory::IsRelevantObject(UVitruvioComponent* VitruvioComponent, UObject* Object)
+{
+	if (VitruvioComponent == Object || VitruvioComponent->InitialShape == Object)
+	{
+		return true;
+	}
+	AActor* Owner = VitruvioComponent->GetOwner();
+	if (!Owner)
+	{
+		return false;
+	}
+
+	const TSet<UActorComponent*>& Components = Owner->GetComponents();
+	for (UActorComponent* ChildComponent : Components)
+	{
+		if (ChildComponent == Object)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 UVitruvioComponent::UVitruvioComponent()
 {
 	static ConstructorHelpers::FObjectFinder<UMaterial> Opaque(TEXT("Material'/Vitruvio/Materials/M_OpaqueParent.M_OpaqueParent'"));
@@ -566,7 +590,8 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		bRecreateInitialShape = InitialShapeFactory != nullptr;
 	}
 	// If a property has changed which is used for creating the initial shape we have to recreate it
-	else if (InitialShapeFactory && InitialShapeFactory->IsRelevantProperty(Object, PropertyChangedEvent.Property))
+	else if (InitialShapeFactory && InitialShapeFactory->IsRelevantObject(this, Object) &&
+			 InitialShapeFactory->IsRelevantProperty(Object, PropertyChangedEvent.Property))
 	{
 		bRecreateInitialShape = true;
 	}

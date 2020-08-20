@@ -147,5 +147,6 @@ public:
 
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) = 0;
+	virtual bool IsRelevantObject(UVitruvioComponent* Component, UObject* Object);
 #endif
 };
