@@ -1,11 +1,11 @@
 ﻿#include "InitialShape.h"
 
-TArray<FVector> FInitialShapeData::GetVertices() const
+TArray<FVector> UInitialShape::GetVertices() const
 {
 	TArray<FVector> AllVertices;
-	for (const TArray<FVector>& Vertices : FaceVertices)
+	for (const FInitialShapeFace& Face : Faces)
 	{
-		AllVertices.Append(Vertices);
+		AllVertices.Append(Face.Vertices);
 	}
 	return AllVertices;
 }

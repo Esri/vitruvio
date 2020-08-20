@@ -79,7 +79,13 @@ class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 
 		const TArray<TArray<FVector>> Windings = Vitruvio::GetOutsideWindings(MeshVertices, MeshIndices);
 		UInitialShape* InitialShape = NewObject<UInitialShape>(Owner);
-		InitialShape->SetInitialShapeData(FInitialShapeData(Windings));
+
+		TArray<FInitialShapeFace> InitialShapeFaces;
+		for (const TArray<FVector>& FaceVertices : Windings)
+		{
+			InitialShapeFaces.Push(FInitialShapeFace{FaceVertices});
+		}
+		InitialShape->SetInitialShapeData(InitialShapeFaces);
 		return InitialShape;
 	}
 
@@ -189,7 +195,7 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 		}
 
 		OrderClockwise(Vertices);
-		InitialShape->SetInitialShapeData(FInitialShapeData({Vertices}));
+		InitialShape->SetInitialShapeData({FInitialShapeFace{Vertices}});
 		return InitialShape;
 	}
 
@@ -220,7 +226,7 @@ TArray<FInitialShapeFactory*> GInitialShapeFactories = {new FStaticMeshInitialSh
 
 int32 CalculateRandomSeed(const FTransform Transform, const UInitialShape* InitialShape)
 {
-	const FVector Centroid = GetCentroid(InitialShape->GetInitialShapeData().GetVertices());
+	const FVector Centroid = GetCentroid(InitialShape->GetVertices());
 	return GetTypeHash(Transform.TransformPosition(Centroid));
 }
 
@@ -275,6 +281,12 @@ void UVitruvioComponent::PostLoad()
 		PropertyChangeDelegate = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &UVitruvioComponent::OnPropertyChanged);
 	}
 #endif
+
+	// Check if we can load the attributes and then generate (eg during play)
+	if (InitialShape && Rpk && bAttributesReady)
+	{
+		Generate();
+	}
 }
 
 void UVitruvioComponent::OnComponentCreated()
@@ -291,7 +303,7 @@ void UVitruvioComponent::OnComponentCreated()
 		}
 	}
 
-	// Generate once (used for example for copy paste to regenerate the model)
+	// If everything is ready we can generate (used for example for copy paste to regenerate the model)
 	if (bAttributesReady)
 	{
 		Generate();
