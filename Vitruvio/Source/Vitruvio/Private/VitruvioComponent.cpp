@@ -226,6 +226,7 @@ int32 CalculateRandomSeed(const FTransform Transform, const UInitialShape* Initi
 
 } // namespace
 
+#if WITH_EDITOR
 bool FInitialShapeFactory::IsRelevantObject(UVitruvioComponent* VitruvioComponent, UObject* Object)
 {
 	if (VitruvioComponent == Object || VitruvioComponent->InitialShape == Object)
@@ -249,6 +250,7 @@ bool FInitialShapeFactory::IsRelevantObject(UVitruvioComponent* VitruvioComponen
 
 	return false;
 }
+#endif
 
 UVitruvioComponent::UVitruvioComponent()
 {
