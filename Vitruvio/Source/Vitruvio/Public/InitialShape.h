@@ -25,7 +25,7 @@ class UInitialShape : public UObject
 	GENERATED_BODY()
 
 private:
-	FInitialShapeData Data;
+	FInitialShapeData Data = {};
 
 public:
 	const FInitialShapeData& GetInitialShapeData() const { return Data; }

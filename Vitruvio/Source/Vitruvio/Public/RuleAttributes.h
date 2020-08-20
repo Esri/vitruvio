@@ -51,7 +51,7 @@ public:
 	UPROPERTY()
 	double Min = NAN;
 	UPROPERTY()
-	double Max;
+	double Max = NAN;
 	UPROPERTY()
 	double StepSize = 0.1;
 	UPROPERTY()
