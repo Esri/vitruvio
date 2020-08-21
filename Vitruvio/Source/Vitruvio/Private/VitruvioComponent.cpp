@@ -252,6 +252,8 @@ void UVitruvioComponent::PostLoad()
 	}
 #endif
 
+	InitialShapeFactory = FindFactory(this);
+
 	// Check if we can load the attributes and then generate (eg during play)
 	if (InitialShape && Rpk && bAttributesReady)
 	{
@@ -263,15 +265,7 @@ void UVitruvioComponent::OnComponentCreated()
 {
 	Super::OnComponentCreated();
 
-	for (FInitialShapeFactory* Factory : GInitialShapeFactories)
-	{
-		if (Factory->CanCreateFrom(this))
-		{
-			InitialShape = Factory->CreateInitialShape(this, InitialShape);
-			InitialShapeFactory = Factory;
-			break;
-		}
-	}
+	InitialShapeFactory = FindFactory(this);
 
 	// If everything is ready we can generate (used for example for copy paste to regenerate the model)
 	if (bAttributesReady)
@@ -526,8 +520,6 @@ void UVitruvioComponent::Generate()
 	}
 }
 
-#if WITH_EDITOR
-
 FInitialShapeFactory* UVitruvioComponent::FindFactory(UVitruvioComponent* VitruvioComponent)
 {
 	for (FInitialShapeFactory* Factory : GInitialShapeFactories)
@@ -540,6 +532,8 @@ FInitialShapeFactory* UVitruvioComponent::FindFactory(UVitruvioComponent* Vitruv
 
 	return nullptr;
 }
+
+#if WITH_EDITOR
 
 void UVitruvioComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
@@ -578,7 +572,6 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 	if (!InitialShapeFactory || !InitialShapeFactory->CanCreateFrom(this))
 	{
 		InitialShapeFactory = FindFactory(this);
-		InitialShape = nullptr;
 		bRecreateInitialShape = InitialShapeFactory != nullptr;
 	}
 	// If a property has changed which is used for creating the initial shape we have to recreate it

@@ -103,9 +103,9 @@ public:
 
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-#if WITH_EDITOR
 	static FInitialShapeFactory* FindFactory(UVitruvioComponent* VitruvioComponent);
 
+#if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
 	void OnPropertyChanged(UObject* Object, FPropertyChangedEvent& PropertyChangedEvent);
