@@ -114,50 +114,6 @@ class FStaticMeshInitialShapeFactory : public FInitialShapeFactory
 
 class FSplineInitialShapeFactory : public FInitialShapeFactory
 {
-	// Adapted from https://stackoverflow.com/a/6989383
-	static void OrderClockwise(TArray<FVector>& Vertices)
-	{
-		const FVector Center = GetCentroid(Vertices);
-		Vertices.Sort([Center](const FVector& A, const FVector& B) {
-			if (A.X - Center.X >= 0 && B.X - Center.X < 0)
-			{
-				return true;
-			}
-
-			if (A.X - Center.X < 0 && B.X - Center.X >= 0)
-			{
-				return false;
-			}
-
-			if (A.X - Center.X == 0 && B.X - Center.X == 0)
-			{
-				if (A.Y - Center.Y >= 0 || B.Y - Center.Y >= 0)
-				{
-					return A.Y > B.Y;
-				}
-
-				return B.Y > A.Y;
-			}
-
-			// compute the cross product of vectors (center -> a) x (center -> b)
-			const int Det = (A.X - Center.X) * (B.Y - Center.Y) - (B.X - Center.X) * (A.Y - Center.Y);
-			if (Det < 0)
-			{
-				return true;
-			}
-
-			if (Det > 0)
-			{
-				return false;
-			}
-
-			// points a and b are on the same line from the center
-			// check which point is closer to the center
-			const int D1 = (A.X - Center.X) * (A.X - Center.X) + (A.Y - Center.Y) * (A.Y - Center.Y);
-			const int D2 = (B.X - Center.X) * (B.X - Center.X) + (B.Y - Center.Y) * (B.Y - Center.Y);
-			return D1 > D2;
-		});
-	}
 
 	virtual USplineInitialShape* CreateInitialShape(UVitruvioComponent* Component, UInitialShape* OldInitialShape) const override
 	{
@@ -194,8 +150,22 @@ class FSplineInitialShapeFactory : public FInitialShapeFactory
 			}
 		}
 
-		OrderClockwise(Vertices);
+		// Reverse vertices if first three vertices are counter clockwise
+		if (Vertices.Num() >= 3)
+		{
+			const FVector V1 = Vertices[1] - Vertices[0];
+			const FVector V2 = Vertices[2] - Vertices[0];
+			const FVector Normal = FVector::CrossProduct(V1, V2);
+			const float Dot = FVector::DotProduct(FVector::UpVector, Normal);
+
+			if (Dot > 0)
+			{
+				Algo::Reverse(Vertices);
+			}
+		}
+
 		InitialShape->SetInitialShapeData({FInitialShapeFace{Vertices}});
+
 		return InitialShape;
 	}
 
