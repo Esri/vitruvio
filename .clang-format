@@ -11,10 +11,8 @@ ColumnLimit                                   : 150
 ReflowComments                                : true
 FixNamespaceComments                          : true
 AlwaysBreakTemplateDeclarations               : Yes
-AllowShortCaseLabelsOnASingleLine             : true
 NamespaceIndentation                          : Inner
-AllowShortBlocksOnASingleLine                 : Never
-AllowShortFunctionsOnASingleLine              : Inline
+AllowShortFunctionsOnASingleLine              : Empty
 AllowShortLambdasOnASingleLine                : Inline
 IncludeCategories:
   - Regex:           'generated.h'

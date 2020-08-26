@@ -1,0 +1,199 @@
+#!/usr/bin/env python
+
+import pathlib
+import subprocess
+import sys
+import shutil
+import os
+import json
+
+
+def abort(message):
+    """
+    Aborts execution of the script with the specified error message.
+    The printed message is formatted according to the script standards
+    and is printed to the system standard error.
+
+    :param message: The message to print.
+    """
+    print('! Error: {}. Aborting'.format(message), file=sys.stderr)
+    sys.exit(-1)
+
+
+def warn(message):
+    """
+    Warns about an unexpected occurrence with the specified warning.
+    The printed message is formatted according to the script standards
+    and is printed to the system standard error.
+
+    :param message: The warning to print.
+    """
+    print('? Warning: {}.'.format(message), file=sys.stderr)
+
+
+def note(message):
+    """
+    Prints an arbitrary information into the standard output.
+    The printed message is formatted according to the script standards.
+
+    :param message: The information to print.
+    """
+    print('> Info: {}.'.format(message))
+
+
+def required_step(function, title, message_success, message_failure):
+    """
+    Executes a step in the script and aborts if the step fails.
+
+    :param function: A function returning 'True', if the step succeeds and 'False' if it doesn't.
+    :param title: The title of the step.
+    :param message_success: The message to print if the step succeeds.
+    :param message_failure: The message to print if the step fails.
+    """
+    sys.stdout.write("> Step: {} ...".format(title))
+    sys.stdout.flush()
+
+    if function():
+        print(' {}'.format(message_success))
+
+    else:
+        print(' Error.')
+        abort(message_failure)
+
+
+def optional_step(function, title, message_success, warning_failure):
+    """
+    Executes an optional step in the script and prints a warning if the step fails.
+
+    :param function: A function returning 'True', if the step succeeds and 'False' if it doesn't.
+    :param title: The title of the step.
+    :param message_success: The message to print if the step succeeds.
+    :param warning_failure: The warning to print if the step fails.
+    """
+    sys.stdout.write("> Step: {} ...".format(title))
+    sys.stdout.flush()
+
+    if function():
+        print(' {}'.format(message_success))
+
+    elif warning_failure is not None:
+        print(' Failed.')
+        warn(warning_failure)
+
+    else:
+        print(' Failed.')
+
+
+def remove_dir_step(directory: pathlib.Path):
+    """
+    Executes an optional step that removes a directory.
+
+    :param directory: The directory to remove.
+    """
+
+    def remove_dir():
+        if directory.exists():
+            shutil.rmtree(directory)
+            return True
+        else:
+            return False
+
+    optional_step(remove_dir, 'Removing {}'.format(str(directory)), 'Done', None)
+
+
+# Extract the commit hashes and branch info from the arguments.
+if len(sys.argv) < 4:
+    abort('Not enough arguments provided to the hook')
+
+hash_old = sys.argv[1]
+hash_new = sys.argv[2]
+is_branch_checkout = sys.argv[3] == '1'
+
+# Exit early if we're not doing a branch checkout.
+if not is_branch_checkout:
+    sys.exit(0)
+
+# Get path to current file and translate into root directory.
+path_file = pathlib.Path(__file__).absolute()
+path_hooks = path_file.parent
+path_root = path_hooks.parent.parent
+
+# Get unreal engine path from environment.
+unreal_path_str = os.getenv('ue4path')
+unreal_path = pathlib.Path(unreal_path_str)
+if unreal_path_str is None:
+    abort('UE4PATH environment variable not set')
+
+# Get all unreal engine projects starting from the root folder and process them.
+for uproject in path_root.glob('**/*.uproject'):
+    # Parse the unreal project version
+    with open(str(uproject)) as project:
+        data = json.load(project)
+        name = str(uproject.stem)
+        version = data['EngineAssociation']
+
+    # Setup some of the unreal engine paths
+    engine_path = unreal_path.joinpath('UE_{}'.format(version))
+    ubt_path = engine_path \
+        .joinpath("Engine") \
+        .joinpath("Binaries") \
+        .joinpath("DotNET") \
+        .joinpath("UnrealBuildTool") \
+        .with_suffix('.exe')
+
+    if not ubt_path.exists():
+        warn('Project: {}, UBT path does not exist for version {}'.format(name, version))
+        continue
+
+    parent_path = uproject.parent
+    solution_path = parent_path.joinpath(uproject.stem).with_suffix('.sln')
+
+    # Get all temporary paths.
+    dir_binaries = parent_path.joinpath('Binaries')
+    dir_intermediate = parent_path.joinpath('Intermediate')
+    dir_saved = parent_path.joinpath('Saved')
+    dir_derived = parent_path.joinpath('DerivedDataCache')
+
+    # Remove all of the directories.
+    remove_dir_step(dir_binaries)
+    remove_dir_step(dir_intermediate)
+    remove_dir_step(dir_saved)
+    remove_dir_step(dir_derived)
+
+    #
+    # We don't unlink the solution currently. It might be more convenient to keep the IDE open and regenerate
+    # the project without first deleting the solution. But this needs to be checked.
+    #
+    # if solution.exists(): solution.unlink()
+
+    # Generate the project files using UBT
+    ubt_path_abs = str(ubt_path.absolute())
+    upr_path_abs = str(uproject.absolute())
+
+    sys.stdout.write('> {}: Regenerating project files...'.format(name))
+    sys.stdout.flush()
+
+    cmd_ubt = subprocess.Popen("{} -ProjectFiles {}".format(ubt_path_abs, upr_path_abs),
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    cmd_ubt.communicate()
+
+    if cmd_ubt.returncode != 0:
+        out = str(b"\n".join(cmd_ubt.stdout.readlines()))
+        err = str(b"\n".join(cmd_ubt.stderr.readlines()))
+        message = 'Project: {}, something went wrong while building the project'.format(name)
+
+        # Write a log file into the project saved folder.
+        path_log = dir_saved.joinpath('Generate.log')
+        # Recreate the saved dir, if it has already been deleted.
+        if not dir_saved.exists():
+            dir_saved.mkdir()
+
+        with open(str(path_log)) as log:
+            log.write(out)
+            log.write(err)
+
+        abort(message)
+    else:
+        print(' Done!')
+        sys.exit(0)

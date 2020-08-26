@@ -1,3 +1,7 @@
+<style>
+    .options { width: 150px; }
+</style>
+
 # Scripts
 
 This folder contains various utility scripts that are used to facilitate setting devops related tasks.
@@ -8,7 +12,7 @@ Currently, the folder hosts scripts for settin up your git pre-commit hook accor
 To use our custom git pre-commit hook that takes care of running clang-format. The minimum clang-format version necessary is quite old and will soon be updated to a newer version.
 
 - python >= 3.8.0
-- clang-format >= 8.0.0
+- clang-format >= 11.0.0
 
 To install the pre-commit hook, simply execute the `setup.py` script, which will take care of registering the current hook. Don't worry, if you already have a hook installed, the script will create a backup for you in the git hooks folder. Careful on successive runs though. The backup gets overwritten.
 
@@ -21,7 +25,31 @@ To install the pre-commit hook, simply execute the `setup.py` script, which will
 ~~~
 
 In case you want to restore or keep a backup of your previous pre-commit hook, the first line tells you where to find the previous hook script.
-As of this time, the hook does not check if clang-format is installed and will instead simply terminate on the first file it tries to format in case the command is not available or not in your path environment.
+
+### Options
+
+The `setup` script comes with a few options that you can use to further customize your development experience.
+
+<table>
+<thead class="options">
+    <th>Option</th>
+    <th>Type</th>
+    <th>Format</th>
+    <th>Description</th>
+</thead>
+<tbody class="options">
+    <tr>
+        <td>Branch Cleanup</td>
+        <td>Flag</td>
+        <td>-c, --cleanup</td>
+        <td>
+            If provided, automatically installs a post checkout hook that, on branch checkouts goes ahead and
+            deletes your `Intermediate`, `Binaries` and `DerivedDataCache` folders and regenerates the Unreal
+            Engine project for you, using Unreal Engine's official CLI tools.
+        </td>
+    </tr>
+</tbody>
+</table>
 
 ## Manual Formatting
 
