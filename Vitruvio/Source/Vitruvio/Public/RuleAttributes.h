@@ -1,4 +1,4 @@
-// Copyright 2019 - 2020 Esri. All Rights Reserved.
+// Copyright © 2017-2020 Esri R&D Center Zurich. All rights reserved.
 
 #pragma once
 
@@ -109,7 +109,10 @@ public:
 	UPROPERTY()
 	bool Hidden;
 
-	void SetAnnotation(UAttributeAnnotation* InAnnotation) { Annotation = InAnnotation; }
+	void SetAnnotation(UAttributeAnnotation* InAnnotation)
+	{
+		Annotation = InAnnotation;
+	}
 
 	virtual void CopyValue(const URuleAttribute* FromAttribute){};
 };
@@ -123,9 +126,15 @@ public:
 	UPROPERTY()
 	FString Value;
 
-	UStringEnumAnnotation* GetEnumAnnotation() const { return Cast<UStringEnumAnnotation>(Annotation); }
+	UStringEnumAnnotation* GetEnumAnnotation() const
+	{
+		return Cast<UStringEnumAnnotation>(Annotation);
+	}
 
-	UColorAnnotation* GetColorAnnotation() const { return Cast<UColorAnnotation>(Annotation); }
+	UColorAnnotation* GetColorAnnotation() const
+	{
+		return Cast<UColorAnnotation>(Annotation);
+	}
 
 	void CopyValue(const URuleAttribute* FromAttribute) override
 	{
@@ -146,9 +155,15 @@ public:
 	UPROPERTY()
 	double Value;
 
-	UFloatEnumAnnotation* GetEnumAnnotation() const { return Cast<UFloatEnumAnnotation>(Annotation); }
+	UFloatEnumAnnotation* GetEnumAnnotation() const
+	{
+		return Cast<UFloatEnumAnnotation>(Annotation);
+	}
 
-	URangeAnnotation* GetRangeAnnotation() const { return Cast<URangeAnnotation>(Annotation); }
+	URangeAnnotation* GetRangeAnnotation() const
+	{
+		return Cast<URangeAnnotation>(Annotation);
+	}
 
 	void CopyValue(const URuleAttribute* FromAttribute) override
 	{

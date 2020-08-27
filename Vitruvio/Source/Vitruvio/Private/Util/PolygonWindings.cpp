@@ -1,4 +1,4 @@
-﻿// Copyright 2019 - 2020 Esri. All Rights Reserved.
+﻿// Copyright © 2017-2020 Esri R&D Center Zurich. All rights reserved.
 
 #pragma once
 
@@ -17,7 +17,10 @@ struct FWindingEdge
 
 	FWindingEdge(const int32 Index0, const int32 Index1) : Index0(Index0), Index1(Index1), Count(1) {}
 
-	bool operator==(const FWindingEdge& E) const { return (E.Index0 == Index0 && E.Index1 == Index1) || (E.Index0 == Index1 && E.Index1 == Index0); }
+	bool operator==(const FWindingEdge& E) const
+	{
+		return (E.Index0 == Index0 && E.Index1 == Index1) || (E.Index0 == Index1 && E.Index1 == Index0);
+	}
 };
 
 uint32 GetTypeHash(const FWindingEdge& Edge)

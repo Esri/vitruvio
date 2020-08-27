@@ -1,3 +1,5 @@
+// Copyright © 2017-2020 Esri R&D Center Zurich. All rights reserved.
+
 #include "VitruvioTypes.h"
 
 #include "Core/Public/Containers/UnrealString.h"
@@ -110,10 +112,18 @@ FMaterialAttributeContainer::FMaterialAttributeContainer(const prt::AttributeMap
 		const EMaterialPropertyType Type = KeyToTypeMap[KeyString];
 		switch (Type)
 		{
-		case EMaterialPropertyType::TEXTURE: TextureProperties.Add(KeyString, FirstValidTextureUri(AttributeMap, Key)); break;
-		case EMaterialPropertyType::LINEAR_COLOR: ColorProperties.Add(KeyString, GetLinearColor(AttributeMap, Key)); break;
-		case EMaterialPropertyType::SCALAR: ScalarProperties.Add(KeyString, AttributeMap->getFloat(Key)); break;
-		case EMaterialPropertyType::STRING: StringProperties.Add(KeyString, AttributeMap->getString(Key)); break;
+		case EMaterialPropertyType::TEXTURE:
+			TextureProperties.Add(KeyString, FirstValidTextureUri(AttributeMap, Key));
+			break;
+		case EMaterialPropertyType::LINEAR_COLOR:
+			ColorProperties.Add(KeyString, GetLinearColor(AttributeMap, Key));
+			break;
+		case EMaterialPropertyType::SCALAR:
+			ScalarProperties.Add(KeyString, AttributeMap->getFloat(Key));
+			break;
+		case EMaterialPropertyType::STRING:
+			StringProperties.Add(KeyString, AttributeMap->getString(Key));
+			break;
 		default:;
 		}
 	}

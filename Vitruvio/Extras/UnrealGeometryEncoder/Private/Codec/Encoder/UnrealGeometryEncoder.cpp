@@ -1,4 +1,4 @@
-// Copyright 2019 - 2020 Esri. All Rights Reserved.
+// Copyright © 2017-2020 Esri R&D Center Zurich. All rights reserved.
 
 #include "UnrealGeometryEncoder.h"
 
@@ -234,11 +234,17 @@ void convertMaterialToAttributeMap(prtx::PRTUtils::AttributeMapBuilderPtr& aBuil
 
 		switch (prtxAttr.getType(key))
 		{
-		case prt::Attributable::PT_BOOL: aBuilder->setBool(key.c_str(), prtxAttr.getBool(key) == prtx::PRTX_TRUE); break;
+		case prt::Attributable::PT_BOOL:
+			aBuilder->setBool(key.c_str(), prtxAttr.getBool(key) == prtx::PRTX_TRUE);
+			break;
 
-		case prt::Attributable::PT_FLOAT: aBuilder->setFloat(key.c_str(), prtxAttr.getFloat(key)); break;
+		case prt::Attributable::PT_FLOAT:
+			aBuilder->setFloat(key.c_str(), prtxAttr.getFloat(key));
+			break;
 
-		case prt::Attributable::PT_INT: aBuilder->setInt(key.c_str(), prtxAttr.getInt(key)); break;
+		case prt::Attributable::PT_INT:
+			aBuilder->setInt(key.c_str(), prtxAttr.getInt(key));
+			break;
 
 		case prt::Attributable::PT_STRING:
 		{
@@ -349,7 +355,8 @@ void forwardGenericAttributes(IUnrealCallbacks* uc, size_t initialShapeIndex, co
 			uc->attrBool(initialShapeIndex, shape->getID(), key, (v == prtx::PRTX_TRUE));
 			break;
 		}
-		default: break;
+		default:
+			break;
 		}
 	});
 }

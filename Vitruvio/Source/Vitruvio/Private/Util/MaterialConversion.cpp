@@ -1,4 +1,4 @@
-// Copyright 2019 - 2020 Esri. All Rights Reserved.
+// Copyright © 2017-2020 Esri R&D Center Zurich. All rights reserved.
 
 #pragma once
 
@@ -88,8 +88,10 @@ ERGBFormat GetRequestedFormat(ERGBFormat Format)
 	{
 	case ERGBFormat::RGBA:
 	case ERGBFormat::BGRA:
-	case ERGBFormat::Gray: return ERGBFormat::BGRA;
-	default: return ERGBFormat::Invalid;
+	case ERGBFormat::Gray:
+		return ERGBFormat::BGRA;
+	default:
+		return ERGBFormat::Invalid;
 	}
 }
 
@@ -99,9 +101,12 @@ EPixelFormat PixelFormatFromRGB(ERGBFormat Format, int32 BitDepth)
 
 		switch (Format)
 	{
-	case ERGBFormat::BGRA: return PF_B8G8R8A8;
-	case ERGBFormat::Gray: return BitDepth == 8 ? PF_G8 : PF_G16;
-	default: return PF_Unknown;
+	case ERGBFormat::BGRA:
+		return PF_B8G8R8A8;
+	case ERGBFormat::Gray:
+		return BitDepth == 8 ? PF_G8 : PF_G16;
+	default:
+		return PF_Unknown;
 	}
 }
 
@@ -229,7 +234,8 @@ EBlendMode ChooseBlendModeFromOpacityMap(const FTextureData& OpacityMapData, boo
 		CountOpacityMapPixels(ImageData, OpacityMap->GetSizeX(), OpacityMap->GetSizeY(), BlackPixels, WhitePixels);
 		break;
 	}
-	default: check(0)
+	default:
+		check(0)
 	}
 
 	OpacityMap->PlatformData->Mips[0].BulkData.Unlock();
@@ -285,9 +291,12 @@ UMaterialInterface* GetMaterialByBlendMode(EBlendMode Mode, UMaterialInterface* 
 {
 	switch (Mode)
 	{
-	case BLEND_Translucent: return Translucent;
-	case BLEND_Masked: return Masked;
-	default: return Opaque;
+	case BLEND_Translucent:
+		return Translucent;
+	case BLEND_Masked:
+		return Masked;
+	default:
+		return Opaque;
 	}
 }
 

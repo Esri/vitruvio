@@ -1,3 +1,5 @@
+// Copyright © 2017-2020 Esri R&D Center Zurich. All rights reserved.
+
 #pragma once
 
 #include "CoreUObject.h"
@@ -30,7 +32,10 @@ struct FMaterialAttributeContainer
 		// clang-format on
 	}
 
-	friend bool operator!=(const FMaterialAttributeContainer& Lhs, const FMaterialAttributeContainer& RHS) { return !(Lhs == RHS); }
+	friend bool operator!=(const FMaterialAttributeContainer& Lhs, const FMaterialAttributeContainer& RHS)
+	{
+		return !(Lhs == RHS);
+	}
 
 	friend uint32 GetTypeHash(const FMaterialAttributeContainer& Object);
 };
@@ -47,7 +52,10 @@ struct FInstanceCacheKey
 		return Lhs.PrototypeId == RHS.PrototypeId && Lhs.MaterialOverrides == RHS.MaterialOverrides;
 	}
 
-	friend bool operator!=(const FInstanceCacheKey& Lhs, const FInstanceCacheKey& RHS) { return !(Lhs == RHS); }
+	friend bool operator!=(const FInstanceCacheKey& Lhs, const FInstanceCacheKey& RHS)
+	{
+		return !(Lhs == RHS);
+	}
 };
 using FInstanceMap = TMap<FInstanceCacheKey, TArray<FTransform>>;
 

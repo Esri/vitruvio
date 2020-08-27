@@ -1,4 +1,5 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright © 2017-2020 Esri R&D Center Zurich. All rights reserved.
+
 using System.IO;
 using System;
 using UnrealBuildTool;
@@ -18,7 +19,6 @@ namespace UnrealBuildTool.Rules
 
 			bUseRTTI = true;
 			bEnableExceptions = true;
-
 		}
 	}
 }

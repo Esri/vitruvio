@@ -1,4 +1,4 @@
-// Copyright 2019 - 2020 Esri. All Rights Reserved.
+// Copyright © 2017-2020 Esri R&D Center Zurich. All rights reserved.
 
 #include "AnnotationParsing.h"
 
@@ -167,9 +167,15 @@ void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, UR
 			{
 				switch (Type)
 				{
-				case prt::AAT_FLOAT: InAttribute.SetAnnotation(ParseEnumAnnotation<UFloatEnumAnnotation, double>(CEAnnotation, Outer)); break;
-				case prt::AAT_STR: InAttribute.SetAnnotation(ParseEnumAnnotation<UStringEnumAnnotation, FString>(CEAnnotation, Outer)); break;
-				default: InAttribute.SetAnnotation({}); break;
+				case prt::AAT_FLOAT:
+					InAttribute.SetAnnotation(ParseEnumAnnotation<UFloatEnumAnnotation, double>(CEAnnotation, Outer));
+					break;
+				case prt::AAT_STR:
+					InAttribute.SetAnnotation(ParseEnumAnnotation<UStringEnumAnnotation, FString>(CEAnnotation, Outer));
+					break;
+				default:
+					InAttribute.SetAnnotation({});
+					break;
 				}
 			}
 		}

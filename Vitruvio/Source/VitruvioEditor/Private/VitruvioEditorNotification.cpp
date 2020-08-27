@@ -1,3 +1,5 @@
+// Copyright © 2017-2020 Esri R&D Center Zurich. All rights reserved.
+
 #include "CoreMinimal.h"
 #include "VitruvioModule.h"
 #include "Widgets/Notifications/GlobalNotification.h"
@@ -17,10 +19,19 @@ protected:
 	virtual bool ShouldShowNotification(const bool bIsNotificationAlreadyActive) const override;
 	virtual void SetNotificationText(const TSharedPtr<SNotificationItem>& InNotificationItem) const override;
 
-	virtual ETickableTickType GetTickableTickType() const override { return ETickableTickType::Always; }
+	virtual ETickableTickType GetTickableTickType() const override
+	{
+		return ETickableTickType::Always;
+	}
 
-	virtual TStatId GetStatId() const override { RETURN_QUICK_DECLARE_CYCLE_STAT(FGlobalEditorNotification, STATGROUP_Tickables); }
-	virtual void Tick(float DeltaTime) override { TickNotification(DeltaTime); }
+	virtual TStatId GetStatId() const override
+	{
+		RETURN_QUICK_DECLARE_CYCLE_STAT(FGlobalEditorNotification, STATGROUP_Tickables);
+	}
+	virtual void Tick(float DeltaTime) override
+	{
+		TickNotification(DeltaTime);
+	}
 };
 
 /** Global notification object. */

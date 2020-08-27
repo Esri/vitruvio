@@ -1,4 +1,4 @@
-﻿// Copyright 2019 - 2020 Esri. All Rights Reserved.
+﻿// Copyright © 2017-2020 Esri R&D Center Zurich. All rights reserved.
 
 #include "ImageChannelsDetection.h"
 
@@ -30,7 +30,10 @@ public:
 		png_destroy_read_struct(png_ptr, info_ptr, nullptr);
 	}
 
-	void SetRowPointers(png_bytep* InRowPointers) { PNGRowPointers = InRowPointers; }
+	void SetRowPointers(png_bytep* InRowPointers)
+	{
+		PNGRowPointers = InRowPointers;
+	}
 
 private:
 	png_structp* png_ptr;
@@ -118,11 +121,16 @@ int32 DetectChannels(EImageFormat ImageFormat, uint8* CompressedData, size_t Com
 
 	switch (ImageFormat)
 	{
-	case EImageFormat::JPEG: return 3;
-	case EImageFormat::GrayscaleJPEG: return 1;
-	case EImageFormat::PNG: return PNG::PNGHeaderReader(CompressedData, CompressedSize).GetNumChannels();
-	case EImageFormat::BMP: return BMP::GetNumChannels(CompressedData);
-	default: return 0;
+	case EImageFormat::JPEG:
+		return 3;
+	case EImageFormat::GrayscaleJPEG:
+		return 1;
+	case EImageFormat::PNG:
+		return PNG::PNGHeaderReader(CompressedData, CompressedSize).GetNumChannels();
+	case EImageFormat::BMP:
+		return BMP::GetNumChannels(CompressedData);
+	default:
+		return 0;
 	}
 }
 } // namespace Vitruvio

@@ -1,4 +1,4 @@
-// Copyright 2019 - 2020 Esri. All Rights Reserved.
+// Copyright © 2017-2020 Esri R&D Center Zurich. All rights reserved.
 
 #pragma once
 
@@ -35,13 +35,25 @@ public:
 
 	static const int32 NO_PROTOTYPE_INDEX = -1;
 
-	const Vitruvio::FInstanceMap& GetInstances() const { return Instances; }
+	const Vitruvio::FInstanceMap& GetInstances() const
+	{
+		return Instances;
+	}
 
-	const TMap<int32, FMeshDescription>& GetMeshes() const { return Meshes; }
+	const TMap<int32, FMeshDescription>& GetMeshes() const
+	{
+		return Meshes;
+	}
 
-	const TMap<int32, TArray<Vitruvio::FMaterialAttributeContainer>>& GetMaterials() const { return Materials; }
+	const TMap<int32, TArray<Vitruvio::FMaterialAttributeContainer>>& GetMaterials() const
+	{
+		return Materials;
+	}
 
-	const FMeshDescription& GetMeshById(int32 PrototypId) const { return Meshes[PrototypId]; }
+	const FMeshDescription& GetMeshById(int32 PrototypId) const
+	{
+		return Meshes[PrototypId];
+	}
 
 	/**
 	 * @param name initial shape name, optionally used to create primitive groups on output
@@ -115,9 +127,18 @@ public:
 		return prt::STATUS_OK;
 	}
 
-	prt::Status cgaReportBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value) override { return prt::STATUS_OK; }
-	prt::Status cgaReportFloat(size_t isIndex, int32_t shapeID, const wchar_t* key, double value) override { return prt::STATUS_OK; }
-	prt::Status cgaReportString(size_t isIndex, int32_t shapeID, const wchar_t* key, const wchar_t* value) override { return prt::STATUS_OK; }
+	prt::Status cgaReportBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value) override
+	{
+		return prt::STATUS_OK;
+	}
+	prt::Status cgaReportFloat(size_t isIndex, int32_t shapeID, const wchar_t* key, double value) override
+	{
+		return prt::STATUS_OK;
+	}
+	prt::Status cgaReportString(size_t isIndex, int32_t shapeID, const wchar_t* key, const wchar_t* value) override
+	{
+		return prt::STATUS_OK;
+	}
 
 	prt::Status attrBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value) override;
 	prt::Status attrFloat(size_t isIndex, int32_t shapeID, const wchar_t* key, double value) override;

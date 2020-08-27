@@ -1,4 +1,6 @@
-﻿#pragma once
+// Copyright © 2017-2020 Esri R&D Center Zurich. All rights reserved.
+
+#pragma once
 
 #include "CoreUObject.h"
 
@@ -23,11 +25,17 @@ class UInitialShape : public UObject
 	TArray<FInitialShapeFace> Faces;
 
 public:
-	const TArray<FInitialShapeFace>& GetInitialShapeData() const { return Faces; }
+	const TArray<FInitialShapeFace>& GetInitialShapeData() const
+	{
+		return Faces;
+	}
 
 	TArray<FVector> GetVertices() const;
 
-	void SetInitialShapeData(const TArray<FInitialShapeFace>& InFaces) { Faces = InFaces; }
+	void SetInitialShapeData(const TArray<FInitialShapeFace>& InFaces)
+	{
+		Faces = InFaces;
+	}
 };
 
 UCLASS()

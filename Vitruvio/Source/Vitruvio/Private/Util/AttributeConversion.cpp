@@ -1,4 +1,4 @@
-// Copyright 2019 - 2020 Esri. All Rights Reserved.
+// Copyright © 2017-2020 Esri R&D Center Zurich. All rights reserved.
 
 #pragma once
 
@@ -43,7 +43,8 @@ URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt:
 	case prt::AAT_BOOL_ARRAY:
 	case prt::AAT_FLOAT_ARRAY:
 	case prt::AAT_STR_ARRAY:
-	default: return nullptr;
+	default:
+		return nullptr;
 	}
 }
 } // namespace
