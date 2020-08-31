@@ -1,19 +1,17 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "0.1",
+	"VersionName": "1.0",
 	"FriendlyName": "Vitruvio",
-	"Description": "CityEngine procedural runtime (PRT) plugin",
+	"Description": "Vitruvio adds support for CityEngine's procedural runtime (PRT)",
 	"Category": "Misc",
 	"CreatedBy": "Esri",
-	"CreatedByURL": "",
+	"CreatedByURL": "https://www.esri.com/en-us/home",
 	"DocsURL": "",
 	"MarketplaceURL": "",
-	"SupportURL": "",
+	"SupportURL": "https://doc.arcgis.com/en/cityengine/",
 	"EngineVersion": "4.25.0",
 	"CanContainContent": true,
-	"IsBetaVersion": true,
-	"IsExperimentalVersion": false,
 	"Installed": true,
 	"Modules": [
 		{
