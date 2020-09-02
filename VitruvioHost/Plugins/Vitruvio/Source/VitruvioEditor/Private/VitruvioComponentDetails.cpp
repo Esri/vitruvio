@@ -350,10 +350,7 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	IDetailCategoryBuilder& RootCategory = DetailBuilder.EditCategory("Vitruvio");
 	RootCategory.SetShowAdvanced(true);
 
-	if (VitruvioComponent)
-	{
-		BuildAttributeEditor(RootCategory, VitruvioComponent);
-	}
+	BuildAttributeEditor(RootCategory, VitruvioComponent);
 }
 
 void FVitruvioComponentDetails::CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& DetailBuilder)
