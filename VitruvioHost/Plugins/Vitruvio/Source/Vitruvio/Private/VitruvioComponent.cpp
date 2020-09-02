@@ -289,7 +289,8 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		FGenerateResultDescription Result;
 		GenerateQueue.Dequeue(Result);
 
-		FConvertedGenerateResult ConvertedResult = BuildResult(Result, VitruvioModule::Get().GetMaterialCache());
+		FConvertedGenerateResult ConvertedResult =
+			BuildResult(Result, VitruvioModule::Get().GetMaterialCache(), VitruvioModule::Get().GetTextureCache());
 
 		RemoveGeneratedMeshes();
 
@@ -393,20 +394,22 @@ void UVitruvioComponent::RemoveGeneratedMeshes()
 }
 
 FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescription& GenerateResult,
-														 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& Cache)
+														 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+														 TMap<Vitruvio::FTextureCacheKey, Vitruvio::FTextureAndChannels>& TextureCache)
 {
 	TMap<int32, UStaticMesh*> MeshMap;
 
-	auto CachedMaterial = [this, &Cache](const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name, UObject* Outer) {
-		if (Cache.Contains(MaterialAttributes))
+	auto CachedMaterial = [this, &MaterialCache, &TextureCache](const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name,
+																UObject* Outer) {
+		if (MaterialCache.Contains(MaterialAttributes))
 		{
-			return Cache[MaterialAttributes];
+			return MaterialCache[MaterialAttributes];
 		}
 		else
 		{
-			UMaterialInstanceDynamic* Material =
-				Vitruvio::GameThread_CreateMaterialInstance(Outer, Name, OpaqueParent, MaskedParent, TranslucentParent, MaterialAttributes);
-			Cache.Add(MaterialAttributes, Material);
+			UMaterialInstanceDynamic* Material = Vitruvio::GameThread_CreateMaterialInstance(Outer, Name, OpaqueParent, MaskedParent,
+																							 TranslucentParent, MaterialAttributes, TextureCache);
+			MaterialCache.Add(MaterialAttributes, Material);
 			return Material;
 		}
 	};

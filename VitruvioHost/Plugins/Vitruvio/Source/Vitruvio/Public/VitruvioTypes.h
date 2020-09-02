@@ -59,4 +59,35 @@ struct FInstanceCacheKey
 };
 using FInstanceMap = TMap<FInstanceCacheKey, TArray<FTransform>>;
 
+struct FTextureAndChannels
+{
+	FTextureAndChannels() = default;
+
+	UTexture2D* Texture = nullptr;
+	uint32 NumChannels = 0;
+
+	friend bool operator==(const FTextureAndChannels& Lhs, const FTextureAndChannels& Rhs)
+	{
+		return Lhs.Texture == Rhs.Texture && Lhs.NumChannels == Rhs.NumChannels;
+	}
+
+	friend bool operator!=(const FTextureAndChannels& Lhs, const FTextureAndChannels& RHS)
+	{
+		return !(Lhs == RHS);
+	}
+};
+
+struct FTextureCacheKey
+{
+	FString Path;
+	FDateTime TimeStamp;
+
+	friend uint32 GetTypeHash(const FTextureCacheKey& Object);
+
+	friend bool operator==(const FTextureCacheKey& Lhs, const FTextureCacheKey& Rhs)
+	{
+		return Lhs.Path == Rhs.Path;
+	}
+};
+
 } // namespace Vitruvio
