@@ -418,6 +418,7 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 	for (auto& IdAndMesh : GenerateResult.MeshDescriptions)
 	{
 		UStaticMesh* StaticMesh = NewObject<UStaticMesh>();
+		TMap<UMaterialInstanceDynamic*, FName> MaterialSlots;
 
 		const TArray<Vitruvio::FMaterialAttributeContainer>& MeshMaterials = GenerateResult.Materials[IdAndMesh.Key];
 		FStaticMeshAttributes MeshAttributes(IdAndMesh.Value);
@@ -426,10 +427,19 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 		for (const auto& PolygonId : PolygonGroups.GetElementIDs())
 		{
 			const FName MaterialName = MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonId];
-			const FName SlotName = StaticMesh->AddMaterial(CachedMaterial(MeshMaterials[MaterialIndex], MaterialName, StaticMesh));
-			MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonId] = SlotName;
+			UMaterialInstanceDynamic* Material = CachedMaterial(MeshMaterials[MaterialIndex], MaterialName, StaticMesh);
 
-			++MaterialIndex;
+			if (MaterialSlots.Contains(Material))
+			{
+				MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonId] = MaterialSlots[Material];
+			}
+			else
+			{
+				const FName SlotName = StaticMesh->AddMaterial(Material);
+				MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonId] = SlotName;
+				MaterialSlots.Add(Material, SlotName);
+				++MaterialIndex;
+			}
 		}
 
 		TArray<const FMeshDescription*> MeshDescriptionPtrs;
