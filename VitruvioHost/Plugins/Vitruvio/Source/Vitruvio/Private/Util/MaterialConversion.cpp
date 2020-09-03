@@ -403,7 +403,7 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, cons
 				Prerequisites.Add(*LoadTextureTask);
 				TGraphTask<TAsyncGraphTask<FTextureAndChannels>>::CreateTask(&Prerequisites)
 					.ConstructAndDispatchWhenReady(
-						[&TextureCache, &TexturePath, &CacheCriticalSection]() {
+						[&TextureCache, TexturePath, &CacheCriticalSection]() {
 							FScopeLock CacheLock(&CacheCriticalSection);
 							return TextureCache[FTextureCacheKey{TexturePath, {}}];
 						},
