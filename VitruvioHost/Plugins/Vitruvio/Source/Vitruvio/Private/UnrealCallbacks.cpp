@@ -86,7 +86,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 		const FPolygonGroupID PolygonGroupId = Description.CreatePolygonGroup();
 
 		Vitruvio::FMaterialAttributeContainer MaterialContainer(materials[PolygonGroupIndex]);
-		const FName MaterialSlot = FName(MaterialContainer.StringProperties["name"]);
+		const FName MaterialSlot = FName(MaterialContainer.Name);
 		Attributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlot;
 		MeshMaterials.Add(MaterialContainer);
 

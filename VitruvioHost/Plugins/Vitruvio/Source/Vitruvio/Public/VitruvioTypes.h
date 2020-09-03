@@ -18,6 +18,7 @@ struct FMaterialAttributeContainer
 	TMap<FString, FString> StringProperties;
 
 	FString BlendMode;
+	FString Name; // ignored on purpose for hash and equality
 
 	explicit FMaterialAttributeContainer(const prt::AttributeMap* AttributeMap);
 

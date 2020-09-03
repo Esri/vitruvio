@@ -32,7 +32,6 @@ const TMap<FString, EMaterialPropertyType> KeyToTypeMap = {
 	{TEXT("roughness"), EMaterialPropertyType::SCALAR},
 
 	{TEXT("shader"), EMaterialPropertyType::STRING},
-	{TEXT("name"), EMaterialPropertyType::STRING},
 };
 // clang-format on
 
@@ -131,6 +130,11 @@ FMaterialAttributeContainer::FMaterialAttributeContainer(const prt::AttributeMap
 	if (AttributeMap->hasKey(L"opacityMap.mode"))
 	{
 		BlendMode = AttributeMap->getString(L"opacityMap.mode");
+	}
+
+	if (AttributeMap->hasKey(L"name"))
+	{
+		Name = AttributeMap->getString(L"name");
 	}
 }
 

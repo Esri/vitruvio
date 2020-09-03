@@ -447,7 +447,7 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 		for (size_t MaterialIndex = 0; MaterialIndex < Instance.Key.MaterialOverrides.Num(); ++MaterialIndex)
 		{
 			const Vitruvio::FMaterialAttributeContainer& MaterialContainer = Instance.Key.MaterialOverrides[MaterialIndex];
-			FName MaterialName = FName(MaterialContainer.StringProperties["name"]);
+			FName MaterialName = FName(MaterialContainer.Name);
 			OverrideMaterials.Add(CachedMaterial(MaterialContainer, MaterialName, GetTransientPackage()));
 		}
 
