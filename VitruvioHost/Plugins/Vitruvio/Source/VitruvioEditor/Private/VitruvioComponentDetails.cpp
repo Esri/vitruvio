@@ -5,11 +5,11 @@
 #include "VitruvioComponent.h"
 
 #include "Algo/Transform.h"
+#include "Brushes/SlateColorBrush.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
 #include "IDetailGroup.h"
-#include "Brushes/SlateColorBrush.h"
 #include "Widgets/Colors/SColorBlock.h"
 #include "Widgets/Colors/SColorPicker.h"
 #include "Widgets/Input/SCheckBox.h"
@@ -227,13 +227,13 @@ void AddSeparator(IDetailCategoryBuilder& RootCategory)
 	// clang-format off
 	RootCategory.AddCustomRow(FText::FromString(L"Divider"), true).WholeRowContent()
 	.VAlign(VAlign_Center)
-    .HAlign(HAlign_Fill)
+	.HAlign(HAlign_Fill)
 	[
-        SNew(SSeparator)
-        .Orientation(Orient_Horizontal)
-        .Thickness(0.5f)
-        .SeparatorImage(new FSlateColorBrush(FLinearColor(FColor(47, 47, 47))))
-    ];
+		SNew(SSeparator)
+		.Orientation(Orient_Horizontal)
+		.Thickness(0.5f)
+		.SeparatorImage(new FSlateColorBrush(FLinearColor(FColor(47, 47, 47))))
+	];
 	// clang-format on
 }
 
@@ -248,7 +248,7 @@ void BuildAttributeEditor(IDetailCategoryBuilder& RootCategory, UVitruvioCompone
 	{
 		AddSeparator(RootCategory);
 	}
-	
+
 	IDetailGroup& RootGroup = RootCategory.AddGroup("Attributes", FText::FromString("Attributes"), true, true);
 	TMap<FString, IDetailGroup*> GroupCache;
 
@@ -306,23 +306,22 @@ void AddGenerateButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent*
 	RootCategory.AddCustomRow(FText::FromString(L"Generate"), true)
 	.WholeRowContent()
 	.VAlign(VAlign_Center)
-    .HAlign(HAlign_Center)
-    [
-        SNew(SHorizontalBox)
-        + SHorizontalBox::Slot()
-        
-        [
-            SNew(SButton)
-	        .Text(FText::FromString("Generate"))
-	        .ContentPadding(FMargin(30, 2))
-	        .OnClicked_Lambda([VitruvioComponent]()
-	        {
-	            VitruvioComponent->Generate();
-	            return FReply::Handled();
-	        })
-        ]
-        .VAlign(VAlign_Fill)
-    ];
+	.HAlign(HAlign_Center)
+	[
+		SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot()
+		[
+			SNew(SButton)
+			.Text(FText::FromString("Generate"))
+			.ContentPadding(FMargin(30, 2))
+			.OnClicked_Lambda([VitruvioComponent]()
+			{
+				VitruvioComponent->Generate();
+				return FReply::Handled();
+			})
+		]
+		.VAlign(VAlign_Fill)
+	];
 	// clang-format on
 }
 
@@ -408,7 +407,7 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	{
 		AddGenerateButton(RootCategory, VitruvioComponent);
 	}
-	
+
 	BuildAttributeEditor(RootCategory, VitruvioComponent);
 }
 
