@@ -266,6 +266,10 @@ void UVitruvioComponent::OnComponentCreated()
 	Super::OnComponentCreated();
 
 	InitialShapeFactory = FindFactory(this);
+	if (InitialShapeFactory)
+	{
+		InitialShape = InitialShapeFactory->CreateInitialShape(this, InitialShape);
+	}
 
 	// If everything is ready we can generate (used for example for copy paste to regenerate the model)
 	if (bAttributesReady)
