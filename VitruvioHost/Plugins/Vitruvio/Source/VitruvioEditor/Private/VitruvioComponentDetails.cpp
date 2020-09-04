@@ -5,6 +5,7 @@
 #include "VitruvioComponent.h"
 
 #include "Algo/Transform.h"
+#include "Brushes/SlateColorBrush.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
@@ -14,6 +15,7 @@
 #include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Input/SSpinBox.h"
 #include "Widgets/Layout/SBox.h"
+#include "Widgets/Layout/SSeparator.h"
 #include "Widgets/Text/STextBlock.h"
 
 namespace
@@ -220,11 +222,31 @@ IDetailGroup* GetOrCreateGroups(IDetailGroup& Root, const TArray<FString>& Group
 	return CurrentGroup;
 }
 
+void AddSeparator(IDetailCategoryBuilder& RootCategory)
+{
+	// clang-format off
+	RootCategory.AddCustomRow(FText::FromString(L"Divider"), true).WholeRowContent()
+	.VAlign(VAlign_Center)
+	.HAlign(HAlign_Fill)
+	[
+		SNew(SSeparator)
+		.Orientation(Orient_Horizontal)
+		.Thickness(0.5f)
+		.SeparatorImage(new FSlateColorBrush(FLinearColor(FColor(47, 47, 47))))
+	];
+	// clang-format on
+}
+
 void BuildAttributeEditor(IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioActor)
 {
 	if (!VitruvioActor || !VitruvioActor->Rpk)
 	{
 		return;
+	}
+
+	if (!VitruvioActor->GenerateAutomatically)
+	{
+		AddSeparator(RootCategory);
 	}
 
 	IDetailGroup& RootGroup = RootCategory.AddGroup("Attributes", FText::FromString("Attributes"), true, true);
@@ -277,6 +299,32 @@ void BuildAttributeEditor(IDetailCategoryBuilder& RootCategory, UVitruvioCompone
 		}
 	}
 }
+
+void AddGenerateButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioComponent)
+{
+	// clang-format off
+	RootCategory.AddCustomRow(FText::FromString(L"Generate"), true)
+	.WholeRowContent()
+	.VAlign(VAlign_Center)
+	.HAlign(HAlign_Center)
+	[
+		SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot()
+		[
+			SNew(SButton)
+			.Text(FText::FromString("Generate"))
+			.ContentPadding(FMargin(30, 2))
+			.OnClicked_Lambda([VitruvioComponent]()
+			{
+				VitruvioComponent->Generate();
+				return FReply::Handled();
+			})
+		]
+		.VAlign(VAlign_Fill)
+	];
+	// clang-format on
+}
+
 } // namespace
 
 template <typename T>
@@ -312,7 +360,7 @@ TSharedRef<SWidget> SPropertyComboBox<T>::OnGenerateComboWidget(TSharedPtr<T> In
 
 FVitruvioComponentDetails::FVitruvioComponentDetails()
 {
-	FCoreUObjectDelegates::OnObjectPropertyChanged.AddRaw(this, &FVitruvioComponentDetails::OnAttributesChanged);
+	FCoreUObjectDelegates::OnObjectPropertyChanged.AddRaw(this, &FVitruvioComponentDetails::OnPropertyChanged);
 }
 
 FVitruvioComponentDetails::~FVitruvioComponentDetails()
@@ -347,13 +395,20 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 
 	DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Attributes))->MarkHiddenByCustomization();
 
+	if (!VitruvioComponent->InitialShape)
+	{
+		DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UVitruvioComponent, InitialShape))->MarkHiddenByCustomization();
+	}
+
 	IDetailCategoryBuilder& RootCategory = DetailBuilder.EditCategory("Vitruvio");
 	RootCategory.SetShowAdvanced(true);
 
-	if (VitruvioComponent)
+	if (!VitruvioComponent->GenerateAutomatically)
 	{
-		BuildAttributeEditor(RootCategory, VitruvioComponent);
+		AddGenerateButton(RootCategory, VitruvioComponent);
 	}
+
+	BuildAttributeEditor(RootCategory, VitruvioComponent);
 }
 
 void FVitruvioComponentDetails::CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& DetailBuilder)
@@ -362,9 +417,17 @@ void FVitruvioComponentDetails::CustomizeDetails(const TSharedPtr<IDetailLayoutB
 	CustomizeDetails(*DetailBuilder);
 }
 
-void FVitruvioComponentDetails::OnAttributesChanged(UObject* Object, struct FPropertyChangedEvent& Event)
+void FVitruvioComponentDetails::OnPropertyChanged(UObject* Object, struct FPropertyChangedEvent& Event)
 {
-	if (Event.Property && Event.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Attributes))
+	if (!Event.Property)
+	{
+		return;
+	}
+
+	const FName PropertyName = Event.Property->GetFName();
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Attributes) ||
+		PropertyName == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateAutomatically) ||
+		PropertyName == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, InitialShape))
 	{
 		const auto DetailBuilder = CachedDetailBuilder.Pin().Get();
 		if (DetailBuilder)

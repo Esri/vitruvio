@@ -16,7 +16,7 @@ public:
 	void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 	void CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& DetailBuilder) override;
 
-	void OnAttributesChanged(UObject* Object, struct FPropertyChangedEvent& Event);
+	void OnPropertyChanged(UObject* Object, struct FPropertyChangedEvent& Event);
 
 private:
 	TArray<TWeakObjectPtr<UObject>> ObjectsBeingCustomized;
