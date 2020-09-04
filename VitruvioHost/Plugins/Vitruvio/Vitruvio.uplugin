@@ -19,8 +19,7 @@
 			"Type": "Runtime",
 			"LoadingPhase": "PostDefault",
 			"WhitelistPlatforms": [
-				"Win64",
-				"Mac"
+				"Win64"
 			]
 		},
 		{
@@ -28,8 +27,7 @@
 			"Type": "Editor",
 			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
-				"Win64",
-				"Mac"
+				"Win64"
 			]
 		}
 	]
