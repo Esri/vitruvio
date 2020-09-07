@@ -5,7 +5,6 @@ from utilities import fs
 from utilities import log
 from pathlib import Path
 
-
 log = log.getLogger(__name__)
 
 
@@ -58,6 +57,12 @@ def load_repositories():
     :return: An array of repository dictionaries otherwise.
     """
     from json import load
+
+    if not paths.GLOBAL.CONFIG_REPOSITORIES.exists():
+        log.warning('No repository configuration file found at "{}"'.format(paths.GLOBAL.CONFIG_REPOSITORIES))
+        log.warning('Please create a "repositories.json" file at the specified location.')
+        log.warning('Please consult the scripts readme file for examples.')
+        return None
 
     with paths.GLOBAL.CONFIG_REPOSITORIES.open() as f:
         repositories = load(f)
@@ -157,7 +162,26 @@ class Repository(paths.Paths):
         :return: A list of changed files.
         :return: An empty list on failure.
         """
-        command_diff = 'git diff --name-only --cached HEAD~1'
+        command_diff = 'git diff --name-only HEAD~1'
+        process = commands.run(command_diff, cwd=self.PATH_ROOT)
+
+        if process.is_failure():
+            return []
+
+        lines = process.stdout.splitlines()
+        names = [line.strip() for line in lines]
+        files = [paths.GLOBAL.PATH_ROOT.joinpath(name) for name in names]
+
+        return files
+
+    def staged_files(self):
+        """
+        Returns the currently staged files.
+
+        :return: A list of staged files.
+        :return: An empty list on failure.
+        """
+        command_diff = 'git diff --name-only --staged'
         process = commands.run(command_diff, cwd=self.PATH_ROOT)
 
         if process.is_failure():
@@ -192,7 +216,8 @@ class Repository(paths.Paths):
 
         if not paths.GLOBAL.PATH_CHECKOUTS.exists():
             log.warning('{}: Can not clone repository. Checkouts folder does not exist.'.format(self.name, self.name))
-            log.warning('{}: Creating new checkouts folder at: "{}"'.format(self.name, str(paths.GLOBAL.PATH_CHECKOUTS.parent)))
+            log.warning(
+                '{}: Creating new checkouts folder at: "{}"'.format(self.name, str(paths.GLOBAL.PATH_CHECKOUTS.parent)))
             paths.GLOBAL.PATH_CHECKOUTS.mkdir(parents=True)
 
         environment = dict(environ, **{"GIT_LFS_SKIP_SMUDGE": "1"}) if slim else None
@@ -493,6 +518,50 @@ class Repository(paths.Paths):
         fs.safe_copy_tree(src, dst)
         self.install_readme()
 
+    def safe_install_hooks(self, *hooks, symbolic=True):
+        """
+        Installs all hooks provided to the function in a safe manner.
+
+        :note:
+            Symbolic links might not be available due to access right issues.
+            This function will check if the symlink creation failed and, if so,
+            will also check if you are running with elevated rights and report
+            if not.
+
+        :note:
+            Currently, does not cleanup already installed hooks if the process
+            fails on a later hook due to invalid access rights. This might leave
+            git in an erroneous state.
+
+        :returns: False, if the hooks could not be installed.
+        :returns: True, if the hooks could be installed.
+
+        :throws: Any other unknown errors that might occur.
+        """
+        # TODO (MM): Add proper cleanup.
+
+        try:
+            for hook in hooks:
+                self.install_hook(hook, symbolic=symbolic)
+
+            if len(hooks) > 0:
+                self.install_hook_utilities(symbolic=symbolic)
+        except OSError as os_error:
+            log.error('Could not install git hooks. An error occurred.')
+            log.info('Checking whether it could be due to missing admin rights.')
+
+            from utilities.admin import is_admin
+
+            if not is_admin():
+                log.warning('Please try to run again with admin rights.')
+                return False
+            else:
+                log.warning('Admin rights available. Unknown reason for failure.')
+                log.warning('Please report this error to your devops admin.')
+                raise os_error
+
+        return True
+
     def install_hook_utilities(self, symbolic=True):
         """
         Installs the latest script utilities to the git hooks folder.
@@ -516,7 +585,7 @@ class Repository(paths.Paths):
 
         if symbolic:
             fs.rmdir(dst)
-            symlink(str_src, str_dst)
+            symlink(str_src, str_dst, target_is_directory=True)
         else:
             fs.safe_copy_tree(src, dst)
 

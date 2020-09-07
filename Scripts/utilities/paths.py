@@ -20,6 +20,22 @@ def ensure_exists(path: Path):
         sys.exit(-1)
 
 
+def filter_cpp_files(paths: [Path]):
+    """
+    Filters a list of paths and returns only C++ files.
+
+    :note: Supports .h, .cpp and .hpp files.
+    :return: A list of C++ file paths.
+    """
+
+    # Quick helper function to check if a file is a path.
+    def is_cpp_file(target: Path):
+        return target.is_file() and target.suffix in ['.cpp', '.h', '.hpp']
+
+    # Return only files that are cpp files.
+    return filter(is_cpp_file, paths)
+
+
 class Paths:
     def __init__(self, root):
         # -----------------------------------------------------------------------------

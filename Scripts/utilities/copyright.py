@@ -112,8 +112,6 @@ def fix(path: Path, full_path=False):
         return False
 
     if path.suffix not in ['.h', '.cpp', '.hpp']:
-        log.warning('File {}: Can not edit copyright, file is not a C++ file.'.format(output))
-        log.warning('File {}: Only ".h", ".hpp" and ".cpp" files are supported at the moment.'.format(output))
         return False
 
     # Read lines of the file.
