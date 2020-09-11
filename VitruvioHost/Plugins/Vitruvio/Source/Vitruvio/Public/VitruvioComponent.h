@@ -128,7 +128,8 @@ private:
 	void ProcessLoadAttributesQueue();
 
 	FConvertedGenerateResult BuildResult(FGenerateResultDescription& GenerateResult,
-										 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache);
+										 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+										 TMap<FString, Vitruvio::FTextureData>& TextureCache);
 
 #if WITH_EDITOR
 	FDelegateHandle PropertyChangeDelegate;

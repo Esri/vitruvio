@@ -266,6 +266,10 @@ void UVitruvioComponent::OnComponentCreated()
 	Super::OnComponentCreated();
 
 	InitialShapeFactory = FindFactory(this);
+	if (InitialShapeFactory)
+	{
+		InitialShape = InitialShapeFactory->CreateInitialShape(this, InitialShape);
+	}
 
 	// If everything is ready we can generate (used for example for copy paste to regenerate the model)
 	if (bAttributesReady)
@@ -289,7 +293,8 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		FGenerateResultDescription Result;
 		GenerateQueue.Dequeue(Result);
 
-		FConvertedGenerateResult ConvertedResult = BuildResult(Result, VitruvioModule::Get().GetMaterialCache());
+		FConvertedGenerateResult ConvertedResult =
+			BuildResult(Result, VitruvioModule::Get().GetMaterialCache(), VitruvioModule::Get().GetTextureCache());
 
 		RemoveGeneratedMeshes();
 
@@ -393,20 +398,22 @@ void UVitruvioComponent::RemoveGeneratedMeshes()
 }
 
 FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescription& GenerateResult,
-														 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& Cache)
+														 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+														 TMap<FString, Vitruvio::FTextureData>& TextureCache)
 {
 	TMap<int32, UStaticMesh*> MeshMap;
 
-	auto CachedMaterial = [this, &Cache](const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name, UObject* Outer) {
-		if (Cache.Contains(MaterialAttributes))
+	auto CachedMaterial = [this, &MaterialCache, &TextureCache](const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name,
+																UObject* Outer) {
+		if (MaterialCache.Contains(MaterialAttributes))
 		{
-			return Cache[MaterialAttributes];
+			return MaterialCache[MaterialAttributes];
 		}
 		else
 		{
-			UMaterialInstanceDynamic* Material =
-				Vitruvio::GameThread_CreateMaterialInstance(Outer, Name, OpaqueParent, MaskedParent, TranslucentParent, MaterialAttributes);
-			Cache.Add(MaterialAttributes, Material);
+			UMaterialInstanceDynamic* Material = Vitruvio::GameThread_CreateMaterialInstance(Outer, Name, OpaqueParent, MaskedParent,
+																							 TranslucentParent, MaterialAttributes, TextureCache);
+			MaterialCache.Add(MaterialAttributes, Material);
 			return Material;
 		}
 	};
@@ -415,6 +422,7 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 	for (auto& IdAndMesh : GenerateResult.MeshDescriptions)
 	{
 		UStaticMesh* StaticMesh = NewObject<UStaticMesh>();
+		TMap<UMaterialInstanceDynamic*, FName> MaterialSlots;
 
 		const TArray<Vitruvio::FMaterialAttributeContainer>& MeshMaterials = GenerateResult.Materials[IdAndMesh.Key];
 		FStaticMeshAttributes MeshAttributes(IdAndMesh.Value);
@@ -423,10 +431,19 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 		for (const auto& PolygonId : PolygonGroups.GetElementIDs())
 		{
 			const FName MaterialName = MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonId];
-			const FName SlotName = StaticMesh->AddMaterial(CachedMaterial(MeshMaterials[MaterialIndex], MaterialName, StaticMesh));
-			MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonId] = SlotName;
+			UMaterialInstanceDynamic* Material = CachedMaterial(MeshMaterials[MaterialIndex], MaterialName, StaticMesh);
 
-			++MaterialIndex;
+			if (MaterialSlots.Contains(Material))
+			{
+				MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonId] = MaterialSlots[Material];
+			}
+			else
+			{
+				const FName SlotName = StaticMesh->AddMaterial(Material);
+				MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonId] = SlotName;
+				MaterialSlots.Add(Material, SlotName);
+				++MaterialIndex;
+			}
 		}
 
 		TArray<const FMeshDescription*> MeshDescriptionPtrs;
@@ -444,7 +461,7 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 		for (size_t MaterialIndex = 0; MaterialIndex < Instance.Key.MaterialOverrides.Num(); ++MaterialIndex)
 		{
 			const Vitruvio::FMaterialAttributeContainer& MaterialContainer = Instance.Key.MaterialOverrides[MaterialIndex];
-			FName MaterialName = FName(MaterialContainer.StringProperties["name"]);
+			FName MaterialName = FName(MaterialContainer.Name);
 			OverrideMaterials.Add(CachedMaterial(MaterialContainer, MaterialName, GetTransientPackage()));
 		}
 

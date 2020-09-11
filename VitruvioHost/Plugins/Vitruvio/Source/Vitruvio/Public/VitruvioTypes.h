@@ -18,6 +18,7 @@ struct FMaterialAttributeContainer
 	TMap<FString, FString> StringProperties;
 
 	FString BlendMode;
+	FString Name; // ignored on purpose for hash and equality
 
 	explicit FMaterialAttributeContainer(const prt::AttributeMap* AttributeMap);
 
@@ -58,5 +59,24 @@ struct FInstanceCacheKey
 	}
 };
 using FInstanceMap = TMap<FInstanceCacheKey, TArray<FTransform>>;
+
+struct FTextureData
+{
+	FTextureData() = default;
+
+	UTexture2D* Texture = nullptr;
+	uint32 NumChannels = 0; // The real amount of channels. See MaterialConversion#LoadTextureFromDisk
+	FDateTime LoadTime;
+
+	friend bool operator==(const FTextureData& Lhs, const FTextureData& Rhs)
+	{
+		return Lhs.Texture == Rhs.Texture && Lhs.NumChannels == Rhs.NumChannels;
+	}
+
+	friend bool operator!=(const FTextureData& Lhs, const FTextureData& RHS)
+	{
+		return !(Lhs == RHS);
+	}
+};
 
 } // namespace Vitruvio
