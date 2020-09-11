@@ -399,7 +399,7 @@ void UVitruvioComponent::RemoveGeneratedMeshes()
 
 FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescription& GenerateResult,
 														 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-														 TMap<Vitruvio::FTextureCacheKey, Vitruvio::FTextureAndChannels>& TextureCache)
+														 TMap<FString, Vitruvio::FTextureData>& TextureCache)
 {
 	TMap<int32, UStaticMesh*> MeshMap;
 

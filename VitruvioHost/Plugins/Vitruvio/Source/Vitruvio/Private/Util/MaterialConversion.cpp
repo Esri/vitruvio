@@ -147,7 +147,7 @@ UTexture2D* CreateTexture(UObject* Outer, const TArray64<uint8>& Data, int32 Siz
 	return NewTexture;
 }
 
-Vitruvio::FTextureAndChannels LoadTextureFromDisk(UObject* Outer, const FString& ImagePath, const FString& TextureKey)
+Vitruvio::FTextureData LoadTextureFromDisk(UObject* Outer, const FString& ImagePath, const FString& TextureKey)
 {
 	static IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(TEXT("ImageWrapper"));
 
@@ -193,11 +193,12 @@ Vitruvio::FTextureAndChannels LoadTextureFromDisk(UObject* Outer, const FString&
 	const FString TextureBaseName = TEXT("T_") + FPaths::GetBaseFilename(ImagePath);
 	UTexture2D* Texture = CreateTexture(Outer, RawData, ImageWrapper->GetWidth(), ImageWrapper->GetHeight(), Format, ImageWrapper->GetBitDepth(),
 										TextureKey, FName(*TextureBaseName));
+	const auto TimeStamp = FPlatformFileManager::Get().GetPlatformFile().GetAccessTimeStamp(*ImagePath);
 
-	return {Texture, NumChannels};
+	return {Texture, NumChannels, TimeStamp};
 }
 
-EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureAndChannels& OpacityMapData, bool UseAlphaAsOpacity)
+EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMapData, bool UseAlphaAsOpacity)
 {
 	const UTexture2D* OpacityMap = OpacityMapData.Texture;
 	const EPixelFormat PixelFormat = OpacityMap->GetPixelFormat();
@@ -246,7 +247,7 @@ EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureAndChannels& Op
 	return BLEND_Translucent;
 }
 
-EBlendMode ChooseBlendMode(const Vitruvio::FTextureAndChannels& OpacityMapData, double Opacity, EBlendMode BlendMode, bool UseAlphaAsOpacity)
+EBlendMode ChooseBlendMode(const Vitruvio::FTextureData& OpacityMapData, double Opacity, EBlendMode BlendMode, bool UseAlphaAsOpacity)
 {
 	if (Opacity < OPACITY_THRESHOLD)
 	{
@@ -296,18 +297,17 @@ UMaterialInterface* GetMaterialByBlendMode(EBlendMode Mode, UMaterialInterface* 
 
 class FLoadTextureTask
 {
-	TPromise<Vitruvio::FTextureAndChannels> Promise;
+	TPromise<Vitruvio::FTextureData> Promise;
 	UObject* Outer;
-	TMap<Vitruvio::FTextureCacheKey, Vitruvio::FTextureAndChannels>& Cache;
+	TMap<FString, Vitruvio::FTextureData>& Cache;
 	FCriticalSection& CacheCriticalSection;
 
 	FString ImagePath;
 	FString TextureKey;
 
 public:
-	FLoadTextureTask(TPromise<Vitruvio::FTextureAndChannels>&& InPromise, UObject* Outer,
-					 TMap<Vitruvio::FTextureCacheKey, Vitruvio::FTextureAndChannels>& Cache, FCriticalSection& CacheCriticalSection,
-					 const FString& ImagePath, const FString& TextureKey)
+	FLoadTextureTask(TPromise<Vitruvio::FTextureData>&& InPromise, UObject* Outer, TMap<FString, Vitruvio::FTextureData>& Cache,
+					 FCriticalSection& CacheCriticalSection, const FString& ImagePath, const FString& TextureKey)
 		: Promise(MoveTemp(InPromise)), Outer(Outer), Cache(Cache), CacheCriticalSection(CacheCriticalSection), ImagePath(ImagePath),
 		  TextureKey(TextureKey)
 	{
@@ -335,15 +335,15 @@ public:
 	void DoTask(ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
 	{
 		QUICK_SCOPE_CYCLE_COUNTER(STAT_MaterialConversion_LoadTexture);
-		Vitruvio::FTextureAndChannels TextureAndChannels = LoadTextureFromDisk(Outer, ImagePath, TextureKey);
+		Vitruvio::FTextureData TextureData = LoadTextureFromDisk(Outer, ImagePath, TextureKey);
 
 		{
 			FScopeLock CacheLock(&CacheCriticalSection);
-			const auto FileSystemTimeStamp = FPlatformFileManager::Get().GetPlatformFile().GetAccessTimeStamp(*ImagePath);
-			Cache.Add({ImagePath, FileSystemTimeStamp}, TextureAndChannels);
+
+			Cache.Add(ImagePath, TextureData);
 		}
 
-		Promise.SetValue(TextureAndChannels);
+		Promise.SetValue(TextureData);
 	}
 };
 
@@ -354,35 +354,34 @@ namespace Vitruvio
 UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, const FName& Name, UMaterialInterface* OpaqueParent,
 															UMaterialInterface* MaskedParent, UMaterialInterface* TranslucentParent,
 															const FMaterialAttributeContainer& MaterialContainer,
-															TMap<FTextureCacheKey, FTextureAndChannels>& TextureCache)
+															TMap<FString, FTextureData>& TextureCache)
 {
 	check(IsInGameThread());
 
 	TMap<FString, FGraphEventRef> TexturePropertyTasks;
-	TMap<FString, TFuture<FTextureAndChannels>> TextureProperties;
+	TMap<FString, TFuture<FTextureData>> TextureProperties;
 
 	FCriticalSection CacheCriticalSection;
 
 	for (const auto& TextureProperty : MaterialContainer.TextureProperties)
 	{
 		const FString TexturePath = TextureProperty.Value;
-		TPromise<FTextureAndChannels> Promise;
-		TFuture<FTextureAndChannels> Future = Promise.GetFuture();
+		TPromise<FTextureData> Promise;
+		TFuture<FTextureData> Future = Promise.GetFuture();
 
 		bool ValidCache = false;
 		{
 			FScopeLock CacheLock(&CacheCriticalSection);
 
-			auto Cached = TextureCache.Find({TexturePath, {}});
+			auto Cached = TextureCache.Find(TexturePath);
 			if (Cached)
 			{
-				auto Key = TextureCache.FindKey(*Cached);
 				auto FileSystemTimeStamp = FPlatformFileManager::Get().GetPlatformFile().GetAccessTimeStamp(*TexturePath);
-				if (FileSystemTimeStamp > Key->TimeStamp)
+				if (FileSystemTimeStamp > Cached->LoadTime)
 				{
 					// If the timestamp on the filesystem is newer than our cached version we have to evict it from the cache and reload the texture
 					// because it has changed
-					TextureCache.Remove(*Key);
+					TextureCache.Remove(*TextureCache.FindKey(*Cached));
 				}
 				else
 				{
@@ -401,11 +400,11 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, cons
 			{
 				FGraphEventArray Prerequisites;
 				Prerequisites.Add(*LoadTextureTask);
-				TGraphTask<TAsyncGraphTask<FTextureAndChannels>>::CreateTask(&Prerequisites)
+				TGraphTask<TAsyncGraphTask<FTextureData>>::CreateTask(&Prerequisites)
 					.ConstructAndDispatchWhenReady(
 						[&TextureCache, TexturePath, &CacheCriticalSection]() {
 							FScopeLock CacheLock(&CacheCriticalSection);
-							return TextureCache[FTextureCacheKey{TexturePath, {}}];
+							return TextureCache[TexturePath];
 						},
 						MoveTemp(Promise), ENamedThreads::AnyThread);
 			}
@@ -424,8 +423,7 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, cons
 		TextureProperties.Add(TextureProperty.Key, MoveTemp(Future));
 	}
 	const float Opacity = MaterialContainer.ScalarProperties["opacity"];
-	const FTextureAndChannels OpacityMapData =
-		TextureProperties.Contains("opacityMap") ? TextureProperties["opacityMap"].Get() : FTextureAndChannels{};
+	const FTextureData OpacityMapData = TextureProperties.Contains("opacityMap") ? TextureProperties["opacityMap"].Get() : FTextureData{};
 	const bool UseAlphaAsOpacity = OpacityMapData.Texture && OpacityMapData.NumChannels == 4;
 	const EBlendMode ChosenBlendMode = ChooseBlendMode(OpacityMapData, Opacity, GetBlendMode(MaterialContainer.BlendMode), UseAlphaAsOpacity);
 
@@ -448,7 +446,7 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, cons
 
 	MaterialInstance->SetScalarParameterValue(FName(TEXT("opacitySource")), UseAlphaAsOpacity);
 
-	for (const TPair<FString, TFuture<FTextureAndChannels>>& TextureFuture : TextureProperties)
+	for (const TPair<FString, TFuture<FTextureData>>& TextureFuture : TextureProperties)
 	{
 		const auto Result = TextureFuture.Value.Get();
 		MaterialInstance->SetTextureParameterValue(FName(TextureFuture.Key), Result.Texture);

@@ -60,34 +60,22 @@ struct FInstanceCacheKey
 };
 using FInstanceMap = TMap<FInstanceCacheKey, TArray<FTransform>>;
 
-struct FTextureAndChannels
+struct FTextureData
 {
-	FTextureAndChannels() = default;
+	FTextureData() = default;
 
 	UTexture2D* Texture = nullptr;
-	uint32 NumChannels = 0;
+	uint32 NumChannels = 0; // The real amount of channels. See MaterialConversion#LoadTextureFromDisk
+	FDateTime LoadTime;
 
-	friend bool operator==(const FTextureAndChannels& Lhs, const FTextureAndChannels& Rhs)
+	friend bool operator==(const FTextureData& Lhs, const FTextureData& Rhs)
 	{
 		return Lhs.Texture == Rhs.Texture && Lhs.NumChannels == Rhs.NumChannels;
 	}
 
-	friend bool operator!=(const FTextureAndChannels& Lhs, const FTextureAndChannels& RHS)
+	friend bool operator!=(const FTextureData& Lhs, const FTextureData& RHS)
 	{
 		return !(Lhs == RHS);
-	}
-};
-
-struct FTextureCacheKey
-{
-	FString Path;
-	FDateTime TimeStamp;
-
-	friend uint32 GetTypeHash(const FTextureCacheKey& Object);
-
-	friend bool operator==(const FTextureCacheKey& Lhs, const FTextureCacheKey& Rhs)
-	{
-		return Lhs.Path == Rhs.Path;
 	}
 };
 

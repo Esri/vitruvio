@@ -129,7 +129,7 @@ private:
 
 	FConvertedGenerateResult BuildResult(FGenerateResultDescription& GenerateResult,
 										 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-										 TMap<Vitruvio::FTextureCacheKey, Vitruvio::FTextureAndChannels>& TextureCache);
+										 TMap<FString, Vitruvio::FTextureData>& TextureCache);
 
 #if WITH_EDITOR
 	FDelegateHandle PropertyChangeDelegate;

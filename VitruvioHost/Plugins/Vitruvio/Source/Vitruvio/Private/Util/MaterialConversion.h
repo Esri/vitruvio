@@ -15,5 +15,5 @@ namespace Vitruvio
 UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, const FName& Name, UMaterialInterface* OpaqueParent,
 															UMaterialInterface* MaskedParent, UMaterialInterface* TranslucentParent,
 															const FMaterialAttributeContainer& MaterialAttributes,
-															TMap<FTextureCacheKey, FTextureAndChannels>& TextureCache);
+															TMap<FString, FTextureData>& TextureCache);
 }

@@ -154,9 +154,4 @@ uint32 GetTypeHash(const FInstanceCacheKey& Object)
 	return HashCombine(Object.PrototypeId, GetArrayHash(Object.MaterialOverrides));
 }
 
-uint32 GetTypeHash(const FTextureCacheKey& Object)
-{
-	return GetTypeHash(Object.Path);
-}
-
 } // namespace Vitruvio
