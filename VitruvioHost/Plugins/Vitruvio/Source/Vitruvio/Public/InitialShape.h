@@ -32,6 +32,9 @@ protected:
 	UPROPERTY()
 	bool bIsValid;
 
+	UPROPERTY()
+	USceneComponent* Component;
+
 public:
 	const TArray<FInitialShapeFace>& GetInitialShapeData() const
 	{
@@ -49,28 +52,23 @@ public:
 
 	virtual void Initialize(UActorComponent* OwnerComponent)
 	{
-		unimplemented()
+		unimplemented();
 	}
 
 	virtual bool CanConstructFrom(UActorComponent* OwnerComponent)
 	{
-		unimplemented() return false;
+		unimplemented();
+		return false;
 	}
 
-	virtual bool CanDestroy()
-	{
-		return true;
-	}
-
-	virtual void Uninitialize()
-	{
-		bIsValid = false;
-	}
+	virtual bool CanDestroy();
+	virtual void Uninitialize();
 
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property)
 	{
-		unimplemented() return false;
+		unimplemented();
+		return false;
 	}
 
 #endif
@@ -83,15 +81,11 @@ public:
 	GENERATED_BODY()
 
 	virtual void Initialize(UActorComponent* OwnerComponent) override;
-	virtual void Uninitialize() override;
 	virtual bool CanConstructFrom(UActorComponent* OwnerComponent) override;
-	virtual bool CanDestroy() override;
 
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) override;
 #endif
-private:
-	UStaticMeshComponent* StaticMeshComponent;
 };
 
 UCLASS(meta = (DisplayName = "Spline"))
@@ -104,13 +98,9 @@ public:
 	int32 SplineApproximationPoints = 15;
 
 	virtual void Initialize(UActorComponent* OwnerComponent) override;
-	virtual void Uninitialize() override;
 	virtual bool CanConstructFrom(UActorComponent* OwnerComponent) override;
-	virtual bool CanDestroy() override;
 
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) override;
 #endif
-private:
-	USplineComponent* SplineComponent;
 };

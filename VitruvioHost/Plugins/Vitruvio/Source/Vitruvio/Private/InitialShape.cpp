@@ -18,18 +18,6 @@ T* AttachComponent(AActor* Owner, const FString& Name)
 	return Component;
 }
 
-void DetachComponent(USceneComponent* SceneComponent)
-{
-#if WITH_EDITOR
-	SceneComponent->Modify();
-#endif
-	SceneComponent->DestroyComponent(true);
-#if WITH_EDITOR
-	AActor* Owner = SceneComponent->GetOwner();
-	Owner->RerunConstructionScripts();
-#endif
-}
-
 // Returns false if all faces are degenerate and true otherwise
 bool HasValidGeometry(const TArray<FInitialShapeFace>& InFaces)
 {
@@ -103,14 +91,35 @@ void UInitialShape::SetInitialShapeData(const TArray<FInitialShapeFace>& InFaces
 	bIsValid = HasValidGeometry(InFaces);
 }
 
+bool UInitialShape::CanDestroy()
+{
+	return !Component || Component->CreationMethod == EComponentCreationMethod::Instance;
+}
+
+void UInitialShape::Uninitialize()
+{
+	if (Component)
+	{
+#if WITH_EDITOR
+		Component->Modify();
+#endif
+		Component->DestroyComponent(true);
+#if WITH_EDITOR
+		AActor* Owner = Component->GetOwner();
+		Owner->RerunConstructionScripts();
+#endif
+	}
+}
+
 void UStaticMeshInitialShape::Initialize(UActorComponent* OwnerComponent)
 {
 	AActor* Owner = OwnerComponent->GetOwner();
-	StaticMeshComponent = Owner->FindComponentByClass<UStaticMeshComponent>();
+	UStaticMeshComponent* StaticMeshComponent = Owner->FindComponentByClass<UStaticMeshComponent>();
 	if (!StaticMeshComponent)
 	{
 		StaticMeshComponent = AttachComponent<UStaticMeshComponent>(Owner, TEXT("InitialShapeStaticMesh"));
 	}
+	Component = StaticMeshComponent;
 
 	UStaticMesh* StaticMesh = StaticMeshComponent->GetStaticMesh();
 
@@ -161,30 +170,15 @@ void UStaticMeshInitialShape::Initialize(UActorComponent* OwnerComponent)
 	SetInitialShapeData(InitialShapeFaces);
 }
 
-void UStaticMeshInitialShape::Uninitialize()
-{
-	Super::Uninitialize();
-
-	if (StaticMeshComponent)
-	{
-		DetachComponent(StaticMeshComponent);
-	}
-}
-
 bool UStaticMeshInitialShape::CanConstructFrom(UActorComponent* OwnerComponent)
 {
 	AActor* Owner = OwnerComponent->GetOwner();
 	if (Owner)
 	{
-		UStaticMeshComponent* Component = Owner->FindComponentByClass<UStaticMeshComponent>();
-		return Component != nullptr && Component->GetStaticMesh() != nullptr;
+		UStaticMeshComponent* StaticMeshComponent = Owner->FindComponentByClass<UStaticMeshComponent>();
+		return StaticMeshComponent != nullptr && StaticMeshComponent->GetStaticMesh() != nullptr;
 	}
 	return false;
-}
-
-bool UStaticMeshInitialShape::CanDestroy()
-{
-	return !StaticMeshComponent || StaticMeshComponent->CreationMethod == EComponentCreationMethod::Instance;
 }
 
 bool USplineInitialShape::CanConstructFrom(UActorComponent* OwnerComponent)
@@ -192,17 +186,11 @@ bool USplineInitialShape::CanConstructFrom(UActorComponent* OwnerComponent)
 	AActor* Owner = OwnerComponent->GetOwner();
 	if (Owner)
 	{
-		USplineComponent* Component = Owner->FindComponentByClass<USplineComponent>();
-		return Component != nullptr && Component->GetNumberOfSplinePoints() > 0;
+		USplineComponent* SplineComponent = Owner->FindComponentByClass<USplineComponent>();
+		return SplineComponent != nullptr && SplineComponent->GetNumberOfSplinePoints() > 0;
 	}
 	return false;
 }
-
-bool USplineInitialShape::CanDestroy()
-{
-	return !SplineComponent || SplineComponent->CreationMethod == EComponentCreationMethod::Instance;
-}
-
 #if WITH_EDITOR
 
 bool USplineInitialShape::IsRelevantProperty(UObject* Object, FProperty* Property)
@@ -227,11 +215,13 @@ bool UStaticMeshInitialShape::IsRelevantProperty(UObject* Object, FProperty* Pro
 void USplineInitialShape::Initialize(UActorComponent* OwnerComponent)
 {
 	AActor* Owner = OwnerComponent->GetOwner();
-	SplineComponent = Owner->FindComponentByClass<USplineComponent>();
+	USplineComponent* SplineComponent = Owner->FindComponentByClass<USplineComponent>();
 	if (!SplineComponent)
 	{
 		SplineComponent = AttachComponent<USplineComponent>(Owner, TEXT("InitialShapeSpline"));
 	}
+
+	Component = SplineComponent;
 
 	TArray<FVector> Vertices;
 	const int32 NumPoints = SplineComponent->GetNumberOfSplinePoints();
@@ -272,14 +262,4 @@ void USplineInitialShape::Initialize(UActorComponent* OwnerComponent)
 	}
 
 	SetInitialShapeData({FInitialShapeFace{Vertices}});
-}
-
-void USplineInitialShape::Uninitialize()
-{
-	Super::Uninitialize();
-
-	if (SplineComponent)
-	{
-		DetachComponent(SplineComponent);
-	}
 }
