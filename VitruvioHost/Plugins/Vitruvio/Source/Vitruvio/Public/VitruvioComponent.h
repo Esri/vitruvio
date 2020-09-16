@@ -6,6 +6,7 @@
 #include "RulePackage.h"
 #include "VitruvioModule.h"
 
+#include "Chaos/AABB.h"
 #include "CoreMinimal.h"
 #include "InitialShape.h"
 #include "VitruvioTypes.h"
@@ -15,8 +16,6 @@
 #endif
 
 #include "VitruvioComponent.generated.h"
-
-class FInitialShapeFactory;
 
 struct FInstance
 {
@@ -87,8 +86,6 @@ public:
 	UPROPERTY(EditAnywhere, DisplayName = "Translucent Parent", Category = "Vitruvio Default Materials")
 	UMaterial* TranslucentParent;
 
-	FInitialShapeFactory* InitialShapeFactory = nullptr;
-
 	UPROPERTY(VisibleAnywhere, Instanced, Category = "Vitruvio")
 	UInitialShape* InitialShape = nullptr;
 
@@ -103,13 +100,14 @@ public:
 
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	static FInitialShapeFactory* FindFactory(UVitruvioComponent* VitruvioComponent);
-
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
 	void OnPropertyChanged(UObject* Object, FPropertyChangedEvent& PropertyChangedEvent);
+	void SetInitialShapeType(const TSubclassOf<UInitialShape>& Type);
 #endif
+
+	static TArray<TSubclassOf<UInitialShape>> GetInitialShapesClasses();
 
 private:
 	TQueue<FGenerateResultDescription> GenerateQueue;
@@ -133,19 +131,5 @@ private:
 
 #if WITH_EDITOR
 	FDelegateHandle PropertyChangeDelegate;
-#endif
-};
-
-class FInitialShapeFactory
-{
-public:
-	virtual ~FInitialShapeFactory() = default;
-
-	virtual UInitialShape* CreateInitialShape(UVitruvioComponent* Component, UInitialShape* OldInitialShape) const = 0;
-	virtual bool CanCreateFrom(UVitruvioComponent* Component) const = 0;
-
-#if WITH_EDITOR
-	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) = 0;
-	virtual bool IsRelevantObject(UVitruvioComponent* Component, UObject* Object);
 #endif
 };
