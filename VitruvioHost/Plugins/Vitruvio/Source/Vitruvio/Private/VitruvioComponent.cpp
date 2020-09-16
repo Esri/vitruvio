@@ -292,8 +292,9 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 				const FName SlotName = StaticMesh->AddMaterial(Material);
 				MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonId] = SlotName;
 				MaterialSlots.Add(Material, SlotName);
-				++MaterialIndex;
 			}
+
+			++MaterialIndex;
 		}
 
 		TArray<const FMeshDescription*> MeshDescriptionPtrs;
