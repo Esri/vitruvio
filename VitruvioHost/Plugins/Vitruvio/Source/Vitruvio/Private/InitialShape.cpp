@@ -30,6 +30,61 @@ void DetachComponent(USceneComponent* SceneComponent)
 #endif
 }
 
+// Returns false if all faces are degenerate and true otherwise
+bool HasValidGeometry(const TArray<FInitialShapeFace>& InFaces)
+{
+	FMeshDescription Description;
+	FStaticMeshAttributes Attributes(Description);
+	const auto VertexPositions = Attributes.GetVertexPositions();
+
+	// 1. Construct MeshDescription from Faces
+	const FPolygonGroupID PolygonGroupId = Description.CreatePolygonGroup();
+	for (const FInitialShapeFace& Face : InFaces)
+	{
+		int32 VertexIndex = 0;
+		TArray<FVertexInstanceID> PolygonVertexInstances;
+		for (const FVector& Vertex : Face.Vertices)
+		{
+			const FVertexID VertexID = Description.CreateVertex();
+			VertexPositions[VertexID] = Vertex;
+			FVertexInstanceID InstanceId = Description.CreateVertexInstance(FVertexID(VertexIndex++));
+			PolygonVertexInstances.Add(InstanceId);
+		}
+
+		Description.CreatePolygon(PolygonGroupId, PolygonVertexInstances);
+	}
+
+	// 2. Triangulate as the input initial shape is in non triangulated form
+	Description.TriangulateMesh();
+
+	// 3. Check if any of the triangles is NOT degenerate (which means the polygon has valid geometry) if all
+	// faces are degenerate we return false (meaning non valid geometry)
+	const float ComparisonThreshold = 0.0001;
+	const float AdjustedComparisonThreshold = FMath::Max(ComparisonThreshold, MIN_flt);
+
+	for (const FPolygonID& PolygonID : Description.Polygons().GetElementIDs())
+	{
+		for (const FTriangleID TriangleID : Description.GetPolygonTriangleIDs(PolygonID))
+		{
+			TArrayView<const FVertexInstanceID> TriangleVertexInstances = Description.GetTriangleVertexInstances(TriangleID);
+			const FVertexID VertexID0 = Description.GetVertexInstanceVertex(TriangleVertexInstances[0]);
+			const FVertexID VertexID1 = Description.GetVertexInstanceVertex(TriangleVertexInstances[1]);
+			const FVertexID VertexID2 = Description.GetVertexInstanceVertex(TriangleVertexInstances[2]);
+
+			const FVector Position0 = VertexPositions[VertexID0];
+			const FVector DPosition1 = VertexPositions[VertexID1] - Position0;
+			const FVector DPosition2 = VertexPositions[VertexID2] - Position0;
+
+			FVector TmpNormal = FVector::CrossProduct(DPosition2, DPosition1).GetSafeNormal(AdjustedComparisonThreshold);
+			if (!TmpNormal.IsNearlyZero(ComparisonThreshold))
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
 } // namespace
 
 TArray<FVector> UInitialShape::GetVertices() const
@@ -40,6 +95,12 @@ TArray<FVector> UInitialShape::GetVertices() const
 		AllVertices.Append(Face.Vertices);
 	}
 	return AllVertices;
+}
+
+void UInitialShape::SetInitialShapeData(const TArray<FInitialShapeFace>& InFaces)
+{
+	Faces = InFaces;
+	bIsValid = HasValidGeometry(InFaces);
 }
 
 void UStaticMeshInitialShape::Initialize(UActorComponent* OwnerComponent)

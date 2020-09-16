@@ -5,6 +5,9 @@
 #include "Components/SplineComponent.h"
 #include "CoreUObject.h"
 
+#include "StaticMeshAttributes.h"
+#include "StaticMeshDescription.h"
+
 #include "InitialShape.generated.h"
 
 USTRUCT()
@@ -42,11 +45,7 @@ public:
 		return bIsValid;
 	}
 
-	void SetInitialShapeData(const TArray<FInitialShapeFace>& InFaces)
-	{
-		Faces = InFaces;
-		bIsValid = true;
-	}
+	void SetInitialShapeData(const TArray<FInitialShapeFace>& InFaces);
 
 	virtual void Initialize(UActorComponent* OwnerComponent)
 	{
