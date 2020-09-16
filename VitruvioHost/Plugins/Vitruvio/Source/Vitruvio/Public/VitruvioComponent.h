@@ -6,14 +6,9 @@
 #include "RulePackage.h"
 #include "VitruvioModule.h"
 
-#include "Chaos/AABB.h"
 #include "CoreMinimal.h"
 #include "InitialShape.h"
 #include "VitruvioTypes.h"
-
-#if WITH_EDITOR
-#include "IDetailGroup.h"
-#endif
 
 #include "VitruvioComponent.generated.h"
 
