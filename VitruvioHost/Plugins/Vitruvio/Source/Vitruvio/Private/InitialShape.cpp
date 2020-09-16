@@ -221,6 +221,8 @@ void USplineInitialShape::Initialize(UActorComponent* OwnerComponent)
 		SplineComponent = AttachComponent<USplineComponent>(Owner, TEXT("InitialShapeSpline"));
 	}
 
+	SplineComponent->SetClosedLoop(true);
+
 	Component = SplineComponent;
 
 	TArray<FVector> Vertices;
