@@ -105,18 +105,19 @@ void UVitruvioComponent::OnComponentCreated()
 	Super::OnComponentCreated();
 
 	// Detect initial initial shape type (eg if there has already been a StaticMeshComponent assigned to the actor)
+	check(GetInitialShapesClasses().Num() > 0);
 	for (const auto& InitialShapeClasses : GetInitialShapesClasses())
 	{
 		UInitialShape* DefaultInitialShape = Cast<UInitialShape>(InitialShapeClasses->GetDefaultObject());
 		if (DefaultInitialShape && DefaultInitialShape->CanConstructFrom(this->GetOwner()))
 		{
-			InitialShape = DuplicateObject(DefaultInitialShape, GetOwner());
+			InitialShape = NewObject<UInitialShape>(GetOwner(), DefaultInitialShape->GetClass());
 		}
 	}
 
 	if (!InitialShape)
 	{
-		InitialShape = DuplicateObject(GetInitialShapesClasses()[0].GetDefaultObject(), GetOwner());
+		InitialShape = NewObject<UInitialShape>(GetOwner(), GetInitialShapesClasses()[0]);
 	}
 
 	InitialShape->Initialize(this);
