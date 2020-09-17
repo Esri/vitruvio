@@ -507,7 +507,5 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 
 TArray<TSubclassOf<UInitialShape>> UVitruvioComponent::GetInitialShapesClasses()
 {
-	static TArray<TSubclassOf<UInitialShape>> InitialShapeClasses = {UStaticMeshInitialShape::StaticClass(), USplineInitialShape::StaticClass()};
-
-	return InitialShapeClasses;
+	return {UStaticMeshInitialShape::StaticClass(), USplineInitialShape::StaticClass()};
 }
