@@ -55,7 +55,7 @@ public:
 		unimplemented();
 	}
 
-	virtual bool CanConstructFrom(UActorComponent* OwnerComponent)
+	virtual bool CanConstructFrom(AActor* Owner) const
 	{
 		unimplemented();
 		return false;
@@ -81,7 +81,7 @@ public:
 	GENERATED_BODY()
 
 	virtual void Initialize(UActorComponent* OwnerComponent) override;
-	virtual bool CanConstructFrom(UActorComponent* OwnerComponent) override;
+	virtual bool CanConstructFrom(AActor* Owner) const override;
 
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) override;
@@ -98,7 +98,7 @@ public:
 	int32 SplineApproximationPoints = 15;
 
 	virtual void Initialize(UActorComponent* OwnerComponent) override;
-	virtual bool CanConstructFrom(UActorComponent* OwnerComponent) override;
+	virtual bool CanConstructFrom(AActor* Owner) const override;
 
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) override;

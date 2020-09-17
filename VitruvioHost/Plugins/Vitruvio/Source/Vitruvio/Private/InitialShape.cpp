@@ -171,9 +171,8 @@ void UStaticMeshInitialShape::Initialize(UActorComponent* OwnerComponent)
 	SetInitialShapeData(InitialShapeFaces);
 }
 
-bool UStaticMeshInitialShape::CanConstructFrom(UActorComponent* OwnerComponent)
+bool UStaticMeshInitialShape::CanConstructFrom(AActor* Owner) const
 {
-	AActor* Owner = OwnerComponent->GetOwner();
 	if (Owner)
 	{
 		UStaticMeshComponent* StaticMeshComponent = Owner->FindComponentByClass<UStaticMeshComponent>();
@@ -182,9 +181,8 @@ bool UStaticMeshInitialShape::CanConstructFrom(UActorComponent* OwnerComponent)
 	return false;
 }
 
-bool USplineInitialShape::CanConstructFrom(UActorComponent* OwnerComponent)
+bool USplineInitialShape::CanConstructFrom(AActor* Owner) const
 {
-	AActor* Owner = OwnerComponent->GetOwner();
 	if (Owner)
 	{
 		USplineComponent* SplineComponent = Owner->FindComponentByClass<USplineComponent>();

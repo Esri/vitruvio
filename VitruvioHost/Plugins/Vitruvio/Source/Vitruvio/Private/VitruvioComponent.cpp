@@ -108,7 +108,7 @@ void UVitruvioComponent::OnComponentCreated()
 	for (const auto& InitialShapeClasses : GetInitialShapesClasses())
 	{
 		UInitialShape* DefaultInitialShape = Cast<UInitialShape>(InitialShapeClasses->GetDefaultObject());
-		if (DefaultInitialShape && DefaultInitialShape->CanConstructFrom(this))
+		if (DefaultInitialShape && DefaultInitialShape->CanConstructFrom(this->GetOwner()))
 		{
 			InitialShape = DuplicateObject(DefaultInitialShape, GetOwner());
 		}
