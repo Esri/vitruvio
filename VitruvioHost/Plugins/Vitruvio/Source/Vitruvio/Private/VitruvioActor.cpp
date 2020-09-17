@@ -6,5 +6,6 @@
 
 AVitruvioActor::AVitruvioActor()
 {
+	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	VitruvioComponent = CreateDefaultSubobject<UVitruvioComponent>(TEXT("VitruvioComponent"));
 }

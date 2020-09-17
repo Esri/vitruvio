@@ -8,7 +8,7 @@
 #include "VitruvioActor.generated.h"
 
 UCLASS()
-class VITRUVIO_API AVitruvioActor : public AStaticMeshActor
+class VITRUVIO_API AVitruvioActor : public AActor
 {
 	GENERATED_BODY()
 
