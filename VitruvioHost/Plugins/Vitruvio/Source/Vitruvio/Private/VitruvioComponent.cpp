@@ -405,6 +405,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		return;
 	}
 
+	bool bRandomSeedChanged = false;
 	if (Object == this && PropertyChangedEvent.Property)
 	{
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Rpk))
@@ -418,6 +419,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, RandomSeed))
 		{
 			bValidRandomSeed = true;
+			bRandomSeedChanged = true;
 		}
 	}
 
@@ -438,11 +440,11 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 			RandomSeed = CalculateRandomSeed(GetOwner()->GetActorTransform(), InitialShape);
 			bValidRandomSeed = true;
 		}
+	}
 
-		if (bAttributesReady)
-		{
-			Generate();
-		}
+	if (bAttributesReady && GenerateAutomatically && (bRecreateInitialShape || bRandomSeedChanged))
+	{
+		Generate();
 	}
 
 	if (!InitialShape || !InitialShape->IsValid() || !Rpk)
