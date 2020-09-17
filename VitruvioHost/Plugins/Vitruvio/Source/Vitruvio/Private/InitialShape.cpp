@@ -100,6 +100,7 @@ void UInitialShape::Uninitialize()
 {
 	if (Component)
 	{
+		// Similarly to Unreal Ed component deletion. See ComponentEditorUtils#DeleteComponents
 #if WITH_EDITOR
 		Component->Modify();
 #endif
