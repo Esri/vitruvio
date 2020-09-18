@@ -192,19 +192,22 @@ bool USplineInitialShape::CanConstructFrom(AActor* Owner) const
 }
 #if WITH_EDITOR
 
-bool USplineInitialShape::IsRelevantProperty(UObject* Object, FProperty* Property)
+bool USplineInitialShape::IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent)
 {
 	if (Object)
 	{
-		return Property && (Property->GetFName() == TEXT("SplineCurves") || Property->GetFName() == TEXT("SplineApproximationPoints"));
+		FProperty* Property = PropertyChangedEvent.Property;
+		return Property && (Property->GetFName() == TEXT("SplineCurves") || (Property->GetFName() == TEXT("SplineApproximationPoints") &&
+																			 PropertyChangedEvent.ChangeType == EPropertyChangeType::ValueSet));
 	}
 	return false;
 }
 
-bool UStaticMeshInitialShape::IsRelevantProperty(UObject* Object, FProperty* Property)
+bool UStaticMeshInitialShape::IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent)
 {
 	if (Object)
 	{
+		FProperty* Property = PropertyChangedEvent.Property;
 		return Property && (Property->GetFName() == TEXT("StaticMesh") || Property->GetFName() == TEXT("StaticMeshComponent"));
 	}
 	return false;

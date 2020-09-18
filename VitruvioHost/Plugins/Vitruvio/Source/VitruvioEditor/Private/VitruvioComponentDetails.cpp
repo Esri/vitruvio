@@ -492,15 +492,14 @@ void FVitruvioComponentDetails::CustomizeDetails(const TSharedPtr<IDetailLayoutB
 
 void FVitruvioComponentDetails::OnPropertyChanged(UObject* Object, struct FPropertyChangedEvent& Event)
 {
-	if (!Event.Property)
+	if (!Event.Property || Event.ChangeType == EPropertyChangeType::Interactive)
 	{
 		return;
 	}
 
 	const FName PropertyName = Event.Property->GetFName();
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Attributes) ||
-		PropertyName == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateAutomatically) ||
-		PropertyName == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, InitialShape))
+		PropertyName == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateAutomatically))
 	{
 		const auto DetailBuilder = CachedDetailBuilder.Pin().Get();
 		if (DetailBuilder)

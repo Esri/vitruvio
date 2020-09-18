@@ -406,13 +406,14 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		return;
 	}
 
-	bool bRandomSeedChanged = false;
+	bool bComponentPropertyChanged = false;
 	if (Object == this && PropertyChangedEvent.Property)
 	{
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Rpk))
 		{
 			Attributes.Empty();
 			bAttributesReady = false;
+			bComponentPropertyChanged = true;
 
 			NotifyAttributesChanged();
 		}
@@ -420,17 +421,14 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, RandomSeed))
 		{
 			bValidRandomSeed = true;
-			bRandomSeedChanged = true;
+			bComponentPropertyChanged = true;
 		}
 	}
 
-	bool bRecreateInitialShape = false;
-	// If a property has changed which is used for creating the initial shape we have to recreate it
-	if (IsRelevantObject(this, Object) && InitialShape && InitialShape->IsRelevantProperty(Object, PropertyChangedEvent.Property))
-	{
-		bRecreateInitialShape = true;
-	}
+	const bool bRelevantProperty = InitialShape && InitialShape->IsRelevantProperty(Object, PropertyChangedEvent);
+	const bool bRecreateInitialShape = IsRelevantObject(this, Object) && bRelevantProperty;
 
+	// If a property has changed which is used for creating the initial shape we have to recreate it
 	if (bRecreateInitialShape)
 	{
 		InitialShape = DuplicateObject(InitialShape, GetOwner());
@@ -443,7 +441,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		}
 	}
 
-	if (bAttributesReady && GenerateAutomatically && (bRecreateInitialShape || bRandomSeedChanged))
+	if (bAttributesReady && GenerateAutomatically && (bRecreateInitialShape || bComponentPropertyChanged))
 	{
 		Generate();
 	}

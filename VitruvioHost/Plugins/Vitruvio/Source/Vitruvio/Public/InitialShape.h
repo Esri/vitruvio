@@ -65,7 +65,7 @@ public:
 	virtual void Uninitialize();
 
 #if WITH_EDITOR
-	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property)
+	virtual bool IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent)
 	{
 		unimplemented();
 		return false;
@@ -84,7 +84,7 @@ public:
 	virtual bool CanConstructFrom(AActor* Owner) const override;
 
 #if WITH_EDITOR
-	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) override;
+	virtual bool IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 };
 
@@ -101,6 +101,6 @@ public:
 	virtual bool CanConstructFrom(AActor* Owner) const override;
 
 #if WITH_EDITOR
-	virtual bool IsRelevantProperty(UObject* Object, FProperty* Property) override;
+	virtual bool IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 };
