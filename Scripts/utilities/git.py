@@ -478,28 +478,6 @@ class Repository(paths.Paths):
 
         copy(src, dst)
 
-    def install_readme(self):
-        """
-        Installs the global readme file to the repository.
-        Does not add the file or create any commits.
-        """
-        from shutil import copy
-
-        src = paths.GLOBAL.TEMPLATE_README
-        dst = self.README
-
-        if src == dst or not src.exists():
-            return
-
-        src = str(src)
-        dst = str(dst)
-
-        log.info('{}: Installing readme file.'.format(self.name, self.name))
-        log.debug('{}: Readme source: "{}"'.format(self.name, src))
-        log.debug('{}: Readme target: "{}"'.format(self.name, dst))
-
-        copy(src, dst)
-
     def install_scripts(self):
         """
         Installs the global scripts folder to the repository.
@@ -516,7 +494,6 @@ class Repository(paths.Paths):
         log.debug('{}: Scripts target path: "{}"'.format(self.name, dst))
 
         fs.safe_copy_tree(src, dst)
-        self.install_readme()
 
     def safe_install_hooks(self, *hooks, symbolic=True):
         """

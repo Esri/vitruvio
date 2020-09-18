@@ -72,7 +72,6 @@ class Paths:
         self.TEMPLATE_GITIGNORE: Path = self.PATH_TEMPLATES.joinpath('.gitignore.template')
         self.TEMPLATE_GITATTRIBUTES: Path = self.PATH_TEMPLATES.joinpath('.gitattributes.template')
         self.TEMPLATE_CLANGFORMAT: Path = self.PATH_TEMPLATES.joinpath('.clang-format.template')
-        self.TEMPLATE_README: Path = self.PATH_TEMPLATES.joinpath('README.md')
 
         # -----------------------------------------------------------------------------
         # Important File Paths
@@ -81,7 +80,6 @@ class Paths:
         self.GITIGNORE: Path = self.PATH_ROOT.joinpath('.gitignore')
         self.GITATTRIBUTES: Path = self.PATH_ROOT.joinpath('.gitattributes')
         self.CLANGFORMAT: Path = self.PATH_ROOT.joinpath('.clang-format')
-        self.README: Path = self.PATH_SCRIPTS.joinpath('README.md')
 
 
 root = Path(__file__).parent.parent.parent
