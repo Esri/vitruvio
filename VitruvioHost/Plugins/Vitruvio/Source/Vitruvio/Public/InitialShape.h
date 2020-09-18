@@ -2,12 +2,16 @@
 
 #pragma once
 
+#include "Components/SplineComponent.h"
 #include "CoreUObject.h"
+
+#include "StaticMeshAttributes.h"
+#include "StaticMeshDescription.h"
 
 #include "InitialShape.generated.h"
 
 USTRUCT()
-struct FInitialShapeFace
+struct VITRUVIO_API FInitialShapeFace
 {
 	GENERATED_BODY()
 
@@ -15,14 +19,21 @@ struct FInitialShapeFace
 	TArray<FVector> Vertices;
 };
 
-UCLASS()
-class UInitialShape : public UObject
+UCLASS(Abstract)
+class VITRUVIO_API UInitialShape : public UObject
 {
 	GENERATED_BODY()
 
 	// Non triangulated vertices per face
 	UPROPERTY()
 	TArray<FInitialShapeFace> Faces;
+
+protected:
+	UPROPERTY()
+	bool bIsValid;
+
+	UPROPERTY()
+	USceneComponent* Component;
 
 public:
 	const TArray<FInitialShapeFace>& GetInitialShapeData() const
@@ -32,18 +43,64 @@ public:
 
 	TArray<FVector> GetVertices() const;
 
-	void SetInitialShapeData(const TArray<FInitialShapeFace>& InFaces)
+	bool IsValid() const
 	{
-		Faces = InFaces;
+		return bIsValid;
 	}
+
+	void SetInitialShapeData(const TArray<FInitialShapeFace>& InFaces);
+
+	virtual void Initialize(UActorComponent* OwnerComponent)
+	{
+		unimplemented();
+	}
+
+	virtual bool CanConstructFrom(AActor* Owner) const
+	{
+		unimplemented();
+		return false;
+	}
+
+	virtual bool CanDestroy();
+	virtual void Uninitialize();
+
+#if WITH_EDITOR
+	virtual bool IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent)
+	{
+		unimplemented();
+		return false;
+	}
+
+#endif
 };
 
-UCLASS()
-class USplineInitialShape : public UInitialShape
+UCLASS(meta = (DisplayName = "Static Mesh"))
+class VITRUVIO_API UStaticMeshInitialShape : public UInitialShape
+{
+public:
+	GENERATED_BODY()
+
+	virtual void Initialize(UActorComponent* OwnerComponent) override;
+	virtual bool CanConstructFrom(AActor* Owner) const override;
+
+#if WITH_EDITOR
+	virtual bool IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
+};
+
+UCLASS(meta = (DisplayName = "Spline"))
+class VITRUVIO_API USplineInitialShape : public UInitialShape
 {
 public:
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, Meta = (UIMin = 5, UIMax = 50))
 	int32 SplineApproximationPoints = 15;
+
+	virtual void Initialize(UActorComponent* OwnerComponent) override;
+	virtual bool CanConstructFrom(AActor* Owner) const override;
+
+#if WITH_EDITOR
+	virtual bool IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
 };

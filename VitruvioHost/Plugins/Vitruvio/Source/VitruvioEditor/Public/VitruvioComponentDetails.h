@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "DetailCategoryBuilder.h"
 #include "IDetailCustomization.h"
 #include "VitruvioComponent.h"
 
@@ -13,6 +14,9 @@ public:
 
 	static TSharedRef<IDetailCustomization> MakeInstance();
 
+	void AddSwitchInitialShapeCombobox(IDetailCategoryBuilder& RootCategory, const TSharedPtr<FString>& CurrentInitialShapeType,
+									   UVitruvioComponent* VitruvioComponent);
+
 	void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 	void CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& DetailBuilder) override;
 
@@ -22,6 +26,9 @@ private:
 	TArray<TWeakObjectPtr<UObject>> ObjectsBeingCustomized;
 	TWeakPtr<IDetailLayoutBuilder> CachedDetailBuilder;
 	TSharedPtr<SWidget> ColorPickerParentWidget;
+
+	TArray<TSharedPtr<FString>> InitialShapeTypes;
+	TMap<TSharedPtr<FString>, UClass*> InitialShapeTypeMap;
 };
 
 template <typename T>

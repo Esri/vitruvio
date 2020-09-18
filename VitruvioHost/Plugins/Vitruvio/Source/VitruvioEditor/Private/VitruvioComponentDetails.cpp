@@ -2,11 +2,11 @@
 
 #include "VitruvioComponentDetails.h"
 
+#include "UnrealEd.h"
 #include "VitruvioComponent.h"
 
 #include "Algo/Transform.h"
 #include "Brushes/SlateColorBrush.h"
-#include "DetailCategoryBuilder.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
 #include "IDetailGroup.h"
@@ -14,6 +14,7 @@
 #include "Widgets/Colors/SColorPicker.h"
 #include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Input/SSpinBox.h"
+#include "Widgets/Input/STextComboBox.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SSeparator.h"
 #include "Widgets/Text/STextBlock.h"
@@ -244,11 +245,6 @@ void BuildAttributeEditor(IDetailCategoryBuilder& RootCategory, UVitruvioCompone
 		return;
 	}
 
-	if (!VitruvioActor->GenerateAutomatically)
-	{
-		AddSeparator(RootCategory);
-	}
-
 	IDetailGroup& RootGroup = RootCategory.AddGroup("Attributes", FText::FromString("Attributes"), true, true);
 	TMap<FString, IDetailGroup*> GroupCache;
 
@@ -360,6 +356,15 @@ TSharedRef<SWidget> SPropertyComboBox<T>::OnGenerateComboWidget(TSharedPtr<T> In
 
 FVitruvioComponentDetails::FVitruvioComponentDetails()
 {
+	for (const auto& InitialShapeType : UVitruvioComponent::GetInitialShapesClasses())
+	{
+		FString DisplayName = InitialShapeType->GetMetaData(TEXT("DisplayName"));
+
+		auto InitialShapeOption = MakeShared<FString>(DisplayName);
+		InitialShapeTypes.Add(InitialShapeOption);
+		InitialShapeTypeMap.Add(InitialShapeOption, *InitialShapeType);
+	}
+
 	FCoreUObjectDelegates::OnObjectPropertyChanged.AddRaw(this, &FVitruvioComponentDetails::OnPropertyChanged);
 }
 
@@ -371,6 +376,52 @@ FVitruvioComponentDetails::~FVitruvioComponentDetails()
 TSharedRef<IDetailCustomization> FVitruvioComponentDetails::MakeInstance()
 {
 	return MakeShareable(new FVitruvioComponentDetails);
+}
+
+void FVitruvioComponentDetails::AddSwitchInitialShapeCombobox(IDetailCategoryBuilder& RootCategory,
+															  const TSharedPtr<FString>& CurrentInitialShapeType,
+															  UVitruvioComponent* VitruvioComponent)
+{
+	// clang-format off
+	FDetailWidgetRow& Row = RootCategory.AddCustomRow(FText::FromString("InitialShape"), false);
+
+	Row.NameContent()
+	[
+		SNew(SBox)
+		.Content()
+		[
+			SNew(STextBlock)
+			.Text(FText::FromString("Initial Shape Type"))
+			.Font(IDetailLayoutBuilder::GetDetailFont())
+		]
+	];
+
+	Row.ValueContent()
+	.VAlign(VAlign_Center)
+	.HAlign(HAlign_Left)
+	[
+		SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot()
+		[
+			SNew(STextComboBox)
+			.Font(IDetailLayoutBuilder::GetDetailFont())
+			.InitiallySelectedItem(CurrentInitialShapeType)
+			.OnSelectionChanged_Lambda([this, VitruvioComponent](TSharedPtr<FString> Selection, ESelectInfo::Type SelectInfo)
+			{
+				if (Selection.IsValid())
+				{
+					VitruvioComponent->SetInitialShapeType(InitialShapeTypeMap[Selection]);
+
+					// Hack to refresh the property editor
+					GEditor->SelectActor(VitruvioComponent->GetOwner(), false, true, true, true);
+					GEditor->SelectActor(VitruvioComponent->GetOwner(), true, true, true, true);
+					GEditor->SelectComponent(VitruvioComponent, true, true, true);
+				}
+			})
+			.OptionsSource(&InitialShapeTypes)
+		]
+	];
+	// clang-format on
 }
 
 void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
@@ -393,6 +444,21 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		return;
 	}
 
+	TSharedPtr<FString> CurrentInitialShapeType;
+
+	if (VitruvioComponent->InitialShape)
+	{
+		for (const auto& InitialShapeTypeOptionTuple : InitialShapeTypeMap)
+		{
+			UClass* IsClass = VitruvioComponent->InitialShape->GetClass();
+			if (InitialShapeTypeOptionTuple.Value == IsClass)
+			{
+				CurrentInitialShapeType = InitialShapeTypeOptionTuple.Key;
+				break;
+			}
+		}
+	}
+
 	DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Attributes))->MarkHiddenByCustomization();
 
 	if (!VitruvioComponent->InitialShape)
@@ -408,6 +474,13 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		AddGenerateButton(RootCategory, VitruvioComponent);
 	}
 
+	if (VitruvioComponent->InitialShape && VitruvioComponent->InitialShape->CanDestroy())
+	{
+		AddSwitchInitialShapeCombobox(RootCategory, CurrentInitialShapeType, VitruvioComponent);
+	}
+
+	AddSeparator(RootCategory);
+
 	BuildAttributeEditor(RootCategory, VitruvioComponent);
 }
 
@@ -419,15 +492,14 @@ void FVitruvioComponentDetails::CustomizeDetails(const TSharedPtr<IDetailLayoutB
 
 void FVitruvioComponentDetails::OnPropertyChanged(UObject* Object, struct FPropertyChangedEvent& Event)
 {
-	if (!Event.Property)
+	if (!Event.Property || Event.ChangeType == EPropertyChangeType::Interactive)
 	{
 		return;
 	}
 
 	const FName PropertyName = Event.Property->GetFName();
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Attributes) ||
-		PropertyName == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateAutomatically) ||
-		PropertyName == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, InitialShape))
+		PropertyName == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateAutomatically))
 	{
 		const auto DetailBuilder = CachedDetailBuilder.Pin().Get();
 		if (DetailBuilder)
