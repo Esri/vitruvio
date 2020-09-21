@@ -144,6 +144,12 @@ void VitruvioEditorModule::ShutdownModule()
 {
 	FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyModule.UnregisterCustomClassLayout(UVitruvioComponent::StaticClass()->GetFName());
+
+	FLevelEditorModule& LevelEditorModule = FModuleManager::LoadModuleChecked<FLevelEditorModule>("LevelEditor");
+	LevelEditorModule.GetAllLevelViewportContextMenuExtenders().RemoveAll(
+		[&](const FLevelEditorModule::FLevelViewportMenuExtender_SelectedActors& Delegate) {
+			return Delegate.GetHandle() == LevelViewportContextMenuVitruvioExtenderDelegateHandle;
+		});
 }
 
 #undef LOCTEXT_NAMESPACE
