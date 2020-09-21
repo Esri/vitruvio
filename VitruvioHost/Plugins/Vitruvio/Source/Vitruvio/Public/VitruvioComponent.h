@@ -29,6 +29,7 @@ struct FLoadAttributes
 {
 	FAttributeMapPtr AttributeMap;
 	bool bKeepOldAttributes;
+	bool bForceRegenerate;
 };
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
@@ -85,7 +86,7 @@ public:
 	UInitialShape* InitialShape = nullptr;
 
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	void Generate();
+	void Generate(bool bLoadAttributes = false);
 
 	virtual void PostLoad() override;
 
@@ -111,7 +112,7 @@ private:
 	FGenerateResult::FTokenPtr GenerateToken;
 	FAttributeMapResult::FTokenPtr LoadAttributesInvalidationToken;
 
-	void LoadDefaultAttributes(bool KeepOldAttributeValues = false);
+	void LoadDefaultAttributes(bool KeepOldAttributeValues = false, bool ForceRegenerate = false);
 
 	void NotifyAttributesChanged();
 

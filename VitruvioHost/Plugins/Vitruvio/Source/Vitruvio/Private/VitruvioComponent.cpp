@@ -71,6 +71,7 @@ bool IsRelevantObject(UVitruvioComponent* VitruvioComponent, UObject* Object)
 
 UVitruvioComponent::UVitruvioComponent()
 {
+
 	static ConstructorHelpers::FObjectFinder<UMaterial> Opaque(TEXT("Material'/Vitruvio/Materials/M_OpaqueParent.M_OpaqueParent'"));
 	static ConstructorHelpers::FObjectFinder<UMaterial> Masked(TEXT("Material'/Vitruvio/Materials/M_MaskedParent.M_MaskedParent'"));
 	static ConstructorHelpers::FObjectFinder<UMaterial> Translucent(TEXT("Material'/Vitruvio/Materials/M_TranslucentParent.M_TranslucentParent'"));
@@ -92,6 +93,12 @@ void UVitruvioComponent::PostLoad()
 		PropertyChangeDelegate = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &UVitruvioComponent::OnPropertyChanged);
 	}
 #endif
+
+	if (!bValidRandomSeed && InitialShape && InitialShape->IsValid())
+	{
+		RandomSeed = CalculateRandomSeed(GetOwner()->GetActorTransform(), InitialShape);
+		bValidRandomSeed = true;
+	}
 
 	// Check if we can load the attributes and then generate (eg during play)
 	if (InitialShape && InitialShape->IsValid() && Rpk && bAttributesReady)
@@ -121,6 +128,12 @@ void UVitruvioComponent::OnComponentCreated()
 	}
 
 	InitialShape->Initialize(this);
+
+	if (!bValidRandomSeed)
+	{
+		RandomSeed = CalculateRandomSeed(GetOwner()->GetActorTransform(), InitialShape);
+		bValidRandomSeed = true;
+	}
 
 	// If everything is ready we can generate (used for example for copy paste to regenerate the model)
 	if (bAttributesReady)
@@ -342,8 +355,17 @@ void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 #endif
 }
 
-void UVitruvioComponent::Generate()
+void UVitruvioComponent::Generate(bool bLoadAttributes)
 {
+	// If the initial shape and RPK are valid but we have not yet loaded the attributes and bLoadAttributes
+	// is set, we load the attributes and regenerate afterwards
+	if (InitialShape && InitialShape->IsValid() && Rpk && !bAttributesReady && bLoadAttributes)
+	{
+		LoadDefaultAttributes(false, true);
+		return;
+	}
+
+	// If either the RPK, initial shape or attributes are not ready we can not generate
 	if (!Rpk || !bAttributesReady || !InitialShape)
 	{
 		RemoveGeneratedMeshes();
@@ -473,7 +495,7 @@ void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& T
 
 #endif // WITH_EDITOR
 
-void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues)
+void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues, bool ForceRegenerate)
 {
 	check(Rpk);
 	check(InitialShape);
@@ -490,7 +512,7 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 
 	LoadAttributesInvalidationToken = AttributesResult.Token;
 
-	AttributesResult.Result.Next([this, KeepOldAttributeValues](const FAttributeMapResult::ResultType& Result) {
+	AttributesResult.Result.Next([this, ForceRegenerate, KeepOldAttributeValues](const FAttributeMapResult::ResultType& Result) {
 		FScopeLock(&Result.Token->Lock);
 
 		if (Result.Token->IsInvalid())
@@ -500,7 +522,7 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 
 		LoadingAttributes = false;
 
-		LoadAttributesQueue.Enqueue({Result.Value, KeepOldAttributeValues});
+		LoadAttributesQueue.Enqueue({Result.Value, KeepOldAttributeValues, ForceRegenerate});
 	});
 }
 
