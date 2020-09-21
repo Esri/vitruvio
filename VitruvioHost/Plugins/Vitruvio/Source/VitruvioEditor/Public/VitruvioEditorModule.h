@@ -9,4 +9,7 @@ class VitruvioEditorModule final : public IModuleInterface
 public:
 	void StartupModule() override;
 	void ShutdownModule() override;
+
+private:
+	FDelegateHandle LevelViewportContextMenuVitruvioExtenderDelegateHandle;
 };
