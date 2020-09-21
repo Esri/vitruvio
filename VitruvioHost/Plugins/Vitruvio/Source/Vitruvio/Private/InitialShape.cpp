@@ -38,8 +38,10 @@ bool HasValidGeometry(const TArray<FInitialShapeFace>& InFaces)
 			FVertexInstanceID InstanceId = Description.CreateVertexInstance(FVertexID(VertexIndex++));
 			PolygonVertexInstances.Add(InstanceId);
 		}
-
-		Description.CreatePolygon(PolygonGroupId, PolygonVertexInstances);
+		if (PolygonVertexInstances.Num() >= 3)
+		{
+			Description.CreatePolygon(PolygonGroupId, PolygonVertexInstances);
+		}
 	}
 
 	// 2. Triangulate as the input initial shape is in non triangulated form
