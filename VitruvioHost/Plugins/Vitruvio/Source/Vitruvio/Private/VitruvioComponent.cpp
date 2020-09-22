@@ -87,6 +87,16 @@ void UVitruvioComponent::CalculateRandomSeed()
 	}
 }
 
+bool UVitruvioComponent::HasValidInputData() const
+{
+	return InitialShape && InitialShape->IsValid() && Rpk;
+}
+
+bool UVitruvioComponent::IsReadyToGenerate() const
+{
+	return HasValidInputData() && bAttributesReady;
+}
+
 void UVitruvioComponent::PostLoad()
 {
 	Super::PostLoad();
@@ -355,14 +365,14 @@ void UVitruvioComponent::Generate(bool bLoadAttributes)
 {
 	// If the initial shape and RPK are valid but we have not yet loaded the attributes and bLoadAttributes
 	// is set, we load the attributes and regenerate afterwards
-	if (InitialShape && InitialShape->IsValid() && Rpk && !bAttributesReady && bLoadAttributes)
+	if (HasValidInputData() && !bAttributesReady && bLoadAttributes)
 	{
 		LoadDefaultAttributes(false, true);
 		return;
 	}
 
 	// If either the RPK, initial shape or attributes are not ready we can not generate
-	if (!Rpk || !bAttributesReady || !InitialShape)
+	if (!HasValidInputData())
 	{
 		RemoveGeneratedMeshes();
 		return;
@@ -460,12 +470,12 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		Generate();
 	}
 
-	if (!InitialShape || !InitialShape->IsValid() || !Rpk)
+	if (!HasValidInputData())
 	{
 		RemoveGeneratedMeshes();
 	}
 
-	if (InitialShape && InitialShape->IsValid() && Rpk && !bAttributesReady)
+	if (HasValidInputData() && !bAttributesReady)
 	{
 		LoadDefaultAttributes();
 	}

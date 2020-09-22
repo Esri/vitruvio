@@ -88,6 +88,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	void Generate(bool bLoadAttributes = false);
 
+	/** Returns true if the component has valid input data (initial shape and RPK). */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	bool HasValidInputData() const;
+
+	/** Returns true if the component is ready to generate meaning it HasValidInputData and the attributes are loaded. */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	bool IsReadyToGenerate() const;
+
 	virtual void PostLoad() override;
 
 	virtual void OnComponentCreated() override;
