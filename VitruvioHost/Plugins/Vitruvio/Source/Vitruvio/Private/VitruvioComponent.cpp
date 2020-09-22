@@ -361,11 +361,11 @@ void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 #endif
 }
 
-void UVitruvioComponent::Generate(bool bLoadAttributes)
+void UVitruvioComponent::Generate()
 {
-	// If the initial shape and RPK are valid but we have not yet loaded the attributes and bLoadAttributes
-	// is set, we load the attributes and regenerate afterwards
-	if (HasValidInputData() && !bAttributesReady && bLoadAttributes)
+	// If the initial shape and RPK are valid but we have not yet loaded the attributes we load the attributes
+	// and regenerate afterwards
+	if (HasValidInputData() && !bAttributesReady)
 	{
 		LoadDefaultAttributes(false, true);
 		return;

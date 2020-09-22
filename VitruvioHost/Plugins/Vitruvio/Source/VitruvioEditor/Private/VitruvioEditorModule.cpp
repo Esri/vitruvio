@@ -80,7 +80,7 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 							Component->RegisterComponent();
 
 							Component->Rpk = Rpk;
-							Component->Generate(true);
+							Component->Generate();
 						}
 					}
 				}

@@ -86,7 +86,7 @@ public:
 	UInitialShape* InitialShape = nullptr;
 
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	void Generate(bool bLoadAttributes = false);
+	void Generate();
 
 	/** Returns true if the component has valid input data (initial shape and RPK). */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
