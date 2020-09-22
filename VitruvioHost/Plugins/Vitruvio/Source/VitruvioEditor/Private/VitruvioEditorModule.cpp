@@ -39,12 +39,12 @@ TArray<AActor*> GetViableVitruvioActorsInHiararchy(AActor* Root)
 		ViableActors.Add(Root);
 	}
 
-	TArray<AActor*> ChildActors;
-	Root->GetAttachedActors(ChildActors);
-
 	// If the actor has a VitruvioComponent attached we do not further check its children.
 	if (Root->FindComponentByClass<UVitruvioComponent>() == nullptr)
 	{
+		TArray<AActor*> ChildActors;
+		Root->GetAttachedActors(ChildActors);
+
 		for (AActor* Child : ChildActors)
 		{
 			ViableActors.Append(GetViableVitruvioActorsInHiararchy(Child));
