@@ -2,6 +2,7 @@
 
 #include "VitruvioComponent.h"
 
+#include "AttributeConversion.h"
 #include "MaterialConversion.h"
 #include "VitruvioModule.h"
 
@@ -389,8 +390,9 @@ void UVitruvioComponent::Generate()
 
 	if (InitialShape)
 	{
-		FGenerateResult GenerateResult = VitruvioModule::Get().GenerateAsync(InitialShape->GetInitialShapeData(), OpaqueParent, MaskedParent,
-																			 TranslucentParent, Rpk, Attributes, RandomSeed);
+		FGenerateResult GenerateResult =
+			VitruvioModule::Get().GenerateAsync(InitialShape->GetInitialShapeData(), OpaqueParent, MaskedParent, TranslucentParent, Rpk,
+												Vitruvio::CreateAttributeMap(Attributes), RandomSeed);
 
 		GenerateToken = GenerateResult.Token;
 

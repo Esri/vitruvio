@@ -294,8 +294,8 @@ void VitruvioModule::ShutdownModule()
 }
 
 FGenerateResult VitruvioModule::GenerateAsync(const TArray<FInitialShapeFace>& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
-											  UMaterial* TranslucentParent, URulePackage* RulePackage,
-											  const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const
+											  UMaterial* TranslucentParent, URulePackage* RulePackage, AttributeMapUPtr Attributes,
+											  const int32 RandomSeed) const
 {
 	check(RulePackage);
 
@@ -313,9 +313,9 @@ FGenerateResult VitruvioModule::GenerateAsync(const TArray<FInitialShapeFace>& I
 		};
 	}
 
-	FGenerateResult::FFutureType ResultFuture = Async(EAsyncExecution::Thread, [=]() {
+	FGenerateResult::FFutureType ResultFuture = Async(EAsyncExecution::Thread, [=, AttributeMap = std::move(Attributes)]() mutable {
 		FGenerateResultDescription Result =
-			Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, Attributes, RandomSeed);
+			Generate(InitialShape, OpaqueParent, MaskedParent, TranslucentParent, RulePackage, std::move(AttributeMap), RandomSeed);
 		return FGenerateResult::ResultType{Token, MoveTemp(Result)};
 	});
 
@@ -323,8 +323,8 @@ FGenerateResult VitruvioModule::GenerateAsync(const TArray<FInitialShapeFace>& I
 }
 
 FGenerateResultDescription VitruvioModule::Generate(const TArray<FInitialShapeFace>& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
-													UMaterial* TranslucentParent, URulePackage* RulePackage,
-													const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const
+													UMaterial* TranslucentParent, URulePackage* RulePackage, AttributeMapUPtr Attributes,
+													const int32 RandomSeed) const
 {
 	check(RulePackage);
 
@@ -347,8 +347,7 @@ FGenerateResultDescription VitruvioModule::Generate(const TArray<FInitialShapeFa
 	const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
 	const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
 
-	const AttributeMapUPtr AttributeMap = Vitruvio::CreateAttributeMap(Attributes);
-	InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", AttributeMap.get(), ResolveMap.get());
+	InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", Attributes.get(), ResolveMap.get());
 
 	AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
 	const TSharedPtr<UnrealCallbacks> OutputHandler(new UnrealCallbacks(AttributeMapBuilder, OpaqueParent, MaskedParent, TranslucentParent));
