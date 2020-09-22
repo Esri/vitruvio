@@ -61,7 +61,7 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 
 	Extender->AddMenuExtension(
 		"ActorControl", EExtensionHook::After, CommandList, FMenuExtensionDelegate::CreateLambda([SelectedActors](FMenuBuilder& MenuBuilder) {
-			MenuBuilder.BeginSection("CreateVitruvio", LOCTEXT("VitruvioHeading", "Vitruvio"));
+			MenuBuilder.BeginSection("CreateVitruvio", FText::FromString("Vitruvio"));
 
 			FUIAction AddVitruvioComponentAction(FExecuteAction::CreateLambda([SelectedActors]() {
 				TOptional<URulePackage*> SelectedRpk = FChooseRulePackageDialog::OpenDialog();
@@ -85,16 +85,15 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 					}
 				}
 			}));
-			MenuBuilder.AddMenuEntry(LOCTEXT("AddVitruvioComponent", "Add Vitruvio Component"),
-									 LOCTEXT("AddVitruvioComponent_Tooltip", "Adds Vitruvio Components to the selected Actors"), FSlateIcon(),
-									 AddVitruvioComponentAction);
+			MenuBuilder.AddMenuEntry(FText::FromString("Add Vitruvio Component"),
+									 FText::FromString("Adds Vitruvio Components to the selected Actors"), FSlateIcon(), AddVitruvioComponentAction);
 
 			MenuBuilder.EndSection();
 		}));
 
 	Extender->AddMenuExtension(
 		"SelectMatinee", EExtensionHook::After, CommandList, FMenuExtensionDelegate::CreateLambda([SelectedActors](FMenuBuilder& MenuBuilder) {
-			MenuBuilder.BeginSection("SelectPossibleVitruvio", LOCTEXT("VitruvioHeading", "Vitruvio"));
+			MenuBuilder.BeginSection("SelectPossibleVitruvio", FText::FromString("Vitruvio"));
 
 			FUIAction SelectAllViableVitruvioActors(FExecuteAction::CreateLambda([SelectedActors]() {
 				GEditor->SelectNone(false, true, false);
@@ -108,10 +107,9 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 				}
 				GEditor->NoteSelectionChange();
 			}));
-			MenuBuilder.AddMenuEntry(
-				LOCTEXT("SelectVitruvio", "Select All Viable Vitruvio Actors In Hiararchy"),
-				LOCTEXT("AddVitruvioComponent_Tooltip", "Selects all Actors which are viable to attach VitruvioComponents to in hiararchy."),
-				FSlateIcon(), SelectAllViableVitruvioActors);
+			MenuBuilder.AddMenuEntry(FText::FromString("Select All Viable Vitruvio Actors In Hiararchy"),
+									 FText::FromString("Selects all Actors which are viable to attach VitruvioComponents to in hiararchy."),
+									 FSlateIcon(), SelectAllViableVitruvioActors);
 
 			MenuBuilder.EndSection();
 		}));
