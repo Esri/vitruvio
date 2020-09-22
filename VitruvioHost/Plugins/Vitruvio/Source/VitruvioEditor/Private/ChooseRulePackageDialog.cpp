@@ -58,27 +58,50 @@ void SCRulePackagePicker::Construct(const FArguments& InArgs)
 	PickRpkDetailView = PropertyEditorModule.CreateDetailView(DetailsViewArgs);
 	PickRpkDetailView->SetObject(RulePackageData);
 
-	ChildSlot[SNew(SVerticalBox) +
+	// clang-format off
+	ChildSlot
+	[
+		SNew(SVerticalBox)
+		+ SVerticalBox::Slot()
+		.Padding(4.0f)
+		.AutoHeight()
+		[
+			SNew(STextBlock)
+			.AutoWrapText(true)
+			.Text(FText::FromString(TEXT("Choose a Rulepackage which will be applied to all VitruvioComponents.")))
+		]
 
-			  SVerticalBox::Slot().Padding(4.0f).AutoHeight()[SNew(STextBlock)
-																  .AutoWrapText(true)
-																  .Text(FText::FromString(
-																	  TEXT("Choose a Rulepackage which will be applied to all VitruvioComponents.")))]
+		+ SVerticalBox::Slot()
+		.Padding(4.0f)
+		.VAlign(VAlign_Fill)
+		.HAlign(HAlign_Fill)
+		[
+			PickRpkDetailView->AsShared()
+		]
+		
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.HAlign(HAlign_Right)
+		.Padding(2)[
+			SNew(SUniformGridPanel).SlotPadding(2)
+			+ SUniformGridPanel::Slot(0, 0)
+			[
+				SNew(SButton)
+				.HAlign(HAlign_Center)
+				.Text(FText::FromString("Apply"))
+				.OnClicked(this, &SCRulePackagePicker::OnRpkPickerConfirmed)
+			]
 
-			  + SVerticalBox::Slot().Padding(4.0f).VAlign(VAlign_Fill).HAlign(HAlign_Fill)[PickRpkDetailView->AsShared()]
-
-			  + SVerticalBox::Slot()
-					.AutoHeight()
-					.HAlign(HAlign_Right)
-					.Padding(2)[SNew(SUniformGridPanel).SlotPadding(2) +
-								SUniformGridPanel::Slot(0, 0)[SNew(SButton)
-																  .HAlign(HAlign_Center)
-																  .Text(FText::FromString("Apply"))
-																  .OnClicked(this, &SCRulePackagePicker::OnRpkPickerConfirmed)] +
-								SUniformGridPanel::Slot(1, 0)[SNew(SButton)
-																  .HAlign(HAlign_Center)
-																  .Text(FText::FromString("Cancel"))
-																  .OnClicked(this, &SCRulePackagePicker::OnRpkPickerCanceled)]]];
+			+ SUniformGridPanel::Slot(1, 0)
+			[
+				SNew(SButton)
+				.HAlign(HAlign_Center)
+				.Text(FText::FromString("Cancel"))
+				.OnClicked(this, &SCRulePackagePicker::OnRpkPickerCanceled)
+			]
+		]
+	];
+	// clang-format on
 }
 
 FReply SCRulePackagePicker::OnRpkPickerConfirmed()
@@ -105,12 +128,14 @@ FReply SCRulePackagePicker::OnRpkPickerCanceled()
 
 TOptional<URulePackage*> FChooseRulePackageDialog::OpenDialog()
 {
+	// clang-format off
 	TSharedRef<SWindow> PickerWindow = SNew(SWindow)
-										   .Title(FText::FromString("Choose Rule Package"))
-										   .SizingRule(ESizingRule::UserSized)
-										   .ClientSize(FVector2D(500.f, 300.f))
-										   .SupportsMaximize(false)
-										   .SupportsMinimize(false);
+	   .Title(FText::FromString("Choose Rule Package"))
+	   .SizingRule(ESizingRule::UserSized)
+	   .ClientSize(FVector2D(500.f, 300.f))
+	   .SupportsMaximize(false)
+	   .SupportsMinimize(false);
+	// clang-format on
 
 	TSharedRef<SCRulePackagePicker> RulePackagePicker = SNew(SCRulePackagePicker).ParentWindow(PickerWindow);
 	PickerWindow->SetContent(RulePackagePicker);
