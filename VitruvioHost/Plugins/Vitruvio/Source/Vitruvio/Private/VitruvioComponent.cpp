@@ -35,12 +35,6 @@ FVector GetCentroid(const TArray<FVector>& Vertices)
 	return Centroid;
 }
 
-int32 CalculateRandomSeed(const FTransform Transform, const UInitialShape* InitialShape)
-{
-	const FVector Centroid = GetCentroid(InitialShape->GetVertices());
-	return GetTypeHash(Transform.TransformPosition(Centroid));
-}
-
 #if WITH_EDITOR
 bool IsRelevantObject(UVitruvioComponent* VitruvioComponent, UObject* Object)
 {
@@ -83,6 +77,16 @@ UVitruvioComponent::UVitruvioComponent()
 	bTickInEditor = true;
 }
 
+void UVitruvioComponent::CalculateRandomSeed()
+{
+	if (!bValidRandomSeed && InitialShape && InitialShape->IsValid())
+	{
+		const FVector Centroid = GetCentroid(InitialShape->GetVertices());
+		RandomSeed = GetTypeHash(GetOwner()->GetActorTransform().TransformPosition(Centroid));
+		bValidRandomSeed = true;
+	}
+}
+
 void UVitruvioComponent::PostLoad()
 {
 	Super::PostLoad();
@@ -94,11 +98,7 @@ void UVitruvioComponent::PostLoad()
 	}
 #endif
 
-	if (!bValidRandomSeed && InitialShape && InitialShape->IsValid())
-	{
-		RandomSeed = CalculateRandomSeed(GetOwner()->GetActorTransform(), InitialShape);
-		bValidRandomSeed = true;
-	}
+	CalculateRandomSeed();
 
 	// Check if we can load the attributes and then generate (eg during play)
 	if (InitialShape && InitialShape->IsValid() && Rpk && bAttributesReady)
@@ -129,11 +129,7 @@ void UVitruvioComponent::OnComponentCreated()
 
 	InitialShape->Initialize(this);
 
-	if (!bValidRandomSeed)
-	{
-		RandomSeed = CalculateRandomSeed(GetOwner()->GetActorTransform(), InitialShape);
-		bValidRandomSeed = true;
-	}
+	CalculateRandomSeed();
 
 	// If everything is ready we can generate (used for example for copy paste to regenerate the model)
 	if (bAttributesReady)
@@ -456,11 +452,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		InitialShape = DuplicateObject(InitialShape, GetOwner());
 		InitialShape->Initialize(this);
 
-		if (!bValidRandomSeed && InitialShape)
-		{
-			RandomSeed = CalculateRandomSeed(GetOwner()->GetActorTransform(), InitialShape);
-			bValidRandomSeed = true;
-		}
+		CalculateRandomSeed();
 	}
 
 	if (bAttributesReady && GenerateAutomatically && (bRecreateInitialShape || bComponentPropertyChanged))

@@ -112,6 +112,8 @@ private:
 	FGenerateResult::FTokenPtr GenerateToken;
 	FAttributeMapResult::FTokenPtr LoadAttributesInvalidationToken;
 
+	void CalculateRandomSeed();
+
 	void LoadDefaultAttributes(bool KeepOldAttributeValues = false, bool ForceRegenerate = false);
 
 	void NotifyAttributesChanged();
