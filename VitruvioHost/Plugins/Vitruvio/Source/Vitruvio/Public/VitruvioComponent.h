@@ -29,6 +29,7 @@ struct FLoadAttributes
 {
 	FAttributeMapPtr AttributeMap;
 	bool bKeepOldAttributes;
+	bool bForceRegenerate;
 };
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
@@ -87,6 +88,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	void Generate();
 
+	/** Returns true if the component has valid input data (initial shape and RPK). */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	bool HasValidInputData() const;
+
+	/** Returns true if the component is ready to generate meaning it HasValidInputData and the attributes are loaded. */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	bool IsReadyToGenerate() const;
+
 	virtual void PostLoad() override;
 
 	virtual void OnComponentCreated() override;
@@ -111,7 +120,9 @@ private:
 	FGenerateResult::FTokenPtr GenerateToken;
 	FAttributeMapResult::FTokenPtr LoadAttributesInvalidationToken;
 
-	void LoadDefaultAttributes(bool KeepOldAttributeValues = false);
+	void CalculateRandomSeed();
+
+	void LoadDefaultAttributes(bool KeepOldAttributeValues = false, bool ForceRegenerate = false);
 
 	void NotifyAttributesChanged();
 

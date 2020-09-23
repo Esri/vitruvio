@@ -2,6 +2,7 @@
 
 #include "VitruvioComponent.h"
 
+#include "AttributeConversion.h"
 #include "MaterialConversion.h"
 #include "VitruvioModule.h"
 
@@ -35,12 +36,6 @@ FVector GetCentroid(const TArray<FVector>& Vertices)
 	return Centroid;
 }
 
-int32 CalculateRandomSeed(const FTransform Transform, const UInitialShape* InitialShape)
-{
-	const FVector Centroid = GetCentroid(InitialShape->GetVertices());
-	return GetTypeHash(Transform.TransformPosition(Centroid));
-}
-
 #if WITH_EDITOR
 bool IsRelevantObject(UVitruvioComponent* VitruvioComponent, UObject* Object)
 {
@@ -71,6 +66,7 @@ bool IsRelevantObject(UVitruvioComponent* VitruvioComponent, UObject* Object)
 
 UVitruvioComponent::UVitruvioComponent()
 {
+
 	static ConstructorHelpers::FObjectFinder<UMaterial> Opaque(TEXT("Material'/Vitruvio/Materials/M_OpaqueParent.M_OpaqueParent'"));
 	static ConstructorHelpers::FObjectFinder<UMaterial> Masked(TEXT("Material'/Vitruvio/Materials/M_MaskedParent.M_MaskedParent'"));
 	static ConstructorHelpers::FObjectFinder<UMaterial> Translucent(TEXT("Material'/Vitruvio/Materials/M_TranslucentParent.M_TranslucentParent'"));
@@ -80,6 +76,26 @@ UVitruvioComponent::UVitruvioComponent()
 
 	PrimaryComponentTick.bCanEverTick = true;
 	bTickInEditor = true;
+}
+
+void UVitruvioComponent::CalculateRandomSeed()
+{
+	if (!bValidRandomSeed && InitialShape && InitialShape->IsValid())
+	{
+		const FVector Centroid = GetCentroid(InitialShape->GetVertices());
+		RandomSeed = GetTypeHash(GetOwner()->GetActorTransform().TransformPosition(Centroid));
+		bValidRandomSeed = true;
+	}
+}
+
+bool UVitruvioComponent::HasValidInputData() const
+{
+	return InitialShape && InitialShape->IsValid() && Rpk;
+}
+
+bool UVitruvioComponent::IsReadyToGenerate() const
+{
+	return HasValidInputData() && bAttributesReady;
 }
 
 void UVitruvioComponent::PostLoad()
@@ -92,6 +108,8 @@ void UVitruvioComponent::PostLoad()
 		PropertyChangeDelegate = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &UVitruvioComponent::OnPropertyChanged);
 	}
 #endif
+
+	CalculateRandomSeed();
 
 	// Check if we can load the attributes and then generate (eg during play)
 	if (InitialShape && InitialShape->IsValid() && Rpk && bAttributesReady)
@@ -121,6 +139,8 @@ void UVitruvioComponent::OnComponentCreated()
 	}
 
 	InitialShape->Initialize(this);
+
+	CalculateRandomSeed();
 
 	// If everything is ready we can generate (used for example for copy paste to regenerate the model)
 	if (bAttributesReady)
@@ -344,7 +364,16 @@ void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 
 void UVitruvioComponent::Generate()
 {
-	if (!Rpk || !bAttributesReady || !InitialShape)
+	// If the initial shape and RPK are valid but we have not yet loaded the attributes we load the attributes
+	// and regenerate afterwards
+	if (HasValidInputData() && !bAttributesReady)
+	{
+		LoadDefaultAttributes(false, true);
+		return;
+	}
+
+	// If either the RPK, initial shape or attributes are not ready we can not generate
+	if (!HasValidInputData())
 	{
 		RemoveGeneratedMeshes();
 		return;
@@ -361,8 +390,9 @@ void UVitruvioComponent::Generate()
 
 	if (InitialShape)
 	{
-		FGenerateResult GenerateResult = VitruvioModule::Get().GenerateAsync(InitialShape->GetInitialShapeData(), OpaqueParent, MaskedParent,
-																			 TranslucentParent, Rpk, Attributes, RandomSeed);
+		FGenerateResult GenerateResult =
+			VitruvioModule::Get().GenerateAsync(InitialShape->GetInitialShapeData(), OpaqueParent, MaskedParent, TranslucentParent, Rpk,
+												Vitruvio::CreateAttributeMap(Attributes), RandomSeed);
 
 		GenerateToken = GenerateResult.Token;
 
@@ -434,11 +464,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		InitialShape = DuplicateObject(InitialShape, GetOwner());
 		InitialShape->Initialize(this);
 
-		if (!bValidRandomSeed && InitialShape)
-		{
-			RandomSeed = CalculateRandomSeed(GetOwner()->GetActorTransform(), InitialShape);
-			bValidRandomSeed = true;
-		}
+		CalculateRandomSeed();
 	}
 
 	if (bAttributesReady && GenerateAutomatically && (bRecreateInitialShape || bComponentPropertyChanged))
@@ -446,12 +472,12 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		Generate();
 	}
 
-	if (!InitialShape || !InitialShape->IsValid() || !Rpk)
+	if (!HasValidInputData())
 	{
 		RemoveGeneratedMeshes();
 	}
 
-	if (InitialShape && InitialShape->IsValid() && Rpk && !bAttributesReady)
+	if (HasValidInputData() && !bAttributesReady)
 	{
 		LoadDefaultAttributes();
 	}
@@ -473,7 +499,7 @@ void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& T
 
 #endif // WITH_EDITOR
 
-void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues)
+void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues, bool ForceRegenerate)
 {
 	check(Rpk);
 	check(InitialShape);
@@ -490,7 +516,7 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 
 	LoadAttributesInvalidationToken = AttributesResult.Token;
 
-	AttributesResult.Result.Next([this, KeepOldAttributeValues](const FAttributeMapResult::ResultType& Result) {
+	AttributesResult.Result.Next([this, ForceRegenerate, KeepOldAttributeValues](const FAttributeMapResult::ResultType& Result) {
 		FScopeLock(&Result.Token->Lock);
 
 		if (Result.Token->IsInvalid())
@@ -500,7 +526,7 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 
 		LoadingAttributes = false;
 
-		LoadAttributesQueue.Enqueue({Result.Value, KeepOldAttributeValues});
+		LoadAttributesQueue.Enqueue({Result.Value, KeepOldAttributeValues, ForceRegenerate});
 	});
 }
 

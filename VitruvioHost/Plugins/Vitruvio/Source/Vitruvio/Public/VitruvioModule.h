@@ -106,8 +106,8 @@ public:
 	 * \return the generated UStaticMesh.
 	 */
 	VITRUVIO_API FGenerateResult GenerateAsync(const TArray<FInitialShapeFace>& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
-											   UMaterial* TranslucentParent, URulePackage* RulePackage,
-											   const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const;
+											   UMaterial* TranslucentParent, URulePackage* RulePackage, AttributeMapUPtr Attributes,
+											   const int32 RandomSeed) const;
 
 	/**
 	 * \brief Generate the models with the given InitialShape, RulePackage and Attributes.
@@ -122,8 +122,8 @@ public:
 	 * \return the generated UStaticMesh.
 	 */
 	VITRUVIO_API FGenerateResultDescription Generate(const TArray<FInitialShapeFace>& InitialShape, UMaterial* OpaqueParent, UMaterial* MaskedParent,
-													 UMaterial* TranslucentParent, URulePackage* RulePackage,
-													 const TMap<FString, URuleAttribute*>& Attributes, const int32 RandomSeed) const;
+													 UMaterial* TranslucentParent, URulePackage* RulePackage, AttributeMapUPtr Attributes,
+													 const int32 RandomSeed) const;
 
 	/**
 	 * \brief Asynchronously loads the default attribute values for the given initial shape and rule package
