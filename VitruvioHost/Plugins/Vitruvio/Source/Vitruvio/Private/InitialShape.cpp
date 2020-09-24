@@ -1,8 +1,10 @@
 // Copyright © 2017-2020 Esri R&D Center Zurich. All rights reserved.
 
 #include "InitialShape.h"
-
 #include "PolygonWindings.h"
+
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
 
 namespace
 {
