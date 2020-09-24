@@ -435,7 +435,7 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, cons
 	{
 		const FString FileName = FPaths::GetBaseFilename(Shader);
 		const FString ParentMaterialPath = Shader + TEXT(".") + FileName;
-		Parent = LoadObject<UMaterial>(Outer, *ParentMaterialPath);
+		Parent = LoadObject<UMaterialInterface>(Outer, *ParentMaterialPath);
 	}
 	if (!Parent)
 	{
