@@ -24,3 +24,44 @@ After placing the actor in the scene and selecting it, the *Details* panel shows
 
 **Hide after Generation:** Whether to hide the initial shape geometry after a model has been generated
 
+## Rule Packages
+
+A [rule package](https://doc.arcgis.com/en/cityengine/2019.0/help/help-rule-package.htm) (RPK) is a compressed package, containing compiled CGA rule files, plus all needed referenced assets and data. RPKs can be exported in CityEngine by right clicking on a CGA file and using the *Share As...* menu. Make sure to include all necessary assets in *Additional Files* and set *Save package to file* to the path you want to export the RPK to.
+
+<img src="img/export_rpk.jpg" width="300">
+
+The exported RPK can then be dragged into the Unreal Editor’s *Content Browser* which will import it into your project.
+
+**Note** that there is currently a limit of 2GB file size for imported RPKs.
+
+<img src="img/import_rpk.jpg" width="400">
+
+## Initial Shapes
+
+Initial shapes ([CGA modeling overview](https://doc.arcgis.com/en/cityengine/latest/help/help-cga-modeling-overview.htm)) represent the input geometry which typically are polygons that represent a lot or a building footprint. Vitruvio supports two kind of initial shapes, Static Meshes and Splines.
+
+### Static Mesh
+
+Vitruvio supports *Static Meshes* as input initial shapes. Currently only planar initial shape Static Meshes are supported. 
+
+<img src="img/export_initial_shapes.jpg" width="400">
+
+To export initial shape building footprints from CityEngine the [Datasmith Export](https://doc.arcgis.com/en/cityengine/latest/help/help-export-unreal.htm)er can be used. Select the building footprints and use *Export models…* in the *File* menu. Select the *Unreal Engine* export and make sure to set *Export Geometry* to **Shapes** and *Mesh Merging* to **Per Initial Shape**.
+
+In UE4 use the *Datasmith* importer and leave all settings as is.
+
+<img src="img/select_vitruvio_actors.jpg" width="400">
+
+To easily assign a Vitruvio Component to all imported initial shapes, select the *DatasmithSceneActor* right click and choose *Select* and then *Select All Viable Vitruvio Actors in Hierarchy*. This will select all child Actors which are viable for Vitruvio (this means Actors which either have a *StaticMeshComponent* or *SplineComponent* attached).
+
+Then right click again and choose *Add Vitruvio Component*. In the Dialog choose a Rule Package you want to assign to all Actors.
+
+### Splines
+
+Vitruvio also supports Splines as input initial shapes. To use spline initial shape, change the **Initial Shape Type** drop down to **Spline**.
+
+<img src="img/vitruvio_spline.jpg" width="400">
+
+To copy a spline point, select an existing point and press alt and drag the point. Spline points can either be linear or curved. The type of an individual point can be changed by selecting the *Spline Component* of the *InitialShapeSpline* and in the *Selected Points* header of the details panel  For more information on how to edit splines please refer to [UE4 Spline Documentation](https://docs.unrealengine.com/en-US/Engine/BlueprintSplines/HowTo/EditSplineComponentInEditor/index.html).
+
+<img src="img/vitruvio_spline_editor.jpg" width="400">
