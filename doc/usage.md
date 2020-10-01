@@ -63,3 +63,11 @@ Vitruvio also supports Splines as input initial shapes. To use spline initial sh
 <img src="img/spline_edit.gif" width="800">
 
 To copy a spline point, select an existing point, press alt and drag the point. Spline points can either be linear or curved. The type of an individual point can be changed by selecting the *Spline Component* of the *InitialShapeSpline* and in the *Selected Points* header of the details panel  For more information on how to edit splines please refer to [UE4 Spline Documentation](https://docs.unrealengine.com/en-US/Engine/BlueprintSplines/HowTo/EditSplineComponentInEditor/index.html).
+
+## Attributes
+
+Attributes control the procedural generation of a model. The set of available attributes depends on the underlying Rule of the assigned *Rule Package*. Attributes can be changed in the Details panel of the Vitruvio Component. 
+
+<img src="img/vitruvio_attributes.gif" width="800">
+
+**Note** if generate automatically is enabled, every attribute change will regenerate the model.
