@@ -60,6 +60,6 @@ Then right click again and choose *Add Vitruvio Component*. In the Dialog choose
 
 Vitruvio also supports Splines as input initial shapes. To use spline initial shape, change the **Initial Shape Type** drop down to **Spline**.
 
-<img src="img/spline_edit.gif" width="400">
+<img src="img/spline_edit.gif" width="800">
 
 To copy a spline point, select an existing point, press alt and drag the point. Spline points can either be linear or curved. The type of an individual point can be changed by selecting the *Spline Component* of the *InitialShapeSpline* and in the *Selected Points* header of the details panel  For more information on how to edit splines please refer to [UE4 Spline Documentation](https://docs.unrealengine.com/en-US/Engine/BlueprintSplines/HowTo/EditSplineComponentInEditor/index.html).
