@@ -1,6 +1,6 @@
 # Usage
 
-To generate a model, Vitruvio leverages the CityEngine Procedural Runtime (PRT), which takes a *rule package (RPK)*, an *initial shape* and a *set of attributes* as inputs. The generation process starts with the initial shape as start shape, from which shape grammar rules are expanded. The attributes are parameters that control shape generation.
+Vitruvio leverages CityEngine's Procedural Runtime (PRT) to generate buildings. As input it takes a *rule package (RPK)*, an *initial shape* and a *set of attributes*. The generation process starts with the initial shape as start shape, from which shape grammar rules are expanded. The attributes are parameters that control shape generation.
 
 This section describes how to export rule packages from CityEngine, how to import or create initial shapes and how to use the Vitruvio Actor or Component in UE4.
 
