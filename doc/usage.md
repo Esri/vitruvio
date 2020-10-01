@@ -1,15 +1,26 @@
-# Vitruvio - CityEngine Plugin for Unreal Engine 4
+# Usage
 
-Vitruvio allows the execution of Esri CityEngine *rules* within Unreal Engine 4. Therefore, an artist does not have to leave their familiar Unreal toolset anymore to make use of CityEngine’s procedural modeling power.
+To generate a model, Vitruvio leverages the CityEngine Procedural Runtime (PRT), which takes a *rule package (RPK)*, an *initial shape* and a *set of attributes* as inputs. The generation process starts with the initial shape as start shape, from which shape grammar rules are expanded. The attributes are parameters that control shape generation.
 
-Vitruvio requires rule packages (RPK) as input which are authored in CityEngine. An RPK includes assets and a CGA rule file which encodes an architectural style.
+This section describes how to export rule packages from CityEngine, how to import or create initial shapes and how to use the Vitruvio Actor or Component in UE4.
 
-## Windows Development Setup
+## Vitruvio Component
 
-1. Checkout the code via `git clone https://devtopia.esri.com/Zurich-R-D-Center/vitruvio.git`
-2. Create a new Unreal project (called host project from now on)
-3. Create a folder named *Plugins* in the root directory of the host project
-4. Start PowerShell as administrator
-5. Create a symbolic link from the vitruvio repo to a folder named Vitruvio in the *Plugins* folder of the host project. Using the `New-Item` command. For example: `New-Item -Path "C:\dev\Epic Games\Unreal Projects\VitruvioHost\Plugins\Vitruvio" -ItemType SymbolicLink -Value "C:\dev\git\vitruvio\Vitruvio"`
-6. Right click the uproject file of your Host project and run Generate Visual Studio project files. This will download the PRT library and setup the project. **Note** this might take a while.
-7. After the project files have been generated the project can be opened.
+The *Vitruvio Component* allows the user to access the procedural generation. For ease of use there is also a *Vitruvio Actor* available, which can be found in the *Place Actors* Panel and placed anywhere in the scene.
+
+<img src="img\select_vitruvio_actor.jpg" style="zoom:75%; float: left;" />
+
+After placing the actor in the scene and selecting it, the *Details* panel shows all relevant properties.
+
+<img src="img\vitruvio_component.jpg" style="zoom:50%; float: left;" />
+
+**Initial Shape Type:** The type of input initial shape used. For more information on how to import or create initial shapes see Initial Shapes.
+
+**Rule Package:** The rule package to be used. For more information on how to export rule packages from CityEngine and importing them into UE4 see Rule Packages.
+
+**Random Seed**: The random seed to be used for generation. See also [CityEngine Help](https://doc.arcgis.com/en/cityengine/2019.1/help/help-working-with-rules.htm#GUID-FD7F11D4-778E-4485-901B-E11DDD2099F2).
+
+**Generate Automatically:** Whether to generate automatically after changes to relevant properties such as the initial shape, rule package or attributes.
+
+**Hide after Generation:** Whether to hide the initial shape geometry after a model has been generated
+
