@@ -8,11 +8,11 @@ This section describes how to export rule packages from CityEngine, how to impor
 
 The *Vitruvio Component* allows the user to access the procedural generation. For ease of use there is also a *Vitruvio Actor* available, which can be found in the *Place Actors* Panel and placed anywhere in the scene.
 
-<img src="img\select_vitruvio_actor.jpg" style="zoom:75%; float: left;" />
+<img src="img/select_vitruvio_actor.jpg" width="400">
 
 After placing the actor in the scene and selecting it, the *Details* panel shows all relevant properties.
 
-<img src="img\vitruvio_component.jpg" style="zoom:50%; float: left;" />
+<img src="img/vitruvio_component.jpg" width="400">
 
 **Initial Shape Type:** The type of input initial shape used. For more information on how to import or create initial shapes see Initial Shapes.
 
