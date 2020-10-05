@@ -14,6 +14,7 @@
 
 #include "ChooseRulePackageDialog.h"
 #include "Editor/LevelEditor/Public/LevelEditor.h"
+#include "VitruvioActor.h"
 
 namespace
 {
@@ -61,7 +62,7 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 
 	Extender->AddMenuExtension(
 		"ActorControl", EExtensionHook::After, CommandList, FMenuExtensionDelegate::CreateLambda([SelectedActors](FMenuBuilder& MenuBuilder) {
-			MenuBuilder.BeginSection("CreateVitruvio", FText::FromString("Vitruvio"));
+			MenuBuilder.BeginSection("Vitruvio", FText::FromString("Vitruvio"));
 
 			FUIAction AddVitruvioComponentAction(FExecuteAction::CreateLambda([SelectedActors]() {
 				TOptional<URulePackage*> SelectedRpk = FChooseRulePackageDialog::OpenDialog();
@@ -87,6 +88,78 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 			}));
 			MenuBuilder.AddMenuEntry(FText::FromString("Add Vitruvio Component"),
 									 FText::FromString("Adds Vitruvio Components to the selected Actors"), FSlateIcon(), AddVitruvioComponentAction);
+
+			FUIAction SwitchRpkAction(FExecuteAction::CreateLambda([SelectedActors]() {
+				TOptional<URulePackage*> SelectedRpk = FChooseRulePackageDialog::OpenDialog();
+
+				if (SelectedRpk.IsSet())
+				{
+					URulePackage* Rpk = SelectedRpk.GetValue();
+
+					for (AActor* Actor : SelectedActors)
+					{
+						if (UVitruvioComponent* Component = Actor->FindComponentByClass<UVitruvioComponent>())
+						{
+							Component->SetRpk(Rpk);
+							Component->Generate();
+						}
+					}
+				}
+			}));
+
+			MenuBuilder.AddMenuEntry(FText::FromString("Change Rule Package"),
+									 FText::FromString("Changes the Rule Package of all selected Vitruvio Actors"), FSlateIcon(), SwitchRpkAction);
+
+			FUIAction SwitchToNormalActor(FExecuteAction::CreateLambda([SelectedActors]() {
+				for (AActor* Actor : SelectedActors)
+				{
+					UVitruvioComponent* Component = Actor->FindComponentByClass<UVitruvioComponent>();
+					if (Component && Actor->IsA<AStaticMeshActor>())
+					{
+						GEditor->SelectNone(true, true, false);
+
+						AActor* VitruvioActor = Actor->GetWorld()->SpawnActor<AActor>(Actor->GetActorLocation(), Actor->GetActorRotation());
+
+						// Root
+						USceneComponent* RootComponent =
+							NewObject<USceneComponent>(VitruvioActor, USceneComponent::GetDefaultSceneRootVariableName(), RF_Transactional);
+						RootComponent->Mobility = EComponentMobility::Movable;
+						RootComponent->SetWorldTransform(Actor->GetTransform());
+						VitruvioActor->SetRootComponent(RootComponent);
+						VitruvioActor->AddInstanceComponent(RootComponent);
+
+						// StaticMesh
+						UStaticMeshComponent* OldStaticMeshComponent = Actor->FindComponentByClass<UStaticMeshComponent>();
+						UStaticMeshComponent* StaticMeshComponent = NewObject<UStaticMeshComponent>(VitruvioActor, TEXT("InitialShapeStaticMesh"));
+						StaticMeshComponent->SetStaticMesh(OldStaticMeshComponent->GetStaticMesh());
+						StaticMeshComponent->Mobility = EComponentMobility::Movable;
+						VitruvioActor->AddInstanceComponent(StaticMeshComponent);
+						StaticMeshComponent->AttachToComponent(VitruvioActor->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+						StaticMeshComponent->OnComponentCreated();
+						StaticMeshComponent->RegisterComponent();
+
+						// Vitruvio
+						UVitruvioComponent* VitruvioComponent = DuplicateObject(Component, VitruvioActor);
+						VitruvioComponent->OnComponentCreated();
+						VitruvioComponent->RegisterComponent();
+
+						TArray<AActor*> AttachedActors;
+						Actor->GetAttachedActors(AttachedActors);
+						for (AActor* Attached : AttachedActors)
+						{
+							Attached->Destroy();
+						}
+
+						Actor->Destroy();
+
+						GEditor->SelectActor(VitruvioActor, true, false);
+						GEditor->SelectComponent(VitruvioComponent, true, true);
+					}
+				}
+			}));
+
+			MenuBuilder.AddMenuEntry(FText::FromString("Change to VitruvioActor"), FText::FromString("Changes the Actor to a VitruvioActor"),
+									 FSlateIcon(), SwitchToNormalActor);
 
 			MenuBuilder.EndSection();
 		}));
