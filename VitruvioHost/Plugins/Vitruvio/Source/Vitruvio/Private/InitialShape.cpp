@@ -201,7 +201,7 @@ void UStaticMeshInitialShape::Initialize(UActorComponent* OwnerComponent, const 
 #if WITH_EDITOR
 	const FString InitialShapeName = TEXT("InitialShape");
 	const FString PackageName = TEXT("/Game/Vitruvio/") + InitialShapeName;
-	UPackage* Package = CreatePackage(*PackageName);
+	UPackage* Package = CreatePackage(nullptr, *PackageName);
 	const FName StaticMeshName = MakeUniqueObjectName(Package, UStaticMesh::StaticClass(), FName(InitialShapeName));
 
 	StaticMesh = NewObject<UStaticMesh>(Package, StaticMeshName, RF_Public | RF_Standalone);
