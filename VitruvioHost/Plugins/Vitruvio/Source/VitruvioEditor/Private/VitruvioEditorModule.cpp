@@ -182,8 +182,9 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 
 			const FUIAction SwitchToNormalActor(FExecuteAction::CreateStatic(ConvertToVitruvioActors, SelectedActors));
 
-			MenuBuilder.AddMenuEntry(FText::FromString("Convert to VitruvioActor"),
-									 FText::FromString("Converts all selected Actors to VitruvioActors"), FSlateIcon(), SwitchToNormalActor);
+			MenuBuilder.AddMenuEntry(FText::FromString("Convert StaticMeshActor to VitruvioActor"),
+									 FText::FromString("Converts all selected StaticMeshActors to VitruvioActors"), FSlateIcon(),
+									 SwitchToNormalActor);
 
 			MenuBuilder.EndSection();
 		}));
