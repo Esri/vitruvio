@@ -518,7 +518,6 @@ void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& T
 
 	InitialShape = NewInitialShape;
 
-	bAttributesReady = false;
 	RemoveGeneratedMeshes();
 }
 
