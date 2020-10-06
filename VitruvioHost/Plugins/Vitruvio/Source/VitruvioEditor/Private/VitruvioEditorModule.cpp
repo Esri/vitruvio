@@ -55,6 +55,112 @@ TArray<AActor*> GetViableVitruvioActorsInHiararchy(AActor* Root)
 	return ViableActors;
 }
 
+void ConvertToVitruvioActors(TArray<AActor*> Actors)
+{
+	for (AActor* Actor : Actors)
+	{
+		UVitruvioComponent* Component = Actor->FindComponentByClass<UVitruvioComponent>();
+		if (Component && Actor->IsA<AStaticMeshActor>())
+		{
+			GEditor->SelectNone(true, true, false);
+
+			AActor* VitruvioActor = Actor->GetWorld()->SpawnActor<AActor>(Actor->GetActorLocation(), Actor->GetActorRotation());
+
+			// Root
+			USceneComponent* RootComponent =
+				NewObject<USceneComponent>(VitruvioActor, USceneComponent::GetDefaultSceneRootVariableName(), RF_Transactional);
+			RootComponent->Mobility = EComponentMobility::Movable;
+			RootComponent->SetWorldTransform(Actor->GetTransform());
+			VitruvioActor->SetRootComponent(RootComponent);
+			VitruvioActor->AddInstanceComponent(RootComponent);
+
+			// StaticMesh
+			UStaticMeshComponent* OldStaticMeshComponent = Actor->FindComponentByClass<UStaticMeshComponent>();
+			UStaticMeshComponent* StaticMeshComponent = NewObject<UStaticMeshComponent>(VitruvioActor, TEXT("InitialShapeStaticMesh"));
+			StaticMeshComponent->SetStaticMesh(OldStaticMeshComponent->GetStaticMesh());
+			StaticMeshComponent->Mobility = EComponentMobility::Movable;
+			VitruvioActor->AddInstanceComponent(StaticMeshComponent);
+			StaticMeshComponent->AttachToComponent(VitruvioActor->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+			StaticMeshComponent->OnComponentCreated();
+			StaticMeshComponent->RegisterComponent();
+
+			// Vitruvio
+			UVitruvioComponent* VitruvioComponent = DuplicateObject(Component, VitruvioActor);
+			VitruvioComponent->OnComponentCreated();
+			VitruvioComponent->RegisterComponent();
+
+			TArray<AActor*> AttachedActors;
+			Actor->GetAttachedActors(AttachedActors);
+			for (AActor* Attached : AttachedActors)
+			{
+				Attached->Destroy();
+			}
+
+			Actor->Destroy();
+			GEditor->SelectActor(VitruvioActor, true, false);
+			GEditor->SelectComponent(VitruvioComponent, true, false);
+		}
+		GEditor->NoteSelectionChange();
+	}
+}
+
+void SwitchRpk(TArray<AActor*> Actors)
+{
+	TOptional<URulePackage*> SelectedRpk = FChooseRulePackageDialog::OpenDialog();
+
+	if (SelectedRpk.IsSet())
+	{
+		URulePackage* Rpk = SelectedRpk.GetValue();
+
+		for (AActor* Actor : Actors)
+		{
+			if (UVitruvioComponent* Component = Actor->FindComponentByClass<UVitruvioComponent>())
+			{
+				Component->SetRpk(Rpk);
+				Component->Generate();
+			}
+		}
+	}
+}
+
+void AddVitruvioComponents(TArray<AActor*> Actors)
+{
+	TOptional<URulePackage*> SelectedRpk = FChooseRulePackageDialog::OpenDialog();
+
+	if (SelectedRpk.IsSet())
+	{
+		URulePackage* Rpk = SelectedRpk.GetValue();
+
+		for (AActor* Actor : Actors)
+		{
+			if (!Actor->FindComponentByClass<UVitruvioComponent>())
+			{
+				UVitruvioComponent* Component = NewObject<UVitruvioComponent>(Actor, TEXT("VitruvioComponent"));
+				Actor->AddInstanceComponent(Component);
+				Component->OnComponentCreated();
+				Component->RegisterComponent();
+
+				Component->SetRpk(Rpk);
+				Component->Generate();
+			}
+		}
+	}
+}
+
+void SelectAllViableVitruvioActors(TArray<AActor*> Actors)
+{
+	GEditor->SelectNone(false, true, false);
+	for (AActor* SelectedActor : Actors)
+	{
+		TArray<AActor*> NewSelection = GetViableVitruvioActorsInHiararchy(SelectedActor);
+		for (AActor* ActorToSelect : NewSelection)
+		{
+			GEditor->SelectActor(ActorToSelect, true, false);
+		}
+	}
+	GEditor->NoteSelectionChange();
+}
+
 TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const TSharedRef<FUICommandList> CommandList,
 																		  TArray<AActor*> SelectedActors)
 {
@@ -64,99 +170,17 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 		"ActorControl", EExtensionHook::After, CommandList, FMenuExtensionDelegate::CreateLambda([SelectedActors](FMenuBuilder& MenuBuilder) {
 			MenuBuilder.BeginSection("Vitruvio", FText::FromString("Vitruvio"));
 
-			FUIAction AddVitruvioComponentAction(FExecuteAction::CreateLambda([SelectedActors]() {
-				TOptional<URulePackage*> SelectedRpk = FChooseRulePackageDialog::OpenDialog();
+			const FUIAction AddVitruvioComponentAction(FExecuteAction::CreateStatic(AddVitruvioComponents, SelectedActors));
 
-				if (SelectedRpk.IsSet())
-				{
-					URulePackage* Rpk = SelectedRpk.GetValue();
-
-					for (AActor* Actor : SelectedActors)
-					{
-						if (!Actor->FindComponentByClass<UVitruvioComponent>())
-						{
-							UVitruvioComponent* Component = NewObject<UVitruvioComponent>(Actor, TEXT("VitruvioComponent"));
-							Actor->AddInstanceComponent(Component);
-							Component->OnComponentCreated();
-							Component->RegisterComponent();
-
-							Component->SetRpk(Rpk);
-							Component->Generate();
-						}
-					}
-				}
-			}));
 			MenuBuilder.AddMenuEntry(FText::FromString("Add Vitruvio Component"),
 									 FText::FromString("Adds Vitruvio Components to the selected Actors"), FSlateIcon(), AddVitruvioComponentAction);
 
-			FUIAction SwitchRpkAction(FExecuteAction::CreateLambda([SelectedActors]() {
-				TOptional<URulePackage*> SelectedRpk = FChooseRulePackageDialog::OpenDialog();
-
-				if (SelectedRpk.IsSet())
-				{
-					URulePackage* Rpk = SelectedRpk.GetValue();
-
-					for (AActor* Actor : SelectedActors)
-					{
-						if (UVitruvioComponent* Component = Actor->FindComponentByClass<UVitruvioComponent>())
-						{
-							Component->SetRpk(Rpk);
-							Component->Generate();
-						}
-					}
-				}
-			}));
+			const FUIAction SwitchRpkAction(FExecuteAction::CreateStatic(SwitchRpk, SelectedActors));
 
 			MenuBuilder.AddMenuEntry(FText::FromString("Change Rule Package"),
 									 FText::FromString("Changes the Rule Package of all selected Vitruvio Actors"), FSlateIcon(), SwitchRpkAction);
 
-			FUIAction SwitchToNormalActor(FExecuteAction::CreateLambda([SelectedActors]() {
-				for (AActor* Actor : SelectedActors)
-				{
-					UVitruvioComponent* Component = Actor->FindComponentByClass<UVitruvioComponent>();
-					if (Component && Actor->IsA<AStaticMeshActor>())
-					{
-						GEditor->SelectNone(true, true, false);
-
-						AActor* VitruvioActor = Actor->GetWorld()->SpawnActor<AActor>(Actor->GetActorLocation(), Actor->GetActorRotation());
-
-						// Root
-						USceneComponent* RootComponent =
-							NewObject<USceneComponent>(VitruvioActor, USceneComponent::GetDefaultSceneRootVariableName(), RF_Transactional);
-						RootComponent->Mobility = EComponentMobility::Movable;
-						RootComponent->SetWorldTransform(Actor->GetTransform());
-						VitruvioActor->SetRootComponent(RootComponent);
-						VitruvioActor->AddInstanceComponent(RootComponent);
-
-						// StaticMesh
-						UStaticMeshComponent* OldStaticMeshComponent = Actor->FindComponentByClass<UStaticMeshComponent>();
-						UStaticMeshComponent* StaticMeshComponent = NewObject<UStaticMeshComponent>(VitruvioActor, TEXT("InitialShapeStaticMesh"));
-						StaticMeshComponent->SetStaticMesh(OldStaticMeshComponent->GetStaticMesh());
-						StaticMeshComponent->Mobility = EComponentMobility::Movable;
-						VitruvioActor->AddInstanceComponent(StaticMeshComponent);
-						StaticMeshComponent->AttachToComponent(VitruvioActor->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
-						StaticMeshComponent->OnComponentCreated();
-						StaticMeshComponent->RegisterComponent();
-
-						// Vitruvio
-						UVitruvioComponent* VitruvioComponent = DuplicateObject(Component, VitruvioActor);
-						VitruvioComponent->OnComponentCreated();
-						VitruvioComponent->RegisterComponent();
-
-						TArray<AActor*> AttachedActors;
-						Actor->GetAttachedActors(AttachedActors);
-						for (AActor* Attached : AttachedActors)
-						{
-							Attached->Destroy();
-						}
-
-						Actor->Destroy();
-						GEditor->SelectActor(VitruvioActor, true, false);
-						GEditor->SelectComponent(VitruvioComponent, true, false);
-					}
-					GEditor->NoteSelectionChange();
-				}
-			}));
+			const FUIAction SwitchToNormalActor(FExecuteAction::CreateStatic(ConvertToVitruvioActors, SelectedActors));
 
 			MenuBuilder.AddMenuEntry(FText::FromString("Convert to VitruvioActor"),
 									 FText::FromString("Converts all selected Actors to VitruvioActors"), FSlateIcon(), SwitchToNormalActor);
@@ -168,21 +192,10 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 		"SelectMatinee", EExtensionHook::After, CommandList, FMenuExtensionDelegate::CreateLambda([SelectedActors](FMenuBuilder& MenuBuilder) {
 			MenuBuilder.BeginSection("SelectPossibleVitruvio", FText::FromString("Vitruvio"));
 
-			FUIAction SelectAllViableVitruvioActors(FExecuteAction::CreateLambda([SelectedActors]() {
-				GEditor->SelectNone(false, true, false);
-				for (AActor* SelectedActor : SelectedActors)
-				{
-					TArray<AActor*> NewSelection = GetViableVitruvioActorsInHiararchy(SelectedActor);
-					for (AActor* ActorToSelect : NewSelection)
-					{
-						GEditor->SelectActor(ActorToSelect, true, false);
-					}
-				}
-				GEditor->NoteSelectionChange();
-			}));
+			const FUIAction SelectAllViableVitruvioActorsAction(FExecuteAction::CreateStatic(SelectAllViableVitruvioActors, SelectedActors));
 			MenuBuilder.AddMenuEntry(FText::FromString("Select All Viable Vitruvio Actors In Hiararchy"),
 									 FText::FromString("Selects all Actors which are viable to attach VitruvioComponents to in hiararchy."),
-									 FSlateIcon(), SelectAllViableVitruvioActors);
+									 FSlateIcon(), SelectAllViableVitruvioActorsAction);
 
 			MenuBuilder.EndSection();
 		}));
