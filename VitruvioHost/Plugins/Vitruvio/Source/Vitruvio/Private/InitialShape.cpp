@@ -20,14 +20,17 @@ T* AttachComponent(AActor* Owner, const FString& Name)
 	return Component;
 }
 
-// Returns false if all faces are degenerate and true otherwise
-bool HasValidGeometry(const TArray<FInitialShapeFace>& InFaces)
+FMeshDescription CreateMeshDescription(const TArray<FInitialShapeFace>& InFaces)
 {
 	FMeshDescription Description;
 	FStaticMeshAttributes Attributes(Description);
-	const auto VertexPositions = Attributes.GetVertexPositions();
+	Attributes.Register();
 
-	// 1. Construct MeshDescription from Faces
+	// Need at least 1 uv set (can be empty) otherwise will crash when building the mesh
+	const auto VertexUVs = Attributes.GetVertexInstanceUVs();
+	VertexUVs.SetNumIndices(1);
+
+	const auto VertexPositions = Attributes.GetVertexPositions();
 	const FPolygonGroupID PolygonGroupId = Description.CreatePolygonGroup();
 	for (const FInitialShapeFace& Face : InFaces)
 	{
@@ -46,6 +49,15 @@ bool HasValidGeometry(const TArray<FInitialShapeFace>& InFaces)
 		}
 	}
 
+	return Description;
+}
+
+// Returns false if all faces are degenerate and true otherwise
+bool HasValidGeometry(const TArray<FInitialShapeFace>& InFaces)
+{
+	// 1. Construct MeshDescription from Faces
+	FMeshDescription Description = CreateMeshDescription(InFaces);
+
 	// 2. Triangulate as the input initial shape is in non triangulated form
 	Description.TriangulateMesh();
 
@@ -54,6 +66,8 @@ bool HasValidGeometry(const TArray<FInitialShapeFace>& InFaces)
 	const float ComparisonThreshold = 0.0001;
 	const float AdjustedComparisonThreshold = FMath::Max(ComparisonThreshold, MIN_flt);
 
+	FStaticMeshAttributes Attributes(Description);
+	const auto VertexPositions = Attributes.GetVertexPositions();
 	for (const FPolygonID& PolygonID : Description.Polygons().GetElementIDs())
 	{
 		for (const FTriangleID TriangleID : Description.GetPolygonTriangleIDs(PolygonID))
@@ -89,7 +103,7 @@ TArray<FVector> UInitialShape::GetVertices() const
 	return AllVertices;
 }
 
-void UInitialShape::SetInitialShapeData(const TArray<FInitialShapeFace>& InFaces)
+void UInitialShape::SetFaces(const TArray<FInitialShapeFace>& InFaces)
 {
 	Faces = InFaces;
 	bIsValid = HasValidGeometry(InFaces);
@@ -172,7 +186,35 @@ void UStaticMeshInitialShape::Initialize(UActorComponent* OwnerComponent)
 	{
 		InitialShapeFaces.Push(FInitialShapeFace{FaceVertices});
 	}
-	SetInitialShapeData(InitialShapeFaces);
+	SetFaces(InitialShapeFaces);
+}
+
+void UStaticMeshInitialShape::Initialize(UActorComponent* OwnerComponent, const TArray<FInitialShapeFace>& InitialFaces)
+{
+	FMeshDescription MeshDescription = CreateMeshDescription(InitialFaces);
+	MeshDescription.TriangulateMesh();
+
+	TArray<const FMeshDescription*> MeshDescriptions;
+	MeshDescriptions.Emplace(&MeshDescription);
+
+	UStaticMesh* StaticMesh;
+#if WITH_EDITOR
+	const FString InitialShapeName = TEXT("InitialShape");
+	const FString PackageName = TEXT("/Game/Vitruvio/") + InitialShapeName;
+	UPackage* Package = CreatePackage(*PackageName);
+	const FName StaticMeshName = MakeUniqueObjectName(Package, UStaticMesh::StaticClass(), FName(InitialShapeName));
+
+	StaticMesh = NewObject<UStaticMesh>(Package, StaticMeshName, RF_Public | RF_Standalone);
+#else
+	StaticMesh = NewObject<UStaticMesh>();
+#endif
+
+	AActor* Owner = OwnerComponent->GetOwner();
+	StaticMesh->BuildFromMeshDescriptions(MeshDescriptions);
+	UStaticMeshComponent* StaticMeshComponent = AttachComponent<UStaticMeshComponent>(Owner, TEXT("InitialShapeStaticMesh"));
+	StaticMeshComponent->SetStaticMesh(StaticMesh);
+
+	Initialize(OwnerComponent);
 }
 
 bool UStaticMeshInitialShape::CanConstructFrom(AActor* Owner) const
@@ -269,5 +311,26 @@ void USplineInitialShape::Initialize(UActorComponent* OwnerComponent)
 		}
 	}
 
-	SetInitialShapeData({FInitialShapeFace{Vertices}});
+	SetFaces({FInitialShapeFace{Vertices}});
+}
+
+void USplineInitialShape::Initialize(UActorComponent* OwnerComponent, const TArray<FInitialShapeFace>& InitialFaces)
+{
+	AActor* Owner = OwnerComponent->GetOwner();
+
+	for (const FInitialShapeFace& Face : InitialFaces)
+	{
+		USplineComponent* Spline = AttachComponent<USplineComponent>(Owner, TEXT("InitialShapeSpline"));
+		Spline->ClearSplinePoints(true);
+
+		int32 PointIndex = 0;
+		for (const FVector& Position : Face.Vertices)
+		{
+			Spline->AddSplineLocalPoint(Position);
+			Spline->SetSplinePointType(PointIndex, ESplinePointType::Linear, true);
+			PointIndex++;
+		}
+	}
+
+	Initialize(OwnerComponent);
 }

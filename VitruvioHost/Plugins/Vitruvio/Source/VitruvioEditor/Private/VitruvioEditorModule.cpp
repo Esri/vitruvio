@@ -80,7 +80,7 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 							Component->OnComponentCreated();
 							Component->RegisterComponent();
 
-							Component->Rpk = Rpk;
+							Component->SetRpk(Rpk);
 							Component->Generate();
 						}
 					}
@@ -151,15 +151,15 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 						}
 
 						Actor->Destroy();
-
 						GEditor->SelectActor(VitruvioActor, true, false);
-						GEditor->SelectComponent(VitruvioComponent, true, true);
+						GEditor->SelectComponent(VitruvioComponent, true, false);
 					}
+					GEditor->NoteSelectionChange();
 				}
 			}));
 
-			MenuBuilder.AddMenuEntry(FText::FromString("Change to VitruvioActor"), FText::FromString("Changes the Actor to a VitruvioActor"),
-									 FSlateIcon(), SwitchToNormalActor);
+			MenuBuilder.AddMenuEntry(FText::FromString("Convert to VitruvioActor"),
+									 FText::FromString("Converts all selected Actors to VitruvioActors"), FSlateIcon(), SwitchToNormalActor);
 
 			MenuBuilder.EndSection();
 		}));

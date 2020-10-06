@@ -50,10 +50,6 @@ class VITRUVIO_API UVitruvioComponent : public UActorComponent
 public:
 	UVitruvioComponent();
 
-	/** CityEngine Rule Package used for generation. */
-	UPROPERTY(EditAnywhere, DisplayName = "Rule Package", Category = "Vitruvio")
-	URulePackage* Rpk;
-
 	/** Random seed used for generation. */
 	UPROPERTY(EditAnywhere, DisplayName = "Random Seed", Category = "Vitruvio")
 	int32 RandomSeed;
@@ -96,6 +92,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	bool IsReadyToGenerate() const;
 
+	/** Sets the given Rpk and possibly invalidates already loaded attributes. */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	void SetRpk(URulePackage* RulePackage);
+
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	URulePackage* GetRpk();
+
 	virtual void PostLoad() override;
 
 	virtual void OnComponentCreated() override;
@@ -114,6 +117,10 @@ public:
 	static TArray<TSubclassOf<UInitialShape>> GetInitialShapesClasses();
 
 private:
+	/** CityEngine Rule Package used for generation. */
+	UPROPERTY(EditAnywhere, DisplayName = "Rule Package", Category = "Vitruvio", meta = (AllowPrivateAccess = "true"))
+	URulePackage* Rpk;
+
 	TQueue<FGenerateResultDescription> GenerateQueue;
 	TQueue<FLoadAttributes> LoadAttributesQueue;
 

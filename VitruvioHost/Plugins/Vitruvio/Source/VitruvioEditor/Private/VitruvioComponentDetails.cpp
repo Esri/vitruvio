@@ -240,7 +240,7 @@ void AddSeparator(IDetailCategoryBuilder& RootCategory)
 
 void BuildAttributeEditor(IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioActor)
 {
-	if (!VitruvioActor || !VitruvioActor->Rpk)
+	if (!VitruvioActor || !VitruvioActor->GetRpk())
 	{
 		return;
 	}
@@ -411,6 +411,7 @@ void FVitruvioComponentDetails::AddSwitchInitialShapeCombobox(IDetailCategoryBui
 				if (Selection.IsValid())
 				{
 					VitruvioComponent->SetInitialShapeType(InitialShapeTypeMap[Selection]);
+					VitruvioComponent->Generate();
 
 					// Hack to refresh the property editor
 					GEditor->SelectActor(VitruvioComponent->GetOwner(), false, true, true, true);

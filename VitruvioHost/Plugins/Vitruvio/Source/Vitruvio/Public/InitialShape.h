@@ -36,7 +36,7 @@ protected:
 	USceneComponent* Component;
 
 public:
-	const TArray<FInitialShapeFace>& GetInitialShapeData() const
+	const TArray<FInitialShapeFace>& GetFaces() const
 	{
 		return Faces;
 	}
@@ -48,7 +48,12 @@ public:
 		return bIsValid;
 	}
 
-	void SetInitialShapeData(const TArray<FInitialShapeFace>& InFaces);
+	void SetFaces(const TArray<FInitialShapeFace>& InFaces);
+
+	virtual void Initialize(UActorComponent* OwnerComponent, const TArray<FInitialShapeFace>& InitialFaces)
+	{
+		unimplemented();
+	}
 
 	virtual void Initialize(UActorComponent* OwnerComponent)
 	{
@@ -81,6 +86,7 @@ public:
 	GENERATED_BODY()
 
 	virtual void Initialize(UActorComponent* OwnerComponent) override;
+	virtual void Initialize(UActorComponent* OwnerComponent, const TArray<FInitialShapeFace>& InitialFaces) override;
 	virtual bool CanConstructFrom(AActor* Owner) const override;
 
 #if WITH_EDITOR
@@ -98,6 +104,7 @@ public:
 	int32 SplineApproximationPoints = 15;
 
 	virtual void Initialize(UActorComponent* OwnerComponent) override;
+	virtual void Initialize(UActorComponent* OwnerComponent, const TArray<FInitialShapeFace>& InitialFaces) override;
 	virtual bool CanConstructFrom(AActor* Owner) const override;
 
 #if WITH_EDITOR
