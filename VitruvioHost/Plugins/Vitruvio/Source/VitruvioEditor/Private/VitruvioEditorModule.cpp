@@ -12,6 +12,7 @@
 
 #define LOCTEXT_NAMESPACE "VitruvioEditorModule"
 
+#include "Algo/AnyOf.h"
 #include "ChooseRulePackageDialog.h"
 #include "Editor/LevelEditor/Public/LevelEditor.h"
 #include "VitruvioActor.h"
@@ -30,6 +31,11 @@ bool IsViableVitruvioActor(AActor* Actor)
 		}
 	}
 	return false;
+}
+
+bool HasAnyViableVitruvioActor(TArray<AActor*> Actors)
+{
+	return Algo::AnyOf(Actors, [](AActor* In) { return IsViableVitruvioActor(In); });
 }
 
 TArray<AActor*> GetViableVitruvioActorsInHiararchy(AActor* Root)
@@ -57,13 +63,13 @@ TArray<AActor*> GetViableVitruvioActorsInHiararchy(AActor* Root)
 
 void ConvertToVitruvioActors(TArray<AActor*> Actors)
 {
+	GEditor->SelectNone(true, true, false);
+
 	for (AActor* Actor : Actors)
 	{
 		UVitruvioComponent* Component = Actor->FindComponentByClass<UVitruvioComponent>();
 		if (Component && Actor->IsA<AStaticMeshActor>())
 		{
-			GEditor->SelectNone(true, true, false);
-
 			AActor* VitruvioActor = Actor->GetWorld()->SpawnActor<AActor>(Actor->GetActorLocation(), Actor->GetActorRotation());
 
 			// Root
@@ -97,11 +103,35 @@ void ConvertToVitruvioActors(TArray<AActor*> Actors)
 			}
 
 			Actor->Destroy();
-			GEditor->SelectActor(VitruvioActor, true, false);
-			GEditor->SelectComponent(VitruvioComponent, true, false);
+			GEditor->SelectActor(VitruvioActor, true, true);
+			GEditor->SelectComponent(VitruvioComponent, true, true);
 		}
-		GEditor->NoteSelectionChange();
 	}
+	GEditor->NoteSelectionChange();
+}
+
+bool CanConvertAnyToVitruvioActor(TArray<AActor*> Actors)
+{
+	return Algo::AnyOf(Actors, [](AActor* In) {
+		UVitruvioComponent* Component = In->FindComponentByClass<UVitruvioComponent>();
+		if (Component && In->IsA<AStaticMeshActor>())
+		{
+			return true;
+		}
+		return false;
+	});
+}
+
+bool HasAnyVitruvioComponent(TArray<AActor*> Actors)
+{
+	return Algo::AnyOf(Actors, [](AActor* In) {
+		UVitruvioComponent* Component = In->FindComponentByClass<UVitruvioComponent>();
+		if (Component)
+		{
+			return true;
+		}
+		return false;
+	});
 }
 
 void SwitchRpk(TArray<AActor*> Actors)
@@ -170,21 +200,32 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 		"ActorControl", EExtensionHook::After, CommandList, FMenuExtensionDelegate::CreateLambda([SelectedActors](FMenuBuilder& MenuBuilder) {
 			MenuBuilder.BeginSection("Vitruvio", FText::FromString("Vitruvio"));
 
-			const FUIAction AddVitruvioComponentAction(FExecuteAction::CreateStatic(AddVitruvioComponents, SelectedActors));
+			if (HasAnyViableVitruvioActor(SelectedActors))
+			{
+				const FUIAction AddVitruvioComponentAction(FExecuteAction::CreateStatic(AddVitruvioComponents, SelectedActors));
 
-			MenuBuilder.AddMenuEntry(FText::FromString("Add Vitruvio Component"),
-									 FText::FromString("Adds Vitruvio Components to the selected Actors"), FSlateIcon(), AddVitruvioComponentAction);
+				MenuBuilder.AddMenuEntry(FText::FromString("Add Vitruvio Component"),
+										 FText::FromString("Adds Vitruvio Components to the selected Actors"), FSlateIcon(),
+										 AddVitruvioComponentAction);
+			}
 
-			const FUIAction SwitchRpkAction(FExecuteAction::CreateStatic(SwitchRpk, SelectedActors));
+			if (HasAnyVitruvioComponent(SelectedActors))
+			{
+				const FUIAction SwitchRpkAction(FExecuteAction::CreateStatic(SwitchRpk, SelectedActors));
 
-			MenuBuilder.AddMenuEntry(FText::FromString("Change Rule Package"),
-									 FText::FromString("Changes the Rule Package of all selected Vitruvio Actors"), FSlateIcon(), SwitchRpkAction);
+				MenuBuilder.AddMenuEntry(FText::FromString("Change Rule Package"),
+										 FText::FromString("Changes the Rule Package of all selected Vitruvio Actors"), FSlateIcon(),
+										 SwitchRpkAction);
+			}
 
-			const FUIAction SwitchToNormalActor(FExecuteAction::CreateStatic(ConvertToVitruvioActors, SelectedActors));
+			if (CanConvertAnyToVitruvioActor(SelectedActors))
+			{
+				const FUIAction SwitchToNormalActor(FExecuteAction::CreateStatic(ConvertToVitruvioActors, SelectedActors));
 
-			MenuBuilder.AddMenuEntry(FText::FromString("Convert StaticMeshActor to VitruvioActor"),
-									 FText::FromString("Converts all selected StaticMeshActors to VitruvioActors"), FSlateIcon(),
-									 SwitchToNormalActor);
+				MenuBuilder.AddMenuEntry(FText::FromString("Convert StaticMeshActor to VitruvioActor"),
+										 FText::FromString("Converts all selected StaticMeshActors to VitruvioActors"), FSlateIcon(),
+										 SwitchToNormalActor);
+			}
 
 			MenuBuilder.EndSection();
 		}));
