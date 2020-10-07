@@ -227,8 +227,9 @@ void UStaticMeshInitialShape::Initialize(UActorComponent* OwnerComponent, const 
 
 	AActor* Owner = OwnerComponent->GetOwner();
 	StaticMesh->BuildFromMeshDescriptions(MeshDescriptions);
-	UStaticMeshComponent* StaticMeshComponent = AttachComponent<UStaticMeshComponent>(Owner, TEXT("InitialShapeStaticMesh"));
-	StaticMeshComponent->SetStaticMesh(StaticMesh);
+
+	UStaticMeshComponent* AttachedStaticMeshComponent = AttachComponent<UStaticMeshComponent>(Owner, TEXT("InitialShapeStaticMesh"));
+	AttachedStaticMeshComponent->SetStaticMesh(StaticMesh);
 
 	Initialize(OwnerComponent);
 }
