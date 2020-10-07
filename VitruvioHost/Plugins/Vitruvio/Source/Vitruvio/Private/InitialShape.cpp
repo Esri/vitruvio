@@ -151,6 +151,7 @@ void UStaticMeshInitialShape::Initialize(UActorComponent* OwnerComponent)
 	StaticMesh->bAllowCPUAccess = true;
 
 	TArray<FVector> MeshVertices;
+	TArray<int32> RemappedIndices;
 	TArray<int32> MeshIndices;
 
 	if (StaticMesh->RenderData != nullptr && StaticMesh->RenderData->LODResources.IsValidIndex(0))
@@ -162,7 +163,21 @@ void UStaticMeshInitialShape::Initialize(UActorComponent* OwnerComponent)
 			for (uint32 VertexIndex = 0; VertexIndex < LOD.VertexBuffers.PositionVertexBuffer.GetNumVertices(); ++VertexIndex)
 			{
 				FVector Vertex = LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(VertexIndex);
-				MeshVertices.Add(Vertex);
+
+				auto VertexFindPredicate = [Vertex](const FVector& In) {
+					return Vertex.Equals(In);
+				};
+				int32 MappedVertexIndex = MeshVertices.IndexOfByPredicate(VertexFindPredicate);
+
+				if (MappedVertexIndex == INDEX_NONE)
+				{
+					RemappedIndices.Add(MeshVertices.Num());
+					MeshVertices.Add(Vertex);
+				}
+				else
+				{
+					RemappedIndices.Add(MappedVertexIndex);
+				}
 			}
 
 			const FStaticMeshSection& Section = LOD.Sections[SectionIndex];
@@ -172,7 +187,8 @@ void UStaticMeshInitialShape::Initialize(UActorComponent* OwnerComponent)
 			{
 				for (uint32 TriangleVertexIndex = 0; TriangleVertexIndex < 3; ++TriangleVertexIndex)
 				{
-					const uint32 MeshVertIndex = IndicesView[Section.FirstIndex + Triangle * 3 + TriangleVertexIndex];
+					const uint32 OriginalMeshIndex = IndicesView[Section.FirstIndex + Triangle * 3 + TriangleVertexIndex];
+					const uint32 MeshVertIndex = RemappedIndices[OriginalMeshIndex];
 					MeshIndices.Add(MeshVertIndex);
 				}
 			}
