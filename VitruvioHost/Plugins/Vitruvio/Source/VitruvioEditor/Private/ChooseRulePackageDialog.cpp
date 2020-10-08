@@ -68,7 +68,7 @@ void SCRulePackagePicker::Construct(const FArguments& InArgs)
 		[
 			SNew(STextBlock)
 			.AutoWrapText(true)
-			.Text(FText::FromString(TEXT("Choose a Rulepackage which will be applied to all VitruvioComponents.")))
+			.Text(FText::FromString(TEXT("Choose a Rule Package which will be applied to all VitruvioComponents.")))
 		]
 
 		+ SVerticalBox::Slot()

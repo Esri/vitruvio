@@ -98,6 +98,25 @@ bool UVitruvioComponent::IsReadyToGenerate() const
 	return HasValidInputData() && bAttributesReady;
 }
 
+void UVitruvioComponent::SetRpk(URulePackage* RulePackage)
+{
+	if (this->Rpk == RulePackage)
+	{
+		return;
+	}
+
+	this->Rpk = RulePackage;
+
+	Attributes.Empty();
+	bAttributesReady = false;
+	NotifyAttributesChanged();
+}
+
+URulePackage* UVitruvioComponent::GetRpk()
+{
+	return Rpk;
+}
+
 void UVitruvioComponent::PostLoad()
 {
 	Super::PostLoad();
@@ -390,9 +409,8 @@ void UVitruvioComponent::Generate()
 
 	if (InitialShape)
 	{
-		FGenerateResult GenerateResult =
-			VitruvioModule::Get().GenerateAsync(InitialShape->GetInitialShapeData(), OpaqueParent, MaskedParent, TranslucentParent, Rpk,
-												Vitruvio::CreateAttributeMap(Attributes), RandomSeed);
+		FGenerateResult GenerateResult = VitruvioModule::Get().GenerateAsync(InitialShape->GetFaces(), OpaqueParent, MaskedParent, TranslucentParent,
+																			 Rpk, Vitruvio::CreateAttributeMap(Attributes), RandomSeed);
 
 		GenerateToken = GenerateResult.Token;
 
@@ -485,15 +503,21 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 
 void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& Type)
 {
+	UInitialShape* NewInitialShape = DuplicateObject(Type.GetDefaultObject(), GetOwner());
+
 	if (InitialShape)
 	{
+		const TArray<FInitialShapeFace> Faces = InitialShape->GetFaces();
 		InitialShape->Uninitialize();
+		NewInitialShape->Initialize(this, Faces);
+	}
+	else
+	{
+		NewInitialShape->Initialize(this);
 	}
 
-	InitialShape = DuplicateObject(Type.GetDefaultObject(), GetOwner());
-	InitialShape->Initialize(this);
+	InitialShape = NewInitialShape;
 
-	bAttributesReady = false;
 	RemoveGeneratedMeshes();
 }
 
@@ -512,7 +536,7 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 	bAttributesReady = false;
 	LoadingAttributes = true;
 
-	FAttributeMapResult AttributesResult = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape->GetInitialShapeData(), Rpk, RandomSeed);
+	FAttributeMapResult AttributesResult = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape->GetFaces(), Rpk, RandomSeed);
 
 	LoadAttributesInvalidationToken = AttributesResult.Token;
 
