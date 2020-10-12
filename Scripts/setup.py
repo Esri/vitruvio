@@ -15,11 +15,9 @@ log.info('Setting up git hooks.')
 parser = argparse.ArgumentParser(description='Setup repository for development.')
 args = parser.parse_args()
 
-
 # Check clang-format and git versions are valid and abort if not.
 clang.ensure_valid()
 git.ensure_valid()
-
 
 # Check git paths and abort if they don't exist.
 log.info('Checking required paths.')
@@ -30,7 +28,5 @@ paths.ensure_exists(paths.GLOBAL.PATH_GIT_HOOKS)
 # exists. If there already is a pre-commit hook, write it to a temporary
 # backup file and then write the new one.
 repository = git.current_repository()
-repository.install_hook_utilities()
-repository.install_hook('pre-commit')
-
-log.info("Installation complete, you are ready to go.")
+if repository.safe_install_hooks('pre-commit'):
+    log.info("Installation complete, you are ready to go.")

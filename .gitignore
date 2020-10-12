@@ -1,4 +1,10 @@
 #----------------------------------------------------------
+# Developer Local Files
+Local.uproject
+Local/
+*.local
+
+#----------------------------------------------------------
 # IDE Configuration Spaces
 
 RiderLink/

@@ -28,3 +28,7 @@
 *.rpk filter=lfs diff=lfs merge=lfs -text
 *.udatasmith filter=lfs diff=lfs merge=lfs -text
 *.udsmesh filter=lfs diff=lfs merge=lfs -text
+*.afphoto filter=lfs diff=lfs merge=lfs -text
+*.afdesign filter=lfs diff=lfs merge=lfs -text
+*.cej filter=lfs diff=lfs merge=lfs -text
+*.CEJ filter=lfs diff=lfs merge=lfs -text

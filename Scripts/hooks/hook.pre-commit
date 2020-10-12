@@ -3,6 +3,7 @@ from utilities import git
 from utilities import clang
 from utilities import log
 from utilities import copyright
+from utilities import paths
 
 
 log.prepare()
@@ -15,11 +16,10 @@ clang.ensure_valid()
 
 # Get the changed files in the repository.
 repository = git.current_repository()
-targets = repository.changed_files()
+changed_files = repository.staged_files()
+target_files = paths.filter_cpp_files(changed_files)
 
-for target in targets:
+for target in target_files:
     clang.format_file(target)
     copyright.fix(target)
-
-# Add all updated files to the commit again.
-repository.add_u()
+    repository.add(target)
