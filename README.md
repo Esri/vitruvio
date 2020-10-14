@@ -1,15 +1,26 @@
 # Vitruvio - CityEngine Plugin for Unreal Engine 4
 
-Vitruvio allows the execution of Esri CityEngine *rules* within Unreal Engine 4. Therefore, an artist does not have to leave their familiar Unreal toolset anymore to make use of CityEngine’s procedural modeling power.
+Vitruvio is an [Unreal Engine 4](https://www.unrealengine.com/) (UE4) plugin which enables the use of ArcGIS CityEngine shape grammar rules in UE4 for the generation of procedural buildings. With Vitruvio, game designers or artists do not have to leave UE4 to make use of CityEngine’s procedural modeling power. The buildings stay procedural all time and artists can change the height, style and appearance of buildings easily with a parametric interface. In addition, buildings can also be generated at runtime.
 
-Vitruvio requires rule packages (RPK) as input which are authored in CityEngine. An RPK includes assets and a CGA rule file which encodes an architectural style.
+As input Vitruvio requires rule packages (RPK) which are authored in CityEngine. An RPK includes assets and a CGA rule file which encodes an architectural style. The download section below provides links to the several RPKs which can be used out-of-the-box in Vitruvio.
 
-## Windows Development Setup
+![City generated using Vitruvio](doc/img/vitruvio_paris.jpg)
 
-1. Checkout the code via `git clone https://devtopia.esri.com/Zurich-R-D-Center/vitruvio.git`
-2. Create a new Unreal project (called host project from now on)
-3. Create a folder named *Plugins* in the root directory of the host project
-4. Start PowerShell as administrator
-5. Create a symbolic link from the vitruvio repo to a folder named Vitruvio in the *Plugins* folder of the host project. Using the `New-Item` command. For example: `New-Item -Path "C:\dev\Epic Games\Unreal Projects\VitruvioHost\Plugins\Vitruvio" -ItemType SymbolicLink -Value "C:\dev\git\vitruvio\Vitruvio"`
-6. Right click the uproject file of your Host project and run Generate Visual Studio project files. This will download the PRT library and setup the project. **Note** this might take a while.
-7. After the project files have been generated the project can be opened.
+## Documentation
+
+* [User Guide](doc/usage.md)
+* [Development Setup](doc/setup.md)
+* [Downloads](doc/downloads.md)
+
+External documentation:
+* [CityEngine Tutorials](https://doc.arcgis.com/en/cityengine/latest/tutorials/introduction-to-the-cityengine-tutorials.htm)
+* [CityEngine CGA Reference](https://doc.arcgis.com/en/cityengine/latest/cga/cityengine-cga-introduction.htm)
+* [CityEngine Manual](https://doc.arcgis.com/en/cityengine/latest/help/cityengine-help-intro.htm)
+* [CityEngine SDK API Reference](https://esri.github.io/cityengine-sdk/html/index.html)
+
+
+## Licensing
+
+Vitruvio is under the same license as the included [CityEngine SDK](https://github.com/Esri/esri-cityengine-sdk#licensing).
+
+An exception is the Vitruvio source code (without CityEngine SDK, binaries, or object code), which is licensed under the Apache License, Version 2.0 (the “License”); you may not use this work except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
