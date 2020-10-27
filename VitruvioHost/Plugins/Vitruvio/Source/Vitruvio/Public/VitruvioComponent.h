@@ -51,19 +51,19 @@ public:
 	UVitruvioComponent();
 
 	/** Random seed used for generation. */
-	UPROPERTY(EditAnywhere, DisplayName = "Random Seed", Category = "Vitruvio")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Random Seed", Category = "Vitruvio")
 	int32 RandomSeed;
 
 	/** Automatically generate after changing attributes or properties. */
-	UPROPERTY(EditAnywhere, DisplayName = "Generate Automatically", Category = "Vitruvio")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Generate Automatically", Category = "Vitruvio")
 	bool GenerateAutomatically = true;
 
 	/** Automatically hide initial shape (i.e. this actor's static mesh) after generation. */
-	UPROPERTY(EditAnywhere, DisplayName = "Hide after Generation", Category = "Vitruvio")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Hide after Generation", Category = "Vitruvio")
 	bool HideAfterGeneration = false;
 
 	/** Rule attributes used for generation. */
-	UPROPERTY(EditAnywhere, DisplayName = "Attributes", Category = "Vitruvio")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, DisplayName = "Attributes", Category = "Vitruvio")
 	TMap<FString, URuleAttribute*> Attributes;
 
 	/** Default parent material for opaque geometry. */
@@ -95,6 +95,33 @@ public:
 	/** Sets the given Rpk and possibly invalidates already loaded attributes. */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	void SetRpk(URulePackage* RulePackage);
+
+	/**
+	 * Sets the string attribute with the given name (if it exists) to the given value.
+	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
+	 *
+	 * @returns true if the attribute has been set
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	bool SetStringAttribute(const FString& Name, const FString& Value);
+
+	/**
+	 * Sets the bool attribute with the given name (if it exists) to the given value.
+	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
+	 *
+	 * @returns true if the attribute has been set
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	bool SetBoolAttribute(const FString& Name, bool Value);
+
+	/**
+	 * Sets the float attribute with the given name (if it exists) to the given value.
+	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
+	 *
+	 * @returns true if the attribute has been set
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	bool SetFloatAttribute(const FString& Name, float Value);
 
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	URulePackage* GetRpk();
@@ -130,7 +157,6 @@ private:
 	void CalculateRandomSeed();
 
 	void LoadDefaultAttributes(bool KeepOldAttributeValues = false, bool ForceRegenerate = false);
-
 	void NotifyAttributesChanged();
 
 	void RemoveGeneratedMeshes();

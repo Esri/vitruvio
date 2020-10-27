@@ -36,6 +36,31 @@ FVector GetCentroid(const TArray<FVector>& Vertices)
 	return Centroid;
 }
 
+template <typename A, typename T>
+bool SetAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name, const T& Value)
+{
+	URuleAttribute** FindRes = VitruvioComponent->Attributes.Find(Name);
+	if (!FindRes)
+	{
+		return false;
+	}
+
+	URuleAttribute* Attribute = *FindRes;
+	A* TAttribute = Cast<A>(Attribute);
+	if (!TAttribute)
+	{
+		return false;
+	}
+
+	TAttribute->Value = Value;
+	if (VitruvioComponent->GenerateAutomatically && VitruvioComponent->IsReadyToGenerate())
+	{
+		VitruvioComponent->Generate();
+	}
+
+	return true;
+}
+
 #if WITH_EDITOR
 bool IsRelevantObject(UVitruvioComponent* VitruvioComponent, UObject* Object)
 {
@@ -110,6 +135,21 @@ void UVitruvioComponent::SetRpk(URulePackage* RulePackage)
 	Attributes.Empty();
 	bAttributesReady = false;
 	NotifyAttributesChanged();
+}
+
+bool UVitruvioComponent::SetStringAttribute(const FString& Name, const FString& Value)
+{
+	return SetAttribute<UStringAttribute, FString>(this, Name, Value);
+}
+
+bool UVitruvioComponent::SetBoolAttribute(const FString& Name, bool Value)
+{
+	return SetAttribute<UBoolAttribute, bool>(this, Name, Value);
+}
+
+bool UVitruvioComponent::SetFloatAttribute(const FString& Name, float Value)
+{
+	return SetAttribute<UFloatAttribute, float>(this, Name, Value);
 }
 
 URulePackage* UVitruvioComponent::GetRpk()
@@ -268,7 +308,7 @@ void UVitruvioComponent::NotifyAttributesChanged()
 	// Notify possible listeners (eg. Details panel) about changes to the Attributes
 	FPropertyChangedEvent PropertyEvent(GetClass()->FindPropertyByName(GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Attributes)));
 	FCoreUObjectDelegates::OnObjectPropertyChanged.Broadcast(this, PropertyEvent);
-#endif // WITH_EDITOR
+#endif
 }
 
 void UVitruvioComponent::RemoveGeneratedMeshes()
