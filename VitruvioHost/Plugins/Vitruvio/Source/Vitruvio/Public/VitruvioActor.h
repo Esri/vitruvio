@@ -15,6 +15,6 @@ class VITRUVIO_API AVitruvioActor : public AActor
 public:
 	AVitruvioActor();
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, Category = "Vitruvio")
 	UVitruvioComponent* VitruvioComponent;
 };

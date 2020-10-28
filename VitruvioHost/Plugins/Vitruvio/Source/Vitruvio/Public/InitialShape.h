@@ -100,7 +100,7 @@ class VITRUVIO_API USplineInitialShape : public UInitialShape
 public:
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, Meta = (UIMin = 5, UIMax = 50))
+	UPROPERTY(EditAnywhere, Category = "Vitruvio", Meta = (UIMin = 5, UIMax = 50))
 	int32 SplineApproximationPoints = 15;
 
 	virtual void Initialize(UActorComponent* OwnerComponent) override;
