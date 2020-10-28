@@ -39,13 +39,13 @@ FVector GetCentroid(const TArray<FVector>& Vertices)
 template <typename A, typename T>
 bool SetAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name, const T& Value)
 {
-	URuleAttribute** FindRes = VitruvioComponent->Attributes.Find(Name);
-	if (!FindRes)
+	URuleAttribute** FoundAttribute = VitruvioComponent->Attributes.Find(Name);
+	if (!FoundAttribute)
 	{
 		return false;
 	}
 
-	URuleAttribute* Attribute = *FindRes;
+	URuleAttribute* Attribute = *FoundAttribute;
 	A* TAttribute = Cast<A>(Attribute);
 	if (!TAttribute)
 	{
