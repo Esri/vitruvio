@@ -134,7 +134,7 @@ void UVitruvioComponent::SetRpk(URulePackage* RulePackage)
 
 	Attributes.Empty();
 	bAttributesReady = false;
-	NotifyAttributesChanged();
+	bNotifyAttributeChange = true;
 }
 
 bool UVitruvioComponent::SetStringAttribute(const FString& Name, const FString& Value)
@@ -287,7 +287,7 @@ void UVitruvioComponent::ProcessLoadAttributesQueue()
 
 		bAttributesReady = true;
 
-		NotifyAttributesChanged();
+		bNotifyAttributeChange = true;
 
 		if (GenerateAutomatically)
 		{
@@ -300,6 +300,12 @@ void UVitruvioComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 {
 	ProcessGenerateQueue();
 	ProcessLoadAttributesQueue();
+
+	if (bNotifyAttributeChange)
+	{
+		NotifyAttributesChanged();
+		bNotifyAttributeChange = false;
+	}
 }
 
 void UVitruvioComponent::NotifyAttributesChanged()
@@ -502,8 +508,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 			Attributes.Empty();
 			bAttributesReady = false;
 			bComponentPropertyChanged = true;
-
-			NotifyAttributesChanged();
+			bNotifyAttributeChange = true;
 		}
 
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, RandomSeed))

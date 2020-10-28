@@ -47,6 +47,8 @@ class VITRUVIO_API UVitruvioComponent : public UActorComponent
 
 	bool bIsGenerating = false;
 
+	bool bNotifyAttributeChange = false;
+
 public:
 	UVitruvioComponent();
 
