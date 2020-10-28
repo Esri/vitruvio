@@ -161,11 +161,12 @@ void AddVitruvioComponents(TArray<AActor*> Actors)
 	{
 		URulePackage* Rpk = SelectedRpk.GetValue();
 
+		UVitruvioComponent* Component = nullptr;
 		for (AActor* Actor : Actors)
 		{
 			if (!Actor->FindComponentByClass<UVitruvioComponent>())
 			{
-				UVitruvioComponent* Component = NewObject<UVitruvioComponent>(Actor, TEXT("VitruvioComponent"));
+				Component = NewObject<UVitruvioComponent>(Actor, TEXT("VitruvioComponent"));
 				Actor->AddInstanceComponent(Component);
 				Component->OnComponentCreated();
 				Component->RegisterComponent();
@@ -173,6 +174,14 @@ void AddVitruvioComponents(TArray<AActor*> Actors)
 				Component->SetRpk(Rpk);
 				Component->Generate();
 			}
+		}
+
+		// Select the last component and reselect its Actor. This will not deselect any other actor but "force update"
+		// the details panel of the current selected actor details panel.
+		if (Component)
+		{
+			GEditor->SelectActor(Component->GetOwner(), true, true);
+			GEditor->SelectComponent(Component, true, true);
 		}
 	}
 }
