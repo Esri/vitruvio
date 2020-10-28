@@ -161,6 +161,12 @@ void UVitruvioComponent::PostLoad()
 {
 	Super::PostLoad();
 
+	// During cooking we don't have to do anything here
+	if (GIsCookerLoadingPackage)
+	{
+		return;
+	}
+
 #if WITH_EDITOR
 	if (!PropertyChangeDelegate.IsValid())
 	{
