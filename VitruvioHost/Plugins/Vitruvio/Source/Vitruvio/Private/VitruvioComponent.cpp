@@ -37,9 +37,30 @@ FVector GetCentroid(const TArray<FVector>& Vertices)
 }
 
 template <typename A, typename T>
-bool SetAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name, const T& Value)
+bool GetAttribute(const TMap<FString, URuleAttribute*>& Attributes, const FString& Name, T& OutValue)
 {
-	URuleAttribute** FoundAttribute = VitruvioComponent->Attributes.Find(Name);
+	URuleAttribute const* const* FoundAttribute = Attributes.Find(Name);
+	if (!FoundAttribute)
+	{
+		return false;
+	}
+
+	URuleAttribute const* Attribute = *FoundAttribute;
+	A const* TAttribute = Cast<A>(Attribute);
+	if (!TAttribute)
+	{
+		return false;
+	}
+
+	OutValue = TAttribute->Value;
+
+	return true;
+}
+
+template <typename A, typename T>
+bool SetAttribute(UVitruvioComponent* VitruvioComponent, TMap<FString, URuleAttribute*>& Attributes, const FString& Name, const T& Value)
+{
+	URuleAttribute** FoundAttribute = Attributes.Find(Name);
 	if (!FoundAttribute)
 	{
 		return false;
@@ -139,20 +160,40 @@ void UVitruvioComponent::SetRpk(URulePackage* RulePackage)
 
 bool UVitruvioComponent::SetStringAttribute(const FString& Name, const FString& Value)
 {
-	return SetAttribute<UStringAttribute, FString>(this, Name, Value);
+	return SetAttribute<UStringAttribute, FString>(this, this->Attributes, Name, Value);
+}
+
+bool UVitruvioComponent::GetStringAttribute(const FString& Name, FString& OutValue) const
+{
+	return GetAttribute<UStringAttribute, FString>(this->Attributes, Name, OutValue);
 }
 
 bool UVitruvioComponent::SetBoolAttribute(const FString& Name, bool Value)
 {
-	return SetAttribute<UBoolAttribute, bool>(this, Name, Value);
+	return SetAttribute<UBoolAttribute, bool>(this, this->Attributes, Name, Value);
+}
+
+bool UVitruvioComponent::GetBoolAttribute(const FString& Name, bool& OutValue) const
+{
+	return GetAttribute<UBoolAttribute, bool>(this->Attributes, Name, OutValue);
 }
 
 bool UVitruvioComponent::SetFloatAttribute(const FString& Name, float Value)
 {
-	return SetAttribute<UFloatAttribute, float>(this, Name, Value);
+	return SetAttribute<UFloatAttribute, float>(this, this->Attributes, Name, Value);
 }
 
-URulePackage* UVitruvioComponent::GetRpk()
+bool UVitruvioComponent::GetFloatAttribute(const FString& Name, float& OutValue) const
+{
+	return GetAttribute<UFloatAttribute, float>(this->Attributes, Name, OutValue);
+}
+
+const TMap<FString, URuleAttribute*>& UVitruvioComponent::GetAttributes() const
+{
+	return Attributes;
+}
+
+URulePackage* UVitruvioComponent::GetRpk() const
 {
 	return Rpk;
 }

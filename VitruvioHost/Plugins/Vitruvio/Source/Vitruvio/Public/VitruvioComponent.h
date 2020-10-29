@@ -64,10 +64,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Hide after Generation", Category = "Vitruvio")
 	bool HideAfterGeneration = false;
 
-	/** Rule attributes used for generation. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, DisplayName = "Attributes", Category = "Vitruvio")
-	TMap<FString, URuleAttribute*> Attributes;
-
 	/** Default parent material for opaque geometry. */
 	UPROPERTY(EditAnywhere, DisplayName = "Opaque Parent", Category = "Vitruvio Default Materials")
 	UMaterial* OpaqueParent;
@@ -90,7 +86,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	bool HasValidInputData() const;
 
-	/** Returns true if the component is ready to generate meaning it HasValidInputData and the attributes are loaded. */
+	/** Returns true if the component is ready to generate, meaning it HasValidInputData and the attributes are loaded. */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	bool IsReadyToGenerate() const;
 
@@ -99,34 +95,75 @@ public:
 	void SetRpk(URulePackage* RulePackage);
 
 	/**
-	 * Sets the string attribute with the given name (if it exists) to the given value.
+	 * Sets string attributes used for generation.
 	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
 	 *
-	 * @returns true if the attribute has been set
+	 * @param Name The name of the attribute to set.
+	 * @param Value The new value for the attribute.
+	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	bool SetStringAttribute(const FString& Name, const FString& Value);
 
 	/**
-	 * Sets the bool attribute with the given name (if it exists) to the given value.
+	 * Access String attribute values used for generation.
+	 *
+	 * @param Name The name of the float attribute.
+	 * @param OutValue Set to the attributes value if it exists or to an empty String otherwise.
+	 * @returns True if the String attribute with the given Name exists or false otherwise.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	bool GetStringAttribute(const FString& Name, FString& OutValue) const;
+
+	/**
+	 * Sets bool attributes used for generation.
 	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
 	 *
-	 * @returns true if the attribute has been set
+	 * @param Name The name of the attribute.
+	 * @param Value The new value for the attribute.
+	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	bool SetBoolAttribute(const FString& Name, bool Value);
 
 	/**
-	 * Sets the float attribute with the given name (if it exists) to the given value.
+	 * Access bool attribute values used for generation.
+	 *
+	 * @param Name The name of the bool attribute.
+	 * @param OutValue Set to the attributes value if it exists or to false otherwise.
+	 * @returns true if the float attribute with the given Name exists or false otherwise.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	bool GetBoolAttribute(const FString& Name, bool& OutValue) const;
+
+	/**
+	 * Sets float attributes used for generation.
 	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
 	 *
-	 * @returns true if the attribute has been set
+	 * @param Name The name of the attribute.
+	 * @param Value The new value for the attribute.
+	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	bool SetFloatAttribute(const FString& Name, float Value);
 
+	/**
+	 * Access float attribute values used for generation.
+	 *
+	 * @param Name The name of the float attribute.
+	 * @param OutValue Set to the attributes value if it exists or to 0.0f otherwise.
+	 * @returns true if the float attribute with the given Name exists or false otherwise.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	URulePackage* GetRpk();
+	bool GetFloatAttribute(const FString& Name, float& OutValue) const;
+
+	/** Returns the attributes used for generation. */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	const TMap<FString, URuleAttribute*>& GetAttributes() const;
+
+	/** Returns the rule package used for generation. */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	URulePackage* GetRpk() const;
 
 	virtual void PostLoad() override;
 
@@ -149,6 +186,10 @@ private:
 	/** CityEngine Rule Package used for generation. */
 	UPROPERTY(EditAnywhere, DisplayName = "Rule Package", Category = "Vitruvio", meta = (AllowPrivateAccess = "true"))
 	URulePackage* Rpk;
+
+	/** Rule attributes used for generation. */
+	UPROPERTY(EditAnywhere, DisplayName = "Attributes", Category = "Vitruvio")
+	TMap<FString, URuleAttribute*> Attributes;
 
 	TQueue<FGenerateResultDescription> GenerateQueue;
 	TQueue<FLoadAttributes> LoadAttributesQueue;

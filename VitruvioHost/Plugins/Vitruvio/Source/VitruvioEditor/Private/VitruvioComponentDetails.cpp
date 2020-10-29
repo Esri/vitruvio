@@ -248,7 +248,7 @@ void BuildAttributeEditor(IDetailCategoryBuilder& RootCategory, UVitruvioCompone
 	IDetailGroup& RootGroup = RootCategory.AddGroup("Attributes", FText::FromString("Attributes"), true, true);
 	TMap<FString, IDetailGroup*> GroupCache;
 
-	for (const auto& AttributeEntry : VitruvioActor->Attributes)
+	for (const auto& AttributeEntry : VitruvioActor->GetAttributes())
 	{
 		URuleAttribute* Attribute = AttributeEntry.Value;
 
@@ -460,7 +460,7 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		}
 	}
 
-	DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Attributes))->MarkHiddenByCustomization();
+	DetailBuilder.GetProperty(FName(TEXT("Attributes")))->MarkHiddenByCustomization();
 
 	if (!VitruvioComponent->InitialShape)
 	{
@@ -499,8 +499,7 @@ void FVitruvioComponentDetails::OnPropertyChanged(UObject* Object, struct FPrope
 	}
 
 	const FName PropertyName = Event.Property->GetFName();
-	if (PropertyName == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Attributes) ||
-		PropertyName == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateAutomatically))
+	if (PropertyName == FName(TEXT("Attributes")) || PropertyName == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateAutomatically))
 	{
 		const auto DetailBuilder = CachedDetailBuilder.Pin().Get();
 		if (DetailBuilder)
