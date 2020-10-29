@@ -22,7 +22,7 @@ After placing the actor in the scene and selecting it, the *Details* panel shows
 
 **Rule Package:** The rule package to be used. For more information on how to export rule packages from CityEngine and importing them into UE4 see [Rule Packages](#Rule-Packages).
 
-**Random Seed**: The random seed to be used for generation. See also [CityEngine Help](https://doc.arcgis.com/en/cityengine/2019.1/help/help-working-with-rules.htm#GUID-FD7F11D4-778E-4485-901B-E11DDD2099F2).
+**Random Seed:** The random seed to be used for generation. See also [CityEngine Help](https://doc.arcgis.com/en/cityengine/2019.1/help/help-working-with-rules.htm#GUID-FD7F11D4-778E-4485-901B-E11DDD2099F2).
 
 **Generate Automatically:** Whether to generate automatically after changes to relevant properties such as the initial shape, rule package or attributes.
 
@@ -84,12 +84,12 @@ After that, right click again on any selected Actor and choose *Add Vitruvio Com
 
 Attributes control the procedural generation of a model. The set of available attributes depends on the underlying Rule of the assigned *Rule Package*. 
 
-To view all Attributes select the *VitruvioComponent* of the Actor
+To view all Attributes select the *VitruvioComponent* of the Actor.
 
 <img src="img/vitruvio_component_selected.jpg" width="400">
 
-The attributes can then be changed in the Details panel. 
+The attributes can then be changed in the *Details* panel. 
 
 <img src="img/vitruvio_attributes.gif" width="800">
 
-**Note** if generate automatically is enabled every attribute change will regenerate the model.
+**Note:** if *generate automatically* is enabled, every attribute change will regenerate the model.  
