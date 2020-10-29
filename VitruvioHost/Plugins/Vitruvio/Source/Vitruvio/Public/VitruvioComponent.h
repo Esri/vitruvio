@@ -52,10 +52,6 @@ class VITRUVIO_API UVitruvioComponent : public UActorComponent
 public:
 	UVitruvioComponent();
 
-	/** Random seed used for generation. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Random Seed", Category = "Vitruvio")
-	int32 RandomSeed;
-
 	/** Automatically generate after changing attributes or properties. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Generate Automatically", Category = "Vitruvio")
 	bool GenerateAutomatically = true;
@@ -165,6 +161,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	URulePackage* GetRpk() const;
 
+	/**
+	 * Sets the random seed used for generation.
+	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	void SetRandomSeed(int32 NewRandomSeed);
+
 	virtual void PostLoad() override;
 
 	virtual void OnComponentCreated() override;
@@ -190,6 +193,10 @@ private:
 	/** Rule attributes used for generation. */
 	UPROPERTY(EditAnywhere, DisplayName = "Attributes", Category = "Vitruvio")
 	TMap<FString, URuleAttribute*> Attributes;
+
+	/** Random seed used for generation. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, DisplayName = "Random Seed", Category = "Vitruvio", meta = (AllowPrivateAccess = "true"))
+	int32 RandomSeed;
 
 	TQueue<FGenerateResultDescription> GenerateQueue;
 	TQueue<FLoadAttributes> LoadAttributesQueue;

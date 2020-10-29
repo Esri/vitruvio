@@ -198,6 +198,17 @@ URulePackage* UVitruvioComponent::GetRpk() const
 	return Rpk;
 }
 
+void UVitruvioComponent::SetRandomSeed(int32 NewRandomSeed)
+{
+	RandomSeed = NewRandomSeed;
+	bValidRandomSeed = true;
+
+	if (GenerateAutomatically && IsReadyToGenerate())
+	{
+		Generate();
+	}
+}
+
 void UVitruvioComponent::PostLoad()
 {
 	Super::PostLoad();
