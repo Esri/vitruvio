@@ -62,13 +62,17 @@ To copy a spline point, select an existing point, press alt and drag the point. 
 
 ### Export Initial Shapes from CityEngine
 
-To export initial shape building footprints from CityEngine the [Datasmith Exporter](https://doc.arcgis.com/en/cityengine/latest/help/help-export-unreal.htm) can be used. Select the building footprints and then select *Export models…* in the *File* menu. Select the *Unreal Engine* export and make sure to set *Export Geometry* to **Shapes** and *Mesh Merging* to **Per Initial Shape**.
+To export initial shape building footprints from CityEngine the [Datasmith Exporter](https://doc.arcgis.com/en/cityengine/latest/help/help-export-unreal.htm) can be used. Select the building footprints in the viewport and then select **File** &rarr; **Export models…** to export them. Select the *Unreal Engine* export and make sure to set *Export Geometry* to **Shapes** and *Mesh Merging* to **Per Initial Shape**. This will make sure that each footprint (with no generated models) is exported individually.
 
 <img src="img/export_initial_shapes.jpg" width="400">
 
+
+
+**Note:**  For the following steps, the **Datasmith Importer** Plugin needs to be enabled for the Project. Go to **Edit** &rarr; **Plugins** and verify that it is enabled.
+
 In UE4 use the *Datasmith* importer and leave all settings as is.
 
-To easily assign a Vitruvio Component to all imported initial shapes, select the *DatasmithSceneActor*, right click on it, choose *Select* and then *Select All Viable Vitruvio Actors in Hierarchy*. This will select all child Actors which are viable for generation with Vitruvio (this means Actors which either have a *StaticMeshComponent* or *SplineComponent* attached).
+To easily assign a Vitruvio Component to all imported initial shapes, select the *DatasmithSceneActor*, right click on it, choose **Select** &rarr; **Select All Viable Vitruvio Actors in Hierarchy**. This will select all child Actors which are viable for generation with Vitruvio (this means Actors which either have a *StaticMeshComponent* or *SplineComponent* attached).
 
 <img src="img/select_vitruvio_actors.jpg" width="400">
 
@@ -78,8 +82,14 @@ After that, right click again on any selected Actor and choose *Add Vitruvio Com
 
 ## Attributes
 
-Attributes control the procedural generation of a model. The set of available attributes depends on the underlying Rule of the assigned *Rule Package*. Attributes can be changed in the Details panel of the Vitruvio Component. 
+Attributes control the procedural generation of a model. The set of available attributes depends on the underlying Rule of the assigned *Rule Package*. 
+
+To view all Attributes select the *VitruvioComponent* of the Actor
+
+<img src="img/vitruvio_component_selected.jpg" width="800">
+
+The attributes can then be changed in the Details panel. 
 
 <img src="img/vitruvio_attributes.gif" width="800">
 
-**Note** if generate automatically is enabled, every attribute change will regenerate the model.
+**Note** if generate automatically is enabled every attribute change will regenerate the model.
