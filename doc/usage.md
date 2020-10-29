@@ -86,7 +86,7 @@ Attributes control the procedural generation of a model. The set of available at
 
 To view all Attributes select the *VitruvioComponent* of the Actor
 
-<img src="img/vitruvio_component_selected.jpg" width="800">
+<img src="img/vitruvio_component_selected.jpg" width="400">
 
 The attributes can then be changed in the Details panel. 
 
