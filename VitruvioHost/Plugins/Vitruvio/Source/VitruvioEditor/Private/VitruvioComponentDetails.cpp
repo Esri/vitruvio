@@ -10,6 +10,7 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
 #include "IDetailGroup.h"
+#include "LevelEditor.h"
 #include "Widgets/Colors/SColorBlock.h"
 #include "Widgets/Colors/SColorPicker.h"
 #include "Widgets/Input/SCheckBox.h"
@@ -44,6 +45,25 @@ void UpdateAttributeValue(UVitruvioComponent* VitruvioActor, A* Attribute, const
 	{
 		VitruvioActor->Generate();
 	}
+}
+
+bool IsVitruvioComponentSelected(const TArray<TWeakObjectPtr<UObject>>& ObjectsBeingCustomized, UVitruvioComponent*& OutComponent)
+{
+	OutComponent = nullptr;
+	for (size_t ObjectIndex = 0; ObjectIndex < ObjectsBeingCustomized.Num(); ++ObjectIndex)
+	{
+		const TWeakObjectPtr<UObject>& CurrentObject = ObjectsBeingCustomized[ObjectIndex];
+		if (CurrentObject.IsValid())
+		{
+			UVitruvioComponent* VitruvioComponent = Cast<UVitruvioComponent>(CurrentObject.Get());
+			if (VitruvioComponent)
+			{
+				OutComponent = VitruvioComponent;
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 template <typename Attr, typename V, typename An>
@@ -366,6 +386,7 @@ FVitruvioComponentDetails::FVitruvioComponentDetails()
 	}
 
 	FCoreUObjectDelegates::OnObjectPropertyChanged.AddRaw(this, &FVitruvioComponentDetails::OnPropertyChanged);
+	UVitruvioComponent::OnHierarchyChanged.AddRaw(this, &FVitruvioComponentDetails::OnVitruvioComponentHierarchyChanged);
 }
 
 FVitruvioComponentDetails::~FVitruvioComponentDetails()
@@ -431,58 +452,48 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	DetailBuilder.GetObjectsBeingCustomized(ObjectsBeingCustomized);
 
 	UVitruvioComponent* VitruvioComponent = nullptr;
-	for (size_t ObjectIndex = 0; ObjectIndex < ObjectsBeingCustomized.Num(); ++ObjectIndex)
+
+	if (IsVitruvioComponentSelected(ObjectsBeingCustomized, VitruvioComponent))
 	{
-		const TWeakObjectPtr<UObject>& CurrentObject = ObjectsBeingCustomized[ObjectIndex];
-		if (CurrentObject.IsValid())
+		DetailBuilder.GetProperty(FName(TEXT("Attributes")))->MarkHiddenByCustomization();
+
+		if (!VitruvioComponent->InitialShape)
 		{
-			VitruvioComponent = Cast<UVitruvioComponent>(CurrentObject.Get());
+			DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UVitruvioComponent, InitialShape))->MarkHiddenByCustomization();
 		}
-	}
 
-	if (!VitruvioComponent)
-	{
-		return;
-	}
+		IDetailCategoryBuilder& RootCategory = DetailBuilder.EditCategory("Vitruvio");
+		RootCategory.SetShowAdvanced(true);
 
-	TSharedPtr<FString> CurrentInitialShapeType;
-
-	if (VitruvioComponent->InitialShape)
-	{
-		for (const auto& InitialShapeTypeOptionTuple : InitialShapeTypeMap)
+		if (!VitruvioComponent->GenerateAutomatically)
 		{
-			UClass* IsClass = VitruvioComponent->InitialShape->GetClass();
-			if (InitialShapeTypeOptionTuple.Value == IsClass)
+			AddGenerateButton(RootCategory, VitruvioComponent);
+		}
+
+		if (VitruvioComponent->InitialShape && VitruvioComponent->InitialShape->CanDestroy())
+		{
+			TSharedPtr<FString> CurrentInitialShapeType;
+
+			if (VitruvioComponent->InitialShape)
 			{
-				CurrentInitialShapeType = InitialShapeTypeOptionTuple.Key;
-				break;
+				for (const auto& InitialShapeTypeOptionTuple : InitialShapeTypeMap)
+				{
+					UClass* IsClass = VitruvioComponent->InitialShape->GetClass();
+					if (InitialShapeTypeOptionTuple.Value == IsClass)
+					{
+						CurrentInitialShapeType = InitialShapeTypeOptionTuple.Key;
+						break;
+					}
+				}
 			}
+
+			AddSwitchInitialShapeCombobox(RootCategory, CurrentInitialShapeType, VitruvioComponent);
 		}
+
+		AddSeparator(RootCategory);
+
+		BuildAttributeEditor(RootCategory, VitruvioComponent);
 	}
-
-	DetailBuilder.GetProperty(FName(TEXT("Attributes")))->MarkHiddenByCustomization();
-
-	if (!VitruvioComponent->InitialShape)
-	{
-		DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UVitruvioComponent, InitialShape))->MarkHiddenByCustomization();
-	}
-
-	IDetailCategoryBuilder& RootCategory = DetailBuilder.EditCategory("Vitruvio");
-	RootCategory.SetShowAdvanced(true);
-
-	if (!VitruvioComponent->GenerateAutomatically)
-	{
-		AddGenerateButton(RootCategory, VitruvioComponent);
-	}
-
-	if (VitruvioComponent->InitialShape && VitruvioComponent->InitialShape->CanDestroy())
-	{
-		AddSwitchInitialShapeCombobox(RootCategory, CurrentInitialShapeType, VitruvioComponent);
-	}
-
-	AddSeparator(RootCategory);
-
-	BuildAttributeEditor(RootCategory, VitruvioComponent);
 }
 
 void FVitruvioComponentDetails::CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& DetailBuilder)
@@ -507,4 +518,10 @@ void FVitruvioComponentDetails::OnPropertyChanged(UObject* Object, struct FPrope
 			DetailBuilder->ForceRefreshDetails();
 		}
 	}
+}
+
+void FVitruvioComponentDetails::OnVitruvioComponentHierarchyChanged(UVitruvioComponent* Component)
+{
+	FLevelEditorModule& LevelEditor = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
+	LevelEditor.OnComponentsEdited().Broadcast();
 }

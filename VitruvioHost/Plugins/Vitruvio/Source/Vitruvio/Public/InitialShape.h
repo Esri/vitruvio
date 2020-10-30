@@ -48,6 +48,11 @@ public:
 		return bIsValid;
 	}
 
+	USceneComponent* GetComponent() const
+	{
+		return Component;
+	}
+
 	void SetFaces(const TArray<FInitialShapeFace>& InFaces);
 
 	virtual void Initialize(UActorComponent* OwnerComponent, const TArray<FInitialShapeFace>& InitialFaces)

@@ -67,44 +67,32 @@ void ConvertToVitruvioActors(TArray<AActor*> Actors)
 
 	for (AActor* Actor : Actors)
 	{
-		UVitruvioComponent* Component = Actor->FindComponentByClass<UVitruvioComponent>();
-		if (Component && Actor->IsA<AStaticMeshActor>())
+		UVitruvioComponent* OldVitruvioComponent = Actor->FindComponentByClass<UVitruvioComponent>();
+		if (OldVitruvioComponent && Actor->IsA<AStaticMeshActor>())
 		{
-			AActor* VitruvioActor = Actor->GetWorld()->SpawnActor<AActor>(Actor->GetActorLocation(), Actor->GetActorRotation());
+			FActorSpawnParameters Parameters;
+			Parameters.Name = MakeUniqueObjectName(Actor->GetWorld(), AVitruvioActor::StaticClass(), *Actor->GetName());
+			AVitruvioActor* VitruvioActor =
+				Actor->GetWorld()->SpawnActor<AVitruvioActor>(Actor->GetActorLocation(), Actor->GetActorRotation(), Parameters);
 
-			// Root
-			USceneComponent* RootComponent =
-				NewObject<USceneComponent>(VitruvioActor, USceneComponent::GetDefaultSceneRootVariableName(), RF_Transactional);
-			RootComponent->Mobility = EComponentMobility::Movable;
-			RootComponent->SetWorldTransform(Actor->GetTransform());
-			VitruvioActor->SetRootComponent(RootComponent);
-			VitruvioActor->AddInstanceComponent(RootComponent);
-
-			// StaticMesh
 			UStaticMeshComponent* OldStaticMeshComponent = Actor->FindComponentByClass<UStaticMeshComponent>();
-			UStaticMeshComponent* StaticMeshComponent = NewObject<UStaticMeshComponent>(VitruvioActor, TEXT("InitialShapeStaticMesh"));
+			UStaticMeshComponent* StaticMeshComponent = VitruvioActor->FindComponentByClass<UStaticMeshComponent>();
+
 			StaticMeshComponent->SetStaticMesh(OldStaticMeshComponent->GetStaticMesh());
 			StaticMeshComponent->Mobility = EComponentMobility::Movable;
-			VitruvioActor->AddInstanceComponent(StaticMeshComponent);
-			StaticMeshComponent->AttachToComponent(VitruvioActor->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
-			StaticMeshComponent->OnComponentCreated();
-			StaticMeshComponent->RegisterComponent();
 
-			// Vitruvio
-			UVitruvioComponent* VitruvioComponent = DuplicateObject(Component, VitruvioActor);
+			// Remove old VitruvioComponent so we can duplicate it from the old Actor
+			UVitruvioComponent* VitruvioActorVitruvioComponent = VitruvioActor->FindComponentByClass<UVitruvioComponent>();
+			VitruvioActorVitruvioComponent->DestroyComponent(true);
+
+			UVitruvioComponent* VitruvioComponent = DuplicateObject(OldVitruvioComponent, VitruvioActor);
 			VitruvioComponent->OnComponentCreated();
 			VitruvioComponent->RegisterComponent();
 
-			TArray<AActor*> AttachedActors;
-			Actor->GetAttachedActors(AttachedActors);
-			for (AActor* Attached : AttachedActors)
-			{
-				Attached->Destroy();
-			}
+			VitruvioActor->VitruvioComponent = VitruvioComponent;
 
 			Actor->Destroy();
-			GEditor->SelectActor(VitruvioActor, true, true);
-			GEditor->SelectComponent(VitruvioComponent, true, true);
+			GEditor->SelectActor(VitruvioActor, true, false);
 		}
 	}
 	GEditor->NoteSelectionChange();

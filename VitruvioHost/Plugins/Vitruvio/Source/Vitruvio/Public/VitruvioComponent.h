@@ -168,6 +168,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	void SetRandomSeed(int32 NewRandomSeed);
 
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnHierarchyChanged, UVitruvioComponent*) static FOnHierarchyChanged OnHierarchyChanged;
+
 	virtual void PostLoad() override;
 
 	virtual void OnComponentCreated() override;

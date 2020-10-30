@@ -22,6 +22,8 @@ public:
 
 	void OnPropertyChanged(UObject* Object, struct FPropertyChangedEvent& Event);
 
+	void OnVitruvioComponentHierarchyChanged(UVitruvioComponent* Component);
+
 private:
 	TArray<TWeakObjectPtr<UObject>> ObjectsBeingCustomized;
 	TWeakPtr<IDetailLayoutBuilder> CachedDetailBuilder;

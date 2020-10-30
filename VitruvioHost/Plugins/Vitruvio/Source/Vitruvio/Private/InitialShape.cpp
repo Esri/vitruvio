@@ -122,6 +122,15 @@ void UInitialShape::Uninitialize()
 #if WITH_EDITOR
 		Component->Modify();
 #endif
+		// Note that promote to children of DestroyComponent only checks for attached children not actual child components
+		// therefore we have to destroy them manually here
+		TArray<USceneComponent*> Children;
+		Component->GetChildrenComponents(true, Children);
+		for (USceneComponent* Child : Children)
+		{
+			Child->DestroyComponent(true);
+		}
+
 		Component->DestroyComponent(true);
 #if WITH_EDITOR
 		AActor* Owner = Component->GetOwner();

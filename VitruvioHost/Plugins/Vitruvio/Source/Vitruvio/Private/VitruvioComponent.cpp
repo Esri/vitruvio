@@ -110,6 +110,8 @@ bool IsRelevantObject(UVitruvioComponent* VitruvioComponent, UObject* Object)
 
 } // namespace
 
+UVitruvioComponent::FOnHierarchyChanged UVitruvioComponent::OnHierarchyChanged;
+
 UVitruvioComponent::UVitruvioComponent()
 {
 
@@ -284,20 +286,47 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		FConvertedGenerateResult ConvertedResult =
 			BuildResult(Result, VitruvioModule::Get().GetMaterialCache(), VitruvioModule::Get().GetTextureCache());
 
-		RemoveGeneratedMeshes();
+		QUICK_SCOPE_CYCLE_COUNTER(STAT_VitruvioActor_CreateModelActors);
 
-		// Create actors for generated meshes
-		QUICK_SCOPE_CYCLE_COUNTER(STAT_VitruvioActor_CreateActors);
-		FActorSpawnParameters Parameters;
-		Parameters.Owner = GetOwner();
-		AStaticMeshActor* StaticMeshActor = GetWorld()->SpawnActor<AStaticMeshActor>(Parameters);
-		StaticMeshActor->SetMobility(EComponentMobility::Movable);
-		StaticMeshActor->GetStaticMeshComponent()->SetStaticMesh(ConvertedResult.ShapeMesh);
-		StaticMeshActor->AttachToActor(GetOwner(), FAttachmentTransformRules::KeepRelativeTransform);
+		USceneComponent* InitialShapeComponent = InitialShape->GetComponent();
+		UStaticMeshComponent* VitruvioModelComponent = nullptr;
+
+		TArray<USceneComponent*> InitialShapeChildComponents;
+		InitialShapeComponent->GetChildrenComponents(false, InitialShapeChildComponents);
+		for (USceneComponent* Component : InitialShapeChildComponents)
+		{
+			if (Component->IsA(UStaticMeshComponent::StaticClass()))
+			{
+				VitruvioModelComponent = Cast<UStaticMeshComponent>(Component);
+
+				VitruvioModelComponent->SetStaticMesh(nullptr);
+
+				// Cleanup old hierarchical instances
+				TArray<USceneComponent*> InstanceComponents;
+				VitruvioModelComponent->GetChildrenComponents(true, InstanceComponents);
+				for (USceneComponent* InstanceComponent : InstanceComponents)
+				{
+					InstanceComponent->DestroyComponent(true);
+				}
+
+				break;
+			}
+		}
+
+		if (!VitruvioModelComponent)
+		{
+			VitruvioModelComponent = NewObject<UStaticMeshComponent>(InitialShape->GetComponent(), FName(TEXT("GeneratedModel")));
+			VitruvioModelComponent->AttachToComponent(InitialShapeComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			InitialShapeComponent->GetOwner()->AddInstanceComponent(VitruvioModelComponent);
+			VitruvioModelComponent->OnComponentCreated();
+			VitruvioModelComponent->RegisterComponent();
+		}
+
+		VitruvioModelComponent->SetStaticMesh(ConvertedResult.ShapeMesh);
 
 		for (const FInstance& Instance : ConvertedResult.Instances)
 		{
-			auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(StaticMeshActor);
+			auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(VitruvioModelComponent);
 			const TArray<FTransform>& Transforms = Instance.Transforms;
 			InstancedComponent->SetStaticMesh(Instance.Mesh);
 
@@ -313,9 +342,13 @@ void UVitruvioComponent::ProcessGenerateQueue()
 				InstancedComponent->SetMaterial(MaterialIndex, Instance.OverrideMaterials[MaterialIndex]);
 			}
 
-			InstancedComponent->AttachToComponent(StaticMeshActor->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+			InstancedComponent->AttachToComponent(VitruvioModelComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			InitialShapeComponent->GetOwner()->AddInstanceComponent(InstancedComponent);
+			InstancedComponent->OnComponentCreated();
 			InstancedComponent->RegisterComponent();
 		}
+
+		OnHierarchyChanged.Broadcast(this);
 	}
 }
 
@@ -377,17 +410,18 @@ void UVitruvioComponent::NotifyAttributesChanged()
 
 void UVitruvioComponent::RemoveGeneratedMeshes()
 {
-	AActor* Owner = GetOwner();
-	if (Owner == nullptr)
+	if (!InitialShape)
 	{
 		return;
 	}
 
-	TArray<AActor*> GeneratedMeshes;
-	Owner->GetAttachedActors(GeneratedMeshes);
-	for (const auto& Child : GeneratedMeshes)
+	USceneComponent* InitialShapeComponent = InitialShape->GetComponent();
+
+	TArray<USceneComponent*> Children;
+	InitialShapeComponent->GetChildrenComponents(true, Children);
+	for (USceneComponent* Child : Children)
 	{
-		Child->Destroy();
+		Child->DestroyComponent(true);
 	}
 }
 
