@@ -233,7 +233,7 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 
 			const FUIAction SelectAllViableVitruvioActorsAction(FExecuteAction::CreateStatic(SelectAllViableVitruvioActors, SelectedActors));
 			MenuBuilder.AddMenuEntry(FText::FromString("Select All Viable Vitruvio Actors In Hiararchy"),
-									 FText::FromString("Selects all Actors which are viable to attach VitruvioComponents to in hiararchy."),
+									 FText::FromString("Selects all Actors which are viable to attach VitruvioComponents to in hierarchy."),
 									 FSlateIcon(), SelectAllViableVitruvioActorsAction);
 
 			MenuBuilder.EndSection();
