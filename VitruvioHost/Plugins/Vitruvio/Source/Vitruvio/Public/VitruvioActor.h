@@ -17,4 +17,6 @@ public:
 
 	UPROPERTY(VisibleAnywhere, Category = "Vitruvio")
 	UVitruvioComponent* VitruvioComponent;
+
+	virtual void PostEditImport() override;
 };

@@ -211,10 +211,8 @@ void UVitruvioComponent::SetRandomSeed(int32 NewRandomSeed)
 	}
 }
 
-void UVitruvioComponent::PostLoad()
+void UVitruvioComponent::Initialize()
 {
-	Super::PostLoad();
-
 	// During cooking we don't have to do anything here
 	if (GIsCookerLoadingPackage)
 	{
@@ -228,13 +226,22 @@ void UVitruvioComponent::PostLoad()
 	}
 #endif
 
+	InitialShape->Initialize(this);
+
 	CalculateRandomSeed();
 
 	// Check if we can load the attributes and then generate (eg during play)
-	if (InitialShape && InitialShape->IsValid() && Rpk && bAttributesReady)
+	if (IsReadyToGenerate())
 	{
 		Generate();
 	}
+}
+
+void UVitruvioComponent::PostLoad()
+{
+	Super::PostLoad();
+
+	Initialize();
 }
 
 void UVitruvioComponent::OnComponentCreated()
@@ -257,22 +264,7 @@ void UVitruvioComponent::OnComponentCreated()
 		InitialShape = NewObject<UInitialShape>(GetOwner(), GetInitialShapesClasses()[0]);
 	}
 
-	InitialShape->Initialize(this);
-
-	CalculateRandomSeed();
-
-	// If everything is ready we can generate (used for example for copy paste to regenerate the model)
-	if (bAttributesReady)
-	{
-		Generate();
-	}
-
-#if WITH_EDITOR
-	if (!PropertyChangeDelegate.IsValid())
-	{
-		PropertyChangeDelegate = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &UVitruvioComponent::OnPropertyChanged);
-	}
-#endif
+	Initialize();
 }
 
 void UVitruvioComponent::ProcessGenerateQueue()

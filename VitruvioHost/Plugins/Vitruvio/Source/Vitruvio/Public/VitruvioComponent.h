@@ -216,6 +216,8 @@ private:
 	void ProcessGenerateQueue();
 	void ProcessLoadAttributesQueue();
 
+	void Initialize();
+
 	FConvertedGenerateResult BuildResult(FGenerateResultDescription& GenerateResult,
 										 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
 										 TMap<FString, Vitruvio::FTextureData>& TextureCache);

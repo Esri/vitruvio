@@ -2,6 +2,7 @@
 
 #include "InitialShape.h"
 #include "PolygonWindings.h"
+#include "VitruvioComponent.h"
 
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -111,43 +112,50 @@ void UInitialShape::SetFaces(const TArray<FInitialShapeFace>& InFaces)
 
 bool UInitialShape::CanDestroy()
 {
-	return !Component || Component->CreationMethod == EComponentCreationMethod::Instance;
+	return !InitialShapeSceneComponent || InitialShapeSceneComponent->CreationMethod == EComponentCreationMethod::Instance;
 }
 
 void UInitialShape::Uninitialize()
 {
-	if (Component)
+	if (InitialShapeSceneComponent)
 	{
 		// Similarly to Unreal Ed component deletion. See ComponentEditorUtils#DeleteComponents
 #if WITH_EDITOR
-		Component->Modify();
+		InitialShapeSceneComponent->Modify();
 #endif
 		// Note that promote to children of DestroyComponent only checks for attached children not actual child components
 		// therefore we have to destroy them manually here
 		TArray<USceneComponent*> Children;
-		Component->GetChildrenComponents(true, Children);
+		InitialShapeSceneComponent->GetChildrenComponents(true, Children);
 		for (USceneComponent* Child : Children)
 		{
 			Child->DestroyComponent(true);
 		}
 
-		Component->DestroyComponent(true);
+		InitialShapeSceneComponent->DestroyComponent(true);
 #if WITH_EDITOR
-		AActor* Owner = Component->GetOwner();
+		AActor* Owner = InitialShapeSceneComponent->GetOwner();
 		Owner->RerunConstructionScripts();
 #endif
 	}
 }
 
-void UStaticMeshInitialShape::Initialize(UActorComponent* OwnerComponent)
+void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component)
 {
-	AActor* Owner = OwnerComponent->GetOwner();
+	Super::Initialize(Component);
+
+	AActor* Owner = Component->GetOwner();
+	if (!Owner)
+	{
+		return;
+	}
+
 	UStaticMeshComponent* StaticMeshComponent = Owner->FindComponentByClass<UStaticMeshComponent>();
 	if (!StaticMeshComponent)
 	{
 		StaticMeshComponent = AttachComponent<UStaticMeshComponent>(Owner, TEXT("InitialShapeStaticMesh"));
 	}
-	Component = StaticMeshComponent;
+	InitialShapeSceneComponent = StaticMeshComponent;
 
 	UStaticMesh* StaticMesh = StaticMeshComponent->GetStaticMesh();
 
@@ -156,6 +164,10 @@ void UStaticMeshInitialShape::Initialize(UActorComponent* OwnerComponent)
 		bIsValid = false;
 		return;
 	}
+
+#if WITH_EDITORONLY_DATA
+	InitialShapeMesh = StaticMesh;
+#endif
 
 	StaticMesh->bAllowCPUAccess = true;
 
@@ -214,8 +226,14 @@ void UStaticMeshInitialShape::Initialize(UActorComponent* OwnerComponent)
 	SetFaces(InitialShapeFaces);
 }
 
-void UStaticMeshInitialShape::Initialize(UActorComponent* OwnerComponent, const TArray<FInitialShapeFace>& InitialFaces)
+void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces)
 {
+	AActor* Owner = Component->GetOwner();
+	if (!Owner)
+	{
+		return;
+	}
+
 	FMeshDescription MeshDescription = CreateMeshDescription(InitialFaces);
 	MeshDescription.TriangulateMesh();
 
@@ -234,13 +252,12 @@ void UStaticMeshInitialShape::Initialize(UActorComponent* OwnerComponent, const 
 	StaticMesh = NewObject<UStaticMesh>();
 #endif
 
-	AActor* Owner = OwnerComponent->GetOwner();
 	StaticMesh->BuildFromMeshDescriptions(MeshDescriptions);
 
 	UStaticMeshComponent* AttachedStaticMeshComponent = AttachComponent<UStaticMeshComponent>(Owner, TEXT("InitialShapeStaticMesh"));
 	AttachedStaticMeshComponent->SetStaticMesh(StaticMesh);
 
-	Initialize(OwnerComponent);
+	Initialize(Component);
 }
 
 bool UStaticMeshInitialShape::CanConstructFrom(AActor* Owner) const
@@ -284,11 +301,37 @@ bool UStaticMeshInitialShape::IsRelevantProperty(UObject* Object, const FPropert
 	}
 	return false;
 }
+
+void UStaticMeshInitialShape::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+#if WITH_EDITORONLY_DATA
+	if (PropertyChangedEvent.Property &&
+		PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UStaticMeshInitialShape, InitialShapeMesh))
+	{
+		UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(InitialShapeSceneComponent);
+		StaticMeshComponent->SetStaticMesh(InitialShapeMesh);
+
+		// We need to fire the property changed event manually
+		for (TFieldIterator<FProperty> PropIt(StaticMeshComponent->GetClass()); PropIt; ++PropIt)
+		{
+			if (PropIt->GetFName() == TEXT("StaticMesh"))
+			{
+				FProperty* Property = *PropIt;
+				FPropertyChangedEvent StaticMeshPropertyChangedEvent(Property);
+				VitruvioComponent->OnPropertyChanged(VitruvioComponent, StaticMeshPropertyChangedEvent);
+				break;
+			}
+		}
+	}
+#endif
+}
 #endif
 
-void USplineInitialShape::Initialize(UActorComponent* OwnerComponent)
+void USplineInitialShape::Initialize(UVitruvioComponent* Component)
 {
-	AActor* Owner = OwnerComponent->GetOwner();
+	Super::Initialize(Component);
+
+	AActor* Owner = Component->GetOwner();
 	USplineComponent* SplineComponent = Owner->FindComponentByClass<USplineComponent>();
 	if (!SplineComponent)
 	{
@@ -297,7 +340,7 @@ void USplineInitialShape::Initialize(UActorComponent* OwnerComponent)
 
 	SplineComponent->SetClosedLoop(true);
 
-	Component = SplineComponent;
+	InitialShapeSceneComponent = SplineComponent;
 
 	TArray<FVector> Vertices;
 	const int32 NumPoints = SplineComponent->GetNumberOfSplinePoints();
@@ -340,9 +383,10 @@ void USplineInitialShape::Initialize(UActorComponent* OwnerComponent)
 	SetFaces({FInitialShapeFace{Vertices}});
 }
 
-void USplineInitialShape::Initialize(UActorComponent* OwnerComponent, const TArray<FInitialShapeFace>& InitialFaces)
+void USplineInitialShape::Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces)
 {
-	AActor* Owner = OwnerComponent->GetOwner();
+
+	AActor* Owner = Component->GetOwner();
 
 	for (const FInitialShapeFace& Face : InitialFaces)
 	{
@@ -358,5 +402,5 @@ void USplineInitialShape::Initialize(UActorComponent* OwnerComponent, const TArr
 		}
 	}
 
-	Initialize(OwnerComponent);
+	Initialize(Component);
 }

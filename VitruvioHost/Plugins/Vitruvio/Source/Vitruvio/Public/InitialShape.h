@@ -10,6 +10,8 @@
 
 #include "InitialShape.generated.h"
 
+class UVitruvioComponent;
+
 USTRUCT()
 struct VITRUVIO_API FInitialShapeFace
 {
@@ -33,7 +35,10 @@ protected:
 	bool bIsValid;
 
 	UPROPERTY()
-	USceneComponent* Component;
+	USceneComponent* InitialShapeSceneComponent;
+
+	UPROPERTY()
+	UVitruvioComponent* VitruvioComponent;
 
 public:
 	const TArray<FInitialShapeFace>& GetFaces() const
@@ -50,19 +55,19 @@ public:
 
 	USceneComponent* GetComponent() const
 	{
-		return Component;
+		return InitialShapeSceneComponent;
 	}
 
 	void SetFaces(const TArray<FInitialShapeFace>& InFaces);
 
-	virtual void Initialize(UActorComponent* OwnerComponent, const TArray<FInitialShapeFace>& InitialFaces)
+	virtual void Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces)
 	{
 		unimplemented();
 	}
 
-	virtual void Initialize(UActorComponent* OwnerComponent)
+	virtual void Initialize(UVitruvioComponent* Component)
 	{
-		unimplemented();
+		VitruvioComponent = Component;
 	}
 
 	virtual bool CanConstructFrom(AActor* Owner) const
@@ -90,12 +95,18 @@ class VITRUVIO_API UStaticMeshInitialShape : public UInitialShape
 public:
 	GENERATED_BODY()
 
-	virtual void Initialize(UActorComponent* OwnerComponent) override;
-	virtual void Initialize(UActorComponent* OwnerComponent, const TArray<FInitialShapeFace>& InitialFaces) override;
+	virtual void Initialize(UVitruvioComponent* Component) override;
+	virtual void Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces) override;
 	virtual bool CanConstructFrom(AActor* Owner) const override;
 
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent) override;
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
+
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
+	UStaticMesh* InitialShapeMesh;
 #endif
 };
 
@@ -108,8 +119,8 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Vitruvio", Meta = (UIMin = 5, UIMax = 50))
 	int32 SplineApproximationPoints = 15;
 
-	virtual void Initialize(UActorComponent* OwnerComponent) override;
-	virtual void Initialize(UActorComponent* OwnerComponent, const TArray<FInitialShapeFace>& InitialFaces) override;
+	virtual void Initialize(UVitruvioComponent* Component) override;
+	virtual void Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces) override;
 	virtual bool CanConstructFrom(AActor* Owner) const override;
 
 #if WITH_EDITOR
