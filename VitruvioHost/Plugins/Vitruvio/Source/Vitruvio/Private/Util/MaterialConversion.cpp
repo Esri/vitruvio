@@ -443,6 +443,7 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, cons
 	}
 
 	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, Outer, Name);
+	MaterialInstance->SetFlags(RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
 
 	MaterialInstance->SetScalarParameterValue(FName(TEXT("opacitySource")), UseAlphaAsOpacity);
 

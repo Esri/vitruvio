@@ -114,7 +114,6 @@ UVitruvioComponent::FOnHierarchyChanged UVitruvioComponent::OnHierarchyChanged;
 
 UVitruvioComponent::UVitruvioComponent()
 {
-
 	static ConstructorHelpers::FObjectFinder<UMaterial> Opaque(TEXT("Material'/Vitruvio/Materials/M_OpaqueParent.M_OpaqueParent'"));
 	static ConstructorHelpers::FObjectFinder<UMaterial> Masked(TEXT("Material'/Vitruvio/Materials/M_MaskedParent.M_MaskedParent'"));
 	static ConstructorHelpers::FObjectFinder<UMaterial> Translucent(TEXT("Material'/Vitruvio/Materials/M_TranslucentParent.M_TranslucentParent'"));
@@ -307,7 +306,8 @@ void UVitruvioComponent::ProcessGenerateQueue()
 
 		if (!VitruvioModelComponent)
 		{
-			VitruvioModelComponent = NewObject<UStaticMeshComponent>(InitialShape->GetComponent(), FName(TEXT("GeneratedModel")));
+			VitruvioModelComponent = NewObject<UStaticMeshComponent>(InitialShape->GetComponent(), FName(TEXT("GeneratedModel")),
+																	 RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
 			VitruvioModelComponent->AttachToComponent(InitialShapeComponent, FAttachmentTransformRules::KeepRelativeTransform);
 			InitialShapeComponent->GetOwner()->AddInstanceComponent(VitruvioModelComponent);
 			VitruvioModelComponent->OnComponentCreated();
@@ -318,7 +318,8 @@ void UVitruvioComponent::ProcessGenerateQueue()
 
 		for (const FInstance& Instance : ConvertedResult.Instances)
 		{
-			auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(VitruvioModelComponent);
+			auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(
+				VitruvioModelComponent, NAME_None, RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
 			const TArray<FTransform>& Transforms = Instance.Transforms;
 			InstancedComponent->SetStaticMesh(Instance.Mesh);
 
@@ -441,7 +442,8 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 	// convert all meshes
 	for (auto& IdAndMesh : GenerateResult.MeshDescriptions)
 	{
-		UStaticMesh* StaticMesh = NewObject<UStaticMesh>();
+		UStaticMesh* StaticMesh =
+			NewObject<UStaticMesh>(GetTransientPackage(), NAME_None, RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
 		TMap<UMaterialInstanceDynamic*, FName> MaterialSlots;
 
 		const TArray<Vitruvio::FMaterialAttributeContainer>& MeshMaterials = GenerateResult.Materials[IdAndMesh.Key];

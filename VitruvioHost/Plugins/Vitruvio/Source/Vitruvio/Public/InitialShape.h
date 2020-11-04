@@ -105,7 +105,7 @@ public:
 #endif
 
 #if WITH_EDITORONLY_DATA
-	UPROPERTY(EditAnywhere, Category = "Vitruvio")
+	UPROPERTY(EditAnywhere, Category = "Vitruvio", TextExportTransient, Transient, DuplicateTransient)
 	UStaticMesh* InitialShapeMesh;
 #endif
 };
