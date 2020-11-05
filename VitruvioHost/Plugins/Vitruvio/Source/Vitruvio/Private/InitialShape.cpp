@@ -132,11 +132,15 @@ void UInitialShape::Uninitialize()
 			Child->DestroyComponent(true);
 		}
 
+		AActor* Owner = InitialShapeSceneComponent->GetOwner();
+
 		InitialShapeSceneComponent->DestroyComponent(true);
 #if WITH_EDITOR
-		AActor* Owner = InitialShapeSceneComponent->GetOwner();
 		Owner->RerunConstructionScripts();
 #endif
+
+		InitialShapeSceneComponent = nullptr;
+		VitruvioComponent = nullptr;
 	}
 }
 

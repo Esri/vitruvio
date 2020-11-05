@@ -72,7 +72,7 @@ public:
 	UPROPERTY(EditAnywhere, DisplayName = "Translucent Parent", Category = "Vitruvio Default Materials")
 	UMaterial* TranslucentParent;
 
-	UPROPERTY(VisibleAnywhere, Instanced, Category = "Vitruvio")
+	UPROPERTY(VisibleAnywhere, Instanced, Category = "Vitruvio", Transient, DuplicateTransient, TextExportTransient)
 	UInitialShape* InitialShape = nullptr;
 
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
@@ -168,11 +168,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	void SetRandomSeed(int32 NewRandomSeed);
 
+	/* Initialize the VitruvioComponent. Only needs to be called if the Component is natively attached. */
+	void Initialize();
+
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnHierarchyChanged, UVitruvioComponent*) static FOnHierarchyChanged OnHierarchyChanged;
 
 	virtual void PostLoad() override;
 
 	virtual void OnComponentCreated() override;
+
+	void LoadInitialShape();
 
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
 
@@ -215,8 +220,6 @@ private:
 
 	void ProcessGenerateQueue();
 	void ProcessLoadAttributesQueue();
-
-	void Initialize();
 
 	FConvertedGenerateResult BuildResult(FGenerateResultDescription& GenerateResult,
 										 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,

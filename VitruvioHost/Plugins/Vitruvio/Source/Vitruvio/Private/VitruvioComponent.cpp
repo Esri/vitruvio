@@ -210,9 +210,36 @@ void UVitruvioComponent::SetRandomSeed(int32 NewRandomSeed)
 	}
 }
 
+void UVitruvioComponent::LoadInitialShape()
+{
+	// Do nothing if an initial shape has already been loaded
+	if (InitialShape)
+	{
+		return;
+	}
+
+	// Detect initial initial shape type (eg if there has already been a StaticMeshComponent assigned to the actor)
+	check(GetInitialShapesClasses().Num() > 0);
+	for (const auto& InitialShapeClasses : GetInitialShapesClasses())
+	{
+		UInitialShape* DefaultInitialShape = Cast<UInitialShape>(InitialShapeClasses->GetDefaultObject());
+		if (DefaultInitialShape && DefaultInitialShape->CanConstructFrom(this->GetOwner()))
+		{
+			InitialShape = NewObject<UInitialShape>(GetOwner(), DefaultInitialShape->GetClass(), NAME_None, RF_Transient | RF_TextExportTransient);
+		}
+	}
+
+	if (!InitialShape)
+	{
+		InitialShape = NewObject<UInitialShape>(GetOwner(), GetInitialShapesClasses()[0], NAME_None, RF_Transient | RF_TextExportTransient);
+	}
+
+	InitialShape->Initialize(this);
+}
+
 void UVitruvioComponent::Initialize()
 {
-	// During cooking we don't have to do anything here
+	// During cooking we don't need to do initialize anything as we don't wont to generate during the cooking process
 	if (GIsCookerLoadingPackage)
 	{
 		return;
@@ -225,7 +252,9 @@ void UVitruvioComponent::Initialize()
 	}
 #endif
 
-	InitialShape->Initialize(this);
+	LoadInitialShape();
+
+	OnHierarchyChanged.Broadcast(this);
 
 	CalculateRandomSeed();
 
@@ -240,30 +269,22 @@ void UVitruvioComponent::PostLoad()
 {
 	Super::PostLoad();
 
-	Initialize();
+	// Only initialize if the Component is instance (eg via details panel to any Actor)
+	if (CreationMethod == EComponentCreationMethod::Instance)
+	{
+		Initialize();
+	}
 }
 
 void UVitruvioComponent::OnComponentCreated()
 {
 	Super::OnComponentCreated();
 
-	// Detect initial initial shape type (eg if there has already been a StaticMeshComponent assigned to the actor)
-	check(GetInitialShapesClasses().Num() > 0);
-	for (const auto& InitialShapeClasses : GetInitialShapesClasses())
+	// Only initialize if the Component is instance (eg via details panel to any Actor)
+	if (CreationMethod == EComponentCreationMethod::Instance)
 	{
-		UInitialShape* DefaultInitialShape = Cast<UInitialShape>(InitialShapeClasses->GetDefaultObject());
-		if (DefaultInitialShape && DefaultInitialShape->CanConstructFrom(this->GetOwner()))
-		{
-			InitialShape = NewObject<UInitialShape>(GetOwner(), DefaultInitialShape->GetClass());
-		}
+		Initialize();
 	}
-
-	if (!InitialShape)
-	{
-		InitialShape = NewObject<UInitialShape>(GetOwner(), GetInitialShapesClasses()[0]);
-	}
-
-	Initialize();
 }
 
 void UVitruvioComponent::ProcessGenerateQueue()
@@ -306,8 +327,8 @@ void UVitruvioComponent::ProcessGenerateQueue()
 
 		if (!VitruvioModelComponent)
 		{
-			VitruvioModelComponent = NewObject<UStaticMeshComponent>(InitialShape->GetComponent(), FName(TEXT("GeneratedModel")),
-																	 RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
+			VitruvioModelComponent =
+				NewObject<UStaticMeshComponent>(InitialShape->GetComponent(), FName(TEXT("GeneratedModel")), RF_Transient | RF_DuplicateTransient);
 			VitruvioModelComponent->AttachToComponent(InitialShapeComponent, FAttachmentTransformRules::KeepRelativeTransform);
 			InitialShapeComponent->GetOwner()->AddInstanceComponent(VitruvioModelComponent);
 			VitruvioModelComponent->OnComponentCreated();
@@ -318,8 +339,8 @@ void UVitruvioComponent::ProcessGenerateQueue()
 
 		for (const FInstance& Instance : ConvertedResult.Instances)
 		{
-			auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(
-				VitruvioModelComponent, NAME_None, RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
+			auto InstancedComponent =
+				NewObject<UHierarchicalInstancedStaticMeshComponent>(VitruvioModelComponent, NAME_None, RF_Transient | RF_DuplicateTransient);
 			const TArray<FTransform>& Transforms = Instance.Transforms;
 			InstancedComponent->SetStaticMesh(Instance.Mesh);
 
@@ -442,8 +463,7 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 	// convert all meshes
 	for (auto& IdAndMesh : GenerateResult.MeshDescriptions)
 	{
-		UStaticMesh* StaticMesh =
-			NewObject<UStaticMesh>(GetTransientPackage(), NAME_None, RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
+		UStaticMesh* StaticMesh = NewObject<UStaticMesh>(GetTransientPackage(), NAME_None, RF_Transient);
 		TMap<UMaterialInstanceDynamic*, FName> MaterialSlots;
 
 		const TArray<Vitruvio::FMaterialAttributeContainer>& MeshMaterials = GenerateResult.Materials[IdAndMesh.Key];
@@ -610,7 +630,9 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 	// If a property has changed which is used for creating the initial shape we have to recreate it
 	if (bRecreateInitialShape)
 	{
-		InitialShape = DuplicateObject(InitialShape, GetOwner());
+		UInitialShape* DuplicatedInitialShape = DuplicateObject(InitialShape, GetOwner());
+		InitialShape->Rename(nullptr, GetTransientPackage()); // Remove from Owner
+		InitialShape = DuplicatedInitialShape;
 		InitialShape->Initialize(this);
 
 		CalculateRandomSeed();
@@ -634,12 +656,13 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 
 void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& Type)
 {
-	UInitialShape* NewInitialShape = DuplicateObject(Type.GetDefaultObject(), GetOwner());
+	UInitialShape* NewInitialShape = NewObject<UInitialShape>(GetOwner(), Type, NAME_None, RF_Transient | RF_TextExportTransient);
 
 	if (InitialShape)
 	{
 		const TArray<FInitialShapeFace> Faces = InitialShape->GetFaces();
 		InitialShape->Uninitialize();
+
 		NewInitialShape->Initialize(this, Faces);
 	}
 	else
@@ -647,6 +670,7 @@ void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& T
 		NewInitialShape->Initialize(this);
 	}
 
+	InitialShape->Rename(nullptr, GetTransientPackage()); // Remove from Owner
 	InitialShape = NewInitialShape;
 
 	RemoveGeneratedMeshes();

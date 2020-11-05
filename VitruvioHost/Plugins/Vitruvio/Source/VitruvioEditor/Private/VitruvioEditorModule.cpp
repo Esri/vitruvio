@@ -106,8 +106,8 @@ void AddVitruvioComponents(TArray<AActor*> Actors)
 			AActor* OldAttachParent = Actor->GetAttachParentActor();
 			if (Actor->IsA<AStaticMeshActor>())
 			{
-				// TODO try to keep name
 				AVitruvioActor* VitruvioActor = Actor->GetWorld()->SpawnActor<AVitruvioActor>(Actor->GetActorLocation(), Actor->GetActorRotation());
+				VitruvioActor->Initialize();
 
 				UStaticMeshComponent* OldStaticMeshComponent = Actor->FindComponentByClass<UStaticMeshComponent>();
 				UStaticMeshComponent* StaticMeshComponent = VitruvioActor->FindComponentByClass<UStaticMeshComponent>();

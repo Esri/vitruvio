@@ -18,5 +18,10 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = "Vitruvio")
 	UVitruvioComponent* VitruvioComponent;
 
-	virtual void PostEditImport() override;
+	virtual void Tick(float DeltaSeconds) override;
+	virtual bool ShouldTickIfViewportsOnly() const override;
+	void Initialize();
+
+private:
+	bool bInitialized = false;
 };
