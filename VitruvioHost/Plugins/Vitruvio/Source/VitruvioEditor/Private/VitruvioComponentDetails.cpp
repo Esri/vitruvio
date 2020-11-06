@@ -451,6 +451,14 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	ObjectsBeingCustomized.Empty();
 	DetailBuilder.GetObjectsBeingCustomized(ObjectsBeingCustomized);
 
+	// If there are more than one selected items we only hide the attributes and return
+	// No support for editing attributes on multiple initial shapes simultaneous
+	if (ObjectsBeingCustomized.Num() > 1)
+	{
+		DetailBuilder.GetProperty(FName(TEXT("Attributes")))->MarkHiddenByCustomization();
+		return;
+	}
+
 	UVitruvioComponent* VitruvioComponent = nullptr;
 
 	if (IsVitruvioComponentSelected(ObjectsBeingCustomized, VitruvioComponent))
@@ -513,7 +521,29 @@ void FVitruvioComponentDetails::OnPropertyChanged(UObject* Object, struct FPrope
 	if (PropertyName == FName(TEXT("Attributes")) || PropertyName == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateAutomatically))
 	{
 		const auto DetailBuilder = CachedDetailBuilder.Pin().Get();
-		if (DetailBuilder)
+
+		if (!DetailBuilder)
+		{
+			return;
+		}
+
+		TArray<TWeakObjectPtr<UObject>> Objects;
+		DetailBuilder->GetObjectsBeingCustomized(Objects);
+
+		if (Objects.Num() > 0)
+		{
+			return;
+		}
+
+		UObject* ObjectModified = Objects[0].Get();
+		UVitruvioComponent* Component = Cast<UVitruvioComponent>(Object);
+		AActor* Owner = nullptr;
+		if (Component)
+		{
+			Owner = Component->GetOwner();
+		}
+
+		if (ObjectModified == Component || ObjectModified == Owner)
 		{
 			DetailBuilder->ForceRefreshDetails();
 		}
