@@ -530,7 +530,7 @@ void FVitruvioComponentDetails::OnPropertyChanged(UObject* Object, struct FPrope
 		TArray<TWeakObjectPtr<UObject>> Objects;
 		DetailBuilder->GetObjectsBeingCustomized(Objects);
 
-		if (Objects.Num() > 0)
+		if (Objects.Num() > 1)
 		{
 			return;
 		}
