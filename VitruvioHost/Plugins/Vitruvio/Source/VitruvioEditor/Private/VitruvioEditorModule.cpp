@@ -61,39 +61,6 @@ TArray<AActor*> GetViableVitruvioActorsInHiararchy(AActor* Root)
 	return ViableActors;
 }
 
-bool HasAnyVitruvioComponent(TArray<AActor*> Actors)
-{
-	return Algo::AnyOf(Actors, [](AActor* In) {
-		UVitruvioComponent* Component = In->FindComponentByClass<UVitruvioComponent>();
-		if (Component)
-		{
-			return true;
-		}
-		return false;
-	});
-}
-
-void SwitchRpk(TArray<AActor*> Actors)
-{
-	TOptional<URulePackage*> SelectedRpk = FChooseRulePackageDialog::OpenDialog();
-
-	GEditor->SelectNone(true, true, false);
-
-	if (SelectedRpk.IsSet())
-	{
-		URulePackage* Rpk = SelectedRpk.GetValue();
-
-		for (AActor* Actor : Actors)
-		{
-			if (UVitruvioComponent* Component = Actor->FindComponentByClass<UVitruvioComponent>())
-			{
-				Component->SetRpk(Rpk);
-				Component->Generate();
-			}
-		}
-	}
-}
-
 void AssignRulePackage(TArray<AActor*> Actors)
 {
 	TOptional<URulePackage*> SelectedRpk = FChooseRulePackageDialog::OpenDialog();
@@ -163,15 +130,6 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 					FText::FromString("Convert to Vitruvio Actor"),
 					FText::FromString("Converts all viable selected Initial Shapes to Vitruvio Actors and assigns the chosen Rule Package."),
 					FSlateIcon(), AddVitruvioComponentAction);
-			}
-
-			if (HasAnyVitruvioComponent(SelectedActors))
-			{
-				const FUIAction SwitchRpkAction(FExecuteAction::CreateStatic(SwitchRpk, SelectedActors));
-
-				MenuBuilder.AddMenuEntry(FText::FromString("Change Rule Package"),
-										 FText::FromString("Changes the Rule Package of all selected Vitruvio Actors"), FSlateIcon(),
-										 SwitchRpkAction);
 			}
 
 			MenuBuilder.EndSection();
