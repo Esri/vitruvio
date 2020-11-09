@@ -76,17 +76,20 @@ void AssignRulePackage(TArray<AActor*> Actors)
 			if (Actor->IsA<AStaticMeshActor>())
 			{
 				AVitruvioActor* VitruvioActor = Actor->GetWorld()->SpawnActor<AVitruvioActor>(Actor->GetActorLocation(), Actor->GetActorRotation());
-				VitruvioActor->Initialize();
 
 				UStaticMeshComponent* OldStaticMeshComponent = Actor->FindComponentByClass<UStaticMeshComponent>();
-				UStaticMeshComponent* StaticMeshComponent = VitruvioActor->FindComponentByClass<UStaticMeshComponent>();
 
-				StaticMeshComponent->SetStaticMesh(OldStaticMeshComponent->GetStaticMesh());
-				StaticMeshComponent->Mobility = EComponentMobility::Movable;
+				UStaticMeshComponent* NewStaticMeshComponent = DuplicateObject(OldStaticMeshComponent, VitruvioActor, TEXT("InitialShapeStaticMesh"));
+				NewStaticMeshComponent->Mobility = EComponentMobility::Movable;
+				VitruvioActor->AddInstanceComponent(NewStaticMeshComponent);
+				NewStaticMeshComponent->AttachToComponent(VitruvioActor->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+				NewStaticMeshComponent->OnComponentCreated();
+				NewStaticMeshComponent->RegisterComponent();
 
 				UVitruvioComponent* VitruvioComponent = VitruvioActor->VitruvioComponent;
-				VitruvioComponent->InitialShape->Initialize(VitruvioComponent);
 				VitruvioComponent->SetRpk(Rpk);
+
+				VitruvioActor->Initialize();
 
 				if (OldAttachParent)
 				{
