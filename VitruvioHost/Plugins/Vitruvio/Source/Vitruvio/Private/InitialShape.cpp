@@ -173,7 +173,13 @@ void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component)
 	InitialShapeMesh = StaticMesh;
 #endif
 
+#if WITH_EDITOR
+	StaticMesh->Modify(false);
+#endif
 	StaticMesh->bAllowCPUAccess = true;
+#if WITH_EDITOR
+	StaticMesh->PostEditChange();
+#endif
 
 	TArray<FVector> MeshVertices;
 	TArray<int32> RemappedIndices;
