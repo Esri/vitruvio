@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "1.0",
+	"VersionName": "2020.1",
 	"FriendlyName": "Vitruvio",
 	"Description": "Vitruvio adds support for CityEngine's procedural runtime (PRT)",
 	"Category": "Misc",
@@ -12,6 +12,8 @@
 	"SupportURL": "https://doc.arcgis.com/en/cityengine/",
 	"EngineVersion": "4.25.0",
 	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
 	"Installed": true,
 	"Modules": [
 		{
