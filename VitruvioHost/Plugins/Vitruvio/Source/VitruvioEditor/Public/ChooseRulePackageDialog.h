@@ -10,7 +10,7 @@ class URulePackageOptions : public UObject
 {
 	GENERATED_BODY()
 public:
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	URulePackage* RulePackage;
 };
 
