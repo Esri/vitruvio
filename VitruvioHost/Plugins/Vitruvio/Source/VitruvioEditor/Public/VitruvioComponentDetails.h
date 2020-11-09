@@ -20,7 +20,8 @@ public:
 	void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 	void CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& DetailBuilder) override;
 
-	void OnPropertyChanged(UObject* Object, struct FPropertyChangedEvent& Event);
+	void OnAttributesChanged(UObject* Object, struct FPropertyChangedEvent& Event);
+	void OnGenerateAutomaticallyChanged();
 
 	void OnVitruvioComponentHierarchyChanged(UVitruvioComponent* Component);
 

@@ -385,7 +385,7 @@ FVitruvioComponentDetails::FVitruvioComponentDetails()
 		InitialShapeTypeMap.Add(InitialShapeOption, *InitialShapeType);
 	}
 
-	FCoreUObjectDelegates::OnObjectPropertyChanged.AddRaw(this, &FVitruvioComponentDetails::OnPropertyChanged);
+	FCoreUObjectDelegates::OnObjectPropertyChanged.AddRaw(this, &FVitruvioComponentDetails::OnAttributesChanged);
 	UVitruvioComponent::OnHierarchyChanged.AddRaw(this, &FVitruvioComponentDetails::OnVitruvioComponentHierarchyChanged);
 }
 
@@ -448,6 +448,11 @@ void FVitruvioComponentDetails::AddSwitchInitialShapeCombobox(IDetailCategoryBui
 
 void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
+	TSharedPtr<IPropertyHandle> GenerateAutomaticallyProperty =
+		DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateAutomatically), UVitruvioComponent::StaticClass());
+	GenerateAutomaticallyProperty->SetOnPropertyValueChanged(
+		FSimpleDelegate::CreateSP(this, &FVitruvioComponentDetails::OnGenerateAutomaticallyChanged));
+
 	ObjectsBeingCustomized.Empty();
 	DetailBuilder.GetObjectsBeingCustomized(ObjectsBeingCustomized);
 
@@ -510,7 +515,16 @@ void FVitruvioComponentDetails::CustomizeDetails(const TSharedPtr<IDetailLayoutB
 	CustomizeDetails(*DetailBuilder);
 }
 
-void FVitruvioComponentDetails::OnPropertyChanged(UObject* Object, struct FPropertyChangedEvent& Event)
+void FVitruvioComponentDetails::OnGenerateAutomaticallyChanged()
+{
+	IDetailLayoutBuilder* DetailBuilder = CachedDetailBuilder.Pin().Get();
+	if (DetailBuilder)
+	{
+		DetailBuilder->ForceRefreshDetails();
+	}
+}
+
+void FVitruvioComponentDetails::OnAttributesChanged(UObject* Object, struct FPropertyChangedEvent& Event)
 {
 	if (!Event.Property || Event.ChangeType == EPropertyChangeType::Interactive)
 	{
@@ -518,7 +532,7 @@ void FVitruvioComponentDetails::OnPropertyChanged(UObject* Object, struct FPrope
 	}
 
 	const FName PropertyName = Event.Property->GetFName();
-	if (PropertyName == FName(TEXT("Attributes")) || PropertyName == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateAutomatically))
+	if (PropertyName == FName(TEXT("Attributes")))
 	{
 		const auto DetailBuilder = CachedDetailBuilder.Pin().Get();
 
