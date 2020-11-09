@@ -79,8 +79,9 @@ void AssignRulePackage(TArray<AActor*> Actors)
 
 				UStaticMeshComponent* OldStaticMeshComponent = Actor->FindComponentByClass<UStaticMeshComponent>();
 
-				UStaticMeshComponent* NewStaticMeshComponent = DuplicateObject(OldStaticMeshComponent, VitruvioActor, TEXT("InitialShapeStaticMesh"));
+				UStaticMeshComponent* NewStaticMeshComponent = NewObject<UStaticMeshComponent>(VitruvioActor, TEXT("InitialShapeStaticMesh"));
 				NewStaticMeshComponent->Mobility = EComponentMobility::Movable;
+				NewStaticMeshComponent->SetStaticMesh(OldStaticMeshComponent->GetStaticMesh());
 				NewStaticMeshComponent->SetWorldTransform(VitruvioActor->GetTransform());
 				VitruvioActor->AddInstanceComponent(NewStaticMeshComponent);
 				NewStaticMeshComponent->AttachToComponent(VitruvioActor->GetRootComponent(), FAttachmentTransformRules::KeepWorldTransform);
