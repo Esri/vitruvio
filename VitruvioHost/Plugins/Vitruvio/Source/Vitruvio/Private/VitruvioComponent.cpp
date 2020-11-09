@@ -600,6 +600,11 @@ void UVitruvioComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 
 void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEvent& PropertyChangedEvent)
 {
+	if (Object != this)
+	{
+		return;
+	}
+
 	// Happens for example during import from copy paste
 	if (!PropertyChangedEvent.Property)
 	{
@@ -607,21 +612,18 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 	}
 
 	bool bComponentPropertyChanged = false;
-	if (Object == this && PropertyChangedEvent.Property)
+	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Rpk))
 	{
-		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Rpk))
-		{
-			Attributes.Empty();
-			bAttributesReady = false;
-			bComponentPropertyChanged = true;
-			bNotifyAttributeChange = true;
-		}
+		Attributes.Empty();
+		bAttributesReady = false;
+		bComponentPropertyChanged = true;
+		bNotifyAttributeChange = true;
+	}
 
-		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, RandomSeed))
-		{
-			bValidRandomSeed = true;
-			bComponentPropertyChanged = true;
-		}
+	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, RandomSeed))
+	{
+		bValidRandomSeed = true;
+		bComponentPropertyChanged = true;
 	}
 
 	const bool bRelevantProperty = InitialShape && InitialShape->IsRelevantProperty(Object, PropertyChangedEvent);
