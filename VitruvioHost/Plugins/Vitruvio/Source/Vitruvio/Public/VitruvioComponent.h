@@ -56,8 +56,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Generate Automatically", Category = "Vitruvio")
 	bool GenerateAutomatically = true;
 
-	/** Automatically hide initial shape (i.e. this actor's static mesh) after generation. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Hide after Generation", Category = "Vitruvio")
+	/** Automatically hide initial shape after generation. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Hide Initial Shape after Generation", Category = "Vitruvio")
 	bool HideAfterGeneration = false;
 
 	/** Default parent material for opaque geometry. */
@@ -210,6 +210,8 @@ private:
 
 	FGenerateResult::FTokenPtr GenerateToken;
 	FAttributeMapResult::FTokenPtr LoadAttributesInvalidationToken;
+
+	bool HasGeneratedMesh = false;
 
 	void CalculateRandomSeed();
 

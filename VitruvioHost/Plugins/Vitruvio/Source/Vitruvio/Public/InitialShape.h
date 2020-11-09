@@ -76,6 +76,8 @@ public:
 		return false;
 	}
 
+	virtual void SetHidden(bool bHidden) {}
+
 	virtual bool CanDestroy();
 	virtual void Uninitialize();
 
@@ -98,6 +100,7 @@ public:
 	virtual void Initialize(UVitruvioComponent* Component) override;
 	virtual void Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces) override;
 	virtual bool CanConstructFrom(AActor* Owner) const override;
+	virtual void SetHidden(bool bHidden) override;
 
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent) override;

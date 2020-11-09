@@ -385,6 +385,9 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		}
 
 		OnHierarchyChanged.Broadcast(this);
+
+		HasGeneratedMesh = true;
+		InitialShape->SetHidden(HideAfterGeneration);
 	}
 }
 
@@ -459,6 +462,9 @@ void UVitruvioComponent::RemoveGeneratedMeshes()
 	{
 		Child->DestroyComponent(true);
 	}
+
+	HasGeneratedMesh = false;
+	InitialShape->SetHidden(false);
 }
 
 FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescription& GenerateResult,
@@ -647,6 +653,11 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 	{
 		bValidRandomSeed = true;
 		bComponentPropertyChanged = true;
+	}
+
+	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, HideAfterGeneration))
+	{
+		InitialShape->SetHidden(HideAfterGeneration && HasGeneratedMesh);
 	}
 
 	const bool bRelevantProperty = InitialShape && InitialShape->IsRelevantProperty(Object, PropertyChangedEvent);

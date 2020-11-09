@@ -280,6 +280,12 @@ bool UStaticMeshInitialShape::CanConstructFrom(AActor* Owner) const
 	return false;
 }
 
+void UStaticMeshInitialShape::SetHidden(bool bHidden)
+{
+	InitialShapeSceneComponent->SetVisibility(!bHidden, false);
+	InitialShapeSceneComponent->SetHiddenInGame(bHidden);
+}
+
 bool USplineInitialShape::CanConstructFrom(AActor* Owner) const
 {
 	if (Owner)
