@@ -544,22 +544,20 @@ void FVitruvioComponentDetails::OnAttributesChanged(UObject* Object, struct FPro
 		TArray<TWeakObjectPtr<UObject>> Objects;
 		DetailBuilder->GetObjectsBeingCustomized(Objects);
 
-		if (Objects.Num() > 1)
+		if (Objects.Num() == 1)
 		{
-			return;
-		}
+			UObject* ObjectModified = Objects[0].Get();
+			UVitruvioComponent* Component = Cast<UVitruvioComponent>(Object);
+			AActor* Owner = nullptr;
+			if (Component)
+			{
+				Owner = Component->GetOwner();
+			}
 
-		UObject* ObjectModified = Objects[0].Get();
-		UVitruvioComponent* Component = Cast<UVitruvioComponent>(Object);
-		AActor* Owner = nullptr;
-		if (Component)
-		{
-			Owner = Component->GetOwner();
-		}
-
-		if (ObjectModified == Component || ObjectModified == Owner)
-		{
-			DetailBuilder->ForceRefreshDetails();
+			if (ObjectModified == Component || ObjectModified == Owner)
+			{
+				DetailBuilder->ForceRefreshDetails();
+			}
 		}
 	}
 }
