@@ -82,6 +82,28 @@ bool SetAttribute(UVitruvioComponent* VitruvioComponent, TMap<FString, URuleAttr
 	return true;
 }
 
+bool IsOuterOf(UObject* Inner, UObject* Outer)
+{
+	if (!Outer)
+	{
+		return false;
+	}
+
+	UObject* Current = Inner->GetOuter();
+
+	while (Current != nullptr)
+	{
+		if (Current == Outer)
+		{
+			return true;
+		}
+
+		Current = Current->GetOuter();
+	}
+
+	return false;
+}
+
 #if WITH_EDITOR
 bool IsRelevantObject(UVitruvioComponent* VitruvioComponent, UObject* Object)
 {
@@ -600,7 +622,7 @@ void UVitruvioComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 
 void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEvent& PropertyChangedEvent)
 {
-	if (Object != this)
+	if (Object != this && !IsOuterOf(Object, this->GetOwner()))
 	{
 		return;
 	}
@@ -612,6 +634,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 	}
 
 	bool bComponentPropertyChanged = false;
+
 	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Rpk))
 	{
 		Attributes.Empty();
