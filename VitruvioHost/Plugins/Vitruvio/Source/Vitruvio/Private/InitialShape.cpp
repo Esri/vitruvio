@@ -254,7 +254,7 @@ void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component, const TA
 #if WITH_EDITOR
 	const FString InitialShapeName = TEXT("InitialShape");
 	const FString PackageName = TEXT("/Game/Vitruvio/") + InitialShapeName;
-	UPackage* Package = CreatePackage(nullptr, *PackageName);
+	UPackage* Package = CreatePackage(*PackageName);
 	const FName StaticMeshName = MakeUniqueObjectName(Package, UStaticMesh::StaticClass(), FName(InitialShapeName));
 
 	StaticMesh = NewObject<UStaticMesh>(Package, StaticMeshName, RF_Public | RF_Standalone);
