@@ -392,6 +392,7 @@ FVitruvioComponentDetails::FVitruvioComponentDetails()
 FVitruvioComponentDetails::~FVitruvioComponentDetails()
 {
 	FCoreUObjectDelegates::OnObjectPropertyChanged.RemoveAll(this);
+	UVitruvioComponent::OnHierarchyChanged.RemoveAll(this);
 }
 
 TSharedRef<IDetailCustomization> FVitruvioComponentDetails::MakeInstance()
