@@ -174,11 +174,18 @@ void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component)
 #endif
 
 #if WITH_EDITOR
-	StaticMesh->Modify(false);
-#endif
-	StaticMesh->bAllowCPUAccess = true;
-#if WITH_EDITOR
-	StaticMesh->PostEditChange();
+	if (!StaticMesh->bAllowCPUAccess)
+	{
+		StaticMesh->Modify(true);
+		StaticMesh->bAllowCPUAccess = true;
+		StaticMesh->PostEditChange();
+	}
+#else
+	if (!ensure(StaticMesh->bAllowCPUAccess))
+	{
+		bIsValid = false;
+		return;
+	}
 #endif
 
 	TArray<FVector> MeshVertices;
