@@ -64,9 +64,11 @@ public class UnrealGeometryEncoderTarget : TargetRules
 		
 		string AllBinaryFolderFiles = Path.Combine(BinaryFolder, "*.*");
 		
-		// We want to delete all old encoder libraries because there might be old builds with different build settings
-		PreBuildSteps.Add(string.Format("echo deleting old encoder libraries \"{0}\"", AllBinaryFolderFiles));
-		PreBuildSteps.Add(string.Format("del /f /q \"{0}\"", AllBinaryFolderFiles));
+		if (File.Exists(BinaryFolder)) {
+			// We want to delete all old encoder libraries because there might be old builds with different build settings
+			PreBuildSteps.Add(string.Format("echo deleting old encoder libraries \"{0}\"", AllBinaryFolderFiles));
+			PreBuildSteps.Add(string.Format("del /f /q \"{0}\"", AllBinaryFolderFiles));
+		}
 		
 		// If Vitruvio is installed, copy the include and library files into the ThirdParty folder of Vitruvio
 		if (!string.IsNullOrEmpty(VitruvioPath))
