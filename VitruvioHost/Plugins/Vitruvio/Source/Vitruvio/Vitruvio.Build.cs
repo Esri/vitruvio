@@ -23,6 +23,7 @@ public class Vitruvio : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"RHI",
+				"PhysicsCore",
 				"RenderCore",
 				"Projects",
 				"SlateCore",

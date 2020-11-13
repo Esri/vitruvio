@@ -4,11 +4,23 @@
 
 #include "CoreUObject.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "PhysicsCore/Public/Interface_CollisionDataProviderCore.h"
 
 #include "prt/AttributeMap.h"
 
 namespace Vitruvio
 {
+
+struct FCollisionData
+{
+	TArray<FTriIndices> Indices;
+	TArray<FVector> Vertices;
+
+	bool IsValid() const
+	{
+		return Indices.Num() > 0 && Vertices.Num() > 0;
+	}
+};
 
 struct FMaterialAttributeContainer
 {

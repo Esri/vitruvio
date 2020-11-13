@@ -3,17 +3,21 @@
 #include "VitruvioComponent.h"
 
 #include "AttributeConversion.h"
+#include "GeneratedModelHISMComponent.h"
+#include "GeneratedModelStaticMeshComponent.h"
 #include "MaterialConversion.h"
+#include "UnrealCallbacks.h"
 #include "VitruvioModule.h"
+#include "VitruvioTypes.h"
 
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/SplineComponent.h"
+#include "Engine/CollisionProfile.h"
 #include "Engine/StaticMeshActor.h"
 #include "ObjectEditorUtils.h"
+#include "PhysicsEngine/BodySetup.h"
 #include "PolygonWindings.h"
 #include "StaticMeshAttributes.h"
-#include "UnrealCallbacks.h"
-#include "VitruvioTypes.h"
 
 #if WITH_EDITOR
 #include "DetailLayoutBuilder.h"
@@ -102,6 +106,16 @@ bool IsOuterOf(UObject* Inner, UObject* Outer)
 	}
 
 	return false;
+}
+
+void InitializeBodySetup(UBodySetup* BodySetup, ECollisionTraceFlag CollisionTraceFlag)
+{
+	BodySetup->DefaultInstance.SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
+	BodySetup->CollisionTraceFlag = CollisionTraceFlag;
+	BodySetup->bDoubleSidedGeometry = true;
+	BodySetup->bMeshCollideAll = true;
+	BodySetup->InvalidatePhysicsData();
+	BodySetup->CreatePhysicsMeshes();
 }
 
 #if WITH_EDITOR
@@ -323,15 +337,15 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		QUICK_SCOPE_CYCLE_COUNTER(STAT_VitruvioActor_CreateModelActors);
 
 		USceneComponent* InitialShapeComponent = InitialShape->GetComponent();
-		UStaticMeshComponent* VitruvioModelComponent = nullptr;
+		UGeneratedModelStaticMeshComponent* VitruvioModelComponent = nullptr;
 
 		TArray<USceneComponent*> InitialShapeChildComponents;
 		InitialShapeComponent->GetChildrenComponents(false, InitialShapeChildComponents);
 		for (USceneComponent* Component : InitialShapeChildComponents)
 		{
-			if (Component->IsA(UStaticMeshComponent::StaticClass()))
+			if (Component->IsA(UGeneratedModelStaticMeshComponent::StaticClass()))
 			{
-				VitruvioModelComponent = Cast<UStaticMeshComponent>(Component);
+				VitruvioModelComponent = Cast<UGeneratedModelStaticMeshComponent>(Component);
 
 				VitruvioModelComponent->SetStaticMesh(nullptr);
 
@@ -349,8 +363,8 @@ void UVitruvioComponent::ProcessGenerateQueue()
 
 		if (!VitruvioModelComponent)
 		{
-			VitruvioModelComponent =
-				NewObject<UStaticMeshComponent>(InitialShape->GetComponent(), FName(TEXT("GeneratedModel")), RF_Transient | RF_DuplicateTransient);
+			VitruvioModelComponent = NewObject<UGeneratedModelStaticMeshComponent>(InitialShape->GetComponent(), FName(TEXT("GeneratedModel")),
+																				   RF_Transient | RF_DuplicateTransient);
 			VitruvioModelComponent->AttachToComponent(InitialShapeComponent, FAttachmentTransformRules::KeepRelativeTransform);
 			InitialShapeComponent->GetOwner()->AddInstanceComponent(VitruvioModelComponent);
 			VitruvioModelComponent->OnComponentCreated();
@@ -358,13 +372,22 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		}
 
 		VitruvioModelComponent->SetStaticMesh(ConvertedResult.ShapeMesh);
+		VitruvioModelComponent->SetCollisionData(ConvertedResult.CollisionData);
+
+		// StaticMesh Collision
+		UStaticMesh* ShapeMesh = ConvertedResult.ShapeMesh;
+		UBodySetup* BodySetup = NewObject<UBodySetup>(VitruvioModelComponent);
+		InitializeBodySetup(BodySetup, GeneratedModelCollisionComplexity);
+		ShapeMesh->BodySetup = BodySetup;
+		VitruvioModelComponent->RecreatePhysicsState();
 
 		for (const FInstance& Instance : ConvertedResult.Instances)
 		{
 			auto InstancedComponent =
-				NewObject<UHierarchicalInstancedStaticMeshComponent>(VitruvioModelComponent, NAME_None, RF_Transient | RF_DuplicateTransient);
+				NewObject<UGeneratedModelHISMComponent>(VitruvioModelComponent, NAME_None, RF_Transient | RF_DuplicateTransient);
 			const TArray<FTransform>& Transforms = Instance.Transforms;
 			InstancedComponent->SetStaticMesh(Instance.Mesh);
+			InstancedComponent->SetCollisionData(Instance.CollisionData);
 
 			// Add all instance transforms
 			for (const FTransform& Transform : Transforms)
@@ -378,6 +401,14 @@ void UVitruvioComponent::ProcessGenerateQueue()
 				InstancedComponent->SetMaterial(MaterialIndex, Instance.OverrideMaterials[MaterialIndex]);
 			}
 
+			// Instanced component collision
+			UStaticMesh* InstanceMesh = Instance.Mesh;
+			UBodySetup* InstanceBodySetup = NewObject<UBodySetup>(InstancedComponent);
+			InitializeBodySetup(InstanceBodySetup, GeneratedModelCollisionComplexity);
+			InstanceMesh->BodySetup = InstanceBodySetup;
+			InstancedComponent->RecreatePhysicsState();
+
+			// Attach and register instance component
 			InstancedComponent->AttachToComponent(VitruvioModelComponent, FAttachmentTransformRules::KeepRelativeTransform);
 			InitialShapeComponent->GetOwner()->AddInstanceComponent(InstancedComponent);
 			InstancedComponent->OnComponentCreated();
@@ -387,6 +418,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		OnHierarchyChanged.Broadcast(this);
 
 		HasGeneratedMesh = true;
+
 		InitialShape->SetHidden(HideAfterGeneration);
 	}
 }
@@ -471,7 +503,7 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 														 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
 														 TMap<FString, Vitruvio::FTextureData>& TextureCache)
 {
-	TMap<int32, UStaticMesh*> MeshMap;
+	TMap<int32, TTuple<UStaticMesh*, Vitruvio::FCollisionData>> MeshMap;
 
 	auto CachedMaterial = [this, &MaterialCache, &TextureCache](const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name,
 																UObject* Outer) {
@@ -495,39 +527,71 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 		TMap<UMaterialInstanceDynamic*, FName> MaterialSlots;
 
 		const TArray<Vitruvio::FMaterialAttributeContainer>& MeshMaterials = GenerateResult.Materials[IdAndMesh.Key];
-		FStaticMeshAttributes MeshAttributes(IdAndMesh.Value);
-		const auto PolygonGroups = IdAndMesh.Value.PolygonGroups();
-		size_t MaterialIndex = 0;
-		for (const auto& PolygonId : PolygonGroups.GetElementIDs())
+		FMeshDescription& MeshDescription = IdAndMesh.Value;
+		FStaticMeshAttributes MeshAttributes(MeshDescription);
+
+		TArray<FVector> Vertices;
+		auto VertexPositions = MeshAttributes.GetVertexPositions();
+		for (int32 VertexIndex = 0; VertexIndex < VertexPositions.GetNumElements(); ++VertexIndex)
 		{
-			const FName MaterialName = MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonId];
+			Vertices.Add(VertexPositions[FVertexID(VertexIndex)]);
+		}
+
+		TArray<FTriIndices> Indices;
+		const auto PolygonGroups = MeshDescription.PolygonGroups();
+		size_t MaterialIndex = 0;
+		for (const auto& PolygonGroupId : PolygonGroups.GetElementIDs())
+		{
+			const FName MaterialName = MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId];
 			UMaterialInstanceDynamic* Material = CachedMaterial(MeshMaterials[MaterialIndex], MaterialName, StaticMesh);
 
 			if (MaterialSlots.Contains(Material))
 			{
-				MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonId] = MaterialSlots[Material];
+				MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlots[Material];
 			}
 			else
 			{
 				const FName SlotName = StaticMesh->AddMaterial(Material);
-				MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonId] = SlotName;
+				MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = SlotName;
 				MaterialSlots.Add(Material, SlotName);
 			}
 
 			++MaterialIndex;
+
+			// cache collision data
+			for (FPolygonID PolygonID : MeshDescription.GetPolygonGroupPolygons(PolygonGroupId))
+			{
+				for (FTriangleID TriangleID : MeshDescription.GetPolygonTriangleIDs(PolygonID))
+				{
+					auto TriangleVertexInstances = MeshDescription.GetTriangleVertexInstances(TriangleID);
+
+					auto VertexID0 = MeshDescription.GetVertexInstanceVertex(TriangleVertexInstances[0]);
+					auto VertexID1 = MeshDescription.GetVertexInstanceVertex(TriangleVertexInstances[1]);
+					auto VertexID2 = MeshDescription.GetVertexInstanceVertex(TriangleVertexInstances[2]);
+
+					FTriIndices TriIndex;
+					TriIndex.v0 = VertexID0.GetValue();
+					TriIndex.v1 = VertexID1.GetValue();
+					TriIndex.v2 = VertexID2.GetValue();
+					Indices.Add(TriIndex);
+				}
+			}
 		}
 
 		TArray<const FMeshDescription*> MeshDescriptionPtrs;
 		MeshDescriptionPtrs.Emplace(&IdAndMesh.Value);
-		StaticMesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
-		MeshMap.Add(IdAndMesh.Key, StaticMesh);
+		UStaticMesh::FBuildMeshDescriptionsParams Params;
+		Params.bBuildSimpleCollision = true;
+		StaticMesh->BuildFromMeshDescriptions(MeshDescriptionPtrs, Params);
+		MeshMap.Add(IdAndMesh.Key, MakeTuple(StaticMesh, Vitruvio::FCollisionData{Indices, Vertices}));
 	}
 
 	// convert materials
 	TArray<FInstance> Instances;
 	for (const auto& Instance : GenerateResult.Instances)
 	{
-		UStaticMesh* Mesh = MeshMap[Instance.Key.PrototypeId];
+		UStaticMesh* Mesh = MeshMap[Instance.Key.PrototypeId].Key;
+		Vitruvio::FCollisionData& CollisionData = MeshMap[Instance.Key.PrototypeId].Value;
 		TArray<UMaterialInstanceDynamic*> OverrideMaterials;
 		for (size_t MaterialIndex = 0; MaterialIndex < Instance.Key.MaterialOverrides.Num(); ++MaterialIndex)
 		{
@@ -536,11 +600,14 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 			OverrideMaterials.Add(CachedMaterial(MaterialContainer, MaterialName, GetTransientPackage()));
 		}
 
-		Instances.Add({Mesh, OverrideMaterials, Instance.Value});
+		Instances.Add({Mesh, CollisionData, OverrideMaterials, Instance.Value});
 	}
 
-	UStaticMesh* ShapeMesh = MeshMap.Contains(UnrealCallbacks::NO_PROTOTYPE_INDEX) ? MeshMap[UnrealCallbacks::NO_PROTOTYPE_INDEX] : nullptr;
-	return {ShapeMesh, Instances};
+	if (MeshMap.Contains(UnrealCallbacks::NO_PROTOTYPE_INDEX))
+	{
+		return {MeshMap[UnrealCallbacks::NO_PROTOTYPE_INDEX].Key, MeshMap[UnrealCallbacks::NO_PROTOTYPE_INDEX].Value, Instances};
+	}
+	return {nullptr, Vitruvio::FCollisionData{}, Instances};
 }
 
 void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
@@ -652,6 +719,11 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, RandomSeed))
 	{
 		bValidRandomSeed = true;
+		bComponentPropertyChanged = true;
+	}
+
+	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GeneratedModelCollisionComplexity))
+	{
 		bComponentPropertyChanged = true;
 	}
 
