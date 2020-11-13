@@ -77,9 +77,8 @@ public:
 	UPROPERTY(VisibleAnywhere, Instanced, Category = "Vitruvio", Transient, DuplicateTransient, TextExportTransient)
 	UInitialShape* InitialShape = nullptr;
 
-	/** Collision Trace behavior - by default, it will keep simple(convex)/complex(per-poly) separate **/
-	UPROPERTY(EditAnywhere, Category = "Vitruvio", meta = (DisplayName = "Generated Model Collision Complexity"))
-	TEnumAsByte<enum ECollisionTraceFlag> GeneratedModelCollisionComplexity = ECollisionTraceFlag::CTF_UseDefault;
+	UPROPERTY(EditAnywhere, Category = "Vitruvio", meta = (DisplayName = "Generate Collision Mesh"))
+	bool GenerateCollision = true;
 
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	void Generate();

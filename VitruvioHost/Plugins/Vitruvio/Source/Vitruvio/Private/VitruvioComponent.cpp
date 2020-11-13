@@ -108,10 +108,11 @@ bool IsOuterOf(UObject* Inner, UObject* Outer)
 	return false;
 }
 
-void InitializeBodySetup(UBodySetup* BodySetup, ECollisionTraceFlag CollisionTraceFlag)
+void InitializeBodySetup(UBodySetup* BodySetup, bool GenerateComplexCollision)
 {
 	BodySetup->DefaultInstance.SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
-	BodySetup->CollisionTraceFlag = CollisionTraceFlag;
+	BodySetup->CollisionTraceFlag =
+		GenerateComplexCollision ? ECollisionTraceFlag::CTF_UseComplexAsSimple : ECollisionTraceFlag::CTF_UseSimpleAsComplex;
 	BodySetup->bDoubleSidedGeometry = true;
 	BodySetup->bMeshCollideAll = true;
 	BodySetup->InvalidatePhysicsData();
@@ -377,7 +378,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		// StaticMesh Collision
 		UStaticMesh* ShapeMesh = ConvertedResult.ShapeMesh;
 		UBodySetup* BodySetup = NewObject<UBodySetup>(VitruvioModelComponent);
-		InitializeBodySetup(BodySetup, GeneratedModelCollisionComplexity);
+		InitializeBodySetup(BodySetup, GenerateCollision);
 		ShapeMesh->BodySetup = BodySetup;
 		VitruvioModelComponent->RecreatePhysicsState();
 
@@ -404,7 +405,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 			// Instanced component collision
 			UStaticMesh* InstanceMesh = Instance.Mesh;
 			UBodySetup* InstanceBodySetup = NewObject<UBodySetup>(InstancedComponent);
-			InitializeBodySetup(InstanceBodySetup, GeneratedModelCollisionComplexity);
+			InitializeBodySetup(InstanceBodySetup, GenerateCollision);
 			InstanceMesh->BodySetup = InstanceBodySetup;
 			InstancedComponent->RecreatePhysicsState();
 
@@ -580,9 +581,7 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 
 		TArray<const FMeshDescription*> MeshDescriptionPtrs;
 		MeshDescriptionPtrs.Emplace(&IdAndMesh.Value);
-		UStaticMesh::FBuildMeshDescriptionsParams Params;
-		Params.bBuildSimpleCollision = true;
-		StaticMesh->BuildFromMeshDescriptions(MeshDescriptionPtrs, Params);
+		StaticMesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
 		MeshMap.Add(IdAndMesh.Key, MakeTuple(StaticMesh, Vitruvio::FCollisionData{Indices, Vertices}));
 	}
 
@@ -722,7 +721,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		bComponentPropertyChanged = true;
 	}
 
-	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GeneratedModelCollisionComplexity))
+	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateCollision))
 	{
 		bComponentPropertyChanged = true;
 	}
