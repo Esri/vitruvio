@@ -566,5 +566,29 @@ void FVitruvioComponentDetails::OnAttributesChanged(UObject* Object, struct FPro
 void FVitruvioComponentDetails::OnVitruvioComponentHierarchyChanged(UVitruvioComponent* Component)
 {
 	FLevelEditorModule& LevelEditor = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
-	LevelEditor.OnComponentsEdited().Broadcast();
+
+	const auto DetailBuilder = CachedDetailBuilder.Pin().Get();
+
+	if (!DetailBuilder)
+	{
+		return;
+	}
+
+	TArray<TWeakObjectPtr<UObject>> Objects;
+	DetailBuilder->GetObjectsBeingCustomized(Objects);
+
+	if (Objects.Num() == 1)
+	{
+		UObject* ObjectModified = Objects[0].Get();
+		AActor* Owner = nullptr;
+		if (Component)
+		{
+			Owner = Component->GetOwner();
+		}
+
+		if (ObjectModified == Component || ObjectModified == Owner)
+		{
+			LevelEditor.OnComponentsEdited().Broadcast();
+		}
+	}
 }
