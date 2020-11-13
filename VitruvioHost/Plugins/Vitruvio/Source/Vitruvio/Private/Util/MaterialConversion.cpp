@@ -117,14 +117,14 @@ FTextureSettings GetTextureSettings(const FString& Key, ERGBFormat Format)
 	return {Format == ERGBFormat::Gray ? false : true, TC_Default};
 }
 
-UTexture2D* CreateTexture(UObject* Outer, const TArray64<uint8>& Data, int32 SizeX, int32 SizeY, ERGBFormat Format, int32 BitDepth,
+UTexture2D* CreateTexture(UObject* OuterObjectName, const TArray64<uint8>& Data, int32 SizeX, int32 SizeY, ERGBFormat Format, int32 BitDepth,
 						  const FString& TextureKey, const FName& BaseName)
 {
 	const EPixelFormat PixelFormat = PixelFormatFromRGB(Format, BitDepth);
 	const FTextureSettings Settings = GetTextureSettings(TextureKey, Format);
 
-	const FName TextureName = MakeUniqueObjectName(Outer, UTexture2D::StaticClass(), BaseName);
-	UTexture2D* NewTexture = NewObject<UTexture2D>(Outer, TextureName, RF_Transient);
+	const FName TextureName = MakeUniqueObjectName(GetTransientPackage(), UTexture2D::StaticClass(), BaseName);
+	UTexture2D* NewTexture = NewObject<UTexture2D>(GetTransientPackage(), TextureName, RF_Transient);
 
 	NewTexture->PlatformData = new FTexturePlatformData();
 	NewTexture->PlatformData->SizeX = SizeX;
@@ -442,7 +442,7 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, cons
 		Parent = GetMaterialByBlendMode(ChosenBlendMode, OpaqueParent, MaskedParent, TranslucentParent);
 	}
 
-	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, Outer, Name);
+	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, GetTransientPackage(), Name);
 	MaterialInstance->SetFlags(RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
 
 	MaterialInstance->SetScalarParameterValue(FName(TEXT("opacitySource")), UseAlphaAsOpacity);
