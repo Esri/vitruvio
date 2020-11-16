@@ -145,7 +145,7 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 			MenuBuilder.BeginSection("SelectPossibleVitruvio", FText::FromString("Vitruvio"));
 
 			const FUIAction SelectAllViableVitruvioActorsAction(FExecuteAction::CreateStatic(SelectAllViableVitruvioActors, SelectedActors));
-			MenuBuilder.AddMenuEntry(FText::FromString("Select All Viable Initial Shapes In Hiararchy"),
+			MenuBuilder.AddMenuEntry(FText::FromString("Select All Viable Initial Shapes In Hierarchy"),
 									 FText::FromString("Selects all Actors which are viable initial shapes in hierarchy."), FSlateIcon(),
 									 SelectAllViableVitruvioActorsAction);
 
