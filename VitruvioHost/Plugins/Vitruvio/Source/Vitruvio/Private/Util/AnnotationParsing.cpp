@@ -91,10 +91,12 @@ URangeAnnotation* ParseRangeAnnotation(const prt::Annotation* Annotation, UObjec
 		if (std::wcscmp(Key, MIN_KEY) == 0)
 		{
 			Result->Min = Argument->getFloat();
+			Result->HasMin = true;
 		}
 		else if (std::wcscmp(Key, MAX_KEY) == 0)
 		{
 			Result->Max = Argument->getFloat();
+			Result->HasMax = true;
 		}
 		else if (std::wcscmp(Key, STEP_SIZE_KEY) == 0)
 		{

@@ -184,8 +184,8 @@ TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(UFloatAttribute* Attribute
 	// clang-format off
 	auto ValueWidget = SNew(SSpinBox<double>)
 		.Font(IDetailLayoutBuilder::GetDetailFont())
-		.MinValue(Annotation && !FMath::IsNaN(Annotation->Min) ? Annotation->Min : TOptional<double>())
-		.MaxValue(Annotation && !FMath::IsNaN(Annotation->Max) ? Annotation->Max : TOptional<double>())
+		.MinValue(Annotation && Annotation->HasMin ? Annotation->Min : TOptional<double>())
+		.MaxValue(Annotation && Annotation->HasMax ? Annotation->Max : TOptional<double>())
 		.OnValueCommitted_Lambda(OnCommit)
 		.SliderExponent(1);
 	// clang-format on

@@ -49,9 +49,13 @@ class URangeAnnotation final : public UAttributeAnnotation
 
 public:
 	UPROPERTY()
-	double Min = NAN;
+	bool HasMin = false;
 	UPROPERTY()
-	double Max = NAN;
+	bool HasMax = false;
+	UPROPERTY()
+	double Min = 0;
+	UPROPERTY()
+	double Max = 0;
 	UPROPERTY()
 	double StepSize = 0.1;
 	UPROPERTY()
