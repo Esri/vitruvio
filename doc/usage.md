@@ -2,17 +2,17 @@
 
 Vitruvio leverages CityEngine's Procedural Runtime (PRT) to generate buildings. As input it takes a *rule package (RPK)*, an *initial shape* and a *set of attributes*. The generation process starts with the initial shape as start shape, from which shape grammar rules are expanded. The attributes are parameters that control shape generation.
 
-This section describes how to use the Vitruvio Actor in UE4, export rule packages from CityEngine and how to import or create initial shapes.
+This section describes how to use the Vitruvio Actor in Unreal Engine 4 (UE4), export rule packages from CityEngine and how to import or create initial shapes.
 
-## Vitruvio Component
+## Vitruvio Actor and Component
 
-The *Vitruvio Component* allows the user to access the procedural generation. It can be attached to any Unreal Actor. If this Actor already has a valid initial shape component attached it will automatically be used. Refer to [Initial Shapes](#Initial-Shapes) for more information.
+The *Vitruvio Component* allows the user to access the procedural generation. It can be attached to any Unreal Actor. If the Actor already has a valid initial shape component attached it will automatically be used as the initial shape for the building generation. Refer to [Initial Shapes](#Initial-Shapes) for more information.
 
-For ease of use there is also a *Vitruvio Actor* available, which can be found in the *Place Actors* Panel and placed anywhere in the scene.
+For ease of use the Vitruvio  plugin also provides the *Vitruvio Actor* which can be found in the *Place Actors* Panel and placed anywhere in the scene.
 
 <img src="img/select_vitruvio_actor.jpg" width="400">
 
-After placing the actor in the scene and selecting it, the *Details* panel shows all relevant properties.
+After placing the Vitruvio Actor in the scene the *Details* panel shows all relevant properties.
 
 <img src="img/vitruvio_component.jpg" width="400">
 
@@ -20,13 +20,17 @@ After placing the actor in the scene and selecting it, the *Details* panel shows
 
 **Initial Shape Type:** The type of input initial shape used. For more information on how to import or create initial shapes see [Initial Shapes](#Initial-Shapes).
 
+**Generate Automatically:** Whether to generate automatically after changes to properties such as the initial shape, rule package or attributes.
+
+**Hide Initial Shape after Generation:** Whether to hide the initial shape geometry after a model has been generated.
+
+**Generate Collision Mesh:** Whether to generate a collision mesh (complex collision) after the generation.
+
 **Rule Package:** The rule package to be used. For more information on how to export rule packages from CityEngine and importing them into UE4 see [Rule Packages](#Rule-Packages).
 
 **Random Seed:** The random seed to be used for generation. See also [CityEngine Help](https://doc.arcgis.com/en/cityengine/2019.1/help/help-working-with-rules.htm#GUID-FD7F11D4-778E-4485-901B-E11DDD2099F2).
 
-**Generate Automatically:** Whether to generate automatically after changes to relevant properties such as the initial shape, rule package or attributes.
-
-**Hide after Generation:** Whether to hide the initial shape geometry after a model has been generated.
+**Attributes:** The attributes of the selected rule package which control the generation. See also [Attributes](#Attributes).
 
 ## Rule Packages
 
@@ -46,7 +50,7 @@ Initial shapes ([CGA modeling overview](https://doc.arcgis.com/en/cityengine/lat
 
 ### Static Mesh
 
-Vitruvio supports *Static Meshes* as input initial shapes. Currently only planar Static Meshes are supported. To change the Static Mesh which represents the initial shape select the *InitialShapeStaticMesh* Component of your Actor and change the *Static Mesh*.
+Vitruvio supports *Static Meshes* as input initial shapes. Currently only planar geometry is supported. To change the Static Mesh which represents the initial shape select the *Vitruvio Actor* and change the *Initial Shape Mesh*.
 
 <img src="img/change_static_mesh.jpg" width="400">
 
@@ -57,26 +61,6 @@ Vitruvio also supports *Splines* as input initial shapes. To use a spline initia
 <img src="img/spline_edit.gif" width="800">
 
 To copy a spline point, select an existing point, press alt and drag the point. Spline points can either be linear or curved. The type of an individual point can be changed by selecting the *Spline Component* of the *InitialShapeSpline* and in the *Selected Points* header of the details panel. For more information on how to edit splines please refer to [UE4 Spline Documentation](https://docs.unrealengine.com/en-US/Engine/BlueprintSplines/HowTo/EditSplineComponentInEditor/index.html).
-
-
-
-### Export Initial Shapes from CityEngine
-
-To export initial shape building footprints from CityEngine the [Datasmith Exporter](https://doc.arcgis.com/en/cityengine/latest/help/help-export-unreal.htm) can be used. Select the building footprints in the viewport and then select **File** &rarr; **Export models…** to export them. Select the *Unreal Engine* export and make sure to set *Export Geometry* to **Shapes** and *Mesh Merging* to **Per Initial Shape**. This will make sure that each footprint (with no generated models) is exported individually.
-
-<img src="img/export_initial_shapes.jpg" width="400">
-
-
-
-**Note:**  For the following steps, the **Datasmith Importer** Plugin needs to be enabled for the Project. Go to **Edit** &rarr; **Plugins** and verify that it is enabled.
-
-In UE4 use the *Datasmith* importer and leave all settings as is.
-
-To easily assign a Vitruvio Component to all imported initial shapes, select the *DatasmithSceneActor*, right click on it, choose **Select** &rarr; **Select All Viable Vitruvio Actors in Hierarchy**. This will select all child Actors which are viable for generation with Vitruvio (this means Actors which either have a *StaticMeshComponent* or *SplineComponent* attached).
-
-<img src="img/select_vitruvio_actors.jpg" width="400">
-
-After that, right click again on any selected Actor and choose *Add Vitruvio Component*. In the Dialog, choose a Rule Package you want to use. This will assign a *VitruvioComponent* to all selected Actors, with the chosen Rule Package assigned.
 
 
 
@@ -93,3 +77,34 @@ The attributes can then be changed in the *Details* panel.
 <img src="img/vitruvio_attributes.gif" width="800">
 
 **Note:** if *generate automatically* is enabled, every attribute change will regenerate the model.  
+
+
+
+# Advanced
+
+### Initial Shapes from CityEngine to Unreal Engine (Experimental)
+
+This section explains how to export a set of building footprints from CityEngine and how to import them into Unreal to use them as initial shapes for building generation.
+
+#### CityEngine
+
+To export initial shape building footprints from CityEngine the [Datasmith Exporter](https://doc.arcgis.com/en/cityengine/latest/help/help-export-unreal.htm) can be used. Select the building footprints in the viewport and then choose **File** &rarr; **Export models…** to export them. Select the *Unreal Engine* exporter and make sure to set *Export Geometry* to **Shapes** and *Mesh Merging* to **Per Initial Shape**. This will make sure that each footprint (without generated models) is exported individually.
+
+<img src="img/export_initial_shapes.jpg" width="400">
+
+
+
+#### Unreal Engine
+
+**Note:**  To import datasmith files, the **Datasmith Importer** plugin needs to be enabled in your project. Go to **Edit** &rarr; **Plugins** and verify that the **Datasmith Importer** plugin is enabled.
+
+First import the datasmith file from CityEngine using the **Datasmith** importer. The default import settings can be used.
+
+Now convert all imported initial shapes to Vitruvio Actors:
+
+1. Select the *DatasmithSceneActor* (this is the root Actor of the Datasmith scene)
+2. Right click and choose **Select** &rarr; **Select All Viable Initial Shapes in Hierarchy**. This will select all child Actors which are viable initial shapes (meaning all Actors which either have a valid *StaticMeshComponent* or *SplineComponent* attached).
+
+<img src="img/select_vitruvio_actors.jpg" width="400">
+
+3. Right click again on any selected Actor and choose **Convert to Vitruvio Actor**. In the opened dialog, choose any RPK you want to assign. This will convert all selected Actors to Vitruvio Actors and assign the chosen RPK.
