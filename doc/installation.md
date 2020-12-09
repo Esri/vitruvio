@@ -10,7 +10,7 @@ This page describes how to install the Vitruvio Plugin for Unreal 4.26.
   
 * Unzip the previously downloaded file to the `Plugins` folder. The `Plugins` folder should now contain a `Vitruvio` folder (containing the Plugin) looking like this:
   
-  <img src="img/plugin_folder.jpg" width="400">
+  <img src="img/plugin_folder.jpg" width="700">
   
 * Open the project. The Vitruvio plugin will be enabled automatically and can be used. For further instructions on how to use the Plugin please refer to the [Usage Guide](usage.md).
   
