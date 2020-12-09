@@ -8,6 +8,7 @@ As input Vitruvio requires rule packages (RPK) which are authored in CityEngine.
 
 ## Documentation
 
+* [Installation](doc/installation.md)
 * [User Guide](doc/usage.md)
 * [Development Setup](doc/setup.md)
 * [Downloads](doc/downloads.md)
