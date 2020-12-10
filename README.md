@@ -19,6 +19,20 @@ External documentation:
 * [CityEngine Manual](https://doc.arcgis.com/en/cityengine/latest/help/cityengine-help-intro.htm)
 * [CityEngine SDK API Reference](https://esri.github.io/cityengine-sdk/html/index.html)
 
+## Requirements
+
+* Windows 10
+* [Unreal Engine 4.26](https://www.unrealengine.com/en-US/download)
+* Visual Studio (for development only)
+
+## Issues
+
+Find a bug or want to request a new feature?  Please let us know by submitting an issue.
+
+## Contributing
+
+Esri welcomes contributions from anyone and everyone. Please see our [guidelines for contributing](https://github.com/esri/contributing).
+
 
 ## Licensing
 
