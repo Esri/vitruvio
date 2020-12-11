@@ -11,7 +11,6 @@ As input Vitruvio requires rule packages (RPK) which are authored in CityEngine.
 * [Installation](doc/installation.md)
 * [User Guide](doc/usage.md)
 * [Development Setup](doc/setup.md)
-* [Downloads](doc/downloads.md)
 
 External documentation:
 * [CityEngine Tutorials](https://doc.arcgis.com/en/cityengine/latest/tutorials/introduction-to-the-cityengine-tutorials.htm)
