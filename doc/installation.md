@@ -6,7 +6,7 @@ This page describes how to install the Vitruvio Plugin for Unreal 4.26.
 
 * Unzip the downloaded file and copy the extracted Vitruvio folder to `<Path to Unreal Engine 4.26>\Engine\Plugins\Marketplace`  (for example `C:\dev\Epic Games\UE_4.26\Engine\Plugins\Marketplace`). The Marketplace folder should now contain the Vitruvio Plugin folder.
 
-* Create a new Unreal Engine 4.26 project from the Epic Games launcher or use an existing project.
+* Create a new Unreal Engine 4.26 project from the Epic Games launcher or open an existing project.
 
 * After opening the project a popup will notify you of the newly available Vitruvio Plugin. Open **Manage Plugins...** (if the popup does not appear open **Edit** &rarr; **Plugins** instead)
   
