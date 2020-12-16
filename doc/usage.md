@@ -44,19 +44,21 @@ The exported RPK can then be dragged into the Unreal Editor’s *Content Browser
 
 <img src="img/import_rpk.jpg" width="400">
 
+The imported RPK Asset can now be dragged on the *Rule Package* field of a Vitruvio Actor to assign it.
+
 ## Initial Shapes
 
 Initial shapes ([CGA modeling overview](https://doc.arcgis.com/en/cityengine/latest/help/help-cga-modeling-overview.htm)) represent the input geometry which typically are polygons that represent a lot or a building footprint. Vitruvio supports two kind of initial shapes, *Static Meshes* and *Splines*.
 
 ### Static Mesh
 
-Vitruvio supports *Static Meshes* as input initial shapes. Currently only planar geometry is supported. To change the Static Mesh which represents the initial shape select the *Vitruvio Actor* and change the *Initial Shape Mesh*.
+To change the initial shape geometry you can assign a Static Mesh to the *Initial Shape Mesh* field. **Note** that currently only planar geometry is supported. 
 
 <img src="img/change_static_mesh.jpg" width="400">
 
 ### Splines
 
-Vitruvio also supports *Splines* as input initial shapes. To use a spline initial shape, change the **Initial Shape Type** drop down to **Spline**.
+To use a Spline as an initial shape, change the **Initial Shape Type** drop down to **Spline**.
 
 <img src="img/spline_edit.gif" width="800">
 
