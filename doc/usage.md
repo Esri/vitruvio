@@ -70,7 +70,7 @@ To copy a spline point, select an existing point, press alt and drag the point. 
 
 Attributes control the procedural generation of a model. The set of available attributes depends on the underlying rule of the assigned *Rule Package*. 
 
-Selecting a *Vitruvio Actor* will display all attributes in the details panel. The values can be changed to control the procedural generation.
+Selecting a *Vitruvio Actor* will display all its attributes in the details panel. The values can be changed to control the procedural generation.
 
 <img src="img/vitruvio_attributes.gif" width="800">
 
