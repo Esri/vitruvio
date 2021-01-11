@@ -80,7 +80,7 @@ struct FTextureData
 	FTextureData() = default;
 
 	UTexture2D* Texture = nullptr;
-	uint32 NumChannels = 0; // The real amount of channels. See MaterialConversion#LoadTextureFromDisk
+	uint32 NumChannels = 0;
 	FDateTime LoadTime;
 
 	friend bool operator==(const FTextureData& Lhs, const FTextureData& Rhs)

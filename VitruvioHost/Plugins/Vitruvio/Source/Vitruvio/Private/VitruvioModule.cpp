@@ -28,10 +28,12 @@
 #include "prtx/EncoderInfoBuilder.h"
 
 #include "Core.h"
+#include "IImageWrapper.h"
 #include "Interfaces/IPluginManager.h"
 #include "MeshDescription.h"
 #include "Modules/ModuleManager.h"
 #include "StaticMeshAttributes.h"
+#include "TextureDecoding.h"
 #include "UObject/UObjectBaseUtility.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioModule"
@@ -311,6 +313,20 @@ void VitruvioModule::ShutdownModule()
 	UE_LOG(LogUnrealPrt, Display, TEXT("Shutdown complete"))
 
 	delete LogHandler;
+}
+
+Vitruvio::FTextureData VitruvioModule::DecodeTexture(UObject* Outer, const FString& Path, const FString& Key) const
+{
+	std::wstring UriPath = prtu::toFileURI(std::wstring(*Path));
+	const prt::AttributeMap* TextureMetadataAttributeMap = prt::createTextureMetadata(UriPath.c_str(), PrtCache.get());
+	Vitruvio::FTextureMetadata TextureMetadata = Vitruvio::ParseTextureMetadata(TextureMetadataAttributeMap);
+
+	size_t BufferSize = TextureMetadata.Width * TextureMetadata.Height * TextureMetadata.Bands * TextureMetadata.BytesPerBand;
+	auto Buffer = std::make_unique<uint8_t[]>(BufferSize);
+
+	prt::getTexturePixeldata(UriPath.c_str(), Buffer.get(), BufferSize, PrtCache.get());
+
+	return Vitruvio::DecodeTexture(Outer, Key, Path, TextureMetadata, std::move(Buffer), BufferSize);
 }
 
 FGenerateResult VitruvioModule::GenerateAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage, AttributeMapUPtr Attributes,

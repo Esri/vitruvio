@@ -22,8 +22,8 @@
 
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
-#include "ImageChannelsDetection.h"
 #include "ImageCore/Public/ImageCore.h"
+#include "VitruvioModule.h"
 #include "VitruvioTypes.h"
 
 #include <map>
@@ -39,12 +39,6 @@ constexpr double OPACITY_THRESHOLD = 0.98;
 
 const FString CE_DEFAULT_SHADER_NAME = TEXT("CityEngineShader");
 const FString CE_PBR_SHADER_NAME = TEXT("CityEnginePBRShader");
-
-struct FTextureSettings
-{
-	bool SRGB;
-	TextureCompressionSettings Compression;
-};
 
 template <typename T, typename F>
 void CountOpacityMapPixels(const T* SrcColors, int32 SizeX, int32 SizeY, uint32& BlackPixels, uint32& WhitePixels, F Accessor)
@@ -85,130 +79,6 @@ void CountOpacityMapPixels(const uint16* SrcColors, int32 SizeX, int32 SizeY, ui
 {
 	return CountOpacityMapPixels(SrcColors, SizeX, SizeY, BlackPixels, WhitePixels,
 								 [](const uint16* Color) { return static_cast<float>(*Color) / 0xFFFF; });
-}
-
-ERGBFormat GetRequestedFormat(ERGBFormat Format)
-{
-	// We handle textures similarly to Unreal handles non power of two images (which will not be DXT compressed) and always use
-	// the BGRA format (even for grayscale textures).
-	switch (Format)
-	{
-	case ERGBFormat::RGBA:
-	case ERGBFormat::BGRA:
-	case ERGBFormat::Gray:
-		return ERGBFormat::BGRA;
-	default:
-		return ERGBFormat::Invalid;
-	}
-}
-
-EPixelFormat PixelFormatFromRGB(ERGBFormat Format, int32 BitDepth)
-{
-	check(BitDepth == 8 || BitDepth == 16) check(Format != ERGBFormat::RGBA)
-
-		switch (Format)
-	{
-	case ERGBFormat::BGRA:
-		return PF_B8G8R8A8;
-	case ERGBFormat::Gray:
-		return BitDepth == 8 ? PF_G8 : PF_G16;
-	default:
-		return PF_Unknown;
-	}
-}
-
-FTextureSettings GetTextureSettings(const FString& Key, ERGBFormat Format)
-{
-	if (Key == L"normalMap")
-	{
-		return {false, TC_Normalmap};
-	}
-	if (Key == L"roughnessMap" || Key == L"metallicMap")
-	{
-		return {false, TC_Masks};
-	}
-	return {Format == ERGBFormat::Gray ? false : true, TC_Default};
-}
-
-UTexture2D* CreateTexture(UObject* OuterObjectName, const TArray64<uint8>& Data, int32 SizeX, int32 SizeY, ERGBFormat Format, int32 BitDepth,
-						  const FString& TextureKey, const FName& BaseName)
-{
-	const EPixelFormat PixelFormat = PixelFormatFromRGB(Format, BitDepth);
-	const FTextureSettings Settings = GetTextureSettings(TextureKey, Format);
-
-	const FName TextureName = MakeUniqueObjectName(GetTransientPackage(), UTexture2D::StaticClass(), BaseName);
-	UTexture2D* NewTexture = NewObject<UTexture2D>(GetTransientPackage(), TextureName, RF_Transient);
-
-	NewTexture->PlatformData = new FTexturePlatformData();
-	NewTexture->PlatformData->SizeX = SizeX;
-	NewTexture->PlatformData->SizeY = SizeY;
-	NewTexture->PlatformData->PixelFormat = PixelFormat;
-	NewTexture->CompressionSettings = Settings.Compression;
-	NewTexture->SRGB = Settings.SRGB;
-
-	// Allocate first mipmap and upload the pixel data
-	FTexture2DMipMap* Mip = new FTexture2DMipMap();
-	NewTexture->PlatformData->Mips.Add(Mip);
-	Mip->SizeX = SizeX;
-	Mip->SizeY = SizeY;
-	Mip->BulkData.Lock(LOCK_READ_WRITE);
-	void* TextureData = Mip->BulkData.Realloc(CalculateImageBytes(SizeX, SizeY, 0, PixelFormat));
-	FMemory::Memcpy(TextureData, Data.GetData(), Data.Num());
-	Mip->BulkData.Unlock();
-
-	NewTexture->UpdateResource();
-	return NewTexture;
-}
-
-Vitruvio::FTextureData LoadTextureFromDisk(UObject* Outer, const FString& ImagePath, const FString& TextureKey)
-{
-	static IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(TEXT("ImageWrapper"));
-
-	if (!FPaths::FileExists(ImagePath))
-	{
-		UE_LOG(LogMaterialConversion, Error, TEXT("File not found: %s"), *ImagePath);
-		return {};
-	}
-
-	TArray<uint8> FileData;
-	if (!FFileHelper::LoadFileToArray(FileData, *ImagePath))
-	{
-		UE_LOG(LogMaterialConversion, Error, TEXT("Failed to load file: %s"), *ImagePath);
-		return {};
-	}
-	const EImageFormat ImageFormat = ImageWrapperModule.DetectImageFormat(FileData.GetData(), FileData.Num());
-	if (ImageFormat == EImageFormat::Invalid)
-	{
-		UE_LOG(LogMaterialConversion, Error, TEXT("Unrecognized image file format: %s"), *ImagePath);
-		return {};
-	}
-
-	TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(ImageFormat);
-
-	if (!ImageWrapper.IsValid())
-	{
-		UE_LOG(LogMaterialConversion, Error, TEXT("Failed to create image wrapper for file: %s"), *ImagePath);
-		return {};
-	}
-
-	// Unfortunately using the IImageWrapperModule to load textures will always result in images with alpha channels even if
-	// the original texture does not contain an alpha channel. Since we have to check the existence of alpha channels to determine
-	// the blend mode we need to extract real number of channels manually.
-	const uint32 NumChannels = Vitruvio::DetectChannels(ImageFormat, FileData.GetData(), FileData.Num());
-
-	// Decompress the image data
-	TArray64<uint8> RawData;
-	ImageWrapper->SetCompressed(FileData.GetData(), FileData.Num());
-	const ERGBFormat Format = GetRequestedFormat(ImageWrapper->GetFormat());
-	ImageWrapper->GetRaw(Format, ImageWrapper->GetBitDepth(), RawData);
-
-	// Create the texture and upload the uncompressed image data
-	const FString TextureBaseName = TEXT("T_") + FPaths::GetBaseFilename(ImagePath);
-	UTexture2D* Texture = CreateTexture(Outer, RawData, ImageWrapper->GetWidth(), ImageWrapper->GetHeight(), Format, ImageWrapper->GetBitDepth(),
-										TextureKey, FName(*TextureBaseName));
-	const auto TimeStamp = FPlatformFileManager::Get().GetPlatformFile().GetAccessTimeStamp(*ImagePath);
-
-	return {Texture, NumChannels, TimeStamp};
 }
 
 EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMapData, bool UseAlphaAsOpacity)
@@ -348,8 +218,7 @@ public:
 	void DoTask(ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
 	{
 		QUICK_SCOPE_CYCLE_COUNTER(STAT_MaterialConversion_LoadTexture);
-		Vitruvio::FTextureData TextureData = LoadTextureFromDisk(Outer, ImagePath, TextureKey);
-
+		Vitruvio::FTextureData TextureData = VitruvioModule::Get().DecodeTexture(Outer, ImagePath, TextureKey);
 		{
 			FScopeLock CacheLock(&CacheCriticalSection);
 
@@ -455,7 +324,7 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, cons
 		Parent = GetMaterialByBlendMode(ChosenBlendMode, OpaqueParent, MaskedParent, TranslucentParent);
 	}
 
-	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, GetTransientPackage(), Name);
+	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, Outer, Name);
 	MaterialInstance->SetFlags(RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
 
 	MaterialInstance->SetScalarParameterValue(FName(TEXT("opacitySource")), UseAlphaAsOpacity);
