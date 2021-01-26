@@ -132,6 +132,19 @@ void InitializeBodySetup(UBodySetup* BodySetup, bool GenerateComplexCollision)
 	BodySetup->CreatePhysicsMeshes();
 }
 
+void CreateCollision(UStaticMesh* Mesh, UStaticMeshComponent* StaticMeshComponent, bool ComplexCollision)
+{
+	if (!Mesh)
+	{
+		return;
+	}
+
+	UBodySetup* BodySetup = NewObject<UBodySetup>(StaticMeshComponent);
+	InitializeBodySetup(BodySetup, ComplexCollision);
+	Mesh->BodySetup = BodySetup;
+	StaticMeshComponent->RecreatePhysicsState();
+}
+
 #if WITH_EDITOR
 bool IsRelevantObject(UVitruvioComponent* VitruvioComponent, UObject* Object)
 {
@@ -388,12 +401,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		VitruvioModelComponent->SetStaticMesh(ConvertedResult.ShapeMesh);
 		VitruvioModelComponent->SetCollisionData(ConvertedResult.CollisionData);
 
-		// StaticMesh Collision
-		UStaticMesh* ShapeMesh = ConvertedResult.ShapeMesh;
-		UBodySetup* BodySetup = NewObject<UBodySetup>(VitruvioModelComponent);
-		InitializeBodySetup(BodySetup, GenerateCollision);
-		ShapeMesh->BodySetup = BodySetup;
-		VitruvioModelComponent->RecreatePhysicsState();
+		CreateCollision(ConvertedResult.ShapeMesh, VitruvioModelComponent, GenerateCollision);
 
 		for (const FInstance& Instance : ConvertedResult.Instances)
 		{
@@ -416,11 +424,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 			}
 
 			// Instanced component collision
-			UStaticMesh* InstanceMesh = Instance.Mesh;
-			UBodySetup* InstanceBodySetup = NewObject<UBodySetup>(InstancedComponent);
-			InitializeBodySetup(InstanceBodySetup, GenerateCollision);
-			InstanceMesh->BodySetup = InstanceBodySetup;
-			InstancedComponent->RecreatePhysicsState();
+			CreateCollision(Instance.Mesh, InstancedComponent, GenerateCollision);
 
 			// Attach and register instance component
 			InstancedComponent->AttachToComponent(VitruvioModelComponent, FAttachmentTransformRules::KeepRelativeTransform);
