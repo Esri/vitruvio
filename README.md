@@ -4,7 +4,7 @@ Vitruvio is an [Unreal Engine 4](https://www.unrealengine.com/) (UE4) plugin whi
 
 As input Vitruvio requires rule packages (RPK) which are authored in CityEngine. An RPK includes assets and a CGA rule file which encodes an architectural style. The download section below provides links to the several RPKs which can be used out-of-the-box in Vitruvio.
 
-The latest release is available on the [Unreal Marketplace](https://www.unrealengine.com/marketplace/en-US/product/vitruvio-cityengine-plugin) (or in the [downloads section on GitHub](https://github.com/Esri/vitruvio/releases/tag/v1.0). Examples can be downloaded from [Vitruvio Plugin page](https://esri.github.io/cityengine/vitruvio#examples). Please make sure to [install Vitruvio](doc/installation.md) before running the examples.
+The latest release is available on the [Unreal Marketplace](https://www.unrealengine.com/marketplace/en-US/product/vitruvio-cityengine-plugin) (or in the [downloads section on GitHub](https://github.com/Esri/vitruvio/releases/tag/v1.0)). Examples can be downloaded from [Vitruvio Plugin page](https://esri.github.io/cityengine/vitruvio#examples). Please make sure to [install Vitruvio](doc/installation.md) before running the examples.
 
 ![City generated using Vitruvio](doc/img/vitruvio_paris.jpg)
 
