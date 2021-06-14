@@ -141,7 +141,7 @@ void CreateCollision(UStaticMesh* Mesh, UStaticMeshComponent* StaticMeshComponen
 
 	UBodySetup* BodySetup = NewObject<UBodySetup>(StaticMeshComponent);
 	InitializeBodySetup(BodySetup, ComplexCollision);
-	Mesh->BodySetup = BodySetup;
+	Mesh->SetBodySetup(BodySetup);
 	StaticMeshComponent->RecreatePhysicsState();
 }
 

@@ -205,9 +205,9 @@ void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component)
 	TArray<int32> RemappedIndices;
 	TArray<int32> MeshIndices;
 
-	if (StaticMesh->RenderData != nullptr && StaticMesh->RenderData->LODResources.IsValidIndex(0))
+	if (StaticMesh->GetRenderData() && StaticMesh->GetRenderData()->LODResources.IsValidIndex(0))
 	{
-		const FStaticMeshLODResources& LOD = StaticMesh->RenderData->LODResources[0];
+		const FStaticMeshLODResources& LOD = StaticMesh->GetRenderData()->LODResources[0];
 
 		for (auto SectionIndex = 0; SectionIndex < LOD.Sections.Num(); ++SectionIndex)
 		{
