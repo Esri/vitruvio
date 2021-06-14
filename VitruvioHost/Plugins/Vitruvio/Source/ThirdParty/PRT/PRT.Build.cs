@@ -20,10 +20,10 @@ public class PRT : ModuleRules
 	private const int PrtBuild = 6821;
 
 	private const string PrtCoreDllName = "com.esri.prt.core.dll";
-	private static string[] ExtensionLibraries = { "com.esri.prt.adaptors.dll", "com.esri.prt.codecs.dll", "VueExport.dll" };
+	private static readonly string[] ExtensionLibraries = { "com.esri.prt.adaptors.dll", "com.esri.prt.codecs.dll", "VueExport.dll" };
 
-	const long ERROR_SHARING_VIOLATION = 0x20;
-	const long ERROR_LOCK_VIOLATION = 0x21;
+	private const long ErrorSharingViolation = 0x20;
+	private const long ErrorLockViolation = 0x21;
 
 	public PRT(ReadOnlyTargetRules Target) : base(Target)
 	{
@@ -179,7 +179,7 @@ public class PRT : ModuleRules
 				// Check if the library is currently locked (happens if a build is triggered which needs to redownload/install PRT while Unreal is running).
 				// If so, we abort the build and let the user know that a build from "source" is required (with Unreal closed).
 				long Win32ErrorCode = Ex.HResult & 0xFFFF;
-				if (Win32ErrorCode == ERROR_SHARING_VIOLATION || Win32ErrorCode == ERROR_LOCK_VIOLATION)
+				if (Win32ErrorCode == ErrorSharingViolation || Win32ErrorCode == ErrorLockViolation)
 				{
 					string ErroMessage = string.Format("'{0}'is currently locked by another process. Trying to install new PRT library while Unreal is running is only possible from a source build.", DstLibFile);
 					throw new Exception(ErroMessage);
