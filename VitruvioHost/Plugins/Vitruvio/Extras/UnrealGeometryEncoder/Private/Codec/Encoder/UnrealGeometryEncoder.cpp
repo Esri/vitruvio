@@ -33,6 +33,7 @@
 #pragma warning(pop)
 
 #include <algorithm>
+#include <cassert>
 #include <memory>
 #include <numeric>
 #include <set>
