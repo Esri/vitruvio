@@ -23,7 +23,7 @@
 namespace
 {
 const int VERSION_MAJOR = 2;
-const int VERSION_MINOR = 3;
+const int VERSION_MINOR = 4;
 } // namespace
 
 extern "C"
