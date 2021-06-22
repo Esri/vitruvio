@@ -20,7 +20,6 @@ public class PRT : ModuleRules
 	private const int PrtBuild = 7316;
 
 	private const string PrtCoreDllName = "com.esri.prt.core.dll";
-	private static readonly string[] ExtensionLibraries = { "com.esri.prt.adaptors.dll", "com.esri.prt.codecs.dll", "VueExport.dll" };
 
 	private const long ErrorSharingViolation = 0x20;
 	private const long ErrorLockViolation = 0x21;
@@ -127,31 +126,6 @@ public class PRT : ModuleRules
 			string LibraryName = Path.GetFileName(FilePath);
 
 			Platform.AddPrtCoreLibrary(FilePath, LibraryName, this);
-		}
-
-		// Delete unused PRT extension libraries
-		if (Debug) Console.WriteLine("Deleting unused PRT extension libraries");
-		foreach (string FilePath in Directory.GetFiles(LibDir))
-		{
-			string FileName = Path.GetFileName(FilePath);
-			if (Path.GetExtension(FilePath) == Platform.DynamicLibExtension)
-			{
-				if (!Array.Exists(ExtensionLibraries, e => e == Path.GetFileName(FilePath)))
-				{
-					File.Delete(FilePath);
-				} 
-				else
-				{
-					RuntimeDependencies.Add(FilePath);
-					PublicDelayLoadDLLs.Add(FileName);
-				}
-			}
-		}
-		
-		// Delete all sub directories from the extensions
-		foreach (string DirectoryPath in Directory.GetDirectories(LibDir))
-		{
-			Directory.Delete(DirectoryPath, true);
 		}
 
 		// Add include search path
