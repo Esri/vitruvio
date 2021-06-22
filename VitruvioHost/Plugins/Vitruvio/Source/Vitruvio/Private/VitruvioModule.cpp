@@ -32,7 +32,6 @@
 #include "MeshDescription.h"
 #include "Modules/ModuleManager.h"
 #include "StaticMeshAttributes.h"
-#include "UObject/GCObjectScopeGuard.h"
 #include "UObject/UObjectBaseUtility.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioModule"
@@ -381,7 +380,28 @@ FGenerateResultDescription VitruvioModule::Generate(const TArray<FInitialShapeFa
 		UE_LOG(LogUnrealPrt, Error, TEXT("PRT generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
 	}
 
-	GenerateCallsCounter.Decrement();
+	const int GenerateCalls = GenerateCallsCounter.Decrement();
+	TArray<FLogMessage> Messages = LogHandler->PopMessages();
+
+	// Notify generate complete callback on game thread
+	AsyncTask(ENamedThreads::GameThread, [this, Messages, GenerateCalls]() {
+		int Warnings = 0;
+		int Errors = 0;
+
+		for (const FLogMessage& Message : Messages)
+		{
+			if (Message.Level == prt::LOG_WARNING)
+			{
+				Warnings++;
+			}
+			else if (Message.Level == prt::LOG_ERROR || Message.Level == prt::LOG_FATAL)
+			{
+				Errors++;
+			}
+		}
+
+		OnGenerateCompleted.Broadcast(GenerateCalls, Warnings, Errors);
+	});
 
 	return {OutputHandler->GetInstances(), OutputHandler->GetMeshes(), OutputHandler->GetMaterials()};
 }

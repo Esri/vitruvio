@@ -24,5 +24,9 @@ public:
 	void ShutdownModule() override;
 
 private:
+	void OnGenerateCompleted(int GenerateCallsLeft, int NumWarnings, int NumErrors);
+	TWeakPtr<SNotificationItem> NotificationItem;
+
 	FDelegateHandle LevelViewportContextMenuVitruvioExtenderDelegateHandle;
+	FDelegateHandle GenerateCompletedDelegateHandle;
 };
