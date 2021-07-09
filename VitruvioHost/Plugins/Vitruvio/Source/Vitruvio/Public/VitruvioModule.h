@@ -198,6 +198,11 @@ public:
 		return TextureCache;
 	}
 
+	/**
+	 * Evicts the given rule package resolve map entries from the cache.
+	 */
+	VITRUVIO_API void EvictFromResolveMapCache(URulePackage* RulePackage);
+
 	DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnGenerateCompleted, int, int, int);
 
 	/**

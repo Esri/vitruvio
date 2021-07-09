@@ -15,6 +15,8 @@
 
 #include "RulePackageFactory.h"
 
+#include "EditorFramework/AssetImportData.h"
+#include "Misc/FileHelper.h"
 #include "RulePackage.h"
 
 URulePackageFactory::URulePackageFactory(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
@@ -27,17 +29,67 @@ URulePackageFactory::URulePackageFactory(const FObjectInitializer& ObjectInitial
 	Formats.Add("rpk;Esri Rule Package");
 }
 
-// TODO: do we want to load the whole RPK into memory? Alternatively use FactoryCreateFile() and just keep the filename?
-UObject* URulePackageFactory::FactoryCreateBinary(UClass* Class, UObject* InParent, FName Name, EObjectFlags Flags, UObject* Context,
-												  const TCHAR* Type, const uint8*& Buffer, const uint8* BufferEnd, FFeedbackContext* Warn)
+bool URulePackageFactory::CanReimport(UObject* Obj, TArray<FString>& OutFilenames)
 {
-	URulePackage* RulePackage = NewObject<URulePackage>(InParent, SupportedClass, Name, Flags | RF_Transactional);
+	URulePackage* RulePackage = Cast<URulePackage>(Obj);
+	if (RulePackage)
+	{
+		OutFilenames.Add(UAssetImportData::ResolveImportFilename(RulePackage->SourcePath, RulePackage->GetOutermost()));
+		return true;
+	}
+	return false;
+}
 
-	const SIZE_T DataSize = BufferEnd - Buffer;
-	RulePackage->Data.Reset(DataSize);
-	RulePackage->Data.AddUninitialized(DataSize);
-	FMemory::Memcpy(RulePackage->Data.GetData(), Buffer, DataSize);
+void URulePackageFactory::SetReimportPaths(UObject* Obj, const TArray<FString>& NewReimportPaths)
+{
+	URulePackage* RulePackage = Cast<URulePackage>(Obj);
+	if (RulePackage && ensure(NewReimportPaths.Num() == 1))
+	{
+		RulePackage->SourcePath = UAssetImportData::SanitizeImportFilename(NewReimportPaths[0], RulePackage->GetOutermost());
+	}
+}
 
+EReimportResult::Type URulePackageFactory::Reimport(UObject* Obj)
+{
+	URulePackage* RulePackage = Cast<URulePackage>(Obj);
+	if (!RulePackage)
+	{
+		return EReimportResult::Failed;
+	}
+
+	const FString Filename = UAssetImportData::ResolveImportFilename(RulePackage->SourcePath, RulePackage->GetOutermost());
+	if (!FPaths::GetExtension(Filename).Equals(TEXT("rpk")))
+	{
+		return EReimportResult::Failed;
+	}
+
+	CurrentFilename = Filename;
+	TArray<uint8> Data;
+	if (FFileHelper::LoadFileToArray(Data, *Filename))
+	{
+		RulePackage->Modify();
+		RulePackage->MarkPackageDirty();
+
+		RulePackage->Data = Data;
+		RulePackage->SourcePath = UAssetImportData::SanitizeImportFilename(CurrentFilename, RulePackage->GetOutermost());
+	}
+
+	return EReimportResult::Succeeded;
+}
+
+UObject* URulePackageFactory::FactoryCreateFile(UClass* InClass, UObject* InParent, FName InName, EObjectFlags Flags, const FString& Filename,
+												const TCHAR* Parms, FFeedbackContext* Warn, bool& bOutOperationCanceled)
+{
+
+	TArray<uint8> Data;
+	if (!FFileHelper::LoadFileToArray(Data, *Filename))
+	{
+		return nullptr;
+	}
+
+	URulePackage* RulePackage = NewObject<URulePackage>(InParent, SupportedClass, InName, Flags | RF_Transactional);
+	RulePackage->Data = Data;
+	RulePackage->SourcePath = UAssetImportData::ResolveImportFilename(Filename, RulePackage->GetOutermost());
 	return RulePackage;
 }
 

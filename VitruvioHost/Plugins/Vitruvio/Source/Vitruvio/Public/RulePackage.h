@@ -28,6 +28,9 @@ public:
 	UPROPERTY(Transient)
 	TArray<uint8> Data;
 
+	UPROPERTY()
+	FString SourcePath;
+
 	void PreSave(const ITargetPlatform* TargetPlatform) override
 	{
 		Super::PreSave(TargetPlatform);

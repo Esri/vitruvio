@@ -460,6 +460,13 @@ FAttributeMapResult VitruvioModule::LoadDefaultRuleAttributesAsync(const TArray<
 	return {MoveTemp(AttributeMapPtrFuture), InvalidationToken};
 }
 
+void VitruvioModule::EvictFromResolveMapCache(URulePackage* RulePackage)
+{
+	const TLazyObjectPtr<URulePackage> LazyRulePackagePtr(RulePackage);
+	FScopeLock Lock(&LoadResolveMapLock);
+	ResolveMapCache.Remove(LazyRulePackagePtr);
+}
+
 TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(URulePackage* const RulePackage) const
 {
 	TPromise<ResolveMapSPtr> Promise;
