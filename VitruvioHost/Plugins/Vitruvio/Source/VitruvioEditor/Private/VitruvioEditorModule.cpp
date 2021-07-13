@@ -208,7 +208,10 @@ void VitruvioEditorModule::ShutdownModule()
 
 	FCoreDelegates::OnPostEngineInit.RemoveAll(this);
 	VitruvioModule::Get().OnGenerateCompleted.Remove(GenerateCompletedDelegateHandle);
-	GEditor->GetEditorSubsystem<UImportSubsystem>()->OnAssetReimport.Remove(OnAssetReloadHandle);
+	if (GEditor)
+	{
+		GEditor->GetEditorSubsystem<UImportSubsystem>()->OnAssetReimport.Remove(OnAssetReloadHandle);
+	}
 }
 
 void VitruvioEditorModule::OnPostEngineInit()
@@ -228,6 +231,7 @@ void VitruvioEditorModule::OnPostEngineInit()
 			UVitruvioComponent* VitruvioComponent = Cast<UVitruvioComponent>(Actor->GetComponentByClass(UVitruvioComponent::StaticClass()));
 			if (VitruvioComponent && VitruvioComponent->GetRpk() == RulePackage)
 			{
+				VitruvioComponent->RemoveGeneratedMeshes();
 				VitruvioComponent->Generate();
 			}
 		}

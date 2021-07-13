@@ -189,6 +189,9 @@ public:
 	/* Initialize the VitruvioComponent. Only needs to be called if the Component is natively attached. */
 	void Initialize();
 
+	/* Removes the generated meshes from this VitruvioComponent. */
+	void RemoveGeneratedMeshes();
+
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnHierarchyChanged, UVitruvioComponent*) static FOnHierarchyChanged OnHierarchyChanged;
 
 	virtual void PostLoad() override;
@@ -235,8 +238,6 @@ private:
 
 	void LoadDefaultAttributes(bool KeepOldAttributeValues = false, bool ForceRegenerate = false);
 	void NotifyAttributesChanged();
-
-	void RemoveGeneratedMeshes();
 
 	void ProcessGenerateQueue();
 	void ProcessLoadAttributesQueue();

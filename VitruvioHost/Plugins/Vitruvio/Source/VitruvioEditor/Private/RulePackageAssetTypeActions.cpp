@@ -15,7 +15,7 @@
 
 #include "RulePackageAssetTypeActions.h"
 
-#include "RulePackage.h"
+#include "ToolMenuSection.h"
 #include "UnrealEd.h"
 
 FText FRulePackageAssetTypeActions::GetName() const
@@ -38,4 +38,29 @@ void FRulePackageAssetTypeActions::OpenAssetEditor(const TArray<UObject*>& InObj
 uint32 FRulePackageAssetTypeActions::GetCategories()
 {
 	return EAssetTypeCategories::Misc;
+}
+
+bool FRulePackageAssetTypeActions::HasActions(const TArray<UObject*>& InObjects) const
+{
+	return true;
+}
+
+void FRulePackageAssetTypeActions::GetActions(const TArray<UObject*>& InObjects, FToolMenuSection& Section)
+{
+	TArray<TWeakObjectPtr<URulePackage>> RulePackages = GetTypedWeakObjectPtrs<URulePackage>(InObjects);
+
+	Section.AddMenuEntry(
+		"Rulpackage_Reload", FText::FromString("Reload From Disk"), FText::FromString("Reloads the Rule Package from disk."), FSlateIcon(),
+		FUIAction(FExecuteAction::CreateSP(this, &FRulePackageAssetTypeActions::ExecuteReimport, RulePackages), FCanExecuteAction()));
+}
+
+void FRulePackageAssetTypeActions::ExecuteReimport(TArray<TWeakObjectPtr<URulePackage>> RulePackages)
+{
+	for (const auto& RulePackage : RulePackages)
+	{
+		if (RulePackage.IsValid())
+		{
+			FReimportManager::Instance()->Reimport(RulePackage.Get(), true);
+		}
+	}
 }
