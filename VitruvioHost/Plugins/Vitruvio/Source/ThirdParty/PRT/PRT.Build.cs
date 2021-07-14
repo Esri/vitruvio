@@ -12,8 +12,8 @@ using System.Linq;
 
 public class PRT : ModuleRules
 {
-	private const bool Debug = true;
-
+	private readonly bool Debug;
+	
 	// PRT version and toolchain (needs to be correct for download URL)
 	private const int PrtMajor = 2;
 	private const int PrtMinor = 4;
@@ -26,6 +26,9 @@ public class PRT : ModuleRules
 
 	public PRT(ReadOnlyTargetRules Target) : base(Target)
 	{
+		// Debug print only enabled when plugin is installed directly into project (not in Engine)
+		Debug = !PluginDirectory.EndsWith(Path.Combine("Plugins", "Marketplace", "Vitruvio"));
+		
 		bUseRTTI = true;
 		bEnableExceptions = true;
 		Type = ModuleType.External;
@@ -33,11 +36,11 @@ public class PRT : ModuleRules
 		AbstractPlatform Platform;
 		if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
-			Platform = new WindowsPlatform();
+			Platform = new WindowsPlatform(Debug);
 		}
 		else if (Target.Platform == UnrealTargetPlatform.Mac)
 		{
-			Platform = new MacPlatform();
+			Platform = new MacPlatform(Debug);
 		}
 		else
 		{
@@ -133,7 +136,7 @@ public class PRT : ModuleRules
 		PublicSystemIncludePaths.Add(IncludeDir);
 	}
 
-	private static void CopyLibraryFile(string SrcLibDir, string SrcFile, string DstLibFile)
+	private void CopyLibraryFile(string SrcLibDir, string SrcFile, string DstLibFile)
 	{
 		string SrcLib = Path.Combine(SrcLibDir, SrcFile);
 		if (!System.IO.File.Exists(DstLibFile) || System.IO.File.GetCreationTime(SrcLib) > System.IO.File.GetCreationTime(DstLibFile))
@@ -179,7 +182,7 @@ public class PRT : ModuleRules
 		}
 	}
 
-	public static bool CheckDllVersion(string DllPath, int Major, int Minor, int Build)
+	public bool CheckDllVersion(string DllPath, int Major, int Minor, int Build)
 	{
 		FileVersionInfo Info = FileVersionInfo.GetVersionInfo(DllPath);
 		string[] BuildVersions = Info.ProductVersion.Split(' ');
@@ -254,6 +257,12 @@ public class PRT : ModuleRules
 		public abstract string PrtPlatform { get; }
 		public abstract string DynamicLibExtension { get; }
 
+		protected bool Debug;
+		public AbstractPlatform(bool Debug)
+		{
+			this.Debug = Debug;
+		}
+
 		public virtual void AddPrtCoreLibrary(string LibraryPath, string LibraryName, ModuleRules Rules)
 		{
 			if (Path.GetExtension(LibraryName) == DynamicLibExtension)
@@ -273,7 +282,11 @@ public class PRT : ModuleRules
 		public override string Name { get { return "Win64"; } }
 		public override string PrtPlatform { get { return "win10-vc1427-x86_64-rel-opt"; } }
 		public override string DynamicLibExtension { get { return ".dll"; } }
-
+		
+		public WindowsPlatform(bool Debug) : base(Debug)
+		{
+		}
+		
 		public override void AddPrtCoreLibrary(string LibraryPath, string LibraryName, ModuleRules Rules)
 		{
 			base.AddPrtCoreLibrary(LibraryPath, LibraryName, Rules);
@@ -290,7 +303,11 @@ public class PRT : ModuleRules
 	private class MacPlatform : AbstractPlatform
 	{
 		public override AbstractZipExtractor ZipExtractor {	get { return new UnixZipExtractor(); } }
-
+		
+		public MacPlatform(bool Debug) : base(Debug)
+		{
+		} 
+		
 		public override string Name { get { return "Mac"; } }
 		public override string PrtPlatform { get { return "osx12-ac81-x86_64-rel-opt"; } }
 		public override string DynamicLibExtension { get { return ".dylib"; } }
