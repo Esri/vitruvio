@@ -190,8 +190,7 @@ void VitruvioEditorModule::StartupModule()
 	MenuExtenders.Add(LevelViewportContextMenuVitruvioExtender);
 	LevelViewportContextMenuVitruvioExtenderDelegateHandle = MenuExtenders.Last().GetHandle();
 
-	GenerateCompletedDelegateHandle = VitruvioModule::Get().OnGenerateCompleted.AddLambda(
-		[this](int GenerateCallsLeft, int NumWarnings, int NumErrors) { OnGenerateCompleted(GenerateCallsLeft, NumWarnings, NumErrors); });
+	GenerateCompletedDelegateHandle = VitruvioModule::Get().OnGenerateCompleted.AddRaw(this, &VitruvioEditorModule::OnGenerateCompleted);
 }
 
 void VitruvioEditorModule::ShutdownModule()
