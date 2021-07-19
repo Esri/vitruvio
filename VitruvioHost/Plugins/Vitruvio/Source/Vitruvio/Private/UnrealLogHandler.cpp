@@ -17,8 +17,18 @@
 
 DEFINE_LOG_CATEGORY(UnrealPrtLog)
 
+TArray<FLogMessage> UnrealLogHandler::PopMessages()
+{
+	TArray<FLogMessage> Result = Messages;
+	Messages.Empty();
+	return Result;
+}
+
 void UnrealLogHandler::handleLogEvent(const wchar_t* msg, prt::LogLevel level)
 {
+	const FString MessageString(msg);
+	Messages.Push({MessageString, level});
+
 	switch (level)
 	{
 	case prt::LOG_TRACE:

@@ -12,21 +12,23 @@ using System.Linq;
 
 public class PRT : ModuleRules
 {
-	private const bool Debug = true;
-
+	private readonly bool Debug;
+	
 	// PRT version and toolchain (needs to be correct for download URL)
 	private const int PrtMajor = 2;
-	private const int PrtMinor = 3;
-	private const int PrtBuild = 6821;
+	private const int PrtMinor = 4;
+	private const int PrtBuild = 7316;
 
 	private const string PrtCoreDllName = "com.esri.prt.core.dll";
-	private static string[] ExtensionLibraries = { "com.esri.prt.adaptors.dll", "com.esri.prt.codecs.dll", "VueExport.dll" };
 
-	const long ERROR_SHARING_VIOLATION = 0x20;
-	const long ERROR_LOCK_VIOLATION = 0x21;
+	private const long ErrorSharingViolation = 0x20;
+	private const long ErrorLockViolation = 0x21;
 
 	public PRT(ReadOnlyTargetRules Target) : base(Target)
 	{
+		// Debug print only enabled when plugin is installed directly into project (not in Engine)
+		Debug = !PluginDirectory.EndsWith(Path.Combine("Plugins", "Marketplace", "Vitruvio"));
+		
 		bUseRTTI = true;
 		bEnableExceptions = true;
 		Type = ModuleType.External;
@@ -34,11 +36,11 @@ public class PRT : ModuleRules
 		AbstractPlatform Platform;
 		if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
-			Platform = new WindowsPlatform();
+			Platform = new WindowsPlatform(Debug);
 		}
 		else if (Target.Platform == UnrealTargetPlatform.Mac)
 		{
-			Platform = new MacPlatform();
+			Platform = new MacPlatform(Debug);
 		}
 		else
 		{
@@ -129,37 +131,12 @@ public class PRT : ModuleRules
 			Platform.AddPrtCoreLibrary(FilePath, LibraryName, this);
 		}
 
-		// Delete unused PRT extension libraries
-		if (Debug) Console.WriteLine("Deleting unused PRT extension libraries");
-		foreach (string FilePath in Directory.GetFiles(LibDir))
-		{
-			string FileName = Path.GetFileName(FilePath);
-			if (Path.GetExtension(FilePath) == Platform.DynamicLibExtension)
-			{
-				if (!Array.Exists(ExtensionLibraries, e => e == Path.GetFileName(FilePath)))
-				{
-					File.Delete(FilePath);
-				} 
-				else
-				{
-					RuntimeDependencies.Add(FilePath);
-					PublicDelayLoadDLLs.Add(FileName);
-				}
-			}
-		}
-		
-		// Delete all sub directories from the extensions
-		foreach (string DirectoryPath in Directory.GetDirectories(LibDir))
-		{
-			Directory.Delete(DirectoryPath, true);
-		}
-
 		// Add include search path
 		if (Debug) Console.WriteLine("Adding include search path " + IncludeDir);
 		PublicSystemIncludePaths.Add(IncludeDir);
 	}
 
-	private static void CopyLibraryFile(string SrcLibDir, string SrcFile, string DstLibFile)
+	private void CopyLibraryFile(string SrcLibDir, string SrcFile, string DstLibFile)
 	{
 		string SrcLib = Path.Combine(SrcLibDir, SrcFile);
 		if (!System.IO.File.Exists(DstLibFile) || System.IO.File.GetCreationTime(SrcLib) > System.IO.File.GetCreationTime(DstLibFile))
@@ -179,7 +156,7 @@ public class PRT : ModuleRules
 				// Check if the library is currently locked (happens if a build is triggered which needs to redownload/install PRT while Unreal is running).
 				// If so, we abort the build and let the user know that a build from "source" is required (with Unreal closed).
 				long Win32ErrorCode = Ex.HResult & 0xFFFF;
-				if (Win32ErrorCode == ERROR_SHARING_VIOLATION || Win32ErrorCode == ERROR_LOCK_VIOLATION)
+				if (Win32ErrorCode == ErrorSharingViolation || Win32ErrorCode == ErrorLockViolation)
 				{
 					string ErroMessage = string.Format("'{0}'is currently locked by another process. Trying to install new PRT library while Unreal is running is only possible from a source build.", DstLibFile);
 					throw new Exception(ErroMessage);
@@ -205,7 +182,7 @@ public class PRT : ModuleRules
 		}
 	}
 
-	public static bool CheckDllVersion(string DllPath, int Major, int Minor, int Build)
+	public bool CheckDllVersion(string DllPath, int Major, int Minor, int Build)
 	{
 		FileVersionInfo Info = FileVersionInfo.GetVersionInfo(DllPath);
 		string[] BuildVersions = Info.ProductVersion.Split(' ');
@@ -280,6 +257,12 @@ public class PRT : ModuleRules
 		public abstract string PrtPlatform { get; }
 		public abstract string DynamicLibExtension { get; }
 
+		protected bool Debug;
+		public AbstractPlatform(bool Debug)
+		{
+			this.Debug = Debug;
+		}
+
 		public virtual void AddPrtCoreLibrary(string LibraryPath, string LibraryName, ModuleRules Rules)
 		{
 			if (Path.GetExtension(LibraryName) == DynamicLibExtension)
@@ -297,9 +280,13 @@ public class PRT : ModuleRules
 		public override AbstractZipExtractor ZipExtractor { get { return new WindowsZipExtractor(); } }
 
 		public override string Name { get { return "Win64"; } }
-		public override string PrtPlatform { get { return "win10-vc142-x86_64-rel-opt"; } }
+		public override string PrtPlatform { get { return "win10-vc1427-x86_64-rel-opt"; } }
 		public override string DynamicLibExtension { get { return ".dll"; } }
-
+		
+		public WindowsPlatform(bool Debug) : base(Debug)
+		{
+		}
+		
 		public override void AddPrtCoreLibrary(string LibraryPath, string LibraryName, ModuleRules Rules)
 		{
 			base.AddPrtCoreLibrary(LibraryPath, LibraryName, Rules);
@@ -316,7 +303,11 @@ public class PRT : ModuleRules
 	private class MacPlatform : AbstractPlatform
 	{
 		public override AbstractZipExtractor ZipExtractor {	get { return new UnixZipExtractor(); } }
-
+		
+		public MacPlatform(bool Debug) : base(Debug)
+		{
+		} 
+		
 		public override string Name { get { return "Mac"; } }
 		public override string PrtPlatform { get { return "osx12-ac81-x86_64-rel-opt"; } }
 		public override string DynamicLibExtension { get { return ".dylib"; } }

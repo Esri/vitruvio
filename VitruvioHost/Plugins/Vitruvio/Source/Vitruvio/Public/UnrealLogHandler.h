@@ -20,12 +20,23 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(UnrealPrtLog, Log, All);
 
+struct FLogMessage
+{
+	FString Message;
+	prt::LogLevel Level;
+};
+
 class UnrealLogHandler final : public prt::LogHandler
 {
+
+	TArray<FLogMessage> Messages;
+
 public:
 	UnrealLogHandler() = default;
 
 	virtual ~UnrealLogHandler() = default;
+
+	TArray<FLogMessage> PopMessages();
 
 	void handleLogEvent(const wchar_t* msg, prt::LogLevel level) override;
 	const prt::LogLevel* getLevels(size_t* count) override;

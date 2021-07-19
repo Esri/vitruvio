@@ -9,7 +9,7 @@
 	"CreatedByURL": "https://www.esri.com/en-us/home",
 	"DocsURL": "https://github.com/Esri/vitruvio/blob/master/doc/usage.md",
 	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/9bf931969c174491bd9a7ca517a40653",
-	"EngineVersion": "4.26.0",
+	"EngineVersion": "4.27.0",
 	"CanContainContent": true,
 	"IsBetaVersion": false,
 	"IsExperimentalVersion": false,

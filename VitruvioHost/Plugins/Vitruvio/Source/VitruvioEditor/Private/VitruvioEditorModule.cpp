@@ -28,7 +28,9 @@
 #include "Algo/AnyOf.h"
 #include "ChooseRulePackageDialog.h"
 #include "Editor/LevelEditor/Public/LevelEditor.h"
+#include "Framework/Notifications/NotificationManager.h"
 #include "VitruvioActor.h"
+#include "Widgets/Notifications/SNotificationList.h"
 
 namespace
 {
@@ -187,6 +189,8 @@ void VitruvioEditorModule::StartupModule()
 	auto& MenuExtenders = LevelEditorModule.GetAllLevelViewportContextMenuExtenders();
 	MenuExtenders.Add(LevelViewportContextMenuVitruvioExtender);
 	LevelViewportContextMenuVitruvioExtenderDelegateHandle = MenuExtenders.Last().GetHandle();
+
+	GenerateCompletedDelegateHandle = VitruvioModule::Get().OnGenerateCompleted.AddRaw(this, &VitruvioEditorModule::OnGenerateCompleted);
 }
 
 void VitruvioEditorModule::ShutdownModule()
@@ -199,6 +203,50 @@ void VitruvioEditorModule::ShutdownModule()
 		[&](const FLevelEditorModule::FLevelViewportMenuExtender_SelectedActors& Delegate) {
 			return Delegate.GetHandle() == LevelViewportContextMenuVitruvioExtenderDelegateHandle;
 		});
+
+	VitruvioModule::Get().OnGenerateCompleted.Remove(GenerateCompletedDelegateHandle);
+}
+
+void VitruvioEditorModule::OnGenerateCompleted(int GenerateCallsLeft, int NumWarnings, int NumErrors)
+{
+	if (GenerateCallsLeft > 0)
+	{
+		return;
+	}
+
+	FString NotificationText(TEXT("Generate Completed"));
+	const FSlateBrush* Image = nullptr;
+	if (NumErrors > 0)
+	{
+		NotificationText += FString::Printf(TEXT(" with %d Errors"), NumErrors);
+		Image = FCoreStyle::Get().GetBrush(TEXT("MessageLog.Error"));
+	}
+	else if (NumWarnings > 0)
+	{
+		NotificationText += FString::Printf(TEXT(" with %d Warnings"), NumWarnings);
+		Image = FCoreStyle::Get().GetBrush(TEXT("MessageLog.Warning"));
+	}
+
+	FNotificationInfo Info(FText::FromString(NotificationText));
+
+	Info.bFireAndForget = true;
+	Info.ExpireDuration = 5.0f;
+	Info.Image = Image;
+
+	if (NumWarnings > 0 || NumErrors > 0)
+	{
+		Info.Hyperlink = FSimpleDelegate::CreateLambda([]() { FGlobalTabmanager::Get()->TryInvokeTab(FName("OutputLog")); });
+		Info.HyperlinkText = FText::FromString("Show Output Log");
+	}
+
+	if (NotificationItem.IsValid())
+	{
+		auto NotificationItemPinned = NotificationItem.Pin();
+		NotificationItemPinned->SetFadeOutDuration(0);
+		NotificationItemPinned->Fadeout();
+		NotificationItem.Reset();
+	}
+	NotificationItem = FSlateNotificationManager::Get().AddNotification(Info);
 }
 
 #undef LOCTEXT_NAMESPACE
