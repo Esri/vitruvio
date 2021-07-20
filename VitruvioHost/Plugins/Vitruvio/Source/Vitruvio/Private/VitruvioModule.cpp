@@ -113,6 +113,9 @@ public:
 				ResolveMapCache.Add(LazyRulePackagePtr, ResolveMapPtr);
 				Promise.SetValue(ResolveMapPtr);
 			}
+
+			// Delete now unpacked rpk file
+			IFileManager::Get().Delete(*RpkFilePath);
 		}
 		else
 		{
