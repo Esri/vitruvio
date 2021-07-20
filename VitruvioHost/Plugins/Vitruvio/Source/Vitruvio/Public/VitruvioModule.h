@@ -102,6 +102,8 @@ using FAttributeMapResult = TResult<FAttributeMapPtr, FInvalidationToken>;
 
 class VitruvioModule final : public IModuleInterface, public FGCObject
 {
+	friend class VitruvioEditorModule;
+
 public:
 	void StartupModule() override;
 	void ShutdownModule() override;
@@ -240,4 +242,6 @@ private:
 
 	TFuture<ResolveMapSPtr> LoadResolveMapAsync(URulePackage* RulePackage) const;
 	void InitializePrt();
+
+	VITRUVIO_API void EvictFromResolveMapCache(URulePackage* RulePackage);
 };

@@ -37,6 +37,7 @@ public class VitruvioEditor : ModuleRules
 				"Slate",
 				"AppFramework",
 				"CoreUObject",
+				"ToolMenus",
 				"InputCore",
 				"UnrealEd",
 				"EditorStyle"

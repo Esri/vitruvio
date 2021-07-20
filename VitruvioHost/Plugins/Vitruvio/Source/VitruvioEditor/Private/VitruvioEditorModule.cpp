@@ -191,6 +191,8 @@ void VitruvioEditorModule::StartupModule()
 	LevelViewportContextMenuVitruvioExtenderDelegateHandle = MenuExtenders.Last().GetHandle();
 
 	GenerateCompletedDelegateHandle = VitruvioModule::Get().OnGenerateCompleted.AddRaw(this, &VitruvioEditorModule::OnGenerateCompleted);
+
+	FCoreDelegates::OnPostEngineInit.AddRaw(this, &VitruvioEditorModule::OnPostEngineInit);
 }
 
 void VitruvioEditorModule::ShutdownModule()
@@ -204,7 +206,37 @@ void VitruvioEditorModule::ShutdownModule()
 			return Delegate.GetHandle() == LevelViewportContextMenuVitruvioExtenderDelegateHandle;
 		});
 
+	FCoreDelegates::OnPostEngineInit.RemoveAll(this);
 	VitruvioModule::Get().OnGenerateCompleted.Remove(GenerateCompletedDelegateHandle);
+	if (GEditor)
+	{
+		GEditor->GetEditorSubsystem<UImportSubsystem>()->OnAssetReimport.Remove(OnAssetReloadHandle);
+	}
+}
+
+void VitruvioEditorModule::OnPostEngineInit()
+{
+	// clang-format off
+	OnAssetReloadHandle = GEditor->GetEditorSubsystem<UImportSubsystem>()->OnAssetReimport.AddLambda([](UObject* Object)
+	{
+		URulePackage* RulePackage = Cast<URulePackage>(Object);
+		if (RulePackage)
+		{
+			VitruvioModule::Get().EvictFromResolveMapCache(RulePackage);
+		}
+
+		for (FActorIterator It(GEditor->GetEditorWorldContext().World()); It; ++It)
+		{
+			AActor* Actor = *It;
+			UVitruvioComponent* VitruvioComponent = Cast<UVitruvioComponent>(Actor->GetComponentByClass(UVitruvioComponent::StaticClass()));
+			if (VitruvioComponent && VitruvioComponent->GetRpk() == RulePackage)
+			{
+				VitruvioComponent->RemoveGeneratedMeshes();
+				VitruvioComponent->Generate();
+			}
+		}
+	});
+	// clang-format on
 }
 
 void VitruvioEditorModule::OnGenerateCompleted(int GenerateCallsLeft, int NumWarnings, int NumErrors)

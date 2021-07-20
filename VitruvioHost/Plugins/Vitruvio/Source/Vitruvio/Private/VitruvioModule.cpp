@@ -84,10 +84,14 @@ public:
 		// Create rpk on disk for PRT
 		IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
 
-		const FString RpkFile = FPaths::GetBaseFilename(UriPath, true) + TEXT(".rpk");
-		const FString RpkPath = FPaths::Combine(RpkFolder, RpkFile);
-		PlatformFile.CreateDirectoryTree(*RpkFolder);
-		IFileHandle* RpkHandle = PlatformFile.OpenWrite(*RpkPath);
+		const FString RpkFile = FPaths::GetBaseFilename(UriPath, false) + TEXT(".rpk");
+		const FString RpkFilePath = FPaths::Combine(RpkFolder, RpkFile);
+		const FString RpkFolderPath = FPaths::GetPath(RpkFilePath);
+
+		IFileManager::Get().Delete(*RpkFilePath);
+		PlatformFile.CreateDirectoryTree(*RpkFolderPath);
+
+		IFileHandle* RpkHandle = PlatformFile.OpenWrite(*RpkFilePath);
 		if (RpkHandle)
 		{
 			// Write file to disk
@@ -96,11 +100,12 @@ public:
 			delete RpkHandle;
 
 			// Create rpk
-			const std::wstring AbsoluteRpkPath(TCHAR_TO_WCHAR(*FPaths::ConvertRelativePathToFull(RpkPath)));
-			const std::wstring AbsoluteRpkFolder(TCHAR_TO_WCHAR(*FPaths::Combine(FPaths::GetPath(FPaths::ConvertRelativePathToFull(RpkPath)),
+			const std::wstring AbsoluteRpkPath(TCHAR_TO_WCHAR(*FPaths::ConvertRelativePathToFull(RpkFilePath)));
+			const std::wstring AbsoluteRpkFolder(TCHAR_TO_WCHAR(*FPaths::Combine(FPaths::GetPath(FPaths::ConvertRelativePathToFull(RpkFilePath)),
 																				 FPaths::GetBaseFilename(UriPath, true) + TEXT("_Unpacked"))));
-			const std::wstring RpkFileUri = prtu::toFileURI(AbsoluteRpkPath);
 
+			const std::wstring RpkFileUri = prtu::toFileURI(AbsoluteRpkPath);
+			IFileManager::Get().DeleteDirectory(AbsoluteRpkFolder.c_str(), false, true);
 			prt::Status Status;
 			const ResolveMapSPtr ResolveMapPtr(prt::createResolveMap(RpkFileUri.c_str(), AbsoluteRpkFolder.c_str(), &Status), PRTDestroyer());
 			{
@@ -108,6 +113,9 @@ public:
 				ResolveMapCache.Add(LazyRulePackagePtr, ResolveMapPtr);
 				Promise.SetValue(ResolveMapPtr);
 			}
+
+			// Delete now unpacked rpk file
+			IFileManager::Get().Delete(*RpkFilePath);
 		}
 		else
 		{
@@ -458,6 +466,14 @@ FAttributeMapResult VitruvioModule::LoadDefaultRuleAttributesAsync(const TArray<
 	});
 
 	return {MoveTemp(AttributeMapPtrFuture), InvalidationToken};
+}
+
+void VitruvioModule::EvictFromResolveMapCache(URulePackage* RulePackage)
+{
+	const TLazyObjectPtr<URulePackage> LazyRulePackagePtr(RulePackage);
+	FScopeLock Lock(&LoadResolveMapLock);
+	ResolveMapCache.Remove(LazyRulePackagePtr);
+	PrtCache->flushAll();
 }
 
 TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(URulePackage* const RulePackage) const
