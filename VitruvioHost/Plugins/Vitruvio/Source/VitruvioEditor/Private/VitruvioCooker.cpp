@@ -1,0 +1,328 @@
+#include "VitruvioCooker.h"
+
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "Dialogs/DlgPickPath.h"
+#include "Factories/MaterialInstanceConstantFactoryNew.h"
+#include "GeneratedModelHISMComponent.h"
+#include "GeneratedModelStaticMeshComponent.h"
+#include "Materials/MaterialInstanceConstant.h"
+#include "VitruvioComponent.h"
+#include "VitruvioModule.h"
+
+namespace
+{
+
+using FMaterialCache = TMap<UMaterialInstanceDynamic*, UMaterialInstanceConstant*>;
+using FTextureCache = TMap<UTexture*, UTexture2D*>;
+using FMeshCache = TMap<UStaticMesh*, UStaticMesh*>;
+
+FDelegateHandle ModelsGeneratedHandle;
+std::atomic<bool> IsCooking;
+
+template <typename T>
+T* AttachMeshComponent(AActor* Parent, UStaticMesh* Mesh, const FName& Name, const FTransform& Transform)
+{
+	T* NewStaticMeshComponent = NewObject<T>(Parent, Name);
+	NewStaticMeshComponent->Mobility = EComponentMobility::Movable;
+	NewStaticMeshComponent->SetStaticMesh(Mesh);
+	NewStaticMeshComponent->SetWorldTransform(Transform);
+	Parent->AddInstanceComponent(NewStaticMeshComponent);
+	NewStaticMeshComponent->AttachToComponent(Parent->GetRootComponent(), FAttachmentTransformRules::KeepWorldTransform);
+	NewStaticMeshComponent->OnComponentCreated();
+	NewStaticMeshComponent->RegisterComponent();
+	return NewStaticMeshComponent;
+}
+
+void BlockUntilCookCompleted()
+{
+	FScopedSlowTask PRTGenerateCallsTasks(0, FText::FromString("Finishing previous Vitruvio cooking..."));
+	while (IsCooking.load())
+	{
+		FPlatformProcess::Sleep(0); // SwitchToThread
+		int32 CurrentNumGenerateCalls = VitruvioModule::Get().GetNumGenerateCalls();
+		PRTGenerateCallsTasks.EnterProgressFrame(0);
+	}
+}
+
+void BlockUntilGenerated()
+{
+	// Wait until all async generate calls to PRT are finished. We want to block the UI and show a modal progress bar.
+	int32 TotalGenerateCalls = VitruvioModule::Get().GetNumGenerateCalls();
+	FScopedSlowTask PRTGenerateCallsTasks(TotalGenerateCalls, FText::FromString("Generating models..."));
+	PRTGenerateCallsTasks.MakeDialog();
+	while (VitruvioModule::Get().IsGenerating() || VitruvioModule::Get().IsLoadingRpks())
+	{
+		FPlatformProcess::Sleep(0); // SwitchToThread
+		int32 CurrentNumGenerateCalls = VitruvioModule::Get().GetNumGenerateCalls();
+		PRTGenerateCallsTasks.EnterProgressFrame(TotalGenerateCalls - CurrentNumGenerateCalls);
+		TotalGenerateCalls = CurrentNumGenerateCalls;
+	}
+}
+
+UTexture2D* SaveTexture(UTexture2D* Original, const FString& Path, FTextureCache& TextureCache)
+{
+	if (TextureCache.Contains(Original))
+	{
+		return TextureCache[Original];
+	}
+
+	FString TexturePath = FPaths::Combine(Path, TEXT("Textures"), Original->GetName());
+	UPackage* TexturePackage = CreatePackage(*TexturePath);
+	const FName UniqueTextureName = MakeUniqueObjectName(TexturePackage, UTexture2D::StaticClass(), *Original->GetName());
+
+	UTexture2D* NewTexture = NewObject<UTexture2D>(TexturePackage, UniqueTextureName, RF_Public | RF_Standalone);
+
+	NewTexture->PlatformData = new FTexturePlatformData();
+	NewTexture->PlatformData->SizeX = Original->PlatformData->SizeX;
+	NewTexture->PlatformData->SizeY = Original->PlatformData->SizeY;
+	NewTexture->PlatformData->PixelFormat = Original->PlatformData->PixelFormat;
+	NewTexture->CompressionSettings = Original->CompressionSettings;
+	NewTexture->SRGB = Original->SRGB;
+
+	// Allocate first mipmap and upload the pixel data
+	FTexture2DMipMap* Mip = new FTexture2DMipMap();
+	FTexture2DMipMap& OriginalMip = Original->PlatformData->Mips[0];
+
+	NewTexture->PlatformData->Mips.Add(Mip);
+
+	Mip->SizeX = OriginalMip.SizeX;
+	Mip->SizeY = OriginalMip.SizeY;
+
+	const uint8* SourcePixels = static_cast<const uint8*>(OriginalMip.BulkData.LockReadOnly());
+	Mip->BulkData.Lock(LOCK_READ_WRITE);
+
+	void* TextureData = Mip->BulkData.Realloc(CalculateImageBytes(Mip->SizeX, Mip->SizeY, 0, NewTexture->PlatformData->PixelFormat));
+	FMemory::Memcpy(TextureData, SourcePixels, OriginalMip.BulkData.GetBulkDataSize());
+	Mip->BulkData.Unlock();
+
+	NewTexture->Source.Init(Original->PlatformData->SizeX, Original->PlatformData->SizeY, 1, 1, ETextureSourceFormat::TSF_BGRA8, SourcePixels);
+	OriginalMip.BulkData.Unlock();
+
+	NewTexture->PostEditChange();
+	TexturePackage->MarkPackageDirty();
+	FAssetRegistryModule::AssetCreated(NewTexture);
+
+	TextureCache.Add(Original, NewTexture);
+
+	return NewTexture;
+}
+
+UMaterialInstanceConstant* SaveMaterial(UMaterialInstanceDynamic* Material, const FString& Path, FMaterialCache& MaterialCache,
+										FTextureCache& TextureCache)
+{
+	if (MaterialCache.Contains(Material))
+	{
+		return MaterialCache[Material];
+	}
+
+	const FString MaterialName = Material->GetName();
+	const FString MaterialPackagePath = FPaths::Combine(Path, TEXT("Materials"), MaterialName);
+	UPackage* MaterialPackage = CreatePackage(*MaterialPackagePath);
+	const FName UniqueMaterialName = MakeUniqueObjectName(MaterialPackage, UMaterial::StaticClass(), FName(*MaterialName));
+
+	UMaterialInstanceConstantFactoryNew* MaterialFactory = NewObject<UMaterialInstanceConstantFactoryNew>();
+	MaterialFactory->InitialParent = Material->Parent;
+
+	UMaterialInstanceConstant* NewMaterial = Cast<UMaterialInstanceConstant>(MaterialFactory->FactoryCreateNew(
+		UMaterialInstanceConstant::StaticClass(), MaterialPackage, UniqueMaterialName, RF_Public | RF_Standalone, nullptr, GWarn));
+	FAssetRegistryModule::AssetCreated(NewMaterial);
+
+	TArray<FMaterialParameterInfo> ParameterInfos;
+	TArray<FGuid> ParameterIds;
+
+	Material->GetAllScalarParameterInfo(ParameterInfos, ParameterIds);
+	for (const FMaterialParameterInfo& Info : ParameterInfos)
+	{
+		float Value;
+		Material->GetScalarParameterValue(Info, Value);
+		NewMaterial->SetScalarParameterValueEditorOnly(Info, Value);
+	}
+
+	Material->GetAllTextureParameterInfo(ParameterInfos, ParameterIds);
+	for (const FMaterialParameterInfo& Info : ParameterInfos)
+	{
+		UTexture* Value;
+		Material->GetTextureParameterValue(Info, Value);
+		if (Value)
+		{
+			UTexture2D* PersistedTexture = SaveTexture(Cast<UTexture2D>(Value), Path, TextureCache);
+			NewMaterial->SetTextureParameterValueEditorOnly(Info, PersistedTexture);
+		}
+	}
+
+	Material->GetAllVectorParameterInfo(ParameterInfos, ParameterIds);
+	for (const FMaterialParameterInfo& Info : ParameterInfos)
+	{
+		FLinearColor Value;
+		Material->GetVectorParameterValue(Info, Value);
+		NewMaterial->SetVectorParameterValueEditorOnly(Info, Value);
+	}
+
+	MaterialCache.Add(Material, NewMaterial);
+
+	NewMaterial->PostEditChange();
+	MaterialPackage->MarkPackageDirty();
+
+	return NewMaterial;
+}
+
+UStaticMesh* SaveStaticMesh(UStaticMesh* Mesh, const FString& Path, FMeshCache& MeshCache, FMaterialCache& MaterialCache, FTextureCache& TextureCache)
+{
+	if (MeshCache.Contains(Mesh))
+	{
+		return MeshCache[Mesh];
+	}
+
+	// Create new StaticMesh Asset
+	const FString StaticMeshName = Mesh->GetName();
+	const FString PackageName = FPaths::Combine(Path, StaticMeshName);
+	UPackage* MeshPackage = CreatePackage(*PackageName);
+	const FName UniqueName = MakeUniqueObjectName(MeshPackage, UStaticMesh::StaticClass(), FName(*StaticMeshName));
+	UStaticMesh* PersistedMesh = NewObject<UStaticMesh>(MeshPackage, UniqueName, RF_Public | RF_Standalone);
+	FAssetRegistryModule::AssetCreated(PersistedMesh);
+
+	FMeshDescription* OriginalMeshDescription = Mesh->GetMeshDescription(0);
+	FStaticMeshAttributes MeshAttributes(*OriginalMeshDescription);
+
+	// Copy Materials
+	const auto PolygonGroups = OriginalMeshDescription->PolygonGroups();
+	for (const auto& PolygonGroupId : PolygonGroups.GetElementIDs())
+	{
+		const FName MaterialName = MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId];
+		int32 Index = Mesh->GetMaterialIndex(MaterialName);
+
+		if (Index != INDEX_NONE)
+		{
+			UMaterialInterface* Material = Mesh->GetMaterial(Index);
+
+			UMaterialInstanceDynamic* DynamicMaterial = Cast<UMaterialInstanceDynamic>(Material);
+			check(DynamicMaterial);
+			UMaterialInstanceConstant* NewMaterial = SaveMaterial(DynamicMaterial, Path, MaterialCache, TextureCache);
+			FName NewSlot = PersistedMesh->AddMaterial(NewMaterial);
+
+			MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = NewSlot;
+		}
+	}
+
+	// Build the Static Mesh
+	TArray<const FMeshDescription*> MeshDescriptions;
+	MeshDescriptions.Add(OriginalMeshDescription);
+	PersistedMesh->BuildFromMeshDescriptions(MeshDescriptions);
+
+	MeshCache.Add(Mesh, PersistedMesh);
+	return PersistedMesh;
+}
+} // namespace
+
+void CookVitruvioActors(TArray<AActor*> Actors)
+{
+	// If there is a previous cooking already ongoing we have to wait until it has completed. This could happen because the last part
+	// of the cooking process is asynchronous.
+	BlockUntilCookCompleted();
+
+	IsCooking = true;
+
+	// Wait until all ongoing generate calls to PRT have finished (might happen if we try to cook before all models of a scene
+	// have been generated).
+	BlockUntilGenerated();
+
+	// Notify on generate completed for VitruvioComponents. Unlike the busy waiting for PRT generate calls which happen async we need to use
+	// a callback here as creating the StaticMeshes from generation also happens on the game thread.
+	ModelsGeneratedHandle = VitruvioModule::Get().OnGenerateCompleted.AddLambda([Actors](int GenerateCalls, int Warnings, int Errors) {
+		if (GenerateCalls == 0)
+		{
+			TSharedRef<SDlgPickPath> PickContentPathDlg = SNew(SDlgPickPath).Title(FText::FromString("Choose location for cooked models."));
+
+			if (PickContentPathDlg->ShowModal() == EAppReturnType::Cancel)
+			{
+				return;
+			}
+			FString CookPath = PickContentPathDlg->GetPath().ToString();
+
+			// Cook actors after all models have been generated and their meshes constructed
+			FScopedSlowTask CookTask(Actors.Num(), FText::FromString("Cooking models..."));
+
+			FMaterialCache MaterialCache;
+			FTextureCache TextureCache;
+			FMeshCache MeshCache;
+
+			for (AActor* Actor : Actors)
+			{
+				CookTask.EnterProgressFrame(1);
+
+				const FString GeometryPath = FPaths::Combine(CookPath, TEXT("Geometry"));
+				AActor* OldAttachParent = Actor->GetAttachParentActor();
+
+				// Spawn new Actor with persisted geometry
+				AActor* CookedActor = Actor->GetWorld()->SpawnActor<AActor>(Actor->GetActorLocation(), Actor->GetActorRotation());
+				if (OldAttachParent)
+				{
+					CookedActor->AttachToActor(OldAttachParent, FAttachmentTransformRules::KeepWorldTransform);
+				}
+
+				USceneComponent* RootComponent = NewObject<USceneComponent>(CookedActor, "Root");
+				CookedActor->AddOwnedComponent(RootComponent);
+				CookedActor->SetRootComponent(RootComponent);
+				RootComponent->SetMobility(EComponentMobility::Movable);
+				RootComponent->OnComponentCreated();
+				RootComponent->RegisterComponent();
+
+				// Persist Mesh
+				UGeneratedModelStaticMeshComponent* StaticMeshComponent = Actor->FindComponentByClass<UGeneratedModelStaticMeshComponent>();
+				if (StaticMeshComponent)
+				{
+					check(StaticMeshComponent->GetStaticMesh());
+
+					UStaticMesh* GeneratedMesh = StaticMeshComponent->GetStaticMesh();
+
+					UStaticMesh* PersistedMesh = SaveStaticMesh(GeneratedMesh, GeometryPath, MeshCache, MaterialCache, TextureCache);
+					AttachMeshComponent<UStaticMeshComponent>(CookedActor, PersistedMesh, TEXT("Model"),
+															  StaticMeshComponent->GetComponentTransform());
+				}
+
+				// Persist instanced Component
+				TArray<UActorComponent*> HismComponents;
+				Actor->GetComponents(UGeneratedModelHISMComponent::StaticClass(), HismComponents);
+				for (UActorComponent* HismComponent : HismComponents)
+				{
+					UGeneratedModelHISMComponent* GeneratedModelHismComponent = Cast<UGeneratedModelHISMComponent>(HismComponent);
+					UStaticMesh* GeneratedMesh = GeneratedModelHismComponent->GetStaticMesh();
+					if (GeneratedMesh)
+					{
+						UStaticMesh* PersistedMesh = SaveStaticMesh(GeneratedMesh, GeometryPath, MeshCache, MaterialCache, TextureCache);
+
+						FName Name = MakeUniqueObjectName(CookedActor, UHierarchicalInstancedStaticMeshComponent::StaticClass(), TEXT("Instance"));
+						auto* InstancedStaticMeshComponent = AttachMeshComponent<UHierarchicalInstancedStaticMeshComponent>(
+							CookedActor, PersistedMesh, Name, GeneratedModelHismComponent->GetComponentTransform());
+
+						for (int32 InstanceIndex = 0; InstanceIndex < GeneratedModelHismComponent->GetInstanceCount(); ++InstanceIndex)
+						{
+							FTransform Transform;
+							GeneratedModelHismComponent->GetInstanceTransform(InstanceIndex, Transform);
+							InstancedStaticMeshComponent->AddInstance(Transform);
+						}
+					}
+				}
+
+				// Destroy the old procedural Vitruvio Actor
+				Actor->Destroy();
+			}
+
+			IsCooking = false;
+			VitruvioModule::Get().OnGenerateCompleted.Remove(ModelsGeneratedHandle);
+			ModelsGeneratedHandle.Reset();
+		}
+	});
+
+	// Regenerate the selected Actors to make sure we have a model to cook.
+	for (AActor* Actor : Actors)
+	{
+		UVitruvioComponent* VitruvioComponent = Actor->FindComponentByClass<UVitruvioComponent>();
+		if (!VitruvioComponent)
+		{
+			continue;
+		}
+
+		VitruvioComponent->Generate();
+	}
+}

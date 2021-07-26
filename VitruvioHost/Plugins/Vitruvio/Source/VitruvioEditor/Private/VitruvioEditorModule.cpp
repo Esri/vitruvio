@@ -15,22 +15,22 @@
 
 #include "VitruvioEditorModule.h"
 
+#include "ChooseRulePackageDialog.h"
 #include "RulePackageAssetTypeActions.h"
+#include "VitruvioActor.h"
 #include "VitruvioComponentDetails.h"
-
-#include "AssetToolsModule.h"
-#include "Core.h"
-#include "IAssetTools.h"
-#include "Modules/ModuleManager.h"
-
-#define LOCTEXT_NAMESPACE "VitruvioEditorModule"
+#include "VitruvioCooker.h"
 
 #include "Algo/AnyOf.h"
-#include "ChooseRulePackageDialog.h"
+#include "AssetToolsModule.h"
+#include "Core.h"
 #include "Editor/LevelEditor/Public/LevelEditor.h"
 #include "Framework/Notifications/NotificationManager.h"
-#include "VitruvioActor.h"
+#include "IAssetTools.h"
+#include "Modules/ModuleManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
+
+#define LOCTEXT_NAMESPACE "VitruvioEditorModule"
 
 namespace
 {
@@ -51,6 +51,14 @@ bool IsViableVitruvioActor(AActor* Actor)
 bool HasAnyViableVitruvioActor(TArray<AActor*> Actors)
 {
 	return Algo::AnyOf(Actors, [](AActor* In) { return IsViableVitruvioActor(In); });
+}
+
+bool HasAnyVitruvioActor(TArray<AActor*> Actors)
+{
+	return Algo::AnyOf(Actors, [](AActor* In) {
+		UVitruvioComponent* VitruvioComponent = In->FindComponentByClass<UVitruvioComponent>();
+		return VitruvioComponent != nullptr;
+	});
 }
 
 TArray<AActor*> GetViableVitruvioActorsInHiararchy(AActor* Root)
@@ -150,6 +158,15 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 					FText::FromString("Convert to Vitruvio Actor"),
 					FText::FromString("Converts all viable selected Initial Shapes to Vitruvio Actors and assigns the chosen Rule Package."),
 					FSlateIcon(), AddVitruvioComponentAction);
+			}
+
+			if (HasAnyVitruvioActor(SelectedActors))
+			{
+				const FUIAction CookVitruvioActorsAction(FExecuteAction::CreateStatic(CookVitruvioActors, SelectedActors));
+
+				MenuBuilder.AddMenuEntry(FText::FromString("Cook Vitruvio Actor"),
+										 FText::FromString("Converts all selected procedural Vitruvio Actors to StaticMesh Actors."), FSlateIcon(),
+										 CookVitruvioActorsAction);
 			}
 
 			MenuBuilder.EndSection();
