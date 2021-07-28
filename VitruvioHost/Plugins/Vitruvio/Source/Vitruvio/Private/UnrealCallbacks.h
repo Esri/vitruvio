@@ -33,6 +33,7 @@ class UnrealCallbacks final : public IUnrealCallbacks
 
 	Vitruvio::FInstanceMap Instances;
 	TMap<int32, FMeshDescription> Meshes;
+	TMap<int32, FString> MeshNames;
 	TMap<int32, TArray<Vitruvio::FMaterialAttributeContainer>> Materials;
 
 	UMaterial* OpaqueParent;
@@ -56,6 +57,11 @@ public:
 	const TMap<int32, FMeshDescription>& GetMeshes() const
 	{
 		return Meshes;
+	}
+
+	const TMap<int32, FString>& GetMeshNames() const
+	{
+		return MeshNames;
 	}
 
 	const TMap<int32, TArray<Vitruvio::FMaterialAttributeContainer>>& GetMaterials() const

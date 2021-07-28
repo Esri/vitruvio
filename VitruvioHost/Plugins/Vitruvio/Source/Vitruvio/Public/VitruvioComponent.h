@@ -28,6 +28,7 @@
 struct FInstance
 {
 	UStaticMesh* Mesh;
+	FString Name;
 	Vitruvio::FCollisionData CollisionData;
 	TArray<UMaterialInstanceDynamic*> OverrideMaterials;
 	TArray<FTransform> Transforms;

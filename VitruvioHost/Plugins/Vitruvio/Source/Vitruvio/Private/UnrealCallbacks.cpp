@@ -156,6 +156,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 	{
 		Materials.Add(prototypeId, MeshMaterials);
 		Meshes.Add(prototypeId, MoveTemp(Description));
+		MeshNames.Add(prototypeId, name);
 	}
 }
 

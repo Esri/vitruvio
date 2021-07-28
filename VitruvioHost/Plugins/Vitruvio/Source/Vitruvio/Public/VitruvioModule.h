@@ -39,6 +39,7 @@ struct FGenerateResultDescription
 {
 	Vitruvio::FInstanceMap Instances;
 	TMap<int32, FMeshDescription> MeshDescriptions;
+	TMap<int32, FString> MeshNames;
 	TMap<int32, TArray<Vitruvio::FMaterialAttributeContainer>> Materials;
 };
 

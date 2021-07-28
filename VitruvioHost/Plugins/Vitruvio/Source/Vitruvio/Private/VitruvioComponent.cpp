@@ -405,8 +405,10 @@ void UVitruvioComponent::ProcessGenerateQueue()
 
 		for (const FInstance& Instance : ConvertedResult.Instances)
 		{
+			const FName UniqueInstanceName =
+				MakeUniqueObjectName(VitruvioModelComponent, UGeneratedModelHISMComponent::StaticClass(), FName(Instance.Name));
 			auto InstancedComponent =
-				NewObject<UGeneratedModelHISMComponent>(VitruvioModelComponent, NAME_None, RF_Transient | RF_DuplicateTransient);
+				NewObject<UGeneratedModelHISMComponent>(VitruvioModelComponent, FName(Instance.Name), RF_Transient | RF_DuplicateTransient);
 			const TArray<FTransform>& Transforms = Instance.Transforms;
 			InstancedComponent->SetStaticMesh(Instance.Mesh);
 			InstancedComponent->SetCollisionData(Instance.CollisionData);
@@ -531,7 +533,8 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 		}
 		else
 		{
-			UMaterialInstanceDynamic* Material = Vitruvio::GameThread_CreateMaterialInstance(Outer, Name, OpaqueParent, MaskedParent,
+			const FName UniqueMaterialName(Name);
+			UMaterialInstanceDynamic* Material = Vitruvio::GameThread_CreateMaterialInstance(Outer, UniqueMaterialName, OpaqueParent, MaskedParent,
 																							 TranslucentParent, MaterialAttributes, TextureCache);
 			MaterialCache.Add(MaterialAttributes, Material);
 			return Material;
@@ -541,7 +544,10 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 	// convert all meshes
 	for (auto& IdAndMesh : GenerateResult.MeshDescriptions)
 	{
-		UStaticMesh* StaticMesh = NewObject<UStaticMesh>(GetTransientPackage(), NAME_None, RF_Transient);
+		FString MeshName = GenerateResult.MeshNames[IdAndMesh.Key];
+		MeshName = MeshName.Replace(TEXT("."), TEXT(""));
+		const FName StaticMeshName = MakeUniqueObjectName(nullptr, UStaticMesh::StaticClass(), FName(MeshName));
+		UStaticMesh* StaticMesh = NewObject<UStaticMesh>(GetTransientPackage(), StaticMeshName, RF_Transient);
 		TMap<UMaterialInstanceDynamic*, FName> MaterialSlots;
 
 		const TArray<Vitruvio::FMaterialAttributeContainer>& MeshMaterials = GenerateResult.Materials[IdAndMesh.Key];
@@ -607,6 +613,7 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 	for (const auto& Instance : GenerateResult.Instances)
 	{
 		UStaticMesh* Mesh = MeshMap[Instance.Key.PrototypeId].Key;
+		FString MeshName = GenerateResult.MeshNames[Instance.Key.PrototypeId];
 		Vitruvio::FCollisionData& CollisionData = MeshMap[Instance.Key.PrototypeId].Value;
 		TArray<UMaterialInstanceDynamic*> OverrideMaterials;
 		for (size_t MaterialIndex = 0; MaterialIndex < Instance.Key.MaterialOverrides.Num(); ++MaterialIndex)
@@ -616,7 +623,7 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 			OverrideMaterials.Add(CachedMaterial(MaterialContainer, MaterialName, GetTransientPackage()));
 		}
 
-		Instances.Add({Mesh, CollisionData, OverrideMaterials, Instance.Value});
+		Instances.Add({Mesh, MeshName, CollisionData, OverrideMaterials, Instance.Value});
 	}
 
 	if (MeshMap.Contains(UnrealCallbacks::NO_PROTOTYPE_INDEX))
