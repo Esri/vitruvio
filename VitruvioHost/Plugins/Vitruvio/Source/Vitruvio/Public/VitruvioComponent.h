@@ -27,17 +27,14 @@
 
 struct FInstance
 {
-	UStaticMesh* Mesh;
-	FString Name;
-	Vitruvio::FCollisionData CollisionData;
+	TSharedPtr<FVitruvioMesh> InstanceMesh;
 	TArray<UMaterialInstanceDynamic*> OverrideMaterials;
 	TArray<FTransform> Transforms;
 };
 
 struct FConvertedGenerateResult
 {
-	UStaticMesh* ShapeMesh;
-	Vitruvio::FCollisionData CollisionData;
+	TSharedPtr<FVitruvioMesh> ShapeMesh;
 	TArray<FInstance> Instances;
 };
 

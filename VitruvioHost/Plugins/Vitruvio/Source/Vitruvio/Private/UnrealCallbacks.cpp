@@ -26,6 +26,8 @@
 #include "StaticMeshDescription.h"
 #include "StaticMeshOperations.h"
 #include "Util/AsyncHelpers.h"
+#include "VitruvioModule.h"
+#include "prtx/Mesh.h"
 
 DEFINE_LOG_CATEGORY(LogUnrealCallbacks);
 
@@ -54,15 +56,27 @@ constexpr float PRT_DIVISOR_LIMIT = 1e-25f;
 
 } // namespace
 
-void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const double* vtx, size_t vtxSize, const double* nrm, size_t nrmSize,
-							  const uint32_t* faceVertexCounts, size_t faceVertexCountsSize, const uint32_t* vertexIndices, size_t vertexIndicesSize,
-							  const uint32_t* normalIndices, size_t normalIndicesSize,
+void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wchar_t* uri, const double* vtx, size_t vtxSize, const double* nrm,
+							  size_t nrmSize, const uint32_t* faceVertexCounts, size_t faceVertexCountsSize, const uint32_t* vertexIndices,
+							  size_t vertexIndicesSize, const uint32_t* normalIndices, size_t normalIndicesSize,
 
 							  double const* const* uvs, size_t const* uvsSizes, uint32_t const* const* uvCounts, size_t const* uvCountsSizes,
 							  uint32_t const* const* uvIndices, size_t const* uvIndicesSizes, size_t uvSets,
 
 							  const uint32_t* faceRanges, size_t faceRangesSize, const prt::AttributeMap** materials)
 {
+
+	const FString UriString(uri);
+	if (!UriString.IsEmpty())
+	{
+		TSharedPtr<FVitruvioMesh> Mesh = VitruvioModule::Get().GetMeshCache().Get(UriString);
+		if (Mesh)
+		{
+			Meshes.Add(prototypeId, Mesh);
+			return;
+		}
+	}
+
 	FMeshDescription Description;
 	FStaticMeshAttributes Attributes(Description);
 	Attributes.Register();
@@ -154,9 +168,11 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const do
 
 	if (BaseVertexIndex > 0)
 	{
-		Materials.Add(prototypeId, MeshMaterials);
-		Meshes.Add(prototypeId, MoveTemp(Description));
-		MeshNames.Add(prototypeId, name);
+		FString NameString(name);
+		TSharedPtr<FVitruvioMesh> VitruvioMesh = MakeShared<FVitruvioMesh>(NameString, UriString, Description, MeshMaterials);
+		TSharedPtr<FVitruvioMesh> CachedMesh =
+			!UriString.IsEmpty() ? VitruvioModule::Get().GetMeshCache().InsertOrGet(UriString, VitruvioMesh) : VitruvioMesh;
+		Meshes.Add(prototypeId, CachedMesh);
 	}
 }
 

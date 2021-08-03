@@ -24,6 +24,7 @@
 #include "Engine/StaticMesh.h"
 #include "MeshDescription.h"
 #include "Modules/ModuleManager.h"
+#include "VitruvioMesh.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogUnrealCallbacks, Log, All);
 
@@ -32,20 +33,11 @@ class UnrealCallbacks final : public IUnrealCallbacks
 	AttributeMapBuilderUPtr& AttributeMapBuilder;
 
 	Vitruvio::FInstanceMap Instances;
-	TMap<int32, FMeshDescription> Meshes;
-	TMap<int32, FString> MeshNames;
-	TMap<int32, TArray<Vitruvio::FMaterialAttributeContainer>> Materials;
-
-	UMaterial* OpaqueParent;
-	UMaterial* MaskedParent;
-	UMaterial* TranslucentParent;
+	TMap<int32, TSharedPtr<FVitruvioMesh>> Meshes;
 
 public:
-	~UnrealCallbacks() override = default;
-	UnrealCallbacks(AttributeMapBuilderUPtr& AttributeMapBuilder, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent)
-		: AttributeMapBuilder(AttributeMapBuilder), OpaqueParent(OpaqueParent), MaskedParent(MaskedParent), TranslucentParent(TranslucentParent)
-	{
-	}
+	virtual ~UnrealCallbacks() override = default;
+	UnrealCallbacks(AttributeMapBuilderUPtr& AttributeMapBuilder) : AttributeMapBuilder(AttributeMapBuilder) {}
 
 	static const int32 NO_PROTOTYPE_INDEX = -1;
 
@@ -54,29 +46,20 @@ public:
 		return Instances;
 	}
 
-	const TMap<int32, FMeshDescription>& GetMeshes() const
+	TSharedPtr<FVitruvioMesh> GetMeshById(int32 PrototypeId) const
+	{
+		return Meshes[PrototypeId];
+	}
+
+	const TMap<int32, TSharedPtr<FVitruvioMesh>>& GetMeshes() const
 	{
 		return Meshes;
-	}
-
-	const TMap<int32, FString>& GetMeshNames() const
-	{
-		return MeshNames;
-	}
-
-	const TMap<int32, TArray<Vitruvio::FMaterialAttributeContainer>>& GetMaterials() const
-	{
-		return Materials;
-	}
-
-	const FMeshDescription& GetMeshById(int32 PrototypId) const
-	{
-		return Meshes[PrototypId];
 	}
 
 	/**
 	 * @param name initial shape name, optionally used to create primitive groups on output
 	 * @param prototypeId the id of the prototype or -1 of not cached
+	 * @param uri
 	 * @param vtx vertex coordinate array
 	 * @param vtxSize of vertex coordinate array
 	 * @param nrm vertex normal array
@@ -93,7 +76,7 @@ public:
 	 */
 	// clang-format off
 	void addMesh(const wchar_t* name,
-		int32_t prototypeId,
+		int32_t prototypeId, const wchar_t* uri,
 		const double* vtx, size_t vtxSize,
 		const double* nrm, size_t nrmSize,
 		const uint32_t* faceVertexCounts, size_t faceVertexCountsSize,

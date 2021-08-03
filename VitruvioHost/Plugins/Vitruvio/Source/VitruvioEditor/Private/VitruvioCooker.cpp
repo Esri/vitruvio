@@ -14,7 +14,7 @@ namespace
 
 using FMaterialCache = TMap<UMaterialInstanceDynamic*, UMaterialInstanceConstant*>;
 using FTextureCache = TMap<UTexture*, UTexture2D*>;
-using FMeshCache = TMap<UStaticMesh*, UStaticMesh*>;
+using FStaticMeshCache = TMap<UStaticMesh*, UStaticMesh*>;
 
 FDelegateHandle ModelsGeneratedHandle;
 std::atomic<bool> IsCooking;
@@ -68,9 +68,7 @@ UTexture2D* SaveTexture(UTexture2D* Original, const FString& Path, FTextureCache
 
 	FString TexturePath = FPaths::Combine(Path, TEXT("Textures"), Original->GetName());
 	UPackage* TexturePackage = CreatePackage(*TexturePath);
-	const FName UniqueTextureName = MakeUniqueObjectName(TexturePackage, UTexture2D::StaticClass(), *Original->GetName());
-
-	UTexture2D* NewTexture = NewObject<UTexture2D>(TexturePackage, UniqueTextureName, RF_Public | RF_Standalone);
+	UTexture2D* NewTexture = NewObject<UTexture2D>(TexturePackage, *Original->GetName(), RF_Public | RF_Standalone);
 
 	NewTexture->PlatformData = new FTexturePlatformData();
 	NewTexture->PlatformData->SizeX = Original->PlatformData->SizeX;
@@ -118,13 +116,12 @@ UMaterialInstanceConstant* SaveMaterial(UMaterialInstanceDynamic* Material, cons
 	const FString MaterialName = Material->GetName();
 	const FString MaterialPackagePath = FPaths::Combine(Path, TEXT("Materials"), MaterialName);
 	UPackage* MaterialPackage = CreatePackage(*MaterialPackagePath);
-	const FName UniqueMaterialName = MakeUniqueObjectName(MaterialPackage, UMaterial::StaticClass(), FName(*MaterialName));
 
 	UMaterialInstanceConstantFactoryNew* MaterialFactory = NewObject<UMaterialInstanceConstantFactoryNew>();
 	MaterialFactory->InitialParent = Material->Parent;
 
 	UMaterialInstanceConstant* NewMaterial = Cast<UMaterialInstanceConstant>(MaterialFactory->FactoryCreateNew(
-		UMaterialInstanceConstant::StaticClass(), MaterialPackage, UniqueMaterialName, RF_Public | RF_Standalone, nullptr, GWarn));
+		UMaterialInstanceConstant::StaticClass(), MaterialPackage, *MaterialName, RF_Public | RF_Standalone, nullptr, GWarn));
 	FAssetRegistryModule::AssetCreated(NewMaterial);
 
 	TArray<FMaterialParameterInfo> ParameterInfos;
@@ -166,7 +163,8 @@ UMaterialInstanceConstant* SaveMaterial(UMaterialInstanceDynamic* Material, cons
 	return NewMaterial;
 }
 
-UStaticMesh* SaveStaticMesh(UStaticMesh* Mesh, const FString& Path, FMeshCache& MeshCache, FMaterialCache& MaterialCache, FTextureCache& TextureCache)
+UStaticMesh* SaveStaticMesh(UStaticMesh* Mesh, const FString& Path, FStaticMeshCache& MeshCache, FMaterialCache& MaterialCache,
+							FTextureCache& TextureCache)
 {
 	if (MeshCache.Contains(Mesh))
 	{
@@ -175,11 +173,10 @@ UStaticMesh* SaveStaticMesh(UStaticMesh* Mesh, const FString& Path, FMeshCache& 
 
 	// Create new StaticMesh Asset
 	const FString StaticMeshName = Mesh->GetName();
-	const FString PackageName = FPaths::Combine(Path, StaticMeshName);
+	const FString PackageName = FPaths::Combine(Path, TEXT("Geometry"), StaticMeshName);
 	UPackage* MeshPackage = CreatePackage(*PackageName);
-	const FName UniqueName = MakeUniqueObjectName(MeshPackage, UStaticMesh::StaticClass(), FName(*StaticMeshName));
-	UStaticMesh* PersistedMesh = NewObject<UStaticMesh>(MeshPackage, UniqueName, RF_Public | RF_Standalone);
-	FAssetRegistryModule::AssetCreated(PersistedMesh);
+	UStaticMesh* PersistedMesh = NewObject<UStaticMesh>(MeshPackage, *StaticMeshName, RF_Public | RF_Standalone);
+	PersistedMesh->InitResources();
 
 	FMeshDescription* OriginalMeshDescription = Mesh->GetMeshDescription(0);
 	FStaticMeshAttributes MeshAttributes(*OriginalMeshDescription);
@@ -208,6 +205,11 @@ UStaticMesh* SaveStaticMesh(UStaticMesh* Mesh, const FString& Path, FMeshCache& 
 	TArray<const FMeshDescription*> MeshDescriptions;
 	MeshDescriptions.Add(OriginalMeshDescription);
 	PersistedMesh->BuildFromMeshDescriptions(MeshDescriptions);
+	PersistedMesh->PostEditChange();
+	PersistedMesh->MarkPackageDirty();
+
+	// Notify asset registry of new asset
+	FAssetRegistryModule::AssetCreated(PersistedMesh);
 
 	MeshCache.Add(Mesh, PersistedMesh);
 	return PersistedMesh;
@@ -244,13 +246,12 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 
 			FMaterialCache MaterialCache;
 			FTextureCache TextureCache;
-			FMeshCache MeshCache;
+			FStaticMeshCache MeshCache;
 
 			for (AActor* Actor : Actors)
 			{
 				CookTask.EnterProgressFrame(1);
 
-				const FString GeometryPath = FPaths::Combine(CookPath, TEXT("Geometry"));
 				AActor* OldAttachParent = Actor->GetAttachParentActor();
 
 				// Spawn new Actor with persisted geometry
@@ -275,7 +276,7 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 
 					UStaticMesh* GeneratedMesh = StaticMeshComponent->GetStaticMesh();
 
-					UStaticMesh* PersistedMesh = SaveStaticMesh(GeneratedMesh, GeometryPath, MeshCache, MaterialCache, TextureCache);
+					UStaticMesh* PersistedMesh = SaveStaticMesh(GeneratedMesh, CookPath, MeshCache, MaterialCache, TextureCache);
 					AttachMeshComponent<UStaticMeshComponent>(CookedActor, PersistedMesh, TEXT("Model"),
 															  StaticMeshComponent->GetComponentTransform());
 				}
@@ -289,9 +290,10 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 					UStaticMesh* GeneratedMesh = GeneratedModelHismComponent->GetStaticMesh();
 					if (GeneratedMesh)
 					{
-						UStaticMesh* PersistedMesh = SaveStaticMesh(GeneratedMesh, GeometryPath, MeshCache, MaterialCache, TextureCache);
+						UStaticMesh* PersistedMesh = SaveStaticMesh(GeneratedMesh, CookPath, MeshCache, MaterialCache, TextureCache);
 
-						FName Name = MakeUniqueObjectName(CookedActor, UHierarchicalInstancedStaticMeshComponent::StaticClass(), TEXT("Instance"));
+						FName Name =
+							MakeUniqueObjectName(CookedActor, UHierarchicalInstancedStaticMeshComponent::StaticClass(), *PersistedMesh->GetName());
 						auto* InstancedStaticMeshComponent = AttachMeshComponent<UHierarchicalInstancedStaticMeshComponent>(
 							CookedActor, PersistedMesh, Name, GeneratedModelHismComponent->GetComponentTransform());
 

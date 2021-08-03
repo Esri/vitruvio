@@ -17,7 +17,7 @@
 
 #include "Components/StaticMeshComponent.h"
 #include "Interfaces/Interface_CollisionDataProvider.h"
-#include "VitruvioTypes.h"
+#include "VitruvioMesh.h"
 
 #include "GeneratedModelStaticMeshComponent.generated.h"
 
@@ -45,11 +45,11 @@ class VITRUVIO_API UGeneratedModelStaticMeshComponent : public UStaticMeshCompon
 	}
 
 public:
-	void SetCollisionData(const Vitruvio::FCollisionData& InCollisionData)
+	void SetCollisionData(const FCollisionData& InCollisionData)
 	{
 		CollisionData = InCollisionData;
 	}
 
 private:
-	Vitruvio::FCollisionData CollisionData;
+	FCollisionData CollisionData;
 };

@@ -17,7 +17,7 @@
 
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Interfaces/Interface_CollisionDataProvider.h"
-#include "VitruvioTypes.h"
+#include "VitruvioMesh.h"
 
 #include "GeneratedModelHISMComponent.generated.h"
 
@@ -45,11 +45,12 @@ class VITRUVIO_API UGeneratedModelHISMComponent : public UHierarchicalInstancedS
 	}
 
 public:
-	void SetCollisionData(const Vitruvio::FCollisionData& InCollisionData)
+	void SetCollisionData(const FCollisionData& InCollisionData)
 	{
 		CollisionData = InCollisionData;
 	}
 
 private:
-	Vitruvio::FCollisionData CollisionData;
+	
+	FCollisionData CollisionData;
 };
