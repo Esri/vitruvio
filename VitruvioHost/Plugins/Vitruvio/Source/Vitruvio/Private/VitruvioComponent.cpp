@@ -556,7 +556,8 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 		{
 			const Vitruvio::FMaterialAttributeContainer& MaterialContainer = Instance.Key.MaterialOverrides[MaterialIndex];
 			FName MaterialName = FName(MaterialContainer.Name);
-			OverrideMaterials.Add(CachedMaterial(MaterialContainer, MaterialName, GetTransientPackage()));
+			OverrideMaterials.Add(CacheMaterial(OpaqueParent, MaskedParent, TranslucentParent, TextureCache, MaterialCache,
+				MaterialContainer, MaterialName, VitruvioMesh->GetStaticMesh()));
 		}
 
 		Instances.Add({VitruvioMesh, OverrideMaterials, Instance.Value});

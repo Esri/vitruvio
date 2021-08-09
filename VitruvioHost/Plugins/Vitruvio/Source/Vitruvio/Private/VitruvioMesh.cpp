@@ -3,30 +3,32 @@
 #include "MaterialConversion.h"
 #include "StaticMeshAttributes.h"
 
+UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
+                                        TMap<FString, Vitruvio::FTextureData>& TextureCache,
+                                        TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+                                        const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name, UObject* Outer)
+{
+	if (MaterialCache.Contains(MaterialAttributes))
+	{
+		return MaterialCache[MaterialAttributes];
+	}
+	else
+	{
+		const FName UniqueMaterialName(Name);
+		UMaterialInstanceDynamic* Material = Vitruvio::GameThread_CreateMaterialInstance(Outer, UniqueMaterialName, OpaqueParent, MaskedParent,
+		                                                                                 TranslucentParent, MaterialAttributes, TextureCache);
+		MaterialCache.Add(MaterialAttributes, Material);
+		return Material;
+	}
+}
 
 void FVitruvioMesh::Build(TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-	TMap<FString, Vitruvio::FTextureData>& TextureCache, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent)
+                          TMap<FString, Vitruvio::FTextureData>& TextureCache, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent)
 {
 	if (StaticMesh)
 	{
 		return;
 	}
-	
-	auto CachedMaterial = [OpaqueParent, MaskedParent, TranslucentParent, &MaterialCache, &TextureCache](const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name,
-															UObject* Outer) {
-		if (MaterialCache.Contains(MaterialAttributes))
-		{
-			return MaterialCache[MaterialAttributes];
-		}
-		else
-		{
-			const FName UniqueMaterialName(Name);
-			UMaterialInstanceDynamic* Material = Vitruvio::GameThread_CreateMaterialInstance(Outer, UniqueMaterialName, OpaqueParent, MaskedParent,
-																							TranslucentParent, MaterialAttributes, TextureCache);
-			MaterialCache.Add(MaterialAttributes, Material);
-			return Material;
-		}
-	};
 	
 	FString MeshName = Name.Replace(TEXT("."), TEXT(""));
 	const FName StaticMeshName = MakeUniqueObjectName(nullptr, UStaticMesh::StaticClass(), FName(MeshName));
@@ -48,7 +50,7 @@ void FVitruvioMesh::Build(TMap<Vitruvio::FMaterialAttributeContainer, UMaterialI
 	for (const auto& PolygonGroupId : PolygonGroups.GetElementIDs())
 	{
 		const FName MaterialName = MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId];
-		UMaterialInstanceDynamic* Material = CachedMaterial(Materials[MaterialIndex], MaterialName, StaticMesh);
+		UMaterialInstanceDynamic* Material = CacheMaterial(OpaqueParent, MaskedParent, TranslucentParent, TextureCache, MaterialCache, Materials[MaterialIndex], MaterialName, StaticMesh);
 
 		if (MaterialSlots.Contains(Material))
 		{

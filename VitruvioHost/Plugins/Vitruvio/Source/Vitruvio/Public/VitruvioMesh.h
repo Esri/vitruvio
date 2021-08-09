@@ -1,5 +1,12 @@
 #pragma once
+
 #include "VitruvioTypes.h"
+
+
+UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
+                                        TMap<FString, Vitruvio::FTextureData>& TextureCache,
+                                        TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+                                        const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name, UObject* Outer);
 
 struct FCollisionData
 {
@@ -24,6 +31,7 @@ class FVitruvioMesh
 	FCollisionData CollisionData;
 
 public:
+
 	FVitruvioMesh(const FString& Name, const FString& Uri, const FMeshDescription& MeshDescription,
 		const TArray<Vitruvio::FMaterialAttributeContainer>& Materials)
 		: Name(Name),
