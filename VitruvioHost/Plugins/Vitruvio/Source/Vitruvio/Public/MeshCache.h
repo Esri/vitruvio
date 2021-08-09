@@ -4,8 +4,9 @@
 class FMeshCache
 {
 public:
-	TSharedPtr<FVitruvioMesh> Get(const FString& Uri);
-	TSharedPtr<FVitruvioMesh> InsertOrGet(const FString& Uri, const TSharedPtr<FVitruvioMesh>& Mesh);
+	VITRUVIO_API TSharedPtr<FVitruvioMesh> Get(const FString& Uri);
+	VITRUVIO_API TSharedPtr<FVitruvioMesh> InsertOrGet(const FString& Uri, const TSharedPtr<FVitruvioMesh>& Mesh);
+	VITRUVIO_API void Invalidate();
 
 private:
 	FCriticalSection MeshCacheCriticalSection;

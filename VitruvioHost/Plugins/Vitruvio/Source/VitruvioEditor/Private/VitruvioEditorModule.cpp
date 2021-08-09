@@ -210,6 +210,9 @@ void VitruvioEditorModule::StartupModule()
 	GenerateCompletedDelegateHandle = VitruvioModule::Get().OnGenerateCompleted.AddRaw(this, &VitruvioEditorModule::OnGenerateCompleted);
 
 	FCoreDelegates::OnPostEngineInit.AddRaw(this, &VitruvioEditorModule::OnPostEngineInit);
+
+	FLevelEditorModule& LevelEditor = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
+	MapChangedHandle = LevelEditor.OnMapChanged().AddRaw(this, &VitruvioEditorModule::OnMapChanged);
 }
 
 void VitruvioEditorModule::ShutdownModule()
@@ -229,6 +232,9 @@ void VitruvioEditorModule::ShutdownModule()
 	{
 		GEditor->GetEditorSubsystem<UImportSubsystem>()->OnAssetReimport.Remove(OnAssetReloadHandle);
 	}
+
+	FLevelEditorModule& LevelEditor = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
+	LevelEditor.OnMapChanged().Remove(MapChangedHandle);
 }
 
 void VitruvioEditorModule::OnPostEngineInit()
@@ -254,6 +260,14 @@ void VitruvioEditorModule::OnPostEngineInit()
 		}
 	});
 	// clang-format on
+}
+
+void VitruvioEditorModule::OnMapChanged(UWorld* World, EMapChangeType ChangeType)
+{
+	if (ChangeType == EMapChangeType::TearDownWorld)
+	{
+		VitruvioModule::Get().GetMeshCache().Invalidate();
+	}
 }
 
 void VitruvioEditorModule::OnGenerateCompleted(int GenerateCallsLeft, int NumWarnings, int NumErrors)
