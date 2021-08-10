@@ -266,6 +266,8 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 				CookedActor->SetRootComponent(RootComponent);
 				RootComponent->SetMobility(EComponentMobility::Movable);
 				RootComponent->OnComponentCreated();
+				RootComponent->SetWorldRotation(Actor->GetActorRotation());
+				RootComponent->SetWorldLocation(Actor->GetActorLocation());
 				RootComponent->RegisterComponent();
 
 				// Persist Mesh
