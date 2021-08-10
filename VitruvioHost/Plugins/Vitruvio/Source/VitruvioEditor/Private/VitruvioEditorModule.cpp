@@ -21,6 +21,7 @@
 #include "VitruvioComponentDetails.h"
 #include "VitruvioCooker.h"
 
+#include "Algo/AllOf.h"
 #include "Algo/AnyOf.h"
 #include "AssetToolsModule.h"
 #include "Core.h"
@@ -37,6 +38,17 @@ namespace
 
 bool IsViableVitruvioActor(AActor* Actor)
 {
+
+	if (Cast<AVitruvioActor>(Actor))
+	{
+		return false;
+	}
+
+	if (Actor->GetComponentByClass(UVitruvioComponent::StaticClass()))
+	{
+		return false;
+	}
+
 	for (const auto& InitialShapeClasses : UVitruvioComponent::GetInitialShapesClasses())
 	{
 		UInitialShape* DefaultInitialShape = Cast<UInitialShape>(InitialShapeClasses->GetDefaultObject());
@@ -50,7 +62,7 @@ bool IsViableVitruvioActor(AActor* Actor)
 
 bool HasAnyViableVitruvioActor(TArray<AActor*> Actors)
 {
-	return Algo::AnyOf(Actors, [](AActor* In) { return IsViableVitruvioActor(In); });
+	return Algo::AllOf(Actors, [](AActor* In) { return IsViableVitruvioActor(In); });
 }
 
 bool HasAnyVitruvioActor(TArray<AActor*> Actors)
