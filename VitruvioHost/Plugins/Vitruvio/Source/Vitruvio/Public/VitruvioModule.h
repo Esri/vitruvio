@@ -230,7 +230,6 @@ private:
 	mutable TMap<TLazyObjectPtr<URulePackage>, FGraphEventRef> ResolveMapEventGraphRefCache;
 
 	mutable FCriticalSection LoadResolveMapLock;
-	mutable FCriticalSection MeshCacheCriticalSection;
 
 	mutable FThreadSafeCounter GenerateCallsCounter;
 	mutable FThreadSafeCounter RpkLoadingTasksCounter;
