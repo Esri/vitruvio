@@ -36,7 +36,7 @@
 namespace
 {
 
-bool IsViableVitruvioActor(AActor* Actor)
+bool CanConvertToVitruvioActor(AActor* Actor)
 {
 
 	if (Cast<AVitruvioActor>(Actor))
@@ -62,7 +62,7 @@ bool IsViableVitruvioActor(AActor* Actor)
 
 bool HasAnyViableVitruvioActor(TArray<AActor*> Actors)
 {
-	return Algo::AllOf(Actors, [](AActor* In) { return IsViableVitruvioActor(In); });
+	return Algo::AllOf(Actors, [](AActor* In) { return CanConvertToVitruvioActor(In); });
 }
 
 bool HasAnyVitruvioActor(TArray<AActor*> Actors)
@@ -76,7 +76,7 @@ bool HasAnyVitruvioActor(TArray<AActor*> Actors)
 TArray<AActor*> GetViableVitruvioActorsInHiararchy(AActor* Root)
 {
 	TArray<AActor*> ViableActors;
-	if (IsViableVitruvioActor(Root))
+	if (CanConvertToVitruvioActor(Root))
 	{
 		ViableActors.Add(Root);
 	}
