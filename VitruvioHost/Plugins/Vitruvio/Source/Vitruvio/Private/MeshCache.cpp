@@ -28,4 +28,6 @@ void FMeshCache::Invalidate()
 	{
 		Entry.Value->Invalidate();
 	}
+
+	Cache.Empty();
 }
