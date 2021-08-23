@@ -8,6 +8,8 @@ UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* Mask
 										TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
 										const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name, UObject* Outer)
 {
+	check(IsInGameThread());
+	
 	if (MaterialCache.Contains(MaterialAttributes))
 	{
 		return MaterialCache[MaterialAttributes];
