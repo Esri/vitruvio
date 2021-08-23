@@ -9,19 +9,18 @@ UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* Mask
 										const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name, UObject* Outer)
 {
 	check(IsInGameThread());
+
+	const auto Result = MaterialCache.Find(MaterialAttributes);
+	if (Result)
+	{
+		return *Result;
+	}
 	
-	if (MaterialCache.Contains(MaterialAttributes))
-	{
-		return MaterialCache[MaterialAttributes];
-	}
-	else
-	{
-		const FName UniqueMaterialName(Name);
-		UMaterialInstanceDynamic* Material = Vitruvio::GameThread_CreateMaterialInstance(Outer, UniqueMaterialName, OpaqueParent, MaskedParent,
-																						 TranslucentParent, MaterialAttributes, TextureCache);
-		MaterialCache.Add(MaterialAttributes, Material);
-		return Material;
-	}
+	const FName UniqueMaterialName(Name);
+	UMaterialInstanceDynamic* Material = Vitruvio::GameThread_CreateMaterialInstance(Outer, UniqueMaterialName, OpaqueParent, MaskedParent,
+																					 TranslucentParent, MaterialAttributes, TextureCache);
+	MaterialCache.Add(MaterialAttributes, Material);
+	return Material;
 }
 
 void FVitruvioMesh::Invalidate()

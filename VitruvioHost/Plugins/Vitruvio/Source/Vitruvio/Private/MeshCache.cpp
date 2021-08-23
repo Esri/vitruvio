@@ -3,19 +3,18 @@
 TSharedPtr<FVitruvioMesh> FMeshCache::Get(const FString& Uri)
 {
 	FScopeLock Lock(&MeshCacheCriticalSection);
-	if (!Cache.Contains(Uri))
-	{
-		return {};
-	}
-	return Cache[Uri];
+	const auto Result = Cache.Find(Uri);
+
+	return Result ? *Result : TSharedPtr<FVitruvioMesh> {};
 }
 
 TSharedPtr<FVitruvioMesh> FMeshCache::InsertOrGet(const FString& Uri, const TSharedPtr<FVitruvioMesh>& Mesh)
 {
 	FScopeLock Lock(&MeshCacheCriticalSection);
-	if (Cache.Contains(Uri))
+	const auto Result = Cache.Find(Uri);
+	if (Result)
 	{
-		return Cache[Uri];
+		return *Result;
 	}
 	Cache.Add(Uri, Mesh);
 	return Mesh;
