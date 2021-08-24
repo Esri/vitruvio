@@ -168,7 +168,7 @@ std::wstring createInstanceName(const prtx::EncodePreparator::FinalizedInstance&
 
 std::wstring uriToPath(const prtx::TexturePtr& t)
 {
-	return t->getURI()->getPath();
+	return t->getURI()->wstring();
 }
 
 // we blacklist all CGA-style material attribute keys, see prtx/Material.h

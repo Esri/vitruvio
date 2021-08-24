@@ -103,21 +103,15 @@ public:
 
 			// Create rpk
 			const std::wstring AbsoluteRpkPath(TCHAR_TO_WCHAR(*FPaths::ConvertRelativePathToFull(RpkFilePath)));
-			const std::wstring AbsoluteRpkFolder(TCHAR_TO_WCHAR(*FPaths::Combine(FPaths::GetPath(FPaths::ConvertRelativePathToFull(RpkFilePath)),
-																				 FPaths::GetBaseFilename(UriPath, true) + TEXT("_Unpacked"))));
 
 			const std::wstring RpkFileUri = prtu::toFileURI(AbsoluteRpkPath);
-			IFileManager::Get().DeleteDirectory(AbsoluteRpkFolder.c_str(), false, true);
 			prt::Status Status;
-			const ResolveMapSPtr ResolveMapPtr(prt::createResolveMap(RpkFileUri.c_str(), AbsoluteRpkFolder.c_str(), &Status), PRTDestroyer());
+			const ResolveMapSPtr ResolveMapPtr(prt::createResolveMap(RpkFileUri.c_str(), nullptr, &Status), PRTDestroyer());
 			{
 				FScopeLock Lock(&LoadResolveMapLock);
 				ResolveMapCache.Add(LazyRulePackagePtr, ResolveMapPtr);
 				Promise.SetValue(ResolveMapPtr);
 			}
-
-			// Delete now unpacked rpk file
-			IFileManager::Get().Delete(*RpkFilePath);
 		}
 		else
 		{
@@ -317,14 +311,13 @@ void VitruvioModule::ShutdownModule()
 
 Vitruvio::FTextureData VitruvioModule::DecodeTexture(UObject* Outer, const FString& Path, const FString& Key) const
 {
-	std::wstring UriPath = prtu::toFileURI(std::wstring(*Path));
-	const prt::AttributeMap* TextureMetadataAttributeMap = prt::createTextureMetadata(UriPath.c_str(), PrtCache.get());
+	const prt::AttributeMap* TextureMetadataAttributeMap = prt::createTextureMetadata(*Path, PrtCache.get());
 	Vitruvio::FTextureMetadata TextureMetadata = Vitruvio::ParseTextureMetadata(TextureMetadataAttributeMap);
 
 	size_t BufferSize = TextureMetadata.Width * TextureMetadata.Height * TextureMetadata.Bands * TextureMetadata.BytesPerBand;
 	auto Buffer = std::make_unique<uint8_t[]>(BufferSize);
 
-	prt::getTexturePixeldata(UriPath.c_str(), Buffer.get(), BufferSize, PrtCache.get());
+	prt::getTexturePixeldata(*Path, Buffer.get(), BufferSize, PrtCache.get());
 
 	return Vitruvio::DecodeTexture(Outer, Key, Path, TextureMetadata, std::move(Buffer), BufferSize);
 }
@@ -464,8 +457,8 @@ FAttributeMapResult VitruvioModule::LoadDefaultRuleAttributesAsync(const TArray<
 			};
 		}
 
-		AttributeMapUPtr DefaultAttributeMap(GetDefaultAttributeValues(RuleFile.c_str(), StartRule.c_str(), ResolveMap, InitialShape, PrtCache.get(),
-																	   RandomSeed));
+		AttributeMapUPtr DefaultAttributeMap(
+			GetDefaultAttributeValues(RuleFile.c_str(), StartRule.c_str(), ResolveMap, InitialShape, PrtCache.get(), RandomSeed));
 
 		LoadAttributesCounter.Decrement();
 
