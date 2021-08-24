@@ -30,7 +30,7 @@ public:
 	 */
 	// clang-format off
 	virtual void addMesh(const wchar_t* name,
-	                     int32_t prototypeId,
+	                     int32_t prototypeId, const wchar_t* uri,
 	                     const double* vtx, size_t vtxSize,
 	                     const double* nrm, size_t nrmSize,
 	                     const uint32_t* faceVertexCounts, size_t faceVertexCountsSize,

@@ -15,28 +15,40 @@
 
 #include "VitruvioEditorModule.h"
 
+#include "ChooseRulePackageDialog.h"
 #include "RulePackageAssetTypeActions.h"
+#include "VitruvioActor.h"
 #include "VitruvioComponentDetails.h"
+#include "VitruvioCooker.h"
 
+#include "Algo/AllOf.h"
+#include "Algo/AnyOf.h"
 #include "AssetToolsModule.h"
 #include "Core.h"
-#include "IAssetTools.h"
-#include "Modules/ModuleManager.h"
-
-#define LOCTEXT_NAMESPACE "VitruvioEditorModule"
-
-#include "Algo/AnyOf.h"
-#include "ChooseRulePackageDialog.h"
 #include "Editor/LevelEditor/Public/LevelEditor.h"
 #include "Framework/Notifications/NotificationManager.h"
-#include "VitruvioActor.h"
+#include "IAssetTools.h"
+#include "Modules/ModuleManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
+
+#define LOCTEXT_NAMESPACE "VitruvioEditorModule"
 
 namespace
 {
 
-bool IsViableVitruvioActor(AActor* Actor)
+bool CanConvertToVitruvioActor(AActor* Actor)
 {
+
+	if (Cast<AVitruvioActor>(Actor))
+	{
+		return false;
+	}
+
+	if (Actor->GetComponentByClass(UVitruvioComponent::StaticClass()))
+	{
+		return false;
+	}
+
 	for (const auto& InitialShapeClasses : UVitruvioComponent::GetInitialShapesClasses())
 	{
 		UInitialShape* DefaultInitialShape = Cast<UInitialShape>(InitialShapeClasses->GetDefaultObject());
@@ -50,13 +62,21 @@ bool IsViableVitruvioActor(AActor* Actor)
 
 bool HasAnyViableVitruvioActor(TArray<AActor*> Actors)
 {
-	return Algo::AnyOf(Actors, [](AActor* In) { return IsViableVitruvioActor(In); });
+	return Algo::AllOf(Actors, [](AActor* In) { return CanConvertToVitruvioActor(In); });
+}
+
+bool HasAnyVitruvioActor(TArray<AActor*> Actors)
+{
+	return Algo::AnyOf(Actors, [](AActor* In) {
+		UVitruvioComponent* VitruvioComponent = In->FindComponentByClass<UVitruvioComponent>();
+		return VitruvioComponent != nullptr;
+	});
 }
 
 TArray<AActor*> GetViableVitruvioActorsInHiararchy(AActor* Root)
 {
 	TArray<AActor*> ViableActors;
-	if (IsViableVitruvioActor(Root))
+	if (CanConvertToVitruvioActor(Root))
 	{
 		ViableActors.Add(Root);
 	}
@@ -152,6 +172,15 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 					FSlateIcon(), AddVitruvioComponentAction);
 			}
 
+			if (HasAnyVitruvioActor(SelectedActors))
+			{
+				const FUIAction CookVitruvioActorsAction(FExecuteAction::CreateStatic(CookVitruvioActors, SelectedActors));
+
+				MenuBuilder.AddMenuEntry(FText::FromString("Convert To Static Mesh Actors"),
+										 FText::FromString("Converts all selected procedural Vitruvio Actors to Static Mesh Actors."), FSlateIcon(),
+										 CookVitruvioActorsAction);
+			}
+
 			MenuBuilder.EndSection();
 		}));
 
@@ -193,6 +222,9 @@ void VitruvioEditorModule::StartupModule()
 	GenerateCompletedDelegateHandle = VitruvioModule::Get().OnGenerateCompleted.AddRaw(this, &VitruvioEditorModule::OnGenerateCompleted);
 
 	FCoreDelegates::OnPostEngineInit.AddRaw(this, &VitruvioEditorModule::OnPostEngineInit);
+
+	FLevelEditorModule& LevelEditor = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
+	MapChangedHandle = LevelEditor.OnMapChanged().AddRaw(this, &VitruvioEditorModule::OnMapChanged);
 }
 
 void VitruvioEditorModule::ShutdownModule()
@@ -212,6 +244,9 @@ void VitruvioEditorModule::ShutdownModule()
 	{
 		GEditor->GetEditorSubsystem<UImportSubsystem>()->OnAssetReimport.Remove(OnAssetReloadHandle);
 	}
+
+	FLevelEditorModule& LevelEditor = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
+	LevelEditor.OnMapChanged().Remove(MapChangedHandle);
 }
 
 void VitruvioEditorModule::OnPostEngineInit()
@@ -237,6 +272,14 @@ void VitruvioEditorModule::OnPostEngineInit()
 		}
 	});
 	// clang-format on
+}
+
+void VitruvioEditorModule::OnMapChanged(UWorld* World, EMapChangeType ChangeType)
+{
+	if (ChangeType == EMapChangeType::TearDownWorld)
+	{
+		VitruvioModule::Get().GetMeshCache().Invalidate();
+	}
 }
 
 void VitruvioEditorModule::OnGenerateCompleted(int GenerateCallsLeft, int NumWarnings, int NumErrors)

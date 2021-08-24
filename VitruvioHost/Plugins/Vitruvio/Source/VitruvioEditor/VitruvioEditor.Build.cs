@@ -36,6 +36,8 @@ public class VitruvioEditor : ModuleRules
 				"SlateCore",
 				"Slate",
 				"AppFramework",
+				"MeshDescription",
+				"StaticMeshDescription",
 				"CoreUObject",
 				"ToolMenus",
 				"InputCore",

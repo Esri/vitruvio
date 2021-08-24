@@ -398,18 +398,20 @@ void UVitruvioComponent::ProcessGenerateQueue()
 			VitruvioModelComponent->RegisterComponent();
 		}
 
-		VitruvioModelComponent->SetStaticMesh(ConvertedResult.ShapeMesh);
-		VitruvioModelComponent->SetCollisionData(ConvertedResult.CollisionData);
+		VitruvioModelComponent->SetStaticMesh(ConvertedResult.ShapeMesh->GetStaticMesh());
+		VitruvioModelComponent->SetCollisionData(ConvertedResult.ShapeMesh->GetCollisionData());
 
-		CreateCollision(ConvertedResult.ShapeMesh, VitruvioModelComponent, GenerateCollision);
+		CreateCollision(ConvertedResult.ShapeMesh->GetStaticMesh(), VitruvioModelComponent, GenerateCollision);
 
 		for (const FInstance& Instance : ConvertedResult.Instances)
 		{
-			auto InstancedComponent =
-				NewObject<UGeneratedModelHISMComponent>(VitruvioModelComponent, NAME_None, RF_Transient | RF_DuplicateTransient);
+			const FName UniqueInstanceName =
+				MakeUniqueObjectName(VitruvioModelComponent, UGeneratedModelHISMComponent::StaticClass(), FName(Instance.InstanceMesh->GetName()));
+			auto InstancedComponent = NewObject<UGeneratedModelHISMComponent>(VitruvioModelComponent, FName(Instance.InstanceMesh->GetName()),
+																			  RF_Transient | RF_DuplicateTransient);
 			const TArray<FTransform>& Transforms = Instance.Transforms;
-			InstancedComponent->SetStaticMesh(Instance.Mesh);
-			InstancedComponent->SetCollisionData(Instance.CollisionData);
+			InstancedComponent->SetStaticMesh(Instance.InstanceMesh->GetStaticMesh());
+			InstancedComponent->SetCollisionData(Instance.InstanceMesh->GetCollisionData());
 
 			// Add all instance transforms
 			for (const FTransform& Transform : Transforms)
@@ -424,7 +426,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 			}
 
 			// Instanced component collision
-			CreateCollision(Instance.Mesh, InstancedComponent, GenerateCollision);
+			CreateCollision(Instance.InstanceMesh->GetStaticMesh(), InstancedComponent, GenerateCollision);
 
 			// Attach and register instance component
 			InstancedComponent->AttachToComponent(VitruvioModelComponent, FAttachmentTransformRules::KeepRelativeTransform);
@@ -521,8 +523,6 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 														 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
 														 TMap<FString, Vitruvio::FTextureData>& TextureCache)
 {
-	TMap<int32, TTuple<UStaticMesh*, Vitruvio::FCollisionData>> MeshMap;
-
 	auto CachedMaterial = [this, &MaterialCache, &TextureCache](const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name,
 																UObject* Outer) {
 		if (MaterialCache.Contains(MaterialAttributes))
@@ -531,99 +531,43 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 		}
 		else
 		{
-			UMaterialInstanceDynamic* Material = Vitruvio::GameThread_CreateMaterialInstance(Outer, Name, OpaqueParent, MaskedParent,
+			const FName UniqueMaterialName(Name);
+			UMaterialInstanceDynamic* Material = Vitruvio::GameThread_CreateMaterialInstance(Outer, UniqueMaterialName, OpaqueParent, MaskedParent,
 																							 TranslucentParent, MaterialAttributes, TextureCache);
 			MaterialCache.Add(MaterialAttributes, Material);
 			return Material;
 		}
 	};
 
-	// convert all meshes
-	for (auto& IdAndMesh : GenerateResult.MeshDescriptions)
+	// build all meshes
+	for (auto& IdAndMesh : GenerateResult.Meshes)
 	{
-		UStaticMesh* StaticMesh = NewObject<UStaticMesh>(GetTransientPackage(), NAME_None, RF_Transient);
-		TMap<UMaterialInstanceDynamic*, FName> MaterialSlots;
-
-		const TArray<Vitruvio::FMaterialAttributeContainer>& MeshMaterials = GenerateResult.Materials[IdAndMesh.Key];
-		FMeshDescription& MeshDescription = IdAndMesh.Value;
-		FStaticMeshAttributes MeshAttributes(MeshDescription);
-
-		TArray<FVector> Vertices;
-		auto VertexPositions = MeshAttributes.GetVertexPositions();
-		for (int32 VertexIndex = 0; VertexIndex < VertexPositions.GetNumElements(); ++VertexIndex)
-		{
-			Vertices.Add(VertexPositions[FVertexID(VertexIndex)]);
-		}
-
-		TArray<FTriIndices> Indices;
-		const auto PolygonGroups = MeshDescription.PolygonGroups();
-		size_t MaterialIndex = 0;
-		for (const auto& PolygonGroupId : PolygonGroups.GetElementIDs())
-		{
-			const FName MaterialName = MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId];
-			UMaterialInstanceDynamic* Material = CachedMaterial(MeshMaterials[MaterialIndex], MaterialName, StaticMesh);
-
-			if (MaterialSlots.Contains(Material))
-			{
-				MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlots[Material];
-			}
-			else
-			{
-				const FName SlotName = StaticMesh->AddMaterial(Material);
-				MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = SlotName;
-				MaterialSlots.Add(Material, SlotName);
-			}
-
-			++MaterialIndex;
-
-			// cache collision data
-			for (FPolygonID PolygonID : MeshDescription.GetPolygonGroupPolygons(PolygonGroupId))
-			{
-				for (FTriangleID TriangleID : MeshDescription.GetPolygonTriangleIDs(PolygonID))
-				{
-					auto TriangleVertexInstances = MeshDescription.GetTriangleVertexInstances(TriangleID);
-
-					auto VertexID0 = MeshDescription.GetVertexInstanceVertex(TriangleVertexInstances[0]);
-					auto VertexID1 = MeshDescription.GetVertexInstanceVertex(TriangleVertexInstances[1]);
-					auto VertexID2 = MeshDescription.GetVertexInstanceVertex(TriangleVertexInstances[2]);
-
-					FTriIndices TriIndex;
-					TriIndex.v0 = VertexID0.GetValue();
-					TriIndex.v1 = VertexID1.GetValue();
-					TriIndex.v2 = VertexID2.GetValue();
-					Indices.Add(TriIndex);
-				}
-			}
-		}
-
-		TArray<const FMeshDescription*> MeshDescriptionPtrs;
-		MeshDescriptionPtrs.Emplace(&IdAndMesh.Value);
-		StaticMesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
-		MeshMap.Add(IdAndMesh.Key, MakeTuple(StaticMesh, Vitruvio::FCollisionData{Indices, Vertices}));
+		IdAndMesh.Value->Build(MaterialCache, TextureCache, OpaqueParent, MaskedParent, TranslucentParent);
 	}
 
-	// convert materials
+	// convert instances
 	TArray<FInstance> Instances;
 	for (const auto& Instance : GenerateResult.Instances)
 	{
-		UStaticMesh* Mesh = MeshMap[Instance.Key.PrototypeId].Key;
-		Vitruvio::FCollisionData& CollisionData = MeshMap[Instance.Key.PrototypeId].Value;
+		auto VitruvioMesh = GenerateResult.Meshes[Instance.Key.PrototypeId];
+		FString MeshName = VitruvioMesh->GetName();
 		TArray<UMaterialInstanceDynamic*> OverrideMaterials;
 		for (size_t MaterialIndex = 0; MaterialIndex < Instance.Key.MaterialOverrides.Num(); ++MaterialIndex)
 		{
 			const Vitruvio::FMaterialAttributeContainer& MaterialContainer = Instance.Key.MaterialOverrides[MaterialIndex];
 			FName MaterialName = FName(MaterialContainer.Name);
-			OverrideMaterials.Add(CachedMaterial(MaterialContainer, MaterialName, GetTransientPackage()));
+			OverrideMaterials.Add(CacheMaterial(OpaqueParent, MaskedParent, TranslucentParent, TextureCache, MaterialCache,
+				MaterialContainer, MaterialName, VitruvioMesh->GetStaticMesh()));
 		}
 
-		Instances.Add({Mesh, CollisionData, OverrideMaterials, Instance.Value});
+		Instances.Add({VitruvioMesh, OverrideMaterials, Instance.Value});
 	}
 
-	if (MeshMap.Contains(UnrealCallbacks::NO_PROTOTYPE_INDEX))
-	{
-		return {MeshMap[UnrealCallbacks::NO_PROTOTYPE_INDEX].Key, MeshMap[UnrealCallbacks::NO_PROTOTYPE_INDEX].Value, Instances};
-	}
-	return {nullptr, Vitruvio::FCollisionData{}, Instances};
+	TSharedPtr<FVitruvioMesh> ShapeMesh = GenerateResult.Meshes.Contains(UnrealCallbacks::NO_PROTOTYPE_INDEX)
+											  ? GenerateResult.Meshes[UnrealCallbacks::NO_PROTOTYPE_INDEX]
+											  : TSharedPtr<FVitruvioMesh>{};
+
+	return {ShapeMesh, Instances};
 }
 
 void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
@@ -672,8 +616,8 @@ void UVitruvioComponent::Generate()
 
 	if (InitialShape)
 	{
-		FGenerateResult GenerateResult = VitruvioModule::Get().GenerateAsync(InitialShape->GetFaces(), OpaqueParent, MaskedParent, TranslucentParent,
-																			 Rpk, Vitruvio::CreateAttributeMap(Attributes), RandomSeed);
+		FGenerateResult GenerateResult =
+			VitruvioModule::Get().GenerateAsync(InitialShape->GetFaces(), Rpk, Vitruvio::CreateAttributeMap(Attributes), RandomSeed);
 
 		GenerateToken = GenerateResult.Token;
 

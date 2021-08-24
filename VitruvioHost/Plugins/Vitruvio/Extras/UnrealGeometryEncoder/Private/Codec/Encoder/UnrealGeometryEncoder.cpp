@@ -148,6 +148,24 @@ uint32_t scanValidTextures(const prtx::MaterialPtr& mat)
 		return highestUVSet + 1;
 }
 
+// use shape name by default for the actor and if the instance originates from a file we use the file name for better readability
+std::wstring createInstanceName(const prtx::EncodePreparator::FinalizedInstance& fi)
+{
+	const auto geometry = fi.getGeometry();
+	const auto uri = geometry->getURI();
+
+	if (uri->isFilePath())
+		return uri->getBaseName();
+
+	std::wstring meshName = fi.getShapeName();
+
+	// remove last point similar to the model hierarchy
+	if (!meshName.empty() && meshName.back() == '.')
+		meshName = meshName.substr(0, meshName.length() - 1);
+
+	return meshName;
+}
+
 std::wstring uriToPath(const prtx::TexturePtr& t)
 {
 	return t->getURI()->getPath();
@@ -481,8 +499,8 @@ SerializedGeometry serializeGeometry(const prtx::GeometryPtrVector& geometries, 
 	return sg;
 }
 
-void encodeMesh(IUnrealCallbacks* cb, const SerializedGeometry& sg, wchar_t const* name, int32_t prototypeIndex, prtx::GeometryPtrVector geometries,
-				std::vector<prtx::MaterialPtrVector> materials)
+void encodeMesh(IUnrealCallbacks* cb, const SerializedGeometry& sg, wchar_t const* name, int32_t prototypeIndex, const std::wstring& uri,
+				prtx::GeometryPtrVector geometries, std::vector<prtx::MaterialPtrVector> materials)
 {
 	auto puvs = toPtrVec(sg.uvs);
 	auto puvCounts = toPtrVec(sg.uvCounts);
@@ -510,8 +528,9 @@ void encodeMesh(IUnrealCallbacks* cb, const SerializedGeometry& sg, wchar_t cons
 		++matIt;
 	}
 
-	cb->addMesh(name, prototypeIndex, sg.coords.data(), sg.coords.size(), sg.normals.data(), sg.normals.size(), sg.faceVertexCounts.data(),
-				sg.faceVertexCounts.size(), sg.vertexIndices.data(), sg.vertexIndices.size(), sg.normalIndices.data(), sg.normalIndices.size(),
+	cb->addMesh(name, prototypeIndex, uri.c_str(), sg.coords.data(), sg.coords.size(), sg.normals.data(), sg.normals.size(),
+				sg.faceVertexCounts.data(), sg.faceVertexCounts.size(), sg.vertexIndices.data(), sg.vertexIndices.size(), sg.normalIndices.data(),
+				sg.normalIndices.size(),
 
 				puvs.first.data(), puvs.second.data(), puvCounts.first.data(), puvCounts.second.data(), puvIndices.first.data(),
 				puvIndices.second.data(), sg.uvs.size(),
@@ -590,27 +609,27 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialSha
 		{
 			const prtx::MaterialPtrVector& instMaterials = inst.getMaterials();
 			const prtx::GeometryPtr& instGeom = inst.getGeometry();
+
 			AttributeMapNOPtrVectorOwner instMaterialsAttributeMap;
 
 			if (serializedPrototypes.find(inst.getPrototypeIndex()) == serializedPrototypes.end())
 			{
+				const std::wstring uri = instGeom->getURI()->wstring();
 				const SerializedGeometry sg = serializeGeometry({instGeom}, {instMaterials});
+				const std::wstring instName = createInstanceName(inst);
 
-				encodeMesh(cb, sg, initialShape.getName(), inst.getPrototypeIndex(), {instGeom}, {instMaterials});
+				encodeMesh(cb, sg, instName.c_str(), inst.getPrototypeIndex(), uri, {instGeom}, {instMaterials});
 
 				serializedPrototypes.insert(inst.getPrototypeIndex());
 			}
-			else
+
+			const prtx::MeshPtrVector& meshes = instGeom->getMeshes();
+			for (size_t mi = 0; mi < meshes.size(); mi++)
 			{
-				const prtx::MeshPtrVector& meshes = instGeom->getMeshes();
+				const prtx::MaterialPtr& mat = instMaterials[mi];
 
-				for (size_t mi = 0; mi < meshes.size(); mi++)
-				{
-					const prtx::MaterialPtr& mat = instMaterials[mi];
-
-					convertMaterialToAttributeMap(instanceMatAmb, *(mat.get()), mat->getKeys());
-					instMaterialsAttributeMap.v.push_back(instanceMatAmb->createAttributeMapAndReset());
-				}
+				convertMaterialToAttributeMap(instanceMatAmb, *(mat.get()), mat->getKeys());
+				instMaterialsAttributeMap.v.push_back(instanceMatAmb->createAttributeMapAndReset());
 			}
 
 			cb->addInstance(inst.getPrototypeIndex(), inst.getTransformation().data(), instMaterialsAttributeMap.v.data(),
@@ -626,7 +645,7 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialSha
 	if (geometries.size() > 0)
 	{
 		const SerializedGeometry sg = serializeGeometry(geometries, materials);
-		encodeMesh(cb, sg, initialShape.getName(), -1, geometries, materials);
+		encodeMesh(cb, sg, initialShape.getName(), -1, L"", geometries, materials);
 	}
 
 	if (DBG)
