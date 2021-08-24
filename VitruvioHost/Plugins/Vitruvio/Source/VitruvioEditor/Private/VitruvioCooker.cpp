@@ -319,8 +319,14 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 					}
 				}
 
+				FString OldActorLabel = Actor->GetActorLabel();
+
 				// Destroy the old procedural Vitruvio Actor
 				Actor->Destroy();
+
+				CookedActor->SetActorLabel(OldActorLabel);
+
+				GEditor->SelectActor(CookedActor, true, false);
 			}
 
 			IsCooking = false;
