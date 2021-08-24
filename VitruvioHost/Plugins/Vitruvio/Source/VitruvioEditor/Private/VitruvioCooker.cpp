@@ -182,6 +182,8 @@ UStaticMesh* SaveStaticMesh(UStaticMesh* Mesh, const FString& Path, FStaticMeshC
 	FStaticMeshAttributes MeshAttributes(*OriginalMeshDescription);
 
 	// Copy Materials
+	TMap<UMaterialInstanceConstant*, FName> MaterialSlots;
+
 	const auto PolygonGroups = OriginalMeshDescription->PolygonGroups();
 	for (const auto& PolygonGroupId : PolygonGroups.GetElementIDs())
 	{
@@ -195,9 +197,18 @@ UStaticMesh* SaveStaticMesh(UStaticMesh* Mesh, const FString& Path, FStaticMeshC
 			UMaterialInstanceDynamic* DynamicMaterial = Cast<UMaterialInstanceDynamic>(Material);
 			check(DynamicMaterial);
 			UMaterialInstanceConstant* NewMaterial = SaveMaterial(DynamicMaterial, Path, MaterialCache, TextureCache);
-			FName NewSlot = PersistedMesh->AddMaterial(NewMaterial);
 
-			MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = NewSlot;
+			const auto MaterialResult = MaterialSlots.Find(NewMaterial);
+			if (MaterialResult)
+			{
+				MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = *MaterialResult;
+			}
+			else
+			{
+				FName NewSlot = PersistedMesh->AddMaterial(NewMaterial);
+				MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = NewSlot;
+				MaterialSlots.Add(NewMaterial, NewSlot);
+			}
 		}
 	}
 
