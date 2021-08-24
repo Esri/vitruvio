@@ -176,8 +176,8 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 			{
 				const FUIAction CookVitruvioActorsAction(FExecuteAction::CreateStatic(CookVitruvioActors, SelectedActors));
 
-				MenuBuilder.AddMenuEntry(FText::FromString("Cook Vitruvio Actor"),
-										 FText::FromString("Converts all selected procedural Vitruvio Actors to StaticMesh Actors."), FSlateIcon(),
+				MenuBuilder.AddMenuEntry(FText::FromString("Convert To Static Mesh Actors"),
+										 FText::FromString("Converts all selected procedural Vitruvio Actors to Static Mesh Actors."), FSlateIcon(),
 										 CookVitruvioActorsAction);
 			}
 
