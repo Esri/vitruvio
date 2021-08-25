@@ -426,7 +426,8 @@ void USplineInitialShape::Initialize(UVitruvioComponent* Component, const TArray
 
 	for (const FInitialShapeFace& Face : InitialFaces)
 	{
-		USplineComponent* Spline = AttachComponent<USplineComponent>(Owner, TEXT("InitialShapeSpline"));
+		auto UniqueName = MakeUniqueObjectName(Owner, USplineComponent::StaticClass(), TEXT("InitialShapeSpline"));
+		USplineComponent* Spline = AttachComponent<USplineComponent>(Owner, UniqueName.ToString());
 		Spline->ClearSplinePoints(true);
 
 		int32 PointIndex = 0;
