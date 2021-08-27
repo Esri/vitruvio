@@ -164,6 +164,35 @@ public:
 };
 
 UCLASS()
+class VITRUVIO_API UStringArrayAttribute final : public URuleAttribute
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere)
+	TArray<FString> Values;
+
+	UStringEnumAnnotation* GetEnumAnnotation() const
+	{
+		return Cast<UStringEnumAnnotation>(Annotation);
+	}
+
+	UColorAnnotation* GetColorAnnotation() const
+	{
+		return Cast<UColorAnnotation>(Annotation);
+	}
+
+	void CopyValue(const URuleAttribute* FromAttribute) override
+	{
+		const UStringArrayAttribute* FromStringAttribute = Cast<UStringArrayAttribute>(FromAttribute);
+		if (FromStringAttribute)
+		{
+			Values = FromStringAttribute->Values;
+		}
+	}
+};
+
+UCLASS()
 class VITRUVIO_API UFloatAttribute final : public URuleAttribute
 {
 	GENERATED_BODY()
@@ -193,6 +222,35 @@ public:
 };
 
 UCLASS()
+class VITRUVIO_API UFloatArrayAttribute final : public URuleAttribute
+{
+	GENERATED_BODY()
+
+	public:
+	UPROPERTY(EditAnywhere)
+	TArray<double> Values;
+
+	UStringEnumAnnotation* GetEnumAnnotation() const
+	{
+		return Cast<UStringEnumAnnotation>(Annotation);
+	}
+
+	UColorAnnotation* GetColorAnnotation() const
+	{
+		return Cast<UColorAnnotation>(Annotation);
+	}
+
+	void CopyValue(const URuleAttribute* FromAttribute) override
+	{
+		const UFloatArrayAttribute* FromFloatArrayAttribute = Cast<UFloatArrayAttribute>(FromAttribute);
+		if (FromFloatArrayAttribute)
+		{
+			Values = FromFloatArrayAttribute->Values;
+		}
+	}
+};
+
+UCLASS()
 class VITRUVIO_API UBoolAttribute final : public URuleAttribute
 {
 	GENERATED_BODY()
@@ -207,6 +265,35 @@ public:
 		if (FromBoolAttribute)
 		{
 			Value = FromBoolAttribute->Value;
+		}
+	}
+};
+
+UCLASS()
+class VITRUVIO_API UBoolArrayAttribute final : public URuleAttribute
+{
+	GENERATED_BODY()
+
+	public:
+	UPROPERTY(EditAnywhere)
+	TArray<bool> Values;
+
+	UStringEnumAnnotation* GetEnumAnnotation() const
+	{
+		return Cast<UStringEnumAnnotation>(Annotation);
+	}
+
+	UColorAnnotation* GetColorAnnotation() const
+	{
+		return Cast<UColorAnnotation>(Annotation);
+	}
+
+	void CopyValue(const URuleAttribute* FromAttribute) override
+	{
+		const UBoolArrayAttribute* FromBoolArrayAttribute = Cast<UBoolArrayAttribute>(FromAttribute);
+		if (FromBoolArrayAttribute)
+		{
+			Values = FromBoolArrayAttribute->Values;
 		}
 	}
 };

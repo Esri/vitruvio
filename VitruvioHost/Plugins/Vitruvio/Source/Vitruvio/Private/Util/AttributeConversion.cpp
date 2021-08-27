@@ -27,6 +27,14 @@ namespace
 {
 const FString DEFAULT_STYLE = TEXT("Default");
 
+std::vector<const wchar_t*> ToPtrVector(const TArray<FString>& Input)
+{
+	std::vector<const wchar_t*> PtrVec(Input.Num());
+	for (size_t i = 0; i < Input.Num(); i++)
+		PtrVec[i] = *Input[i];
+	return PtrVec;
+}
+
 URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt::RuleFileInfo::Entry* AttrInfo, UObject* const Outer)
 {
 	const std::wstring Name(AttrInfo->getName());
@@ -51,11 +59,42 @@ URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt:
 		StringAttribute->Value = WCHAR_TO_TCHAR(AttributeMap->getString(Name.c_str()));
 		return StringAttribute;
 	}
+	case prt::AAT_STR_ARRAY:
+	{
+		UStringArrayAttribute* StringArrayAttribute = NewObject<UStringArrayAttribute>(Outer);
+		size_t Count = 0;
+		const wchar_t* const* Arr = AttributeMap->getStringArray(Name.c_str(), &Count);
+		for (size_t Index = 0; Index < Count; Index++)
+		{
+			StringArrayAttribute->Values.Add(Arr[Index]);
+		}
+		return StringArrayAttribute;
+	}
+	case prt::AAT_BOOL_ARRAY:
+	{
+		UBoolArrayAttribute* BoolArrayAttribute = NewObject<UBoolArrayAttribute>(Outer);
+		size_t Count = 0;
+		const bool* Arr = AttributeMap->getBoolArray(Name.c_str(), &Count);
+		for (size_t Index = 0; Index < Count; Index++)
+		{
+			BoolArrayAttribute->Values.Add(Arr[Index]);
+		}
+		return BoolArrayAttribute;
+	}
+	case prt::AAT_FLOAT_ARRAY:
+	{
+		UFloatArrayAttribute* FloatArrayAttribute = NewObject<UFloatArrayAttribute>(Outer);
+		size_t Count = 0;
+		const double* Arr = AttributeMap->getFloatArray(Name.c_str(), &Count);
+		for (size_t Index = 0; Index < Count; Index++)
+		{
+			FloatArrayAttribute->Values.Add(Arr[Index]);
+		}
+		return FloatArrayAttribute;
+	}
 	case prt::AAT_UNKNOWN:
 	case prt::AAT_VOID:
-	case prt::AAT_BOOL_ARRAY:
-	case prt::AAT_FLOAT_ARRAY:
-	case prt::AAT_STR_ARRAY:
+
 	default:
 		return nullptr;
 	}
@@ -127,6 +166,19 @@ AttributeMapUPtr CreateAttributeMap(const TMap<FString, URuleAttribute*>& Attrib
 		else if (const UBoolAttribute* BoolAttribute = Cast<UBoolAttribute>(Attribute))
 		{
 			AttributeMapBuilder->setBool(TCHAR_TO_WCHAR(*Attribute->Name), BoolAttribute->Value);
+		}
+		else if (const UStringArrayAttribute* StringArrayAttribute = Cast<UStringArrayAttribute>(Attribute))
+		{
+			std::vector<const wchar_t*> PtrVec = ToPtrVector(StringArrayAttribute->Values);
+			AttributeMapBuilder->setStringArray(TCHAR_TO_WCHAR(*Attribute->Name), PtrVec.data(), StringArrayAttribute->Values.Num());
+		}
+		else if (const UBoolArrayAttribute* BoolArrayAttribute = Cast<UBoolArrayAttribute>(Attribute))
+		{
+			AttributeMapBuilder->setBoolArray(TCHAR_TO_WCHAR(*Attribute->Name), BoolArrayAttribute->Values.GetData(), BoolArrayAttribute->Values.Num());
+		}
+		else if (const UFloatArrayAttribute* FloatArrayAttribute = Cast<UFloatArrayAttribute>(Attribute))
+		{
+			AttributeMapBuilder->setFloatArray(TCHAR_TO_WCHAR(*Attribute->Name), FloatArrayAttribute->Values.GetData(), FloatArrayAttribute->Values.Num());
 		}
 	}
 

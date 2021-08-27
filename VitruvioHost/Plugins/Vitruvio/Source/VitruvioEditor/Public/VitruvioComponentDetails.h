@@ -16,7 +16,10 @@
 #pragma once
 
 #include "DetailCategoryBuilder.h"
+#include "DetailLayoutBuilder.h"
+#include "DetailWidgetRow.h"
 #include "IDetailCustomization.h"
+#include "IDetailPropertyRow.h"
 #include "VitruvioComponent.h"
 
 class FVitruvioComponentDetails final : public IDetailCustomization
@@ -39,12 +42,16 @@ public:
 	void OnVitruvioComponentHierarchyChanged(UVitruvioComponent* Component);
 
 private:
+	void BuildAttributeEditor(IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioActor);
+
 	TArray<TWeakObjectPtr<UObject>> ObjectsBeingCustomized;
 	TWeakPtr<IDetailLayoutBuilder> CachedDetailBuilder;
 	TSharedPtr<SWidget> ColorPickerParentWidget;
 
 	TArray<TSharedPtr<FString>> InitialShapeTypes;
 	TMap<TSharedPtr<FString>, UClass*> InitialShapeTypeMap;
+
+	TArray<TSharedPtr<IPropertyRowGenerator>> Generators;
 };
 
 template <typename T>

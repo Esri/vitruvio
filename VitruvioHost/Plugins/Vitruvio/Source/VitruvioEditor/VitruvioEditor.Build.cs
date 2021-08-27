@@ -42,7 +42,8 @@ public class VitruvioEditor : ModuleRules
 				"ToolMenus",
 				"InputCore",
 				"UnrealEd",
-				"EditorStyle"
+				"EditorStyle",
+				"PropertyEditor"
 			}
 		);
 		
