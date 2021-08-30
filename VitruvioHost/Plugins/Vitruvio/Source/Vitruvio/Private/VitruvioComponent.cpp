@@ -471,7 +471,7 @@ void UVitruvioComponent::ProcessLoadAttributesQueue()
 
 		bNotifyAttributeChange = true;
 
-		if (GenerateAutomatically)
+		if (GenerateAutomatically || LoadAttributes.bForceRegenerate)
 		{
 			Generate();
 		}
