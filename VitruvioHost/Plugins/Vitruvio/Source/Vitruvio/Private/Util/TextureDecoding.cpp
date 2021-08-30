@@ -108,7 +108,7 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 
 	const FString TextureBaseName = TEXT("T_") + FPaths::GetBaseFilename(Path);
 	const FName TextureName = MakeUniqueObjectName(GetTransientPackage(), UTexture2D::StaticClass(), *TextureBaseName);
-	UTexture2D* NewTexture = NewObject<UTexture2D>(GetTransientPackage(), TextureName, RF_Transient | RF_DuplicateTransient);
+	UTexture2D* NewTexture = NewObject<UTexture2D>(GetTransientPackage(), TextureName, RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
 
 	NewTexture->PlatformData = new FTexturePlatformData();
 	NewTexture->PlatformData->SizeX = TextureMetadata.Width;
