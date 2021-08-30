@@ -1,6 +1,7 @@
 #include "VitruvioCooker.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "AssetToolsModule.h"
 #include "Dialogs/DlgPickPath.h"
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
 #include "GeneratedModelHISMComponent.h"
@@ -66,9 +67,12 @@ UTexture2D* SaveTexture(UTexture2D* Original, const FString& Path, FTextureCache
 		return TextureCache[Original];
 	}
 
-	FString TexturePath = FPaths::Combine(Path, TEXT("Textures"), Original->GetName());
-	UPackage* TexturePackage = CreatePackage(*TexturePath);
-	UTexture2D* NewTexture = NewObject<UTexture2D>(TexturePackage, *Original->GetName(), RF_Public | RF_Standalone);
+	FString TexturePackagePathSuggestion = FPaths::Combine(Path, TEXT("Textures"), Original->GetName());
+	FString TextureName;
+	FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+	AssetToolsModule.Get().CreateUniqueAssetName(TexturePackagePathSuggestion, TEXT(""), TexturePackagePathSuggestion, TextureName);
+	UPackage* TexturePackage = CreatePackage(*TexturePackagePathSuggestion);
+	UTexture2D* NewTexture = NewObject<UTexture2D>(TexturePackage, *TextureName, RF_Public | RF_Standalone);
 
 	NewTexture->PlatformData = new FTexturePlatformData();
 	NewTexture->PlatformData->SizeX = Original->PlatformData->SizeX;
@@ -113,9 +117,11 @@ UMaterialInstanceConstant* SaveMaterial(UMaterialInstanceDynamic* Material, cons
 		return MaterialCache[Material];
 	}
 
-	const FString MaterialName = Material->GetName();
-	const FString MaterialPackagePath = FPaths::Combine(Path, TEXT("Materials"), MaterialName);
-	UPackage* MaterialPackage = CreatePackage(*MaterialPackagePath);
+	FString MaterialPackagePathSuggestion = FPaths::Combine(Path, TEXT("Materials"), Material->GetName());
+	FString MaterialName;
+	FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+	AssetToolsModule.Get().CreateUniqueAssetName(MaterialPackagePathSuggestion, TEXT(""), MaterialPackagePathSuggestion, MaterialName);
+	UPackage* MaterialPackage = CreatePackage(*MaterialPackagePathSuggestion);
 
 	UMaterialInstanceConstantFactoryNew* MaterialFactory = NewObject<UMaterialInstanceConstantFactoryNew>();
 	MaterialFactory->InitialParent = Material->Parent;
@@ -172,9 +178,12 @@ UStaticMesh* SaveStaticMesh(UStaticMesh* Mesh, const FString& Path, FStaticMeshC
 	}
 
 	// Create new StaticMesh Asset
-	const FString StaticMeshName = Mesh->GetName();
-	const FString PackageName = FPaths::Combine(Path, TEXT("Geometry"), StaticMeshName);
-	UPackage* MeshPackage = CreatePackage(*PackageName);
+	FString PackageNameSuggestion = FPaths::Combine(Path, TEXT("Geometry"), Mesh->GetName());
+	FString StaticMeshName;
+	FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+	AssetToolsModule.Get().CreateUniqueAssetName(PackageNameSuggestion, TEXT(""), PackageNameSuggestion, StaticMeshName);
+
+	UPackage* MeshPackage = CreatePackage(*PackageNameSuggestion);
 	UStaticMesh* PersistedMesh = NewObject<UStaticMesh>(MeshPackage, *StaticMeshName, RF_Public | RF_Standalone);
 	PersistedMesh->InitResources();
 
