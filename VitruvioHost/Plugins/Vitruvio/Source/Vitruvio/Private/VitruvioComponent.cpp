@@ -139,7 +139,7 @@ void CreateCollision(UStaticMesh* Mesh, UStaticMeshComponent* StaticMeshComponen
 		return;
 	}
 
-	UBodySetup* BodySetup = NewObject<UBodySetup>(StaticMeshComponent);
+	UBodySetup* BodySetup = NewObject<UBodySetup>(StaticMeshComponent, NAME_None, RF_Transient | RF_DuplicateTransient | RF_TextExportTransient);
 	InitializeBodySetup(BodySetup, ComplexCollision);
 	Mesh->SetBodySetup(BodySetup);
 	StaticMeshComponent->RecreatePhysicsState();
@@ -390,17 +390,17 @@ void UVitruvioComponent::ProcessGenerateQueue()
 
 		if (!VitruvioModelComponent)
 		{
-			VitruvioModelComponent = NewObject<UGeneratedModelStaticMeshComponent>(InitialShape->GetComponent(), FName(TEXT("GeneratedModel")),
-																				   RF_Transient | RF_DuplicateTransient);
-			VitruvioModelComponent->AttachToComponent(InitialShapeComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			VitruvioModelComponent = NewObject<UGeneratedModelStaticMeshComponent>(InitialShapeComponent, FName(TEXT("GeneratedModel")),
+																				   RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
 			InitialShapeComponent->GetOwner()->AddInstanceComponent(VitruvioModelComponent);
+			VitruvioModelComponent->AttachToComponent(InitialShapeComponent, FAttachmentTransformRules::KeepRelativeTransform);
 			VitruvioModelComponent->OnComponentCreated();
 			VitruvioModelComponent->RegisterComponent();
 		}
 
 		VitruvioModelComponent->SetStaticMesh(ConvertedResult.ShapeMesh->GetStaticMesh());
-		VitruvioModelComponent->SetCollisionData(ConvertedResult.ShapeMesh->GetCollisionData());
 
+		VitruvioModelComponent->SetCollisionData(ConvertedResult.ShapeMesh->GetCollisionData());
 		CreateCollision(ConvertedResult.ShapeMesh->GetStaticMesh(), VitruvioModelComponent, GenerateCollision);
 
 		for (const FInstance& Instance : ConvertedResult.Instances)
@@ -408,7 +408,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 			const FName UniqueInstanceName =
 				MakeUniqueObjectName(VitruvioModelComponent, UGeneratedModelHISMComponent::StaticClass(), FName(Instance.InstanceMesh->GetName()));
 			auto InstancedComponent = NewObject<UGeneratedModelHISMComponent>(VitruvioModelComponent, FName(Instance.InstanceMesh->GetName()),
-																			  RF_Transient | RF_DuplicateTransient);
+																			  RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
 			const TArray<FTransform>& Transforms = Instance.Transforms;
 			InstancedComponent->SetStaticMesh(Instance.InstanceMesh->GetStaticMesh());
 			InstancedComponent->SetCollisionData(Instance.InstanceMesh->GetCollisionData());
@@ -471,7 +471,7 @@ void UVitruvioComponent::ProcessLoadAttributesQueue()
 
 		bNotifyAttributeChange = true;
 
-		if (GenerateAutomatically)
+		if (GenerateAutomatically || LoadAttributes.bForceRegenerate)
 		{
 			Generate();
 		}
@@ -556,8 +556,8 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 		{
 			const Vitruvio::FMaterialAttributeContainer& MaterialContainer = Instance.Key.MaterialOverrides[MaterialIndex];
 			FName MaterialName = FName(MaterialContainer.Name);
-			OverrideMaterials.Add(CacheMaterial(OpaqueParent, MaskedParent, TranslucentParent, TextureCache, MaterialCache,
-				MaterialContainer, MaterialName, VitruvioMesh->GetStaticMesh()));
+			OverrideMaterials.Add(CacheMaterial(OpaqueParent, MaskedParent, TranslucentParent, TextureCache, MaterialCache, MaterialContainer,
+												MaterialName, VitruvioMesh->GetStaticMesh()));
 		}
 
 		Instances.Add({VitruvioMesh, OverrideMaterials, Instance.Value});

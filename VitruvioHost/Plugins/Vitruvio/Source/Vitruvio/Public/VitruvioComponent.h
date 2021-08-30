@@ -190,6 +190,14 @@ public:
 	/* Removes the generated meshes from this VitruvioComponent. */
 	void RemoveGeneratedMeshes();
 
+	/**
+	 * Load the default attributes.
+	 *
+	 * @param KeepOldAttributeValues Whether to keep old attribute values
+	 * @param ForceRegenerate Whether to force regenerate even if generate automatically is set to false
+	 */
+	void LoadDefaultAttributes(bool KeepOldAttributeValues = false, bool ForceRegenerate = false);
+
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnHierarchyChanged, UVitruvioComponent*) static FOnHierarchyChanged OnHierarchyChanged;
 
 	virtual void PostLoad() override;
@@ -234,7 +242,6 @@ private:
 
 	void CalculateRandomSeed();
 
-	void LoadDefaultAttributes(bool KeepOldAttributeValues = false, bool ForceRegenerate = false);
 	void NotifyAttributesChanged();
 
 	void ProcessGenerateQueue();

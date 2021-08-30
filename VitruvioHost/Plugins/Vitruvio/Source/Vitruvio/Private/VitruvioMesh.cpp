@@ -39,7 +39,7 @@ void FVitruvioMesh::Build(TMap<Vitruvio::FMaterialAttributeContainer, UMaterialI
 
 	FString MeshName = Name.Replace(TEXT("."), TEXT(""));
 	const FName StaticMeshName = MakeUniqueObjectName(nullptr, UStaticMesh::StaticClass(), FName(MeshName));
-	StaticMesh = NewObject<UStaticMesh>(GetTransientPackage(), StaticMeshName, RF_Transient);
+	StaticMesh = NewObject<UStaticMesh>(GetTransientPackage(), StaticMeshName, RF_Transient | RF_DuplicateTransient | RF_TextExportTransient);
 	TMap<UMaterialInstanceDynamic*, FName> MaterialSlots;
 
 	FStaticMeshAttributes MeshAttributes(MeshDescription);

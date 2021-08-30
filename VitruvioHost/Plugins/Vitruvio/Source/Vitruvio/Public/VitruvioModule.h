@@ -109,6 +109,11 @@ public:
 	void ShutdownModule() override;
 
 	/**
+	 * \brief Decodes the given texture.
+	 */
+	VITRUVIO_API Vitruvio::FTextureData DecodeTexture(UObject* Outer, const FString& Path, const FString& Key) const;
+
+	/**
 	 * \brief Asynchronously generate the models with the given InitialShape, RulePackage and Attributes.
 	 *
 	 * \param InitialShape

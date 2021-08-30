@@ -18,7 +18,7 @@
 #include "prt/AttributeMap.h"
 
 #include "CoreUObject.h"
-#include "Materials/MaterialInstanceDynamic.h"
+#include "TextureDecoding.h"
 #include "VitruvioTypes.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMaterialConversion, Log, All);
