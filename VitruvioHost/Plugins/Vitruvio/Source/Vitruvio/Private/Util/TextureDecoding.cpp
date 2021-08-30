@@ -36,32 +36,32 @@ FTextureMetadata ParseTextureMetadata(const prt::AttributeMap* TextureMetadata)
 	Result.BytesPerBand = 0;
 	Result.Bands = 0;
 
-	const wchar_t* Format = TextureMetadata->getString(L"format");
-	if (std::wstring(L"GREY8").compare(Format) == 0)
+	FString Format(TextureMetadata->getString(L"format"));
+	if (Format == TEXT("GREY8"))
 	{
 		Result.BytesPerBand = 1;
 		Result.Bands = 1;
 		Result.PixelFormat = EPixelFormat::PF_G8;
 	}
-	else if (std::wstring(L"GREY16").compare(Format) == 0)
+	else if (Format == TEXT("GREY16"))
 	{
 		Result.BytesPerBand = 2;
 		Result.Bands = 1;
 		Result.PixelFormat = EPixelFormat::PF_G16;
 	}
-	else if (std::wstring(L"FLOAT32").compare(Format) == 0)
+	else if (Format == TEXT("FLOAT32"))
 	{
 		Result.BytesPerBand = 4;
 		Result.Bands = 1;
 		Result.PixelFormat = EPixelFormat::PF_R32_FLOAT;
 	}
-	else if (std::wstring(L"RGB8").compare(Format) == 0)
+	else if (Format == TEXT("RGB8"))
 	{
 		Result.BytesPerBand = 1;
 		Result.Bands = 3;
 		Result.PixelFormat = EPixelFormat::PF_R8G8B8A8;
 	}
-	else if (std::wstring(L"RGBA8").compare(Format) == 0)
+	else if (Format == TEXT("RGBA8"))
 	{
 		Result.BytesPerBand = 1;
 		Result.Bands = 4;
