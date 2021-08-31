@@ -188,12 +188,13 @@ UStaticMesh* SaveStaticMesh(UStaticMesh* Mesh, const FString& Path, FStaticMeshC
 	PersistedMesh->InitResources();
 
 	FMeshDescription* OriginalMeshDescription = Mesh->GetMeshDescription(0);
-	FStaticMeshAttributes MeshAttributes(*OriginalMeshDescription);
+	FMeshDescription NewMeshDescription(*OriginalMeshDescription);
+	FStaticMeshAttributes MeshAttributes(NewMeshDescription);
 
 	// Copy Materials
 	TMap<UMaterialInstanceConstant*, FName> MaterialSlots;
 
-	const auto PolygonGroups = OriginalMeshDescription->PolygonGroups();
+	const auto PolygonGroups = NewMeshDescription.PolygonGroups();
 	for (const auto& PolygonGroupId : PolygonGroups.GetElementIDs())
 	{
 		const FName MaterialName = MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId];
@@ -223,7 +224,7 @@ UStaticMesh* SaveStaticMesh(UStaticMesh* Mesh, const FString& Path, FStaticMeshC
 
 	// Build the Static Mesh
 	TArray<const FMeshDescription*> MeshDescriptions;
-	MeshDescriptions.Add(OriginalMeshDescription);
+	MeshDescriptions.Add(&NewMeshDescription);
 	PersistedMesh->BuildFromMeshDescriptions(MeshDescriptions);
 	PersistedMesh->PostEditChange();
 	PersistedMesh->MarkPackageDirty();
