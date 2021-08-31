@@ -257,6 +257,9 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 
 			if (PickContentPathDlg->ShowModal() == EAppReturnType::Cancel)
 			{
+				IsCooking = false;
+				VitruvioModule::Get().OnGenerateCompleted.Remove(ModelsGeneratedHandle);
+				ModelsGeneratedHandle.Reset();
 				return;
 			}
 			FString CookPath = PickContentPathDlg->GetPath().ToString();
