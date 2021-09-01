@@ -93,7 +93,7 @@ UTexture2D* SaveTexture(UTexture2D* Original, const FString& Path, FTextureCache
 	const uint8* SourcePixels = static_cast<const uint8*>(OriginalMip.BulkData.LockReadOnly());
 	Mip->BulkData.Lock(LOCK_READ_WRITE);
 
-	void* TextureData = Mip->BulkData.Realloc(CalculateImageBytes(Mip->SizeX, Mip->SizeY, 0, NewTexture->PlatformData->PixelFormat));
+	void* TextureData = Mip->BulkData.Realloc(OriginalMip.BulkData.GetBulkDataSize());
 	FMemory::Memcpy(TextureData, SourcePixels, OriginalMip.BulkData.GetBulkDataSize());
 	Mip->BulkData.Unlock();
 
