@@ -285,10 +285,6 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 
 				// Spawn new Actor with persisted geometry
 				AActor* CookedActor = Actor->GetWorld()->SpawnActor<AActor>(Actor->GetActorLocation(), Actor->GetActorRotation());
-				if (OldAttachParent)
-				{
-					CookedActor->AttachToActor(OldAttachParent, FAttachmentTransformRules::KeepWorldTransform);
-				}
 
 				USceneComponent* RootComponent = NewObject<USceneComponent>(CookedActor, "Root");
 				CookedActor->AddOwnedComponent(RootComponent);
@@ -298,6 +294,11 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 				RootComponent->SetWorldRotation(Actor->GetActorRotation());
 				RootComponent->SetWorldLocation(Actor->GetActorLocation());
 				RootComponent->RegisterComponent();
+
+				if (OldAttachParent)
+				{
+					CookedActor->AttachToActor(OldAttachParent, FAttachmentTransformRules::KeepWorldTransform);
+				}
 
 				// Persist Mesh
 				UGeneratedModelStaticMeshComponent* StaticMeshComponent = Actor->FindComponentByClass<UGeneratedModelStaticMeshComponent>();
