@@ -1,6 +1,7 @@
 #include "VitruvioCooker.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "AssetToolsModule.h"
 #include "Dialogs/DlgPickPath.h"
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
 #include "GeneratedModelHISMComponent.h"
@@ -31,6 +32,15 @@ T* AttachMeshComponent(AActor* Parent, UStaticMesh* Mesh, const FName& Name, con
 	NewStaticMeshComponent->OnComponentCreated();
 	NewStaticMeshComponent->RegisterComponent();
 	return NewStaticMeshComponent;
+}
+
+UPackage* CreateUniquePackage(const FString& InputName, FString& OutAssetName)
+{
+	FString PackageName;
+	const FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+	AssetToolsModule.Get().CreateUniqueAssetName(InputName, TEXT(""), PackageName, OutAssetName);
+	UPackage* Package = CreatePackage(*PackageName);
+	return Package;
 }
 
 void BlockUntilCookCompleted()
@@ -65,10 +75,9 @@ UTexture2D* SaveTexture(UTexture2D* Original, const FString& Path, FTextureCache
 	{
 		return TextureCache[Original];
 	}
-
-	FString TexturePath = FPaths::Combine(Path, TEXT("Textures"), Original->GetName());
-	UPackage* TexturePackage = CreatePackage(*TexturePath);
-	UTexture2D* NewTexture = NewObject<UTexture2D>(TexturePackage, *Original->GetName(), RF_Public | RF_Standalone);
+	FString AssetName;
+	UPackage* TexturePackage = CreateUniquePackage(FPaths::Combine(Path, TEXT("Textures")), AssetName);
+	UTexture2D* NewTexture = NewObject<UTexture2D>(TexturePackage, *AssetName, RF_Public | RF_Standalone);
 
 	NewTexture->PlatformData = new FTexturePlatformData();
 	NewTexture->PlatformData->SizeX = Original->PlatformData->SizeX;
@@ -89,7 +98,7 @@ UTexture2D* SaveTexture(UTexture2D* Original, const FString& Path, FTextureCache
 	const uint8* SourcePixels = static_cast<const uint8*>(OriginalMip.BulkData.LockReadOnly());
 	Mip->BulkData.Lock(LOCK_READ_WRITE);
 
-	void* TextureData = Mip->BulkData.Realloc(CalculateImageBytes(Mip->SizeX, Mip->SizeY, 0, NewTexture->PlatformData->PixelFormat));
+	void* TextureData = Mip->BulkData.Realloc(OriginalMip.BulkData.GetBulkDataSize());
 	FMemory::Memcpy(TextureData, SourcePixels, OriginalMip.BulkData.GetBulkDataSize());
 	Mip->BulkData.Unlock();
 
@@ -113,15 +122,14 @@ UMaterialInstanceConstant* SaveMaterial(UMaterialInstanceDynamic* Material, cons
 		return MaterialCache[Material];
 	}
 
-	const FString MaterialName = Material->GetName();
-	const FString MaterialPackagePath = FPaths::Combine(Path, TEXT("Materials"), MaterialName);
-	UPackage* MaterialPackage = CreatePackage(*MaterialPackagePath);
+	FString AssetName;
+	UPackage* MaterialPackage = CreateUniquePackage(FPaths::Combine(Path, TEXT("Materials"), Material->GetName()), AssetName);
 
 	UMaterialInstanceConstantFactoryNew* MaterialFactory = NewObject<UMaterialInstanceConstantFactoryNew>();
 	MaterialFactory->InitialParent = Material->Parent;
 
 	UMaterialInstanceConstant* NewMaterial = Cast<UMaterialInstanceConstant>(MaterialFactory->FactoryCreateNew(
-		UMaterialInstanceConstant::StaticClass(), MaterialPackage, *MaterialName, RF_Public | RF_Standalone, nullptr, GWarn));
+		UMaterialInstanceConstant::StaticClass(), MaterialPackage, *AssetName, RF_Public | RF_Standalone, nullptr, GWarn));
 	FAssetRegistryModule::AssetCreated(NewMaterial);
 
 	TArray<FMaterialParameterInfo> ParameterInfos;
@@ -172,19 +180,19 @@ UStaticMesh* SaveStaticMesh(UStaticMesh* Mesh, const FString& Path, FStaticMeshC
 	}
 
 	// Create new StaticMesh Asset
-	const FString StaticMeshName = Mesh->GetName();
-	const FString PackageName = FPaths::Combine(Path, TEXT("Geometry"), StaticMeshName);
-	UPackage* MeshPackage = CreatePackage(*PackageName);
-	UStaticMesh* PersistedMesh = NewObject<UStaticMesh>(MeshPackage, *StaticMeshName, RF_Public | RF_Standalone);
+	FString AssetName;
+	UPackage* MeshPackage = CreateUniquePackage(FPaths::Combine(Path, TEXT("Geometry"), Mesh->GetName()), AssetName);
+	UStaticMesh* PersistedMesh = NewObject<UStaticMesh>(MeshPackage, *AssetName, RF_Public | RF_Standalone);
 	PersistedMesh->InitResources();
 
 	FMeshDescription* OriginalMeshDescription = Mesh->GetMeshDescription(0);
-	FStaticMeshAttributes MeshAttributes(*OriginalMeshDescription);
+	FMeshDescription NewMeshDescription(*OriginalMeshDescription);
+	FStaticMeshAttributes MeshAttributes(NewMeshDescription);
 
 	// Copy Materials
 	TMap<UMaterialInstanceConstant*, FName> MaterialSlots;
 
-	const auto PolygonGroups = OriginalMeshDescription->PolygonGroups();
+	const auto PolygonGroups = NewMeshDescription.PolygonGroups();
 	for (const auto& PolygonGroupId : PolygonGroups.GetElementIDs())
 	{
 		const FName MaterialName = MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId];
@@ -214,7 +222,7 @@ UStaticMesh* SaveStaticMesh(UStaticMesh* Mesh, const FString& Path, FStaticMeshC
 
 	// Build the Static Mesh
 	TArray<const FMeshDescription*> MeshDescriptions;
-	MeshDescriptions.Add(OriginalMeshDescription);
+	MeshDescriptions.Add(&NewMeshDescription);
 	PersistedMesh->BuildFromMeshDescriptions(MeshDescriptions);
 	PersistedMesh->PostEditChange();
 	PersistedMesh->MarkPackageDirty();
@@ -248,13 +256,17 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 
 			if (PickContentPathDlg->ShowModal() == EAppReturnType::Cancel)
 			{
+				IsCooking = false;
+				VitruvioModule::Get().OnGenerateCompleted.Remove(ModelsGeneratedHandle);
+				ModelsGeneratedHandle.Reset();
 				return;
 			}
 			FString CookPath = PickContentPathDlg->GetPath().ToString();
 
 			// Cook actors after all models have been generated and their meshes constructed
 			FScopedSlowTask CookTask(Actors.Num(), FText::FromString("Cooking models..."));
-
+			CookTask.MakeDialog();
+			
 			FMaterialCache MaterialCache;
 			FTextureCache TextureCache;
 			FStaticMeshCache MeshCache;
@@ -262,15 +274,16 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 			for (AActor* Actor : Actors)
 			{
 				CookTask.EnterProgressFrame(1);
-
+				
+				UVitruvioComponent* VitruvioComponent = Actor->FindComponentByClass<UVitruvioComponent>();
+				if (!VitruvioComponent)
+				{
+					continue;
+				}
 				AActor* OldAttachParent = Actor->GetAttachParentActor();
 
 				// Spawn new Actor with persisted geometry
 				AActor* CookedActor = Actor->GetWorld()->SpawnActor<AActor>(Actor->GetActorLocation(), Actor->GetActorRotation());
-				if (OldAttachParent)
-				{
-					CookedActor->AttachToActor(OldAttachParent, FAttachmentTransformRules::KeepWorldTransform);
-				}
 
 				USceneComponent* RootComponent = NewObject<USceneComponent>(CookedActor, "Root");
 				CookedActor->AddOwnedComponent(RootComponent);
@@ -280,6 +293,11 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 				RootComponent->SetWorldRotation(Actor->GetActorRotation());
 				RootComponent->SetWorldLocation(Actor->GetActorLocation());
 				RootComponent->RegisterComponent();
+
+				if (OldAttachParent)
+				{
+					CookedActor->AttachToActor(OldAttachParent, FAttachmentTransformRules::KeepWorldTransform);
+				}
 
 				// Persist Mesh
 				UGeneratedModelStaticMeshComponent* StaticMeshComponent = Actor->FindComponentByClass<UGeneratedModelStaticMeshComponent>();
