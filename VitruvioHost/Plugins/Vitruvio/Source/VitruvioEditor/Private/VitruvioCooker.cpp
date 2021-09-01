@@ -267,7 +267,8 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 
 			// Cook actors after all models have been generated and their meshes constructed
 			FScopedSlowTask CookTask(Actors.Num(), FText::FromString("Cooking models..."));
-
+			CookTask.MakeDialog();
+			
 			FMaterialCache MaterialCache;
 			FTextureCache TextureCache;
 			FStaticMeshCache MeshCache;
