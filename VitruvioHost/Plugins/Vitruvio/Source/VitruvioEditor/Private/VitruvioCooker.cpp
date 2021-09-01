@@ -275,7 +275,12 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 			for (AActor* Actor : Actors)
 			{
 				CookTask.EnterProgressFrame(1);
-
+				
+				UVitruvioComponent* VitruvioComponent = Actor->FindComponentByClass<UVitruvioComponent>();
+				if (!VitruvioComponent)
+				{
+					continue;
+				}
 				AActor* OldAttachParent = Actor->GetAttachParentActor();
 
 				// Spawn new Actor with persisted geometry
