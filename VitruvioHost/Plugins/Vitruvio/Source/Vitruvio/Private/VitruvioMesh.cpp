@@ -28,7 +28,7 @@ void FVitruvioMesh::Invalidate()
 	StaticMesh = nullptr;
 }
 
-void FVitruvioMesh::Build(TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
 						  TMap<FString, Vitruvio::FTextureData>& TextureCache, UMaterial* OpaqueParent, UMaterial* MaskedParent,
 						  UMaterial* TranslucentParent)
 {

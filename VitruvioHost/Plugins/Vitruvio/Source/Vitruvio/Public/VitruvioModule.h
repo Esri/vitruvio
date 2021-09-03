@@ -40,6 +40,7 @@ struct FGenerateResultDescription
 {
 	Vitruvio::FInstanceMap Instances;
 	TMap<int32, TSharedPtr<FVitruvioMesh>> Meshes;
+	TMap<int32, FString> Names;
 };
 
 class FInvalidationToken

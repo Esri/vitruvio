@@ -20,7 +20,6 @@ struct FCollisionData
 
 class FVitruvioMesh
 {
-	FString Name;
 	FString Uri;
 
 	FMeshDescription MeshDescription;
@@ -30,15 +29,10 @@ class FVitruvioMesh
 	FCollisionData CollisionData;
 
 public:
-	FVitruvioMesh(const FString& Name, const FString& Uri, const FMeshDescription& MeshDescription,
+	FVitruvioMesh(const FString& Uri, const FMeshDescription& MeshDescription,
 				  const TArray<Vitruvio::FMaterialAttributeContainer>& Materials)
-		: Name(Name), Uri(Uri), MeshDescription(MeshDescription), Materials(Materials), StaticMesh(nullptr)
+		: Uri(Uri), MeshDescription(MeshDescription), Materials(Materials), StaticMesh(nullptr)
 	{
-	}
-
-	FString GetName() const
-	{
-		return Name;
 	}
 
 	FString GetUri() const
@@ -63,6 +57,6 @@ public:
 
 	void Invalidate();
 
-	void Build(TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+	void Build(const FString& Name, TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
 			   TMap<FString, Vitruvio::FTextureData>& TextureCache, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent);
 };
