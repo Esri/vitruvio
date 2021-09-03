@@ -171,6 +171,18 @@ bool IsRelevantObject(UVitruvioComponent* VitruvioComponent, UObject* Object)
 }
 #endif
 
+FString UniqueComponentName(const FString& Name, TMap<FString, int32>& UsedNames)
+{
+	FString CurrentName = Name;
+	while (UsedNames.Contains(CurrentName))
+	{
+		const int32 Count = UsedNames[CurrentName]++;
+		CurrentName = Name + FString::FromInt(Count);
+	}
+	UsedNames.Add(CurrentName, 0);
+	return CurrentName;
+}
+
 } // namespace
 
 UVitruvioComponent::FOnHierarchyChanged UVitruvioComponent::OnHierarchyChanged;
@@ -410,11 +422,11 @@ void UVitruvioComponent::ProcessGenerateQueue()
 			VitruvioModelComponent->SetCollisionData({});
 		}
 
+		TMap<FString, int32> NameMap;
 		for (const FInstance& Instance : ConvertedResult.Instances)
 		{
-			const FName UniqueInstanceName =
-				MakeUniqueObjectName(VitruvioModelComponent, UGeneratedModelHISMComponent::StaticClass(), FName(Instance.InstanceMesh->GetName()));
-			auto InstancedComponent = NewObject<UGeneratedModelHISMComponent>(VitruvioModelComponent, FName(Instance.InstanceMesh->GetName()),
+			FString UniqueName = UniqueComponentName(Instance.Name, NameMap);
+			auto InstancedComponent = NewObject<UGeneratedModelHISMComponent>(VitruvioModelComponent, FName(UniqueName),
 																			  RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
 			const TArray<FTransform>& Transforms = Instance.Transforms;
 			InstancedComponent->SetStaticMesh(Instance.InstanceMesh->GetStaticMesh());
