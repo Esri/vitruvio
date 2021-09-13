@@ -226,7 +226,7 @@ class VITRUVIO_API UFloatArrayAttribute final : public URuleAttribute
 {
 	GENERATED_BODY()
 
-	public:
+public:
 	UPROPERTY(EditAnywhere)
 	TArray<double> Values;
 
@@ -274,7 +274,7 @@ class VITRUVIO_API UBoolArrayAttribute final : public URuleAttribute
 {
 	GENERATED_BODY()
 
-	public:
+public:
 	UPROPERTY(EditAnywhere)
 	TArray<bool> Values;
 
