@@ -775,7 +775,7 @@ void UVitruvioComponent::EvalRuleAttributes(bool ForceRegenerate)
 
 	bAttributesReady = false;
 
-	FAttributeMapResult AttributesResult = VitruvioModule::Get().EvalRuleAttributesAsync(InitialShape->GetFaces(), Rpk, RandomSeed);
+	FAttributeMapResult AttributesResult = VitruvioModule::Get().EvalRuleAttributesAsync(InitialShape->GetFaces(), Rpk, Vitruvio::CreateAttributeMap(Attributes), RandomSeed);
 
 	EvalAttributesInvalidationToken = AttributesResult.Token;
 

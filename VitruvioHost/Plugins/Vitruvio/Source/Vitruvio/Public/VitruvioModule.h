@@ -160,11 +160,12 @@ public:
 	 *
 	 * \param InitialShape
 	 * \param RulePackage
+	 * \param Attributes
 	 * \param RandomSeed
 	 * \return
 	 */
 	VITRUVIO_API FAttributeMapResult EvalRuleAttributesAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage,
-																	const int32 RandomSeed) const;
+															 AttributeMapUPtr Attributes, const int32 RandomSeed) const;
 
 	/**
 	 * \return whether PRT is initialized meaning installed and ready to use. Before initialization generation is not possible and will

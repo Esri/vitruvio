@@ -150,7 +150,7 @@ void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder,
 	}
 }
 
-AttributeMapUPtr EvalAttributeValues(const std::wstring& RuleFile, const std::wstring& StartRule, const ResolveMapSPtr& ResolveMapPtr,
+AttributeMapUPtr EvalRuleAttribtues(const std::wstring& RuleFile, const std::wstring& StartRule, AttributeMapUPtr Attributes, const ResolveMapSPtr& ResolveMapPtr,
 										   const TArray<FInitialShapeFace>& InitialShape, prt::Cache* Cache, const int32 RandomSeed)
 {
 	AttributeMapBuilderUPtr UnrealCallbacksAttributeBuilder(prt::AttributeMapBuilder::create());
@@ -160,8 +160,7 @@ AttributeMapUPtr EvalAttributeValues(const std::wstring& RuleFile, const std::ws
 
 	SetInitialShapeGeometry(InitialShapeBuilder, InitialShape);
 
-	const AttributeMapUPtr EmptyAttributes(AttributeMapBuilderUPtr(prt::AttributeMapBuilder::create())->createAttributeMap());
-	InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", EmptyAttributes.get(), ResolveMapPtr.get());
+	InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", Attributes.get(), ResolveMapPtr.get());
 
 	const InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShapeAndReset());
 	const InitialShapeNOPtrVector InitialShapes = {Shape.get()};
@@ -421,7 +420,7 @@ FGenerateResultDescription VitruvioModule::Generate(const TArray<FInitialShapeFa
 }
 
 FAttributeMapResult VitruvioModule::EvalRuleAttributesAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage,
-																   const int32 RandomSeed) const
+															AttributeMapUPtr Attributes, const int32 RandomSeed) const
 {
 	check(RulePackage);
 
@@ -437,7 +436,7 @@ FAttributeMapResult VitruvioModule::EvalRuleAttributesAsync(const TArray<FInitia
 
 	LoadAttributesCounter.Increment();
 
-	FAttributeMapResult::FFutureType AttributeMapPtrFuture = Async(EAsyncExecution::Thread, [=]() {
+	FAttributeMapResult::FFutureType AttributeMapPtrFuture = Async(EAsyncExecution::Thread, [=, Attributes = std::move(Attributes)]() mutable {
 		const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(RulePackage).Get();
 
 		const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
@@ -458,7 +457,7 @@ FAttributeMapResult VitruvioModule::EvalRuleAttributesAsync(const TArray<FInitia
 		}
 
 		AttributeMapUPtr DefaultAttributeMap(
-			EvalAttributeValues(RuleFile.c_str(), StartRule.c_str(), ResolveMap, InitialShape, PrtCache.get(), RandomSeed));
+			EvalRuleAttribtues(RuleFile.c_str(), StartRule.c_str(), std::move(Attributes), ResolveMap, InitialShape, PrtCache.get(), RandomSeed));
 
 		LoadAttributesCounter.Decrement();
 
