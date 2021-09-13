@@ -63,6 +63,23 @@ private:
 	FThreadSafeBool bIsInvalid = false;
 };
 
+class FEvalAttributesToken : public FInvalidationToken
+{
+public:
+	void RequestReEvaluateAttributes()
+	{
+		bRequestReEvaluateAttributes = true;
+	}
+
+	bool IsReEvaluateRequested() const
+	{
+		return bRequestReEvaluateAttributes;
+	}
+
+private:
+	FThreadSafeBool bRequestReEvaluateAttributes = false;
+};
+
 class FGenerateToken : public FInvalidationToken
 {
 public:
@@ -99,7 +116,7 @@ public:
 };
 
 using FGenerateResult = TResult<FGenerateResultDescription, FGenerateToken>;
-using FAttributeMapResult = TResult<FAttributeMapPtr, FInvalidationToken>;
+using FAttributeMapResult = TResult<FAttributeMapPtr, FEvalAttributesToken>;
 
 class VitruvioModule final : public IModuleInterface, public FGCObject
 {

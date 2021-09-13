@@ -425,7 +425,7 @@ FAttributeMapResult VitruvioModule::EvalRuleAttributesAsync(const TArray<FInitia
 {
 	check(RulePackage);
 
-	FAttributeMapResult::FTokenPtr InvalidationToken = MakeShared<FInvalidationToken>();
+	FAttributeMapResult::FTokenPtr InvalidationToken = MakeShared<FEvalAttributesToken>();
 
 	if (!Initialized)
 	{

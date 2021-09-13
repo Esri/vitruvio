@@ -771,13 +771,15 @@ void UVitruvioComponent::EvalRuleAttributes(const bool KeepOldAttributeValues, b
 	check(Rpk);
 	check(InitialShape);
 
-	if (EvaluatingAttributes)
+	// Since we can not abort an ongoing generate call from PRT, we invalidate the result and evaluate the attributes again after the current request
+	// has completed.
+	if (EvalAttributesInvalidationToken)
 	{
+		EvalAttributesInvalidationToken->RequestReEvaluateAttributes();
 		return;
 	}
 
 	bAttributesReady = false;
-	EvaluatingAttributes = true;
 
 	FAttributeMapResult AttributesResult = VitruvioModule::Get().EvalRuleAttributesAsync(InitialShape->GetFaces(), Rpk, RandomSeed);
 
@@ -790,10 +792,16 @@ void UVitruvioComponent::EvalRuleAttributes(const bool KeepOldAttributeValues, b
 		{
 			return;
 		}
-
-		EvaluatingAttributes = false;
-
-		AttributesEvaluationQueue.Enqueue({Result.Value, KeepOldAttributeValues, ForceRegenerate});
+		
+		EvalAttributesInvalidationToken.Reset();
+		if (Result.Token->IsReEvaluateRequested())
+		{
+			EvalRuleAttributes(ForceRegenerate, KeepOldAttributeValues);
+		}
+		else
+		{
+			AttributesEvaluationQueue.Enqueue({Result.Value, KeepOldAttributeValues, ForceRegenerate});
+		}
 	});
 }
 

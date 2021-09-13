@@ -51,8 +51,6 @@ class VITRUVIO_API UVitruvioComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
-	TAtomic<bool> EvaluatingAttributes = false;
-
 	UPROPERTY()
 	bool bValidRandomSeed = false;
 
