@@ -155,6 +155,8 @@ AttributeMapUPtr CreateAttributeMap(const TMap<FString, URuleAttribute*>& Attrib
 	{
 		const URuleAttribute* Attribute = AttributeEntry.Value;
 
+		if (!Attribute->UserSet) continue;
+
 		if (const UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
 		{
 			AttributeMapBuilder->setFloat(TCHAR_TO_WCHAR(*Attribute->Name), FloatAttribute->Value);

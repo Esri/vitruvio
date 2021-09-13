@@ -42,7 +42,6 @@ struct FConvertedGenerateResult
 struct FAttributesEvaluation
 {
 	FAttributeMapPtr AttributeMap;
-	bool bKeepOldAttributes;
 	bool bForceRegenerate;
 };
 
@@ -192,10 +191,9 @@ public:
 	/**
 	 * Evaluate rule attributes.
 	 *
-	 * @param KeepOldAttributeValues Whether to keep old attribute values
 	 * @param ForceRegenerate Whether to force regenerate even if generate automatically is set to false
 	 */
-	void EvalRuleAttributes(bool KeepOldAttributeValues = false, bool ForceRegenerate = false);
+	void EvalRuleAttributes(bool ForceRegenerate = false);
 
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnHierarchyChanged, UVitruvioComponent*) static FOnHierarchyChanged OnHierarchyChanged;
 

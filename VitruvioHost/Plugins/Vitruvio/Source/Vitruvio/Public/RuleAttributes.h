@@ -126,6 +126,9 @@ public:
 	UPROPERTY()
 	bool Hidden;
 
+	UPROPERTY()
+	bool UserSet;
+
 	void SetAnnotation(UAttributeAnnotation* InAnnotation)
 	{
 		Annotation = InAnnotation;

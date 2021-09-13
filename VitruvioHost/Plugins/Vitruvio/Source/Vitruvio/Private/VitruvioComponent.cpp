@@ -468,22 +468,16 @@ void UVitruvioComponent::ProcessAttributesEvaluationQueue()
 	{
 		FAttributesEvaluation AttributesEvaluation;
 		AttributesEvaluationQueue.Dequeue(AttributesEvaluation);
-		if (AttributesEvaluation.bKeepOldAttributes)
-		{
-			TMap<FString, URuleAttribute*> OldAttributes = Attributes;
-			Attributes = AttributesEvaluation.AttributeMap->ConvertToUnrealAttributeMap(this);
+		TMap<FString, URuleAttribute*> OldAttributes = Attributes;
+		Attributes = AttributesEvaluation.AttributeMap->ConvertToUnrealAttributeMap(this);
 
-			for (auto Attribute : Attributes)
-			{
-				if (OldAttributes.Contains(Attribute.Key))
-				{
-					Attribute.Value->CopyValue(OldAttributes[Attribute.Key]);
-				}
-			}
-		}
-		else
+		for (auto Attribute : Attributes)
 		{
-			Attributes = AttributesEvaluation.AttributeMap->ConvertToUnrealAttributeMap(this);
+			if (OldAttributes.Contains(Attribute.Key) && OldAttributes[Attribute.Key]->UserSet)
+			{
+				Attribute.Value->CopyValue(OldAttributes[Attribute.Key]);
+				Attribute.Value->UserSet = true;
+			}
 		}
 
 		bAttributesReady = true;
@@ -614,7 +608,7 @@ void UVitruvioComponent::Generate()
 	// and regenerate afterwards
 	if (HasValidInputData() && !bAttributesReady)
 	{
-		EvalRuleAttributes(false, true);
+		EvalRuleAttributes(true);
 		return;
 	}
 
@@ -766,7 +760,7 @@ void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& T
 
 #endif // WITH_EDITOR
 
-void UVitruvioComponent::EvalRuleAttributes(const bool KeepOldAttributeValues, bool ForceRegenerate)
+void UVitruvioComponent::EvalRuleAttributes(bool ForceRegenerate)
 {
 	check(Rpk);
 	check(InitialShape);
@@ -785,7 +779,7 @@ void UVitruvioComponent::EvalRuleAttributes(const bool KeepOldAttributeValues, b
 
 	EvalAttributesInvalidationToken = AttributesResult.Token;
 
-	AttributesResult.Result.Next([this, ForceRegenerate, KeepOldAttributeValues](const FAttributeMapResult::ResultType& Result) {
+	AttributesResult.Result.Next([this, ForceRegenerate](const FAttributeMapResult::ResultType& Result) {
 		FScopeLock(&Result.Token->Lock);
 
 		if (Result.Token->IsInvalid())
@@ -796,11 +790,11 @@ void UVitruvioComponent::EvalRuleAttributes(const bool KeepOldAttributeValues, b
 		EvalAttributesInvalidationToken.Reset();
 		if (Result.Token->IsReEvaluateRequested())
 		{
-			EvalRuleAttributes(ForceRegenerate, KeepOldAttributeValues);
+			EvalRuleAttributes(ForceRegenerate);
 		}
 		else
 		{
-			AttributesEvaluationQueue.Enqueue({Result.Value, KeepOldAttributeValues, ForceRegenerate});
+			AttributesEvaluationQueue.Enqueue({Result.Value, ForceRegenerate});
 		}
 	});
 }

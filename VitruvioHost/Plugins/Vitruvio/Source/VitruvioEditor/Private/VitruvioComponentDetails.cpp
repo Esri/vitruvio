@@ -65,6 +65,7 @@ template <typename A, typename V>
 void UpdateAttributeValue(UVitruvioComponent* VitruvioActor, A* Attribute, const V& Value)
 {
 	Attribute->Value = Value;
+	Attribute->UserSet = true;
 	if (VitruvioActor->GenerateAutomatically)
 	{
 		VitruvioActor->Generate();
@@ -265,7 +266,7 @@ TSharedPtr<SBox> CreateNameWidget(URuleAttribute* Attribute)
 		[
 			SNew(STextBlock)
 			.Text(FText::FromString(Attribute->DisplayName))
-			.Font(IDetailLayoutBuilder::GetDetailFont())
+			.Font(Attribute->UserSet ? IDetailLayoutBuilder::GetDetailFontBold() : IDetailLayoutBuilder::GetDetailFont())
 		];
 	// clang-format on
 	return NameWidget;
@@ -528,7 +529,7 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailCategoryBuilder& Roo
 			TArray<UObject*> Objects;
 			Objects.Add(Attribute);
 			Generator->SetObjects(Objects);
-			Generator->OnFinishedChangingProperties().AddLambda([this, VitruvioActor](const FPropertyChangedEvent Event) {
+			Generator->OnFinishedChangingProperties().AddLambda([this, VitruvioActor, Attribute](const FPropertyChangedEvent Event) {
 				IDetailLayoutBuilder* DetailBuilder = CachedDetailBuilder.Pin().Get();
 				if (DetailBuilder)
 				{
@@ -539,6 +540,7 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailCategoryBuilder& Roo
 				{
 					VitruvioActor->Generate();
 				}
+				Attribute->UserSet = true;
 			});
 			const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes = Generator->GetRootTreeNodes();
 			

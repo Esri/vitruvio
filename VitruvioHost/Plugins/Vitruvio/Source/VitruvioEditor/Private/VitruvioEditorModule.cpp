@@ -267,7 +267,7 @@ void VitruvioEditorModule::OnPostEngineInit()
 			if (VitruvioComponent && VitruvioComponent->GetRpk() == RulePackage)
 			{
 				VitruvioComponent->RemoveGeneratedMeshes();
-				VitruvioComponent->EvalRuleAttributes(true, true);
+				VitruvioComponent->EvalRuleAttributes(true);
 			}
 		}
 	});
