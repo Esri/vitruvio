@@ -139,14 +139,14 @@ public:
 													 AttributeMapUPtr Attributes, const int32 RandomSeed) const;
 
 	/**
-	 * \brief Asynchronously loads the default attribute values for the given initial shape and rule package
+	 * \brief Asynchronously evaluates attributes for the given initial shape and rule package.
 	 *
 	 * \param InitialShape
 	 * \param RulePackage
 	 * \param RandomSeed
 	 * \return
 	 */
-	VITRUVIO_API FAttributeMapResult LoadDefaultRuleAttributesAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage,
+	VITRUVIO_API FAttributeMapResult EvalRuleAttributesAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage,
 																	const int32 RandomSeed) const;
 
 	/**

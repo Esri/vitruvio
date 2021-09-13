@@ -462,16 +462,16 @@ void UVitruvioComponent::ProcessGenerateQueue()
 	}
 }
 
-void UVitruvioComponent::ProcessLoadAttributesQueue()
+void UVitruvioComponent::ProcessAttributesEvaluationQueue()
 {
-	if (!LoadAttributesQueue.IsEmpty())
+	if (!AttributesEvaluationQueue.IsEmpty())
 	{
-		FLoadAttributes LoadAttributes;
-		LoadAttributesQueue.Dequeue(LoadAttributes);
-		if (LoadAttributes.bKeepOldAttributes)
+		FAttributesEvaluation AttributesEvaluation;
+		AttributesEvaluationQueue.Dequeue(AttributesEvaluation);
+		if (AttributesEvaluation.bKeepOldAttributes)
 		{
 			TMap<FString, URuleAttribute*> OldAttributes = Attributes;
-			Attributes = LoadAttributes.AttributeMap->ConvertToUnrealAttributeMap(this);
+			Attributes = AttributesEvaluation.AttributeMap->ConvertToUnrealAttributeMap(this);
 
 			for (auto Attribute : Attributes)
 			{
@@ -483,14 +483,14 @@ void UVitruvioComponent::ProcessLoadAttributesQueue()
 		}
 		else
 		{
-			Attributes = LoadAttributes.AttributeMap->ConvertToUnrealAttributeMap(this);
+			Attributes = AttributesEvaluation.AttributeMap->ConvertToUnrealAttributeMap(this);
 		}
 
 		bAttributesReady = true;
 
 		bNotifyAttributeChange = true;
 
-		if (GenerateAutomatically || LoadAttributes.bForceRegenerate)
+		if (GenerateAutomatically || AttributesEvaluation.bForceRegenerate)
 		{
 			Generate();
 		}
@@ -500,7 +500,7 @@ void UVitruvioComponent::ProcessLoadAttributesQueue()
 void UVitruvioComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	ProcessGenerateQueue();
-	ProcessLoadAttributesQueue();
+	ProcessAttributesEvaluationQueue();
 
 	if (bNotifyAttributeChange)
 	{
@@ -597,9 +597,9 @@ void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 		GenerateToken->Invalidate();
 	}
 
-	if (LoadAttributesInvalidationToken)
+	if (EvalAttributesInvalidationToken)
 	{
-		LoadAttributesInvalidationToken->Invalidate();
+		EvalAttributesInvalidationToken->Invalidate();
 	}
 
 #if WITH_EDITOR
@@ -614,7 +614,7 @@ void UVitruvioComponent::Generate()
 	// and regenerate afterwards
 	if (HasValidInputData() && !bAttributesReady)
 	{
-		LoadDefaultAttributes(false, true);
+		EvalRuleAttributes(false, true);
 		return;
 	}
 
@@ -738,7 +738,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 
 	if (HasValidInputData() && !bAttributesReady)
 	{
-		LoadDefaultAttributes();
+		EvalRuleAttributes();
 	}
 }
 
@@ -766,22 +766,22 @@ void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& T
 
 #endif // WITH_EDITOR
 
-void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues, bool ForceRegenerate)
+void UVitruvioComponent::EvalRuleAttributes(const bool KeepOldAttributeValues, bool ForceRegenerate)
 {
 	check(Rpk);
 	check(InitialShape);
 
-	if (LoadingAttributes)
+	if (EvaluatingAttributes)
 	{
 		return;
 	}
 
 	bAttributesReady = false;
-	LoadingAttributes = true;
+	EvaluatingAttributes = true;
 
-	FAttributeMapResult AttributesResult = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape->GetFaces(), Rpk, RandomSeed);
+	FAttributeMapResult AttributesResult = VitruvioModule::Get().EvalRuleAttributesAsync(InitialShape->GetFaces(), Rpk, RandomSeed);
 
-	LoadAttributesInvalidationToken = AttributesResult.Token;
+	EvalAttributesInvalidationToken = AttributesResult.Token;
 
 	AttributesResult.Result.Next([this, ForceRegenerate, KeepOldAttributeValues](const FAttributeMapResult::ResultType& Result) {
 		FScopeLock(&Result.Token->Lock);
@@ -791,9 +791,9 @@ void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues
 			return;
 		}
 
-		LoadingAttributes = false;
+		EvaluatingAttributes = false;
 
-		LoadAttributesQueue.Enqueue({Result.Value, KeepOldAttributeValues, ForceRegenerate});
+		AttributesEvaluationQueue.Enqueue({Result.Value, KeepOldAttributeValues, ForceRegenerate});
 	});
 }
 
