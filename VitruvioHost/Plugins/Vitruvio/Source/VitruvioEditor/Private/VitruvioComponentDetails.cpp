@@ -439,7 +439,11 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailCategoryBuilder& Roo
 				{
 					DetailBuilder->ForceRefreshDetails();
 				}
-				VitruvioActor->Generate();
+
+				if (VitruvioActor->GenerateAutomatically)
+				{
+					VitruvioActor->Generate();
+				}
 			});
 			const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes = Generator->GetRootTreeNodes();
 			AddArrayWidgets(DetailTreeNodes, *Group, Attribute, false);
