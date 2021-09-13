@@ -23,6 +23,14 @@ UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* Mask
 	return Material;
 }
 
+void FVitruvioMesh::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	if (StaticMesh)
+	{
+		Collector.AddReferencedObject(StaticMesh);
+	}
+}
+
 void FVitruvioMesh::Invalidate()
 {
 	StaticMesh = nullptr;

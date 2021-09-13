@@ -18,7 +18,7 @@ struct FCollisionData
 	}
 };
 
-class FVitruvioMesh
+class FVitruvioMesh : public FGCObject
 {
 	FString Uri;
 
@@ -34,6 +34,8 @@ public:
 		: Uri(Uri), MeshDescription(MeshDescription), Materials(Materials), StaticMesh(nullptr)
 	{
 	}
+
+	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	FString GetUri() const
 	{
