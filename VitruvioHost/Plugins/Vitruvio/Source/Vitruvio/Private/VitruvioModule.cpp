@@ -417,7 +417,7 @@ FGenerateResultDescription VitruvioModule::Generate(const TArray<FInitialShapeFa
 		OnGenerateCompleted.Broadcast(GenerateCalls, Warnings, Errors);
 	});
 
-	return {OutputHandler->GetInstances(), OutputHandler->GetMeshes()};
+	return FGenerateResultDescription {OutputHandler->GetInstances(), OutputHandler->GetMeshes(), OutputHandler->GetNames() };
 }
 
 FAttributeMapResult VitruvioModule::LoadDefaultRuleAttributesAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage,

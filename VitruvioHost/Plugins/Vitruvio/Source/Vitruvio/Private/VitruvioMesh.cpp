@@ -23,12 +23,20 @@ UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* Mask
 	return Material;
 }
 
+void FVitruvioMesh::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	if (StaticMesh)
+	{
+		Collector.AddReferencedObject(StaticMesh);
+	}
+}
+
 void FVitruvioMesh::Invalidate()
 {
 	StaticMesh = nullptr;
 }
 
-void FVitruvioMesh::Build(TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
 						  TMap<FString, Vitruvio::FTextureData>& TextureCache, UMaterial* OpaqueParent, UMaterial* MaskedParent,
 						  UMaterial* TranslucentParent)
 {

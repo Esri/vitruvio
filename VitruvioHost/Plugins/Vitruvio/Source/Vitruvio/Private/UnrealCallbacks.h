@@ -34,6 +34,7 @@ class UnrealCallbacks final : public IUnrealCallbacks
 
 	Vitruvio::FInstanceMap Instances;
 	TMap<int32, TSharedPtr<FVitruvioMesh>> Meshes;
+	TMap<int32, FString> Names;
 
 public:
 	virtual ~UnrealCallbacks() override = default;
@@ -54,6 +55,11 @@ public:
 	const TMap<int32, TSharedPtr<FVitruvioMesh>>& GetMeshes() const
 	{
 		return Meshes;
+	}
+
+	const TMap<int32, FString>& GetNames() const
+	{
+		return Names;
 	}
 
 	/**

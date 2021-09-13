@@ -27,6 +27,7 @@
 
 struct FInstance
 {
+	FString Name;
 	TSharedPtr<FVitruvioMesh> InstanceMesh;
 	TArray<UMaterialInstanceDynamic*> OverrideMaterials;
 	TArray<FTransform> Transforms;

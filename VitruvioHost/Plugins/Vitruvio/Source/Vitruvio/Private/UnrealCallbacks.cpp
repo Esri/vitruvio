@@ -67,12 +67,15 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 {
 
 	const FString UriString(uri);
+	const FString NameString(name);
+	
 	if (!UriString.IsEmpty())
 	{
 		TSharedPtr<FVitruvioMesh> Mesh = VitruvioModule::Get().GetMeshCache().Get(UriString);
 		if (Mesh)
 		{
 			Meshes.Add(prototypeId, Mesh);
+			Names.Add(prototypeId, NameString);
 			return;
 		}
 	}
@@ -168,11 +171,11 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 
 	if (BaseVertexIndex > 0)
 	{
-		FString NameString(name);
-		TSharedPtr<FVitruvioMesh> VitruvioMesh = MakeShared<FVitruvioMesh>(NameString, UriString, Description, MeshMaterials);
+		TSharedPtr<FVitruvioMesh> VitruvioMesh = MakeShared<FVitruvioMesh>(UriString, Description, MeshMaterials);
 		TSharedPtr<FVitruvioMesh> CachedMesh =
 			!UriString.IsEmpty() ? VitruvioModule::Get().GetMeshCache().InsertOrGet(UriString, VitruvioMesh) : VitruvioMesh;
 		Meshes.Add(prototypeId, CachedMesh);
+		Names.Add(prototypeId, NameString);
 	}
 }
 

@@ -171,6 +171,18 @@ bool IsRelevantObject(UVitruvioComponent* VitruvioComponent, UObject* Object)
 }
 #endif
 
+FString UniqueComponentName(const FString& Name, TMap<FString, int32>& UsedNames)
+{
+	FString CurrentName = Name;
+	while (UsedNames.Contains(CurrentName))
+	{
+		const int32 Count = UsedNames[CurrentName]++;
+		CurrentName = Name + FString::FromInt(Count);
+	}
+	UsedNames.Add(CurrentName, 0);
+	return CurrentName;
+}
+
 } // namespace
 
 UVitruvioComponent::FOnHierarchyChanged UVitruvioComponent::OnHierarchyChanged;
@@ -410,11 +422,11 @@ void UVitruvioComponent::ProcessGenerateQueue()
 			VitruvioModelComponent->SetCollisionData({});
 		}
 
+		TMap<FString, int32> NameMap;
 		for (const FInstance& Instance : ConvertedResult.Instances)
 		{
-			const FName UniqueInstanceName =
-				MakeUniqueObjectName(VitruvioModelComponent, UGeneratedModelHISMComponent::StaticClass(), FName(Instance.InstanceMesh->GetName()));
-			auto InstancedComponent = NewObject<UGeneratedModelHISMComponent>(VitruvioModelComponent, FName(Instance.InstanceMesh->GetName()),
+			FString UniqueName = UniqueComponentName(Instance.Name, NameMap);
+			auto InstancedComponent = NewObject<UGeneratedModelHISMComponent>(VitruvioModelComponent, FName(UniqueName),
 																			  RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
 			const TArray<FTransform>& Transforms = Instance.Transforms;
 			InstancedComponent->SetStaticMesh(Instance.InstanceMesh->GetStaticMesh());
@@ -549,7 +561,8 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 	// build all meshes
 	for (auto& IdAndMesh : GenerateResult.Meshes)
 	{
-		IdAndMesh.Value->Build(MaterialCache, TextureCache, OpaqueParent, MaskedParent, TranslucentParent);
+		FString Name = GenerateResult.Names[IdAndMesh.Key];
+		IdAndMesh.Value->Build(Name, MaterialCache, TextureCache, OpaqueParent, MaskedParent, TranslucentParent);
 	}
 
 	// convert instances
@@ -557,7 +570,7 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 	for (const auto& Instance : GenerateResult.Instances)
 	{
 		auto VitruvioMesh = GenerateResult.Meshes[Instance.Key.PrototypeId];
-		FString MeshName = VitruvioMesh->GetName();
+		FString MeshName = GenerateResult.Names[Instance.Key.PrototypeId];
 		TArray<UMaterialInstanceDynamic*> OverrideMaterials;
 		for (size_t MaterialIndex = 0; MaterialIndex < Instance.Key.MaterialOverrides.Num(); ++MaterialIndex)
 		{
@@ -567,7 +580,7 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 												MaterialName, VitruvioMesh->GetStaticMesh()));
 		}
 
-		Instances.Add({VitruvioMesh, OverrideMaterials, Instance.Value});
+		Instances.Add({MeshName, VitruvioMesh, OverrideMaterials, Instance.Value});
 	}
 
 	TSharedPtr<FVitruvioMesh> ShapeMesh = GenerateResult.Meshes.Contains(UnrealCallbacks::NO_PROTOTYPE_INDEX)
