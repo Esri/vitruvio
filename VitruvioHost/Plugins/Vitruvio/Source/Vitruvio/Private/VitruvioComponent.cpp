@@ -398,10 +398,17 @@ void UVitruvioComponent::ProcessGenerateQueue()
 			VitruvioModelComponent->RegisterComponent();
 		}
 
-		VitruvioModelComponent->SetStaticMesh(ConvertedResult.ShapeMesh->GetStaticMesh());
-
-		VitruvioModelComponent->SetCollisionData(ConvertedResult.ShapeMesh->GetCollisionData());
-		CreateCollision(ConvertedResult.ShapeMesh->GetStaticMesh(), VitruvioModelComponent, GenerateCollision);
+		if (ConvertedResult.ShapeMesh)
+		{
+			VitruvioModelComponent->SetStaticMesh(ConvertedResult.ShapeMesh->GetStaticMesh());
+			VitruvioModelComponent->SetCollisionData(ConvertedResult.ShapeMesh->GetCollisionData());
+			CreateCollision(ConvertedResult.ShapeMesh->GetStaticMesh(), VitruvioModelComponent, GenerateCollision);
+		}
+		else
+		{
+			VitruvioModelComponent->SetStaticMesh(nullptr);
+			VitruvioModelComponent->SetCollisionData({});
+		}
 
 		for (const FInstance& Instance : ConvertedResult.Instances)
 		{
