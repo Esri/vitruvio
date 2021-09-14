@@ -164,7 +164,7 @@ public:
 	 * \param RandomSeed
 	 * \return
 	 */
-	VITRUVIO_API FAttributeMapResult EvalRuleAttributesAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage,
+	VITRUVIO_API FAttributeMapResult EvaluateRuleAttributesAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage,
 															 AttributeMapUPtr Attributes, const int32 RandomSeed) const;
 
 	/**

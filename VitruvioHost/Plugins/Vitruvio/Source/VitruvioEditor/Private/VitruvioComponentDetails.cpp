@@ -66,7 +66,7 @@ void UpdateAttributeValue(UVitruvioComponent* VitruvioActor, A* Attribute, const
 {
 	Attribute->Value = Value;
 	Attribute->UserSet = true;
-	VitruvioActor->EvalRuleAttributes(VitruvioActor->GenerateAutomatically);
+	VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
 }
 
 bool IsVitruvioComponentSelected(const TArray<TWeakObjectPtr<UObject>>& ObjectsBeingCustomized, UVitruvioComponent*& OutComponent)
@@ -533,7 +533,7 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailCategoryBuilder& Roo
 					DetailBuilder->ForceRefreshDetails();
 				}
 
-				VitruvioActor->EvalRuleAttributes(VitruvioActor->GenerateAutomatically);
+				VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
 				Attribute->UserSet = true;
 			});
 			const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes = Generator->GetRootTreeNodes();

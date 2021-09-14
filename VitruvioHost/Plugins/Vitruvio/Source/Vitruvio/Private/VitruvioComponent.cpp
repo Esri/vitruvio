@@ -608,7 +608,7 @@ void UVitruvioComponent::Generate()
 	// and regenerate afterwards
 	if (HasValidInputData() && !bAttributesReady)
 	{
-		EvalRuleAttributes(true);
+		EvaluateRuleAttributes(true);
 		return;
 	}
 
@@ -732,7 +732,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 
 	if (HasValidInputData() && !bAttributesReady)
 	{
-		EvalRuleAttributes();
+		EvaluateRuleAttributes();
 	}
 }
 
@@ -760,7 +760,7 @@ void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& T
 
 #endif // WITH_EDITOR
 
-void UVitruvioComponent::EvalRuleAttributes(bool ForceRegenerate)
+void UVitruvioComponent::EvaluateRuleAttributes(bool ForceRegenerate)
 {
 	check(Rpk);
 	check(InitialShape);
@@ -775,7 +775,7 @@ void UVitruvioComponent::EvalRuleAttributes(bool ForceRegenerate)
 
 	bAttributesReady = false;
 
-	FAttributeMapResult AttributesResult = VitruvioModule::Get().EvalRuleAttributesAsync(InitialShape->GetFaces(), Rpk, Vitruvio::CreateAttributeMap(Attributes), RandomSeed);
+	FAttributeMapResult AttributesResult = VitruvioModule::Get().EvaluateRuleAttributesAsync(InitialShape->GetFaces(), Rpk, Vitruvio::CreateAttributeMap(Attributes), RandomSeed);
 
 	EvalAttributesInvalidationToken = AttributesResult.Token;
 
@@ -790,7 +790,7 @@ void UVitruvioComponent::EvalRuleAttributes(bool ForceRegenerate)
 		EvalAttributesInvalidationToken.Reset();
 		if (Result.Token->IsReEvaluateRequested())
 		{
-			EvalRuleAttributes(ForceRegenerate);
+			EvaluateRuleAttributes(ForceRegenerate);
 		}
 		else
 		{

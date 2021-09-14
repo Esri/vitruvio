@@ -193,7 +193,7 @@ public:
 	 *
 	 * @param ForceRegenerate Whether to force regenerate even if generate automatically is set to false
 	 */
-	void EvalRuleAttributes(bool ForceRegenerate = false);
+	void EvaluateRuleAttributes(bool ForceRegenerate = false);
 
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnHierarchyChanged, UVitruvioComponent*) static FOnHierarchyChanged OnHierarchyChanged;
 
