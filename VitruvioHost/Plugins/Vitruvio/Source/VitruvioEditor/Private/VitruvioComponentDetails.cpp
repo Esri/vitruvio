@@ -366,7 +366,7 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 					{
 						FString Value;
 						ColorStringProperty->GetValue(Value);
-						return FLinearColor(FColor::FromHex(Value));
+						return Value.IsEmpty() ? FLinearColor(1, 1, 1) : FLinearColor(FColor::FromHex(Value));
 					};
 					
 					ValueRow.ValueContent()[CreateColorInputWidget(ColorSetter, ColorGetter).ToSharedRef()];
