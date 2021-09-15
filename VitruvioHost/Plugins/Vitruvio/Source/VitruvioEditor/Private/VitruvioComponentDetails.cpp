@@ -51,6 +51,16 @@ FString ValueToString(const TSharedPtr<bool>& In)
 	return *In ? TEXT("True") : TEXT("False");
 }
 
+bool IsDefault(double Value)
+{
+	return Value == 0.0;
+}
+
+bool IsDefault(const FString& Value)
+{
+	return Value.IsEmpty();
+}
+
 template <typename A, typename V>
 void UpdateAttributeValue(UVitruvioComponent* VitruvioActor, A* Attribute, const V& Value)
 {
@@ -83,16 +93,21 @@ bool IsVitruvioComponentSelected(const TArray<TWeakObjectPtr<UObject>>& ObjectsB
 template <typename V, typename An, typename G, typename S>
 TSharedPtr<SPropertyComboBox<V>>  CreateEnumWidget(An* Annotation, S Setter, G Getter)
 {
+	check(Annotation->Values.Num() > 0)
+	
 	TArray<TSharedPtr<V>> SharedPtrValues;
 	Algo::Transform(Annotation->Values, SharedPtrValues, [](const V& Value) { return MakeShared<V>(Value); });
 
 	V CurrentValue = Getter();
 	auto InitialSelectedIndex = Annotation->Values.IndexOfByPredicate([&CurrentValue](const V& Value) { return Value == CurrentValue; });
 	
-	// If the value is not present in the enum values we insert it at the beginning (similar behavior to CE inspector)
 	if (InitialSelectedIndex == INDEX_NONE) 
 	{
-		SharedPtrValues.Insert(MakeShared<V>(CurrentValue), 0);
+		// If the value is not present in the enum values we insert it at the beginning (similar behavior to CE inspector)
+		if (!IsDefault(CurrentValue))
+		{
+			SharedPtrValues.Insert(MakeShared<V>(CurrentValue), 0);
+		}
 		InitialSelectedIndex = 0;
 	}
 	auto InitialSelectedValue = SharedPtrValues[InitialSelectedIndex];
@@ -119,8 +134,6 @@ TSharedPtr<SPropertyComboBox<V>> CreateScalarEnumWidget(Attr* Attribute, An* Ann
 template <typename V, typename An>
 TSharedPtr<SPropertyComboBox<V>> CreateArrayEnumWidget(An* Annotation, TSharedPtr<IPropertyHandle> PropertyHandle)
 {
-	check(Annotation->Values.Num() > 0)
-	
 	auto Setter = [PropertyHandle](TSharedPtr<V> Val, ESelectInfo::Type Type) {
 		PropertyHandle->SetValue(*Val);
 	};
