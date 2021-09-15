@@ -80,52 +80,57 @@ bool IsVitruvioComponentSelected(const TArray<TWeakObjectPtr<UObject>>& ObjectsB
 	return false;
 }
 
-template <typename Attr, typename V, typename An>
-TSharedPtr<SPropertyComboBox<V>> CreateArrayEnumWidget(Attr* Attribute, An* Annotation, TSharedPtr<IPropertyHandle> PropertyHandle)
+template <typename V, typename An, typename G, typename S>
+TSharedPtr<SPropertyComboBox<V>>  CreateEnumWidget(An* Annotation, S Setter, G Getter)
 {
-	check(Annotation->Values.Num() > 0)
-	
 	TArray<TSharedPtr<V>> SharedPtrValues;
 	Algo::Transform(Annotation->Values, SharedPtrValues, [](const V& Value) { return MakeShared<V>(Value); });
-	V CurrentValue;
-	PropertyHandle->GetValue(CurrentValue);
+
+	V CurrentValue = Getter();
 	auto InitialSelectedIndex = Annotation->Values.IndexOfByPredicate([&CurrentValue](const V& Value) { return Value == CurrentValue; });
-	InitialSelectedIndex = FMath::Max(InitialSelectedIndex, 0);
-	auto InitialSelectedValue = SharedPtrValues[InitialSelectedIndex];
-
-	auto ValueWidget = SNew(SPropertyComboBox<V>)
-						.ComboItemList(SharedPtrValues)
-						.OnSelectionChanged_Lambda([PropertyHandle, Attribute](TSharedPtr<V> Val, ESelectInfo::Type Type) {
-							PropertyHandle->SetValue(*Val);
-						})
-						.InitialValue(InitialSelectedValue);
-
-	return ValueWidget;
-}
-
-template <typename Attr, typename V, typename An>
-TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(Attr* Attribute, An* Annotation, UVitruvioComponent* VitruvioActor)
-{
-	TArray<TSharedPtr<V>> SharedPtrValues;
-	Algo::Transform(Annotation->Values, SharedPtrValues, [](const V& Value) { return MakeShared<V>(Value); });
-	auto InitialSelectedIndex = Annotation->Values.IndexOfByPredicate([Attribute](const V& Value) { return Value == Attribute->Value; });
 	
 	// If the value is not present in the enum values we insert it at the beginning (similar behavior to CE inspector)
 	if (InitialSelectedIndex == INDEX_NONE) 
 	{
-		SharedPtrValues.Insert(MakeShared<V>(Attribute->Value), 0);
+		SharedPtrValues.Insert(MakeShared<V>(CurrentValue), 0);
 		InitialSelectedIndex = 0;
 	}
 	auto InitialSelectedValue = SharedPtrValues[InitialSelectedIndex];
 
 	auto ValueWidget = SNew(SPropertyComboBox<V>)
 						   .ComboItemList(SharedPtrValues)
-						   .OnSelectionChanged_Lambda([VitruvioActor, Attribute](TSharedPtr<V> Val, ESelectInfo::Type Type) {
-							   UpdateAttributeValue(VitruvioActor, Attribute, *Val);
-						   })
+						   .OnSelectionChanged_Lambda(Setter)
 						   .InitialValue(InitialSelectedValue);
 
 	return ValueWidget;
+}
+template <typename Attr, typename V, typename An>
+TSharedPtr<SPropertyComboBox<V>> CreateScalarEnumWidget(Attr* Attribute, An* Annotation, UVitruvioComponent* VitruvioActor)
+{
+	auto Setter = [VitruvioActor, Attribute](TSharedPtr<V> Val, ESelectInfo::Type Type) {
+		UpdateAttributeValue(VitruvioActor, Attribute, *Val);
+	};
+	auto Getter = [Attribute]() {
+		return Attribute->Value;
+	};
+	return CreateEnumWidget<V, An>(Annotation, Setter, Getter);
+}
+
+template <typename V, typename An>
+TSharedPtr<SPropertyComboBox<V>> CreateArrayEnumWidget(An* Annotation, TSharedPtr<IPropertyHandle> PropertyHandle)
+{
+	check(Annotation->Values.Num() > 0)
+	
+	auto Setter = [PropertyHandle](TSharedPtr<V> Val, ESelectInfo::Type Type) {
+		PropertyHandle->SetValue(*Val);
+	};
+	auto Getter = [PropertyHandle]() {
+		V CurrentValue;
+		PropertyHandle->GetValue(CurrentValue);
+		return CurrentValue;
+	};
+	
+	return CreateEnumWidget<V, An>(Annotation, Setter, Getter);
 }
 
 template <typename S, typename G>
@@ -346,8 +351,8 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 			{
 				if (FloatArrayAttribute->GetEnumAnnotation() && FloatArrayAttribute->Values.Num() > 0)
 				{
-					ValueRow.ValueContent()[CreateArrayEnumWidget<UFloatArrayAttribute, double, UFloatEnumAnnotation>(
-										FloatArrayAttribute, FloatArrayAttribute->GetEnumAnnotation(), DetailPropertyRow->GetPropertyHandle())
+					ValueRow.ValueContent()[CreateArrayEnumWidget<double, UFloatEnumAnnotation>(
+										FloatArrayAttribute->GetEnumAnnotation(), DetailPropertyRow->GetPropertyHandle())
 										.ToSharedRef()];
 				}
 				else
@@ -359,8 +364,8 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 			{
 				if (StringArrayAttribute->GetEnumAnnotation() && StringArrayAttribute->GetEnumAnnotation()->Values.Num() > 0)
 				{
-					ValueRow.ValueContent()[CreateArrayEnumWidget<UStringArrayAttribute, FString, UStringEnumAnnotation>(
-										StringArrayAttribute, StringArrayAttribute->GetEnumAnnotation(), DetailPropertyRow->GetPropertyHandle())
+					ValueRow.ValueContent()[CreateArrayEnumWidget<FString, UStringEnumAnnotation>(
+										StringArrayAttribute->GetEnumAnnotation(), DetailPropertyRow->GetPropertyHandle())
 										.ToSharedRef()];
 				}
 				else if (StringArrayAttribute->GetColorAnnotation())
@@ -531,7 +536,7 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailCategoryBuilder& Roo
 			{
 				if (FloatAttribute->GetEnumAnnotation())
 				{
-					Row.ValueContent()[CreateEnumWidget<UFloatAttribute, double, UFloatEnumAnnotation>(
+					Row.ValueContent()[CreateScalarEnumWidget<UFloatAttribute, double, UFloatEnumAnnotation>(
 										   FloatAttribute, FloatAttribute->GetEnumAnnotation(), VitruvioActor)
 										   .ToSharedRef()];
 				}
@@ -544,7 +549,7 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailCategoryBuilder& Roo
 			{
 				if (StringAttribute->GetEnumAnnotation())
 				{
-					Row.ValueContent()[CreateEnumWidget<UStringAttribute, FString, UStringEnumAnnotation>(
+					Row.ValueContent()[CreateScalarEnumWidget<UStringAttribute, FString, UStringEnumAnnotation>(
 										   StringAttribute, StringAttribute->GetEnumAnnotation(), VitruvioActor)
 										   .ToSharedRef()];
 				}
