@@ -81,6 +81,29 @@ bool IsVitruvioComponentSelected(const TArray<TWeakObjectPtr<UObject>>& ObjectsB
 }
 
 template <typename Attr, typename V, typename An>
+TSharedPtr<SPropertyComboBox<V>> CreateArrayEnumWidget(Attr* Attribute, An* Annotation, TSharedPtr<IPropertyHandle> PropertyHandle)
+{
+	check(Annotation->Values.Num() > 0)
+	
+	TArray<TSharedPtr<V>> SharedPtrValues;
+	Algo::Transform(Annotation->Values, SharedPtrValues, [](const V& Value) { return MakeShared<V>(Value); });
+	V CurrentValue;
+	PropertyHandle->GetValue(CurrentValue);
+	auto InitialSelectedIndex = Annotation->Values.IndexOfByPredicate([&CurrentValue](const V& Value) { return Value == CurrentValue; });
+	InitialSelectedIndex = FMath::Min(InitialSelectedIndex, 0);
+	auto InitialSelectedValue = SharedPtrValues[InitialSelectedIndex];
+
+	auto ValueWidget = SNew(SPropertyComboBox<V>)
+						.ComboItemList(SharedPtrValues)
+						.OnSelectionChanged_Lambda([PropertyHandle, Attribute](TSharedPtr<V> Val, ESelectInfo::Type Type) {
+							PropertyHandle->SetValue(*Val);
+						})
+						.InitialValue(InitialSelectedValue);
+
+	return ValueWidget;
+}
+
+template <typename Attr, typename V, typename An>
 TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(Attr* Attribute, An* Annotation, UVitruvioComponent* VitruvioActor)
 {
 	TArray<TSharedPtr<V>> SharedPtrValues;
@@ -98,7 +121,8 @@ TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(Attr* Attribute, An* Annotatio
 	return ValueWidget;
 }
 
-void CreateColorPicker(UStringAttribute* Attribute, UVitruvioComponent* VitruvioActor)
+template <typename S, typename G>
+void CreateColorPicker(S Setter, G Getter)
 {
 	FColorPickerArgs PickerArgs;
 	{
@@ -106,16 +130,15 @@ void CreateColorPicker(UStringAttribute* Attribute, UVitruvioComponent* Vitruvio
 		PickerArgs.bOnlyRefreshOnOk = true;
 		PickerArgs.sRGBOverride = true;
 		PickerArgs.DisplayGamma = TAttribute<float>::Create(TAttribute<float>::FGetter::CreateUObject(GEngine, &UEngine::GetDisplayGamma));
-		PickerArgs.InitialColorOverride = FLinearColor(FColor::FromHex(Attribute->Value));
-		PickerArgs.OnColorCommitted.BindLambda([Attribute, VitruvioActor](FLinearColor NewColor) {
-			UpdateAttributeValue(VitruvioActor, Attribute, TEXT("#") + NewColor.ToFColor(true).ToHex());
-		});
+		PickerArgs.InitialColorOverride = Getter();
+		PickerArgs.OnColorCommitted.BindLambda(Setter);
 	}
 
 	OpenColorPicker(PickerArgs);
 }
 
-TSharedPtr<SHorizontalBox> CreateColorInputWidget(UStringAttribute* Attribute, UVitruvioComponent* VitruvioActor)
+template <typename S, typename G>
+TSharedPtr<SHorizontalBox> CreateColorInputWidget(S Setter, G Getter)
 {
 	// clang-format off
 	return SNew(SHorizontalBox)
@@ -125,19 +148,16 @@ TSharedPtr<SHorizontalBox> CreateColorInputWidget(UStringAttribute* Attribute, U
 		[
 			// Displays the color without alpha
 			SNew(SColorBlock)
-			.Color_Lambda([Attribute]()
-			{
-				return FLinearColor(FColor::FromHex(Attribute->Value));
-			})
+			.Color_Lambda(Getter)
 			.ShowBackgroundForAlpha(false)
-			.OnMouseButtonDown_Lambda([Attribute, VitruvioActor](const FGeometry& Geometry, const FPointerEvent& Event) -> FReply
+			.OnMouseButtonDown_Lambda([Setter, Getter](const FGeometry& Geometry, const FPointerEvent& Event) -> FReply
 			{
 				if (Event.GetEffectingButton() != EKeys::LeftMouseButton)
 				{
 					return FReply::Unhandled();
 				}
 
-				CreateColorPicker(Attribute, VitruvioActor);
+				CreateColorPicker(Setter, Getter);
 				return FReply::Handled();
 			})
 			.UseSRGB(true)
@@ -272,7 +292,7 @@ void AddSeparator(IDetailCategoryBuilder& RootCategory)
 	// clang-format on
 }
 
-void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, IDetailGroup& Group, URuleAttribute* Attribute)
+void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, IDetailGroup& Group, URuleAttribute* Attribute, UVitruvioComponent* VitruvioActor)
 {
 	if (DetailTreeNodes.Num() == 0 || DetailTreeNodes[0]->GetNodeType() != EDetailNodeType::Category)
 	{
@@ -311,10 +331,56 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 			FDetailWidgetRow ArrayDefaultWidgetsRow;
 			TSharedPtr<SWidget> ArrayNameWidget;
 			TSharedPtr<SWidget> ArrayValueWidget;
-	
+
 			DetailPropertyRow->GetDefaultWidgets(ArrayNameWidget, ArrayValueWidget, ArrayDefaultWidgetsRow, true);
 			ValueRow.NameContent()[ArrayNameWidget.ToSharedRef()];
-			ValueRow.ValueContent()[ArrayValueWidget.ToSharedRef()];
+
+			if (UFloatArrayAttribute* FloatArrayAttribute = Cast<UFloatArrayAttribute>(Attribute))
+			{
+				if (FloatArrayAttribute->GetEnumAnnotation() && FloatArrayAttribute->Values.Num() > 0)
+				{
+					ValueRow.ValueContent()[CreateArrayEnumWidget<UFloatArrayAttribute, double, UFloatEnumAnnotation>(
+										FloatArrayAttribute, FloatArrayAttribute->GetEnumAnnotation(), DetailPropertyRow->GetPropertyHandle())
+										.ToSharedRef()];
+				}
+				else
+				{
+					ValueRow.ValueContent()[ArrayValueWidget.ToSharedRef()];
+				}
+			}
+			else if (UStringArrayAttribute* StringArrayAttribute = Cast<UStringArrayAttribute>(Attribute))
+			{
+				if (StringArrayAttribute->GetEnumAnnotation() && StringArrayAttribute->GetEnumAnnotation()->Values.Num() > 0)
+				{
+					ValueRow.ValueContent()[CreateArrayEnumWidget<UStringArrayAttribute, FString, UStringEnumAnnotation>(
+										StringArrayAttribute, StringArrayAttribute->GetEnumAnnotation(), DetailPropertyRow->GetPropertyHandle())
+										.ToSharedRef()];
+				}
+				else if (StringArrayAttribute->GetColorAnnotation())
+				{
+					auto ColorStringProperty = DetailPropertyRow->GetPropertyHandle();
+					auto ColorSetter = [ColorStringProperty](FLinearColor NewColor) {
+						ColorStringProperty->SetValue(TEXT("#") + NewColor.ToFColor(true).ToHex());
+					};
+					auto ColorGetter = [ColorStringProperty]()
+					{
+						FString Value;
+						ColorStringProperty->GetValue(Value);
+						return FLinearColor(FColor::FromHex(Value));
+					};
+					
+					ValueRow.ValueContent()[CreateColorInputWidget(ColorSetter, ColorGetter).ToSharedRef()];
+				}
+				else
+				{
+					ValueRow.ValueContent()[ArrayValueWidget.ToSharedRef()];
+				}
+			}
+			else
+			{
+				ValueRow.ValueContent()[ArrayValueWidget.ToSharedRef()];
+			}
+			
 		}
 	}
 }
@@ -443,7 +509,7 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailCategoryBuilder& Roo
 			});
 			const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes = Generator->GetRootTreeNodes();
 			
-			AddArrayWidget(DetailTreeNodes, *Group, Attribute);
+			AddArrayWidget(DetailTreeNodes, *Group, Attribute, VitruvioActor);
 
 			Generators.Add(Generator);
 		}
@@ -477,7 +543,15 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailCategoryBuilder& Roo
 				}
 				else if (StringAttribute->GetColorAnnotation())
 				{
-					Row.ValueContent()[CreateColorInputWidget(StringAttribute, VitruvioActor).ToSharedRef()];
+					auto ColorSetter = [StringAttribute, VitruvioActor](FLinearColor NewColor) {
+						UpdateAttributeValue(VitruvioActor, StringAttribute, TEXT("#") + NewColor.ToFColor(true).ToHex());
+					};
+					auto ColorGetter = [StringAttribute]()
+					{
+						return FLinearColor(FColor::FromHex(StringAttribute->Value));
+					};
+					
+					Row.ValueContent()[CreateColorInputWidget(ColorSetter, ColorGetter).ToSharedRef()];
 				}
 				else
 				{
