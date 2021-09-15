@@ -109,7 +109,14 @@ TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(Attr* Attribute, An* Annotatio
 	TArray<TSharedPtr<V>> SharedPtrValues;
 	Algo::Transform(Annotation->Values, SharedPtrValues, [](const V& Value) { return MakeShared<V>(Value); });
 	auto InitialSelectedIndex = Annotation->Values.IndexOfByPredicate([Attribute](const V& Value) { return Value == Attribute->Value; });
-	auto InitialSelectedValue = InitialSelectedIndex != INDEX_NONE ? SharedPtrValues[InitialSelectedIndex] : nullptr;
+	
+	// If the value is not present in the enum values we insert it at the beginning (similar behavior to CE inspector)
+	if (InitialSelectedIndex == INDEX_NONE) 
+	{
+		SharedPtrValues.Insert(MakeShared<V>(Attribute->Value), 0);
+		InitialSelectedIndex = 0;
+	}
+	auto InitialSelectedValue = SharedPtrValues[InitialSelectedIndex];
 
 	auto ValueWidget = SNew(SPropertyComboBox<V>)
 						   .ComboItemList(SharedPtrValues)
