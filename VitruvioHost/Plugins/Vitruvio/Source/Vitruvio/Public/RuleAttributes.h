@@ -230,9 +230,9 @@ public:
 	UPROPERTY(EditAnywhere)
 	TArray<double> Values;
 
-	UStringEnumAnnotation* GetEnumAnnotation() const
+	UFloatEnumAnnotation* GetEnumAnnotation() const
 	{
-		return Cast<UStringEnumAnnotation>(Annotation);
+		return Cast<UFloatEnumAnnotation>(Annotation);
 	}
 
 	UColorAnnotation* GetColorAnnotation() const
@@ -277,11 +277,6 @@ class VITRUVIO_API UBoolArrayAttribute final : public URuleAttribute
 public:
 	UPROPERTY(EditAnywhere)
 	TArray<bool> Values;
-
-	UStringEnumAnnotation* GetEnumAnnotation() const
-	{
-		return Cast<UStringEnumAnnotation>(Annotation);
-	}
 
 	UColorAnnotation* GetColorAnnotation() const
 	{
