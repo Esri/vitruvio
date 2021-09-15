@@ -272,57 +272,53 @@ void AddSeparator(IDetailCategoryBuilder& RootCategory)
 	// clang-format on
 }
 
-void AddArrayWidgets(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, IDetailGroup& Group, URuleAttribute* Attribute, bool ArrayRoot)
+void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, IDetailGroup& Group, URuleAttribute* Attribute)
 {
-	for (auto& ChildNode : DetailTreeNodes)
+	if (DetailTreeNodes.Num() == 0 || DetailTreeNodes[0]->GetNodeType() != EDetailNodeType::Category)
 	{
-		TSharedPtr<IPropertyHandle> PropertyHandle = ChildNode->CreatePropertyHandle();
+		return;
+	}
 
-		if (ChildNode->GetNodeType() == EDetailNodeType::Category)
+	TArray<TSharedRef<IDetailTreeNode>> ArrayRoots;
+	DetailTreeNodes[0]->GetChildren(ArrayRoots);
+
+	for (const auto& ArrayRoot : ArrayRoots)
+	{
+		if (ArrayRoot->GetNodeType() != EDetailNodeType::Item)
 		{
-			TArray<TSharedRef<IDetailTreeNode>> Children;
-			ChildNode->GetChildren(Children);
-			AddArrayWidgets(Children, Group, Attribute, true);
+			continue;
 		}
-		else
+		
+		// Header Row
+		const TSharedPtr<IDetailPropertyRow> HeaderPropertyRow = ArrayRoot->GetRow();
+		IDetailGroup& ArrayHeader = Group.AddGroup(TEXT(""), FText::GetEmpty(), true);
+		FDetailWidgetRow& Row = ArrayHeader.HeaderRow();
+		FDetailWidgetRow DefaultWidgetsRow;
+		TSharedPtr<SWidget> NameWidget;
+		TSharedPtr<SWidget> ValueWidget;
+		HeaderPropertyRow->GetDefaultWidgets(NameWidget, ValueWidget, DefaultWidgetsRow, true);
+		Row.NameContent()[CreateNameWidget(Attribute).ToSharedRef()];
+		Row.ValueContent()[ValueWidget.ToSharedRef()];
+
+		// Value Rows
+		TArray<TSharedRef<IDetailTreeNode>> ArrayTreeNodes;
+		ArrayRoot->GetChildren(ArrayTreeNodes);
+		for (const auto& ChildNode : ArrayTreeNodes)
 		{
-			TSharedPtr<IDetailPropertyRow> DetailPropertyRow = ChildNode->GetRow();
-			if (DetailPropertyRow.IsValid())
-			{
-				TArray<TSharedRef<IDetailTreeNode>> Children;
-				ChildNode->GetChildren(Children);
+			const TSharedPtr<IDetailPropertyRow> DetailPropertyRow = ChildNode->GetRow();
+			FDetailWidgetRow& ValueRow = ArrayHeader.AddWidgetRow();
 
-				if (Children.Num() > 0)
-				{
-					IDetailGroup& ArrayHeader = Group.AddGroup(TEXT(""), FText::GetEmpty(), true);
-					FDetailWidgetRow& Row = ArrayHeader.HeaderRow();
-
-					FDetailWidgetRow DefaultWidgetsRow;
-					TSharedPtr<SWidget> NameWidget;
-					TSharedPtr<SWidget> ValueWidget;
-					DetailPropertyRow->GetDefaultWidgets(NameWidget, ValueWidget, DefaultWidgetsRow, true);
-					Row.NameContent()[ArrayRoot ? CreateNameWidget(Attribute).ToSharedRef() : NameWidget.ToSharedRef()];
-					Row.ValueContent()[ValueWidget.ToSharedRef()];
-
-					AddArrayWidgets(Children, ArrayHeader, Attribute, false);
-				}
-				else
-				{
-					FDetailWidgetRow& Row = Group.AddWidgetRow();
-
-					FDetailWidgetRow DefaultWidgetsRow;
-					TSharedPtr<SWidget> NameWidget;
-					TSharedPtr<SWidget> ValueWidget;
-					DetailPropertyRow->GetDefaultWidgets(NameWidget, ValueWidget, DefaultWidgetsRow, true);
-					Row.NameContent()[ArrayRoot ? CreateNameWidget(Attribute).ToSharedRef() : NameWidget.ToSharedRef()];
-					Row.ValueContent()[ValueWidget.ToSharedRef()];
-
-					AddArrayWidgets(Children, Group, Attribute, false);
-				}
-			}
+			FDetailWidgetRow ArrayDefaultWidgetsRow;
+			TSharedPtr<SWidget> ArrayNameWidget;
+			TSharedPtr<SWidget> ArrayValueWidget;
+	
+			DetailPropertyRow->GetDefaultWidgets(ArrayNameWidget, ArrayValueWidget, ArrayDefaultWidgetsRow, true);
+			ValueRow.NameContent()[ArrayNameWidget.ToSharedRef()];
+			ValueRow.ValueContent()[ArrayValueWidget.ToSharedRef()];
 		}
 	}
 }
+
 void AddGenerateButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioComponent)
 {
 	// clang-format off
@@ -446,7 +442,8 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailCategoryBuilder& Roo
 				}
 			});
 			const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes = Generator->GetRootTreeNodes();
-			AddArrayWidgets(DetailTreeNodes, *Group, Attribute, false);
+			
+			AddArrayWidget(DetailTreeNodes, *Group, Attribute);
 
 			Generators.Add(Generator);
 		}
