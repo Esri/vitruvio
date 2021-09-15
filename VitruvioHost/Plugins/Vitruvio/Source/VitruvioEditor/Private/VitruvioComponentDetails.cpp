@@ -269,6 +269,32 @@ TSharedPtr<SBox> CreateNameWidget(URuleAttribute* Attribute)
 	return NameWidget;
 }
 
+FExecuteAction ResetAllToDefaultAction(UVitruvioComponent* VitruvioActor)
+{
+	return FExecuteAction::CreateLambda(
+		[VitruvioActor]()
+		{
+			for (const auto& AttributeEntry : VitruvioActor->GetAttributes())
+			{
+				AttributeEntry.Value->UserSet = false;
+			}
+			
+			VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
+		}
+	);
+}
+
+FExecuteAction ResetToDefaultAction(URuleAttribute* Attribute, UVitruvioComponent* VitruvioActor)
+{
+	return FExecuteAction::CreateLambda(
+		[Attribute, VitruvioActor]()
+		{
+			Attribute->UserSet = false;
+			VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
+		}
+	);
+}
+
 IDetailGroup* GetOrCreateGroups(IDetailGroup& Root, const TArray<FString>& Groups, TMap<FString, IDetailGroup*>& GroupCache)
 {
 	if (Groups.Num() == 0)
@@ -322,7 +348,7 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 
 	TArray<TSharedRef<IDetailTreeNode>> ArrayRoots;
 	DetailTreeNodes[0]->GetChildren(ArrayRoots);
-
+	
 	for (const auto& ArrayRoot : ArrayRoots)
 	{
 		if (ArrayRoot->GetNodeType() != EDetailNodeType::Item)
@@ -334,6 +360,10 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 		const TSharedPtr<IDetailPropertyRow> HeaderPropertyRow = ArrayRoot->GetRow();
 		IDetailGroup& ArrayHeader = Group.AddGroup(TEXT(""), FText::GetEmpty(), true);
 		FDetailWidgetRow& Row = ArrayHeader.HeaderRow();
+		Row.AddCustomContextMenuAction(ResetToDefaultAction(Attribute, VitruvioActor),
+				FText::FromString("Reset to default"),
+				FText::FromString("Resets the current value to its default value.")
+		);
 		FDetailWidgetRow DefaultWidgetsRow;
 		TSharedPtr<SWidget> NameWidget;
 		TSharedPtr<SWidget> ValueWidget;
@@ -510,6 +540,26 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailCategoryBuilder& Roo
 	Generators.Empty();
 
 	IDetailGroup& RootGroup = RootCategory.AddGroup("Attributes", FText::FromString("Attributes"), true, true);
+
+	// Create Attributes header widget
+	FDetailWidgetRow& HeaderWidget = RootGroup.HeaderRow();
+	HeaderWidget.AddCustomContextMenuAction(ResetAllToDefaultAction(VitruvioActor),
+		FText::FromString("Reset all to default"),
+		FText::FromString("Resets all values to their default.")
+	);
+	// clang-format off
+	HeaderWidget.NameContent()
+	[
+		SNew(SBox)
+		.Content()
+		[
+			SNew(STextBlock)
+			.Text(FText::FromString(RootGroup.GetGroupName().ToString()))
+			.Font(IDetailLayoutBuilder::GetDetailFont())
+		]
+	];
+	// clang-format on
+	
 	TMap<FString, IDetailGroup*> GroupCache;
 	FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
 
@@ -545,6 +595,11 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailCategoryBuilder& Roo
 		else
 		{
 			FDetailWidgetRow& Row = Group->AddWidgetRow();
+			
+			Row.AddCustomContextMenuAction(ResetToDefaultAction(Attribute, VitruvioActor),
+            	FText::FromString("Reset to default"),
+            	FText::FromString("Resets the current value to its default value.")
+            );
 			
 			Row.FilterTextString = FText::FromString(Attribute->DisplayName);
 			Row.NameContent()[CreateNameWidget(Attribute).ToSharedRef()];
