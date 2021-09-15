@@ -233,19 +233,17 @@ TSharedPtr<SHorizontalBox> CreateTextInputWidget(UStringAttribute* Attribute, UV
 	// clang-format on
 }
 
-TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(UFloatAttribute* Attribute, UVitruvioComponent* VitruvioActor)
+template <typename Attr, typename S, typename G>
+TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(Attr* Attribute, S Setter, G Getter)
 {
 	auto Annotation = Attribute->GetRangeAnnotation();
-	auto OnCommit = [VitruvioActor, Attribute](double Value, ETextCommit::Type Type) -> void {
-		UpdateAttributeValue(VitruvioActor, Attribute, Value);
-	};
 
 	// clang-format off
 	auto ValueWidget = SNew(SSpinBox<double>)
 		.Font(IDetailLayoutBuilder::GetDetailFont())
 		.MinValue(Annotation && Annotation->HasMin ? Annotation->Min : TOptional<double>())
 		.MaxValue(Annotation && Annotation->HasMax ? Annotation->Max : TOptional<double>())
-		.OnValueCommitted_Lambda(OnCommit)
+		.OnValueCommitted_Lambda(Setter)
 		.SliderExponent(1);
 	// clang-format on
 
@@ -254,7 +252,7 @@ TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(UFloatAttribute* Attribute
 		ValueWidget->SetDelta(Annotation->StepSize);
 	}
 
-	ValueWidget->SetValue(Attribute->Value);
+	ValueWidget->SetValue(Getter());
 
 	return ValueWidget;
 }
@@ -370,7 +368,17 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 				}
 				else
 				{
-					ValueRow.ValueContent()[ArrayValueWidget.ToSharedRef()];
+					auto FloatProperty = DetailPropertyRow->GetPropertyHandle();
+					auto FloatSetter = [FloatProperty](double Value, ETextCommit::Type Type) {
+						FloatProperty->SetValue(Value);
+					};
+					auto FloatGetter = [FloatProperty]() {
+						double Value;
+						FloatProperty->GetValue(Value);
+						return Value;
+					};
+					
+					ValueRow.ValueContent()[CreateNumericInputWidget(FloatArrayAttribute, FloatSetter, FloatGetter).ToSharedRef()];
 				}
 			}
 			else if (UStringArrayAttribute* StringArrayAttribute = Cast<UStringArrayAttribute>(Attribute))
@@ -541,13 +549,13 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailCategoryBuilder& Roo
 		else
 		{
 			FDetailWidgetRow& Row = Group->AddWidgetRow();
-
+			
 			Row.FilterTextString = FText::FromString(Attribute->DisplayName);
 			Row.NameContent()[CreateNameWidget(Attribute).ToSharedRef()];
 
 			if (UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
 			{
-				if (FloatAttribute->GetEnumAnnotation())
+				if (FloatAttribute->GetEnumAnnotation() && FloatAttribute->GetEnumAnnotation()->Values.Num() > 0)
 				{
 					Row.ValueContent()[CreateScalarEnumWidget<UFloatAttribute, double, UFloatEnumAnnotation>(
 										   FloatAttribute, FloatAttribute->GetEnumAnnotation(), VitruvioActor)
@@ -555,7 +563,15 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailCategoryBuilder& Roo
 				}
 				else
 				{
-					Row.ValueContent()[CreateNumericInputWidget(FloatAttribute, VitruvioActor).ToSharedRef()];
+					auto Setter = [VitruvioActor, FloatAttribute](double Value, ETextCommit::Type Type) {
+						UpdateAttributeValue(VitruvioActor, FloatAttribute, Value);
+					};
+
+					auto Getter = [&FloatAttribute](){
+						return FloatAttribute->Value;	
+					};
+					
+					Row.ValueContent()[CreateNumericInputWidget(FloatAttribute, Setter, Getter).ToSharedRef()];
 				}
 			}
 			else if (UStringAttribute* StringAttribute = Cast<UStringAttribute>(Attribute))

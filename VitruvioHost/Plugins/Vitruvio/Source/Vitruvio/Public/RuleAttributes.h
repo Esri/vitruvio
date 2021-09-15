@@ -235,9 +235,9 @@ public:
 		return Cast<UFloatEnumAnnotation>(Annotation);
 	}
 
-	UColorAnnotation* GetColorAnnotation() const
+	URangeAnnotation* GetRangeAnnotation() const
 	{
-		return Cast<UColorAnnotation>(Annotation);
+		return Cast<URangeAnnotation>(Annotation);
 	}
 
 	void CopyValue(const URuleAttribute* FromAttribute) override
