@@ -90,7 +90,7 @@ TSharedPtr<SPropertyComboBox<V>> CreateArrayEnumWidget(Attr* Attribute, An* Anno
 	V CurrentValue;
 	PropertyHandle->GetValue(CurrentValue);
 	auto InitialSelectedIndex = Annotation->Values.IndexOfByPredicate([&CurrentValue](const V& Value) { return Value == CurrentValue; });
-	InitialSelectedIndex = FMath::Min(InitialSelectedIndex, 0);
+	InitialSelectedIndex = FMath::Max(InitialSelectedIndex, 0);
 	auto InitialSelectedValue = SharedPtrValues[InitialSelectedIndex];
 
 	auto ValueWidget = SNew(SPropertyComboBox<V>)
