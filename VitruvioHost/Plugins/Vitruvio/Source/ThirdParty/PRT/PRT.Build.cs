@@ -21,6 +21,8 @@ public class PRT : ModuleRules
 
 	private const string PrtCoreDllName = "com.esri.prt.core.dll";
 
+	private static readonly List<string> FilteredExtensionLibraries = new List<string>() { "DatasmithSDK.dll", "FreeImage317.dll", "com.esri.prt.unreal.dll" };
+
 	private const long ErrorSharingViolation = 0x20;
 	private const long ErrorLockViolation = 0x21;
 
@@ -93,7 +95,7 @@ public class PRT : ModuleRules
 
 				Directory.CreateDirectory(LibDir);
 				Directory.CreateDirectory(BinDir);
-				Copy(Path.Combine(ModuleDirectory, PrtLibName, "lib"), Path.Combine(ModuleDirectory, LibDir));
+				Copy(Path.Combine(ModuleDirectory, PrtLibName, "lib"), Path.Combine(ModuleDirectory, LibDir), FilteredExtensionLibraries);
 				Copy(Path.Combine(ModuleDirectory, PrtLibName, "bin"), Path.Combine(ModuleDirectory, BinDir));
 				Copy(Path.Combine(ModuleDirectory, PrtLibName, "include"), Path.Combine(ModuleDirectory, "include"));
 			}
@@ -167,13 +169,16 @@ public class PRT : ModuleRules
 		}
 	}
 
-	void Copy(string SrcDir, string DstDir)
+	void Copy(string SrcDir, string DstDir, List<string> Filter = null)
 	{
 		Directory.CreateDirectory(DstDir);
 
 		foreach (var CopyFile in Directory.GetFiles(SrcDir))
 		{
-			File.Copy(CopyFile, Path.Combine(DstDir, Path.GetFileName(CopyFile)));
+			if (Filter == null || !Filter.Contains(Path.GetFileName(CopyFile)))
+			{
+				File.Copy(CopyFile, Path.Combine(DstDir, Path.GetFileName(CopyFile)));
+			}
 		}
 
 		foreach (var Dir in Directory.GetDirectories(SrcDir))
