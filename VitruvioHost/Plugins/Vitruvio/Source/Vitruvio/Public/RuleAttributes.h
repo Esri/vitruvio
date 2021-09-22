@@ -172,7 +172,7 @@ class VITRUVIO_API UStringArrayAttribute final : public URuleAttribute
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category="Vitruvio")
 	TArray<FString> Values;
 
 	UStringEnumAnnotation* GetEnumAnnotation() const
@@ -230,7 +230,7 @@ class VITRUVIO_API UFloatArrayAttribute final : public URuleAttribute
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category="Vitruvio")
 	TArray<double> Values;
 
 	UFloatEnumAnnotation* GetEnumAnnotation() const
@@ -278,7 +278,7 @@ class VITRUVIO_API UBoolArrayAttribute final : public URuleAttribute
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category="Vitruvio")
 	TArray<bool> Values;
 
 	UColorAnnotation* GetColorAnnotation() const
