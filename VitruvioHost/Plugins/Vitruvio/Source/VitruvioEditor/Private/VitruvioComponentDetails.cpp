@@ -149,7 +149,7 @@ TSharedPtr<SHorizontalBox> CreateColorInputWidget(TSharedPtr<IPropertyHandle> Co
 	{
 		FString Value;
 		ColorStringProperty->GetValue(Value);
-		return Value.IsEmpty() ? FLinearColor(1, 1, 1) : FLinearColor(FColor::FromHex(Value));
+		return Value.IsEmpty() ? FLinearColor::White : FLinearColor(FColor::FromHex(Value));
 	};
 	
 	// clang-format off
