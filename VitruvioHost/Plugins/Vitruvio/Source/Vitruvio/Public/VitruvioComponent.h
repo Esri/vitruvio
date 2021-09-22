@@ -195,7 +195,11 @@ public:
 	 */
 	void EvaluateRuleAttributes(bool ForceRegenerate = false);
 
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnHierarchyChanged, UVitruvioComponent*) static FOnHierarchyChanged OnHierarchyChanged;
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnHierarchyChanged, UVitruvioComponent*);
+	static FOnHierarchyChanged OnHierarchyChanged;
+
+	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnAttributesChanged, UObject*, struct FPropertyChangedEvent&);
+	static FOnAttributesChanged OnAttributesChanged;
 
 	virtual void PostLoad() override;
 

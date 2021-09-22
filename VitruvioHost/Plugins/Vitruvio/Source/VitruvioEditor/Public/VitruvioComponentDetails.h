@@ -42,7 +42,7 @@ public:
 	void OnVitruvioComponentHierarchyChanged(UVitruvioComponent* Component);
 
 private:
-	void BuildAttributeEditor(IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioActor);
+	void BuildAttributeEditor(IDetailLayoutBuilder& DetailBuilder, IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioActor);
 
 	TArray<TWeakObjectPtr<UObject>> ObjectsBeingCustomized;
 	TWeakPtr<IDetailLayoutBuilder> CachedDetailBuilder;

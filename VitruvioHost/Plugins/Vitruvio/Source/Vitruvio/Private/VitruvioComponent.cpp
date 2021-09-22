@@ -186,6 +186,7 @@ FString UniqueComponentName(const FString& Name, TMap<FString, int32>& UsedNames
 } // namespace
 
 UVitruvioComponent::FOnHierarchyChanged UVitruvioComponent::OnHierarchyChanged;
+UVitruvioComponent::FOnAttributesChanged UVitruvioComponent::OnAttributesChanged;
 
 UVitruvioComponent::UVitruvioComponent()
 {
@@ -508,7 +509,7 @@ void UVitruvioComponent::NotifyAttributesChanged()
 #if WITH_EDITOR
 	// Notify possible listeners (eg. Details panel) about changes to the Attributes
 	FPropertyChangedEvent PropertyEvent(GetClass()->FindPropertyByName(GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Attributes)));
-	FCoreUObjectDelegates::OnObjectPropertyChanged.Broadcast(this, PropertyEvent);
+	OnAttributesChanged.Broadcast(this, PropertyEvent);
 #endif
 }
 
