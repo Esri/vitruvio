@@ -474,10 +474,10 @@ void UVitruvioComponent::ProcessAttributesEvaluationQueue()
 
 		for (auto Attribute : Attributes)
 		{
-			if (OldAttributes.Contains(Attribute.Key) && OldAttributes[Attribute.Key]->UserSet)
+			if (OldAttributes.Contains(Attribute.Key) && OldAttributes[Attribute.Key]->bUserSet)
 			{
 				Attribute.Value->CopyValue(OldAttributes[Attribute.Key]);
-				Attribute.Value->UserSet = true;
+				Attribute.Value->bUserSet = true;
 			}
 		}
 

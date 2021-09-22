@@ -124,10 +124,10 @@ public:
 	int GroupOrder;
 
 	UPROPERTY()
-	bool Hidden;
+	bool bHidden;
 
 	UPROPERTY()
-	bool UserSet;
+	bool bUserSet;
 
 	void SetAnnotation(UAttributeAnnotation* InAnnotation)
 	{

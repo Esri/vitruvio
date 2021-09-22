@@ -65,7 +65,7 @@ template <typename A, typename V>
 void UpdateAttributeValue(UVitruvioComponent* VitruvioActor, A* Attribute, const V& Value)
 {
 	Attribute->Value = Value;
-	Attribute->UserSet = true;
+	Attribute->bUserSet = true;
 	VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
 }
 
@@ -262,7 +262,7 @@ TSharedPtr<SBox> CreateNameWidget(URuleAttribute* Attribute)
 		[
 			SNew(STextBlock)
 			.Text(FText::FromString(Attribute->DisplayName))
-			.Font(Attribute->UserSet ? IDetailLayoutBuilder::GetDetailFontBold() : IDetailLayoutBuilder::GetDetailFont())
+			.Font(Attribute->bUserSet ? IDetailLayoutBuilder::GetDetailFontBold() : IDetailLayoutBuilder::GetDetailFont())
 		];
 	// clang-format on
 	return NameWidget;
@@ -273,11 +273,11 @@ FResetToDefaultOverride ResetToDefaultOverride(URuleAttribute* Attribute, UVitru
 	FResetToDefaultOverride ResetToDefaultOverride = FResetToDefaultOverride::Create(
 	FIsResetToDefaultVisible::CreateLambda([Attribute](TSharedPtr<IPropertyHandle> Property)
 	{
-		return Attribute->UserSet;
+		return Attribute->bUserSet;
 	}),
 	FResetToDefaultHandler::CreateLambda([Attribute, VitruvioActor](TSharedPtr<IPropertyHandle> Property)
 	{
-		Attribute->UserSet = false;
+		Attribute->bUserSet = false;
 		VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
 	})
 	);
@@ -569,7 +569,7 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailLayoutBuilder& Detai
 	{
 		for (const auto& AttributeEntry : VitruvioActor->GetAttributes())
 		{
-			AttributeEntry.Value->UserSet = false;
+			AttributeEntry.Value->bUserSet = false;
 		}
 			
 		VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
@@ -608,7 +608,7 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailLayoutBuilder& Detai
 		Generator->SetObjects(Objects);
 		Generator->OnFinishedChangingProperties().AddLambda([this, VitruvioActor, Attribute](const FPropertyChangedEvent Event) {
 			VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
-			Attribute->UserSet = true;
+			Attribute->bUserSet = true;
 		});
 		const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes = Generator->GetRootTreeNodes();
 
