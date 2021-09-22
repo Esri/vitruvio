@@ -124,7 +124,10 @@ public:
 	int GroupOrder;
 
 	UPROPERTY()
-	bool Hidden;
+	bool bHidden;
+
+	UPROPERTY()
+	bool bUserSet;
 
 	void SetAnnotation(UAttributeAnnotation* InAnnotation)
 	{
@@ -140,7 +143,7 @@ class VITRUVIO_API UStringAttribute final : public URuleAttribute
 	GENERATED_BODY()
 
 public:
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 	FString Value;
 
 	UStringEnumAnnotation* GetEnumAnnotation() const
@@ -198,7 +201,7 @@ class VITRUVIO_API UFloatAttribute final : public URuleAttribute
 	GENERATED_BODY()
 
 public:
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 	double Value;
 
 	UFloatEnumAnnotation* GetEnumAnnotation() const
@@ -230,14 +233,14 @@ public:
 	UPROPERTY(EditAnywhere)
 	TArray<double> Values;
 
-	UStringEnumAnnotation* GetEnumAnnotation() const
+	UFloatEnumAnnotation* GetEnumAnnotation() const
 	{
-		return Cast<UStringEnumAnnotation>(Annotation);
+		return Cast<UFloatEnumAnnotation>(Annotation);
 	}
 
-	UColorAnnotation* GetColorAnnotation() const
+	URangeAnnotation* GetRangeAnnotation() const
 	{
-		return Cast<UColorAnnotation>(Annotation);
+		return Cast<URangeAnnotation>(Annotation);
 	}
 
 	void CopyValue(const URuleAttribute* FromAttribute) override
@@ -256,7 +259,7 @@ class VITRUVIO_API UBoolAttribute final : public URuleAttribute
 	GENERATED_BODY()
 
 public:
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 	bool Value;
 
 	void CopyValue(const URuleAttribute* FromAttribute) override
@@ -277,11 +280,6 @@ class VITRUVIO_API UBoolArrayAttribute final : public URuleAttribute
 public:
 	UPROPERTY(EditAnywhere)
 	TArray<bool> Values;
-
-	UStringEnumAnnotation* GetEnumAnnotation() const
-	{
-		return Cast<UStringEnumAnnotation>(Annotation);
-	}
 
 	UColorAnnotation* GetColorAnnotation() const
 	{

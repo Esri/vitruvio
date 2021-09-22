@@ -63,6 +63,23 @@ private:
 	FThreadSafeBool bIsInvalid = false;
 };
 
+class FEvalAttributesToken : public FInvalidationToken
+{
+public:
+	void RequestReEvaluateAttributes()
+	{
+		bRequestReEvaluateAttributes = true;
+	}
+
+	bool IsReEvaluateRequested() const
+	{
+		return bRequestReEvaluateAttributes;
+	}
+
+private:
+	FThreadSafeBool bRequestReEvaluateAttributes = false;
+};
+
 class FGenerateToken : public FInvalidationToken
 {
 public:
@@ -99,7 +116,7 @@ public:
 };
 
 using FGenerateResult = TResult<FGenerateResultDescription, FGenerateToken>;
-using FAttributeMapResult = TResult<FAttributeMapPtr, FInvalidationToken>;
+using FAttributeMapResult = TResult<FAttributeMapPtr, FEvalAttributesToken>;
 
 class VitruvioModule final : public IModuleInterface, public FGCObject
 {
@@ -139,15 +156,16 @@ public:
 													 AttributeMapUPtr Attributes, const int32 RandomSeed) const;
 
 	/**
-	 * \brief Asynchronously loads the default attribute values for the given initial shape and rule package
+	 * \brief Asynchronously evaluates attributes for the given initial shape and rule package.
 	 *
 	 * \param InitialShape
 	 * \param RulePackage
+	 * \param Attributes
 	 * \param RandomSeed
 	 * \return
 	 */
-	VITRUVIO_API FAttributeMapResult LoadDefaultRuleAttributesAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage,
-																	const int32 RandomSeed) const;
+	VITRUVIO_API FAttributeMapResult EvaluateRuleAttributesAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage,
+															 AttributeMapUPtr Attributes, const int32 RandomSeed) const;
 
 	/**
 	 * \return whether PRT is initialized meaning installed and ready to use. Before initialization generation is not possible and will

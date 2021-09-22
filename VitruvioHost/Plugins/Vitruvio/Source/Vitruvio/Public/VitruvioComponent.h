@@ -39,10 +39,9 @@ struct FConvertedGenerateResult
 	TArray<FInstance> Instances;
 };
 
-struct FLoadAttributes
+struct FAttributesEvaluation
 {
 	FAttributeMapPtr AttributeMap;
-	bool bKeepOldAttributes;
 	bool bForceRegenerate;
 };
 
@@ -50,8 +49,6 @@ UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class VITRUVIO_API UVitruvioComponent : public UActorComponent
 {
 	GENERATED_BODY()
-
-	TAtomic<bool> LoadingAttributes = false;
 
 	UPROPERTY()
 	bool bValidRandomSeed = false;
@@ -192,14 +189,17 @@ public:
 	void RemoveGeneratedMeshes();
 
 	/**
-	 * Load the default attributes.
+	 * Evaluate rule attributes.
 	 *
-	 * @param KeepOldAttributeValues Whether to keep old attribute values
 	 * @param ForceRegenerate Whether to force regenerate even if generate automatically is set to false
 	 */
-	void LoadDefaultAttributes(bool KeepOldAttributeValues = false, bool ForceRegenerate = false);
+	void EvaluateRuleAttributes(bool ForceRegenerate = false);
 
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnHierarchyChanged, UVitruvioComponent*) static FOnHierarchyChanged OnHierarchyChanged;
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnHierarchyChanged, UVitruvioComponent*);
+	static FOnHierarchyChanged OnHierarchyChanged;
+
+	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnAttributesChanged, UObject*, struct FPropertyChangedEvent&);
+	static FOnAttributesChanged OnAttributesChanged;
 
 	virtual void PostLoad() override;
 
@@ -234,10 +234,10 @@ private:
 	int32 RandomSeed;
 
 	TQueue<FGenerateResultDescription> GenerateQueue;
-	TQueue<FLoadAttributes> LoadAttributesQueue;
+	TQueue<FAttributesEvaluation> AttributesEvaluationQueue;
 
 	FGenerateResult::FTokenPtr GenerateToken;
-	FAttributeMapResult::FTokenPtr LoadAttributesInvalidationToken;
+	FAttributeMapResult::FTokenPtr EvalAttributesInvalidationToken;
 
 	bool HasGeneratedMesh = false;
 
@@ -246,7 +246,7 @@ private:
 	void NotifyAttributesChanged();
 
 	void ProcessGenerateQueue();
-	void ProcessLoadAttributesQueue();
+	void ProcessAttributesEvaluationQueue();
 
 	FConvertedGenerateResult BuildResult(FGenerateResultDescription& GenerateResult,
 										 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,

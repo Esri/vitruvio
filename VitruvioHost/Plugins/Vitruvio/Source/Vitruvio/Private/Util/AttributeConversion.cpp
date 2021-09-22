@@ -138,7 +138,7 @@ TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& Attri
 
 			ParseAttributeAnnotations(AttrInfo, *Attribute, Outer);
 
-			if (!Attribute->Hidden)
+			if (!Attribute->bHidden)
 			{
 				UnrealAttributeMap.Add(AttributeName, Attribute);
 			}
@@ -154,6 +154,8 @@ AttributeMapUPtr CreateAttributeMap(const TMap<FString, URuleAttribute*>& Attrib
 	for (const TPair<FString, URuleAttribute*>& AttributeEntry : Attributes)
 	{
 		const URuleAttribute* Attribute = AttributeEntry.Value;
+
+		if (!Attribute->bUserSet) continue;
 
 		if (const UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
 		{

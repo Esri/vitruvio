@@ -186,6 +186,7 @@ FString UniqueComponentName(const FString& Name, TMap<FString, int32>& UsedNames
 } // namespace
 
 UVitruvioComponent::FOnHierarchyChanged UVitruvioComponent::OnHierarchyChanged;
+UVitruvioComponent::FOnAttributesChanged UVitruvioComponent::OnAttributesChanged;
 
 UVitruvioComponent::UVitruvioComponent()
 {
@@ -462,35 +463,29 @@ void UVitruvioComponent::ProcessGenerateQueue()
 	}
 }
 
-void UVitruvioComponent::ProcessLoadAttributesQueue()
+void UVitruvioComponent::ProcessAttributesEvaluationQueue()
 {
-	if (!LoadAttributesQueue.IsEmpty())
+	if (!AttributesEvaluationQueue.IsEmpty())
 	{
-		FLoadAttributes LoadAttributes;
-		LoadAttributesQueue.Dequeue(LoadAttributes);
-		if (LoadAttributes.bKeepOldAttributes)
-		{
-			TMap<FString, URuleAttribute*> OldAttributes = Attributes;
-			Attributes = LoadAttributes.AttributeMap->ConvertToUnrealAttributeMap(this);
+		FAttributesEvaluation AttributesEvaluation;
+		AttributesEvaluationQueue.Dequeue(AttributesEvaluation);
+		TMap<FString, URuleAttribute*> OldAttributes = Attributes;
+		Attributes = AttributesEvaluation.AttributeMap->ConvertToUnrealAttributeMap(this);
 
-			for (auto Attribute : Attributes)
-			{
-				if (OldAttributes.Contains(Attribute.Key))
-				{
-					Attribute.Value->CopyValue(OldAttributes[Attribute.Key]);
-				}
-			}
-		}
-		else
+		for (auto Attribute : Attributes)
 		{
-			Attributes = LoadAttributes.AttributeMap->ConvertToUnrealAttributeMap(this);
+			if (OldAttributes.Contains(Attribute.Key) && OldAttributes[Attribute.Key]->bUserSet)
+			{
+				Attribute.Value->CopyValue(OldAttributes[Attribute.Key]);
+				Attribute.Value->bUserSet = true;
+			}
 		}
 
 		bAttributesReady = true;
 
 		bNotifyAttributeChange = true;
 
-		if (GenerateAutomatically || LoadAttributes.bForceRegenerate)
+		if (GenerateAutomatically || AttributesEvaluation.bForceRegenerate)
 		{
 			Generate();
 		}
@@ -500,7 +495,7 @@ void UVitruvioComponent::ProcessLoadAttributesQueue()
 void UVitruvioComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	ProcessGenerateQueue();
-	ProcessLoadAttributesQueue();
+	ProcessAttributesEvaluationQueue();
 
 	if (bNotifyAttributeChange)
 	{
@@ -514,7 +509,7 @@ void UVitruvioComponent::NotifyAttributesChanged()
 #if WITH_EDITOR
 	// Notify possible listeners (eg. Details panel) about changes to the Attributes
 	FPropertyChangedEvent PropertyEvent(GetClass()->FindPropertyByName(GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Attributes)));
-	FCoreUObjectDelegates::OnObjectPropertyChanged.Broadcast(this, PropertyEvent);
+	OnAttributesChanged.Broadcast(this, PropertyEvent);
 #endif
 }
 
@@ -542,22 +537,6 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 														 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
 														 TMap<FString, Vitruvio::FTextureData>& TextureCache)
 {
-	auto CachedMaterial = [this, &MaterialCache, &TextureCache](const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name,
-																UObject* Outer) {
-		if (MaterialCache.Contains(MaterialAttributes))
-		{
-			return MaterialCache[MaterialAttributes];
-		}
-		else
-		{
-			const FName UniqueMaterialName(Name);
-			UMaterialInstanceDynamic* Material = Vitruvio::GameThread_CreateMaterialInstance(Outer, UniqueMaterialName, OpaqueParent, MaskedParent,
-																							 TranslucentParent, MaterialAttributes, TextureCache);
-			MaterialCache.Add(MaterialAttributes, Material);
-			return Material;
-		}
-	};
-
 	// build all meshes
 	for (auto& IdAndMesh : GenerateResult.Meshes)
 	{
@@ -597,9 +576,9 @@ void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 		GenerateToken->Invalidate();
 	}
 
-	if (LoadAttributesInvalidationToken)
+	if (EvalAttributesInvalidationToken)
 	{
-		LoadAttributesInvalidationToken->Invalidate();
+		EvalAttributesInvalidationToken->Invalidate();
 	}
 
 #if WITH_EDITOR
@@ -614,7 +593,7 @@ void UVitruvioComponent::Generate()
 	// and regenerate afterwards
 	if (HasValidInputData() && !bAttributesReady)
 	{
-		LoadDefaultAttributes(false, true);
+		EvaluateRuleAttributes(true);
 		return;
 	}
 
@@ -738,7 +717,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 
 	if (HasValidInputData() && !bAttributesReady)
 	{
-		LoadDefaultAttributes();
+		EvaluateRuleAttributes();
 	}
 }
 
@@ -766,34 +745,42 @@ void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& T
 
 #endif // WITH_EDITOR
 
-void UVitruvioComponent::LoadDefaultAttributes(const bool KeepOldAttributeValues, bool ForceRegenerate)
+void UVitruvioComponent::EvaluateRuleAttributes(bool ForceRegenerate)
 {
 	check(Rpk);
 	check(InitialShape);
 
-	if (LoadingAttributes)
+	// Since we can not abort an ongoing generate call from PRT, we invalidate the result and evaluate the attributes again after the current request
+	// has completed.
+	if (EvalAttributesInvalidationToken)
 	{
+		EvalAttributesInvalidationToken->RequestReEvaluateAttributes();
 		return;
 	}
 
 	bAttributesReady = false;
-	LoadingAttributes = true;
 
-	FAttributeMapResult AttributesResult = VitruvioModule::Get().LoadDefaultRuleAttributesAsync(InitialShape->GetFaces(), Rpk, RandomSeed);
+	FAttributeMapResult AttributesResult = VitruvioModule::Get().EvaluateRuleAttributesAsync(InitialShape->GetFaces(), Rpk, Vitruvio::CreateAttributeMap(Attributes), RandomSeed);
 
-	LoadAttributesInvalidationToken = AttributesResult.Token;
+	EvalAttributesInvalidationToken = AttributesResult.Token;
 
-	AttributesResult.Result.Next([this, ForceRegenerate, KeepOldAttributeValues](const FAttributeMapResult::ResultType& Result) {
+	AttributesResult.Result.Next([this, ForceRegenerate](const FAttributeMapResult::ResultType& Result) {
 		FScopeLock(&Result.Token->Lock);
 
 		if (Result.Token->IsInvalid())
 		{
 			return;
 		}
-
-		LoadingAttributes = false;
-
-		LoadAttributesQueue.Enqueue({Result.Value, KeepOldAttributeValues, ForceRegenerate});
+		
+		EvalAttributesInvalidationToken.Reset();
+		if (Result.Token->IsReEvaluateRequested())
+		{
+			EvaluateRuleAttributes(ForceRegenerate);
+		}
+		else
+		{
+			AttributesEvaluationQueue.Enqueue({Result.Value, ForceRegenerate});
+		}
 	});
 }
 

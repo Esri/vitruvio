@@ -215,7 +215,7 @@ void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, UR
 
 		if (!std::wcscmp(Name, ANNOT_HIDDEN))
 		{
-			InAttribute.Hidden = true;
+			InAttribute.bHidden = true;
 		}
 		else if (!std::wcscmp(Name, ANNOT_ORDER))
 		{
