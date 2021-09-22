@@ -536,22 +536,6 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 														 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
 														 TMap<FString, Vitruvio::FTextureData>& TextureCache)
 {
-	auto CachedMaterial = [this, &MaterialCache, &TextureCache](const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name,
-																UObject* Outer) {
-		if (MaterialCache.Contains(MaterialAttributes))
-		{
-			return MaterialCache[MaterialAttributes];
-		}
-		else
-		{
-			const FName UniqueMaterialName(Name);
-			UMaterialInstanceDynamic* Material = Vitruvio::GameThread_CreateMaterialInstance(Outer, UniqueMaterialName, OpaqueParent, MaskedParent,
-																							 TranslucentParent, MaterialAttributes, TextureCache);
-			MaterialCache.Add(MaterialAttributes, Material);
-			return Material;
-		}
-	};
-
 	// build all meshes
 	for (auto& IdAndMesh : GenerateResult.Meshes)
 	{
