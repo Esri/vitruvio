@@ -331,7 +331,7 @@ void AddSeparator(IDetailCategoryBuilder& RootCategory)
 template <typename A>
 TSharedPtr<SWidget> CreateFloatAttributeWidget(A* Attribute, const TSharedPtr<IPropertyHandle>& PropertyHandle)
 {
-	if (Attribute->GetEnumAnnotation())
+	if (Attribute->GetEnumAnnotation() && Attribute->GetEnumAnnotation()->Values.Num() > 0)
 	{
 		return CreateEnumWidget<double, UFloatEnumAnnotation>(Attribute->GetEnumAnnotation(), PropertyHandle).ToSharedRef();
 	}
@@ -344,7 +344,7 @@ TSharedPtr<SWidget> CreateFloatAttributeWidget(A* Attribute, const TSharedPtr<IP
 template <typename A>
 TSharedPtr<SWidget> CreateStringAttributeWidget(A* Attribute, const TSharedPtr<IPropertyHandle>& PropertyHandle)
 {
-	if (Attribute->GetEnumAnnotation())
+	if (Attribute->GetEnumAnnotation() && Attribute->GetEnumAnnotation()->Values.Num() > 0)
 	{
 		return CreateEnumWidget<FString, UStringEnumAnnotation>(Attribute->GetEnumAnnotation(), PropertyHandle);
 	}
