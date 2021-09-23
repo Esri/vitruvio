@@ -335,9 +335,9 @@ void UVitruvioComponent::Initialize()
 	CalculateRandomSeed();
 
 	// Check if we can load the attributes and then generate (eg during play)
-	if (GenerateAutomatically && IsReadyToGenerate())
+	if (GenerateAutomatically && HasValidInputData())
 	{
-		Generate();
+		EvaluateRuleAttributes(true);
 	}
 }
 
