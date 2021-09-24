@@ -606,7 +606,17 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailLayoutBuilder& Detai
 		TArray<UObject*> Objects;
 		Objects.Add(Attribute);
 		Generator->SetObjects(Objects);
-		Generator->OnFinishedChangingProperties().AddLambda([this, VitruvioActor, Attribute](const FPropertyChangedEvent Event) {
+		Generator->OnFinishedChangingProperties().AddLambda([this, VitruvioActor, Attribute](FPropertyChangedEvent Event) {
+			if (Event.ChangeType == EPropertyChangeType::ArrayAdd)
+			{
+				if (UArrayAttribute* ArrayAttribute = Cast<UArrayAttribute>(Attribute))
+				{
+					Event.ObjectIteratorIndex = 0;
+					const int ArrayIndex = Event.GetArrayIndex(Event.Property->GetFName().ToString());
+					ArrayAttribute->InitializeDefaultArrayValue(ArrayIndex);
+				}
+			}
+			
 			VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
 			Attribute->bUserSet = true;
 		});

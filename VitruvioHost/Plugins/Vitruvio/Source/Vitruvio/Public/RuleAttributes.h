@@ -134,7 +134,16 @@ public:
 		Annotation = InAnnotation;
 	}
 
-	virtual void CopyValue(const URuleAttribute* FromAttribute){};
+	virtual void CopyValue(const URuleAttribute* FromAttribute){}
+};
+
+UCLASS()
+class VITRUVIO_API UArrayAttribute : public URuleAttribute {
+	GENERATED_BODY()
+
+public:
+	virtual void InitializeDefaultArrayValue(int32 Index) {}
+	
 };
 
 UCLASS()
@@ -167,7 +176,7 @@ public:
 };
 
 UCLASS()
-class VITRUVIO_API UStringArrayAttribute final : public URuleAttribute
+class VITRUVIO_API UStringArrayAttribute final : public UArrayAttribute
 {
 	GENERATED_BODY()
 
@@ -191,6 +200,26 @@ public:
 		if (FromStringAttribute)
 		{
 			Values = FromStringAttribute->Values;
+		}
+	}
+	
+	virtual void InitializeDefaultArrayValue(int32 Index) override
+	{
+		if (Index == INDEX_NONE || Index >= Values.Num())
+		{
+			return;
+		}
+		
+		if (UStringEnumAnnotation* EnumAnnotation = GetEnumAnnotation())
+		{
+			if (EnumAnnotation->Values.Num() > 0)
+			{
+				Values[Index] = EnumAnnotation->Values[0];
+			}
+		}
+		else if (GetColorAnnotation())
+		{
+			Values[Index] = TEXT("#") + FLinearColor::White.ToFColor(true).ToHex();
 		}
 	}
 };
@@ -225,7 +254,7 @@ public:
 };
 
 UCLASS()
-class VITRUVIO_API UFloatArrayAttribute final : public URuleAttribute
+class VITRUVIO_API UFloatArrayAttribute final : public UArrayAttribute
 {
 	GENERATED_BODY()
 
@@ -251,6 +280,29 @@ public:
 			Values = FromFloatArrayAttribute->Values;
 		}
 	}
+
+	virtual void InitializeDefaultArrayValue(int32 Index) override
+	{
+		if (Index == INDEX_NONE || Index >= Values.Num())
+		{
+			return;
+		}
+		
+		if (UFloatEnumAnnotation* FloatEnumAnnotation = GetEnumAnnotation())
+		{
+			if (FloatEnumAnnotation->Values.Num() > 0)
+			{
+				Values[Index] = FloatEnumAnnotation->Values[0];
+			}
+		}
+		else if (URangeAnnotation* RangeAnnotation = GetRangeAnnotation())
+		{
+			if (RangeAnnotation->HasMin)
+			{
+				Values[Index] = RangeAnnotation->Min;
+			}
+		}
+	}
 };
 
 UCLASS()
@@ -273,18 +325,13 @@ public:
 };
 
 UCLASS()
-class VITRUVIO_API UBoolArrayAttribute final : public URuleAttribute
+class VITRUVIO_API UBoolArrayAttribute final : public UArrayAttribute
 {
 	GENERATED_BODY()
 
 public:
 	UPROPERTY(EditAnywhere, Category="Vitruvio")
 	TArray<bool> Values;
-
-	UColorAnnotation* GetColorAnnotation() const
-	{
-		return Cast<UColorAnnotation>(Annotation);
-	}
 
 	void CopyValue(const URuleAttribute* FromAttribute) override
 	{
