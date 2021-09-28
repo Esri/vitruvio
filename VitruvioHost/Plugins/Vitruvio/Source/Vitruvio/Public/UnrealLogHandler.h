@@ -30,6 +30,7 @@ class UnrealLogHandler final : public prt::LogHandler
 {
 
 	TArray<FLogMessage> Messages;
+	FCriticalSection MessageLock;
 
 public:
 	UnrealLogHandler() = default;
