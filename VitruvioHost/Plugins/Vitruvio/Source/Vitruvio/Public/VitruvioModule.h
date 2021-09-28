@@ -224,12 +224,19 @@ public:
 		return TextureCache;
 	}
 
-	DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnGenerateCompleted, int, int, int);
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnGenerateCompleted, int);
+
+	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnAllGenerateCompleted, int, int);
 
 	/**
 	 * Delegate which is called after a generate call has completed.
 	 */
 	FOnGenerateCompleted OnGenerateCompleted;
+
+	/**
+	* Delegate which is called after all generate calls have completed.
+	*/
+	FOnAllGenerateCompleted OnAllGenerateCompleted;
 
 	void AddReferencedObjects(FReferenceCollector& Collector) override
 	{

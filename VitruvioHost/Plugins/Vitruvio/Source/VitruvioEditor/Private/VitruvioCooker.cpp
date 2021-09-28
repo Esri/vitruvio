@@ -249,108 +249,105 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 
 	// Notify on generate completed for VitruvioComponents. Unlike the busy waiting for PRT generate calls which happen async we need to use
 	// a callback here as creating the StaticMeshes from generation also happens on the game thread.
-	ModelsGeneratedHandle = VitruvioModule::Get().OnGenerateCompleted.AddLambda([Actors](int GenerateCalls, int Warnings, int Errors) {
-		if (GenerateCalls == 0)
+	ModelsGeneratedHandle = VitruvioModule::Get().OnAllGenerateCompleted.AddLambda([Actors](int Warnings, int Errors) {
+		TSharedRef<SDlgPickPath> PickContentPathDlg = SNew(SDlgPickPath).Title(FText::FromString("Choose location for cooked models."));
+
+		if (PickContentPathDlg->ShowModal() == EAppReturnType::Cancel)
 		{
-			TSharedRef<SDlgPickPath> PickContentPathDlg = SNew(SDlgPickPath).Title(FText::FromString("Choose location for cooked models."));
+			IsCooking = false;
+			VitruvioModule::Get().OnAllGenerateCompleted.Remove(ModelsGeneratedHandle);
+			ModelsGeneratedHandle.Reset();
+			return;
+		}
+		FString CookPath = PickContentPathDlg->GetPath().ToString();
 
-			if (PickContentPathDlg->ShowModal() == EAppReturnType::Cancel)
-			{
-				IsCooking = false;
-				VitruvioModule::Get().OnGenerateCompleted.Remove(ModelsGeneratedHandle);
-				ModelsGeneratedHandle.Reset();
-				return;
-			}
-			FString CookPath = PickContentPathDlg->GetPath().ToString();
+		// Cook actors after all models have been generated and their meshes constructed
+		FScopedSlowTask CookTask(Actors.Num(), FText::FromString("Cooking models..."));
+		CookTask.MakeDialog();
+		
+		FMaterialCache MaterialCache;
+		FTextureCache TextureCache;
+		FStaticMeshCache MeshCache;
 
-			// Cook actors after all models have been generated and their meshes constructed
-			FScopedSlowTask CookTask(Actors.Num(), FText::FromString("Cooking models..."));
-			CookTask.MakeDialog();
+		for (AActor* Actor : Actors)
+		{
+			CookTask.EnterProgressFrame(1);
 			
-			FMaterialCache MaterialCache;
-			FTextureCache TextureCache;
-			FStaticMeshCache MeshCache;
-
-			for (AActor* Actor : Actors)
+			UVitruvioComponent* VitruvioComponent = Actor->FindComponentByClass<UVitruvioComponent>();
+			if (!VitruvioComponent)
 			{
-				CookTask.EnterProgressFrame(1);
-				
-				UVitruvioComponent* VitruvioComponent = Actor->FindComponentByClass<UVitruvioComponent>();
-				if (!VitruvioComponent)
+				continue;
+			}
+			AActor* OldAttachParent = Actor->GetAttachParentActor();
+
+			// Spawn new Actor with persisted geometry
+			AActor* CookedActor = Actor->GetWorld()->SpawnActor<AActor>(Actor->GetActorLocation(), Actor->GetActorRotation());
+
+			USceneComponent* RootComponent = NewObject<USceneComponent>(CookedActor, "Root");
+			CookedActor->AddOwnedComponent(RootComponent);
+			CookedActor->SetRootComponent(RootComponent);
+			RootComponent->SetMobility(EComponentMobility::Movable);
+			RootComponent->OnComponentCreated();
+			RootComponent->SetWorldRotation(Actor->GetActorRotation());
+			RootComponent->SetWorldLocation(Actor->GetActorLocation());
+			RootComponent->RegisterComponent();
+
+			if (OldAttachParent)
+			{
+				CookedActor->AttachToActor(OldAttachParent, FAttachmentTransformRules::KeepWorldTransform);
+			}
+
+			// Persist Mesh
+			UGeneratedModelStaticMeshComponent* StaticMeshComponent = Actor->FindComponentByClass<UGeneratedModelStaticMeshComponent>();
+			if (StaticMeshComponent)
+			{
+				check(StaticMeshComponent->GetStaticMesh());
+
+				UStaticMesh* GeneratedMesh = StaticMeshComponent->GetStaticMesh();
+
+				UStaticMesh* PersistedMesh = SaveStaticMesh(GeneratedMesh, CookPath, MeshCache, MaterialCache, TextureCache);
+				AttachMeshComponent<UStaticMeshComponent>(CookedActor, PersistedMesh, TEXT("Model"),
+														  StaticMeshComponent->GetComponentTransform());
+			}
+
+			// Persist instanced Component
+			TArray<UActorComponent*> HismComponents;
+			Actor->GetComponents(UGeneratedModelHISMComponent::StaticClass(), HismComponents);
+			for (UActorComponent* HismComponent : HismComponents)
+			{
+				UGeneratedModelHISMComponent* GeneratedModelHismComponent = Cast<UGeneratedModelHISMComponent>(HismComponent);
+				UStaticMesh* GeneratedMesh = GeneratedModelHismComponent->GetStaticMesh();
+				if (GeneratedMesh)
 				{
-					continue;
-				}
-				AActor* OldAttachParent = Actor->GetAttachParentActor();
-
-				// Spawn new Actor with persisted geometry
-				AActor* CookedActor = Actor->GetWorld()->SpawnActor<AActor>(Actor->GetActorLocation(), Actor->GetActorRotation());
-
-				USceneComponent* RootComponent = NewObject<USceneComponent>(CookedActor, "Root");
-				CookedActor->AddOwnedComponent(RootComponent);
-				CookedActor->SetRootComponent(RootComponent);
-				RootComponent->SetMobility(EComponentMobility::Movable);
-				RootComponent->OnComponentCreated();
-				RootComponent->SetWorldRotation(Actor->GetActorRotation());
-				RootComponent->SetWorldLocation(Actor->GetActorLocation());
-				RootComponent->RegisterComponent();
-
-				if (OldAttachParent)
-				{
-					CookedActor->AttachToActor(OldAttachParent, FAttachmentTransformRules::KeepWorldTransform);
-				}
-
-				// Persist Mesh
-				UGeneratedModelStaticMeshComponent* StaticMeshComponent = Actor->FindComponentByClass<UGeneratedModelStaticMeshComponent>();
-				if (StaticMeshComponent)
-				{
-					check(StaticMeshComponent->GetStaticMesh());
-
-					UStaticMesh* GeneratedMesh = StaticMeshComponent->GetStaticMesh();
-
 					UStaticMesh* PersistedMesh = SaveStaticMesh(GeneratedMesh, CookPath, MeshCache, MaterialCache, TextureCache);
-					AttachMeshComponent<UStaticMeshComponent>(CookedActor, PersistedMesh, TEXT("Model"),
-															  StaticMeshComponent->GetComponentTransform());
-				}
 
-				// Persist instanced Component
-				TArray<UActorComponent*> HismComponents;
-				Actor->GetComponents(UGeneratedModelHISMComponent::StaticClass(), HismComponents);
-				for (UActorComponent* HismComponent : HismComponents)
-				{
-					UGeneratedModelHISMComponent* GeneratedModelHismComponent = Cast<UGeneratedModelHISMComponent>(HismComponent);
-					UStaticMesh* GeneratedMesh = GeneratedModelHismComponent->GetStaticMesh();
-					if (GeneratedMesh)
+					FName Name =
+						MakeUniqueObjectName(CookedActor, UHierarchicalInstancedStaticMeshComponent::StaticClass(), *PersistedMesh->GetName());
+					auto* InstancedStaticMeshComponent = AttachMeshComponent<UHierarchicalInstancedStaticMeshComponent>(
+						CookedActor, PersistedMesh, Name, GeneratedModelHismComponent->GetComponentTransform());
+
+					for (int32 InstanceIndex = 0; InstanceIndex < GeneratedModelHismComponent->GetInstanceCount(); ++InstanceIndex)
 					{
-						UStaticMesh* PersistedMesh = SaveStaticMesh(GeneratedMesh, CookPath, MeshCache, MaterialCache, TextureCache);
-
-						FName Name =
-							MakeUniqueObjectName(CookedActor, UHierarchicalInstancedStaticMeshComponent::StaticClass(), *PersistedMesh->GetName());
-						auto* InstancedStaticMeshComponent = AttachMeshComponent<UHierarchicalInstancedStaticMeshComponent>(
-							CookedActor, PersistedMesh, Name, GeneratedModelHismComponent->GetComponentTransform());
-
-						for (int32 InstanceIndex = 0; InstanceIndex < GeneratedModelHismComponent->GetInstanceCount(); ++InstanceIndex)
-						{
-							FTransform Transform;
-							GeneratedModelHismComponent->GetInstanceTransform(InstanceIndex, Transform);
-							InstancedStaticMeshComponent->AddInstance(Transform);
-						}
+						FTransform Transform;
+						GeneratedModelHismComponent->GetInstanceTransform(InstanceIndex, Transform);
+						InstancedStaticMeshComponent->AddInstance(Transform);
 					}
 				}
-
-				FString OldActorLabel = Actor->GetActorLabel();
-
-				// Destroy the old procedural Vitruvio Actor
-				Actor->Destroy();
-
-				CookedActor->SetActorLabel(OldActorLabel);
-
-				GEditor->SelectActor(CookedActor, true, false);
 			}
 
-			IsCooking = false;
-			VitruvioModule::Get().OnGenerateCompleted.Remove(ModelsGeneratedHandle);
-			ModelsGeneratedHandle.Reset();
+			FString OldActorLabel = Actor->GetActorLabel();
+
+			// Destroy the old procedural Vitruvio Actor
+			Actor->Destroy();
+
+			CookedActor->SetActorLabel(OldActorLabel);
+
+			GEditor->SelectActor(CookedActor, true, false);
 		}
+
+		IsCooking = false;
+		VitruvioModule::Get().OnAllGenerateCompleted.Remove(ModelsGeneratedHandle);
+		ModelsGeneratedHandle.Reset();
 	});
 
 	// Regenerate the selected Actors to make sure we have a model to cook.

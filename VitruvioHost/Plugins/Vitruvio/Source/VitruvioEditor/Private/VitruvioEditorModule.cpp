@@ -219,7 +219,7 @@ void VitruvioEditorModule::StartupModule()
 	MenuExtenders.Add(LevelViewportContextMenuVitruvioExtender);
 	LevelViewportContextMenuVitruvioExtenderDelegateHandle = MenuExtenders.Last().GetHandle();
 
-	GenerateCompletedDelegateHandle = VitruvioModule::Get().OnGenerateCompleted.AddRaw(this, &VitruvioEditorModule::OnGenerateCompleted);
+	GenerateCompletedDelegateHandle = VitruvioModule::Get().OnAllGenerateCompleted.AddRaw(this, &VitruvioEditorModule::OnGenerateCompleted);
 
 	FCoreDelegates::OnPostEngineInit.AddRaw(this, &VitruvioEditorModule::OnPostEngineInit);
 
@@ -239,7 +239,7 @@ void VitruvioEditorModule::ShutdownModule()
 		});
 
 	FCoreDelegates::OnPostEngineInit.RemoveAll(this);
-	VitruvioModule::Get().OnGenerateCompleted.Remove(GenerateCompletedDelegateHandle);
+	VitruvioModule::Get().OnAllGenerateCompleted.Remove(GenerateCompletedDelegateHandle);
 	if (GEditor)
 	{
 		GEditor->GetEditorSubsystem<UImportSubsystem>()->OnAssetReimport.Remove(OnAssetReloadHandle);
@@ -282,13 +282,8 @@ void VitruvioEditorModule::OnMapChanged(UWorld* World, EMapChangeType ChangeType
 	}
 }
 
-void VitruvioEditorModule::OnGenerateCompleted(int GenerateCallsLeft, int NumWarnings, int NumErrors)
+void VitruvioEditorModule::OnGenerateCompleted(int NumWarnings, int NumErrors)
 {
-	if (GenerateCallsLeft > 0)
-	{
-		return;
-	}
-
 	FString NotificationText(TEXT("Generate Completed"));
 	const FSlateBrush* Image = nullptr;
 	if (NumErrors > 0)
