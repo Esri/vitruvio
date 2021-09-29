@@ -394,26 +394,32 @@ FGenerateResultDescription VitruvioModule::Generate(const TArray<FInitialShapeFa
 	}
 
 	const int GenerateCalls = GenerateCallsCounter.Decrement();
-	TArray<FLogMessage> Messages = LogHandler->PopMessages();
 
 	// Notify generate complete callback on game thread
-	AsyncTask(ENamedThreads::GameThread, [this, Messages, GenerateCalls]() {
-		int Warnings = 0;
-		int Errors = 0;
+	AsyncTask(ENamedThreads::GameThread, [this, GenerateCalls]() {
+		OnGenerateCompleted.Broadcast(GenerateCalls);
 
-		for (const FLogMessage& Message : Messages)
+		if (GenerateCalls == 0)
 		{
-			if (Message.Level == prt::LOG_WARNING)
-			{
-				Warnings++;
-			}
-			else if (Message.Level == prt::LOG_ERROR || Message.Level == prt::LOG_FATAL)
-			{
-				Errors++;
-			}
-		}
+			TArray<FLogMessage> Messages = LogHandler->PopMessages();
+		
+			int Warnings = 0;
+			int Errors = 0;
 
-		OnGenerateCompleted.Broadcast(GenerateCalls, Warnings, Errors);
+			for (const FLogMessage& Message : Messages)
+			{
+				if (Message.Level == prt::LOG_WARNING)
+				{
+					Warnings++;
+				}
+				else if (Message.Level == prt::LOG_ERROR || Message.Level == prt::LOG_FATAL)
+				{
+					Errors++;
+				}
+			}
+
+			OnAllGenerateCompleted.Broadcast(Warnings, Errors);
+		}
 	});
 
 	return FGenerateResultDescription {OutputHandler->GetInstances(), OutputHandler->GetMeshes(), OutputHandler->GetNames() };

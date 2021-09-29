@@ -26,7 +26,7 @@ public:
 private:
 	void OnPostEngineInit();
 	void OnMapChanged(UWorld* World, EMapChangeType ChangeType);
-	void OnGenerateCompleted(int GenerateCallsLeft, int NumWarnings, int NumErrors);
+	void OnGenerateCompleted(int NumWarnings, int NumErrors);
 	TWeakPtr<SNotificationItem> NotificationItem;
 
 	FDelegateHandle LevelViewportContextMenuVitruvioExtenderDelegateHandle;

@@ -19,6 +19,7 @@ DEFINE_LOG_CATEGORY(UnrealPrtLog)
 
 TArray<FLogMessage> UnrealLogHandler::PopMessages()
 {
+	FScopeLock Lock(&MessageLock);
 	TArray<FLogMessage> Result(Messages);
 	Messages.Empty();
 	return Result;
@@ -26,6 +27,7 @@ TArray<FLogMessage> UnrealLogHandler::PopMessages()
 
 void UnrealLogHandler::handleLogEvent(const wchar_t* msg, prt::LogLevel level)
 {
+	FScopeLock Lock(&MessageLock);
 	const FString MessageString(WCHAR_TO_TCHAR(msg));
 	Messages.Push({MessageString, level});
 
