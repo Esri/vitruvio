@@ -224,6 +224,13 @@ UStaticMesh* SaveStaticMesh(UStaticMesh* Mesh, const FString& Path, FStaticMeshC
 	TArray<const FMeshDescription*> MeshDescriptions;
 	MeshDescriptions.Add(&NewMeshDescription);
 	PersistedMesh->BuildFromMeshDescriptions(MeshDescriptions);
+
+	check(PersistedMesh->GetNumSourceModels() == 1);
+	FStaticMeshSourceModel& SrcModel = PersistedMesh->GetSourceModel(0);
+	SrcModel.BuildSettings.bRecomputeNormals = false;
+	SrcModel.BuildSettings.bRecomputeTangents = false;
+	SrcModel.BuildSettings.bRemoveDegenerates = true;
+	
 	PersistedMesh->PostEditChange();
 	PersistedMesh->MarkPackageDirty();
 
