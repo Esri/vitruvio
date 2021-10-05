@@ -138,37 +138,6 @@ public class PRT : ModuleRules
 		PublicSystemIncludePaths.Add(IncludeDir);
 	}
 
-	private void CopyLibraryFile(string SrcLibDir, string SrcFile, string DstLibFile)
-	{
-		string SrcLib = Path.Combine(SrcLibDir, SrcFile);
-		if (!System.IO.File.Exists(DstLibFile) || System.IO.File.GetCreationTime(SrcLib) > System.IO.File.GetCreationTime(DstLibFile))
-		{
-		
-			if (Debug) Console.WriteLine("\tCopying " + SrcFile + " to " + DstLibFile);
-
-			try
-			{
-				// For some reason File.Copy does not always preserve the creation time so we set it manually
-				DateTime CreationTime = System.IO.File.GetCreationTime(SrcLib);
-				System.IO.File.Copy(SrcLib, DstLibFile, true);
-				System.IO.File.SetCreationTime(DstLibFile, CreationTime);
-			} 
-			catch (IOException Ex)
-			{
-				// Check if the library is currently locked (happens if a build is triggered which needs to redownload/install PRT while Unreal is running).
-				// If so, we abort the build and let the user know that a build from "source" is required (with Unreal closed).
-				long Win32ErrorCode = Ex.HResult & 0xFFFF;
-				if (Win32ErrorCode == ErrorSharingViolation || Win32ErrorCode == ErrorLockViolation)
-				{
-					string ErroMessage = string.Format("'{0}'is currently locked by another process. Trying to install new PRT library while Unreal is running is only possible from a source build.", DstLibFile);
-					throw new Exception(ErroMessage);
-				}
-				throw Ex;
-			}
-
-		}
-	}
-
 	void Copy(string SrcDir, string DstDir, List<string> Filter = null)
 	{
 		Directory.CreateDirectory(DstDir);
