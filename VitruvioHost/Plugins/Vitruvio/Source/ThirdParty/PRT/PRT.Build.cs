@@ -124,7 +124,7 @@ public class PRT : ModuleRules
 		Directory.CreateDirectory(ModuleBinariesDir);
 		PublicRuntimeLibraryPaths.Add(ModuleBinariesDir);
 
-		// Copy PRT core libraries
+		// Add PRT core libraries
 		if (Debug) Console.WriteLine("Adding PRT core libraries");
 		foreach (string FilePath in Directory.GetFiles(BinDir))
 		{
@@ -132,6 +132,10 @@ public class PRT : ModuleRules
 
 			Platform.AddPrtCoreLibrary(FilePath, LibraryName, this);
 		}
+		
+		// Add extension libraries as run-time dependencies
+		if (Debug) Console.WriteLine("Adding PRT extension libraries");
+		Platform.AddExtensionLibraries(LibDir, this);
 
 		// Add include search path
 		if (Debug) Console.WriteLine("Adding include search path " + IncludeDir);
@@ -235,6 +239,19 @@ public class PRT : ModuleRules
 		public AbstractPlatform(bool Debug)
 		{
 			this.Debug = Debug;
+		}
+
+		public virtual void AddExtensionLibraries(string SourceFolder, ModuleRules Rules)
+		{
+			foreach (string Dir in Directory.GetDirectories(SourceFolder))
+			{
+				AddExtensionLibraries(Dir, Rules);
+			}
+			
+			foreach (string FilePath in Directory.GetFiles(SourceFolder))
+			{
+				Rules.RuntimeDependencies.Add(FilePath);
+			}
 		}
 
 		public virtual void AddPrtCoreLibrary(string LibraryPath, string LibraryName, ModuleRules Rules)
