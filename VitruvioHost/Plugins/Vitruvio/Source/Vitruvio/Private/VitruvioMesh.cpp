@@ -1,12 +1,12 @@
 #include "VitruvioMesh.h"
-
+#include "VitruvioModule.h"
 #include "MaterialConversion.h"
 #include "StaticMeshAttributes.h"
 
 UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
-										TMap<FString, Vitruvio::FTextureData>& TextureCache,
-										TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-										const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name, UObject* Outer)
+                                        TMap<FString, Vitruvio::FTextureData>& TextureCache,
+                                        TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+                                        const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name, UObject* Outer)
 {
 	check(IsInGameThread());
 
@@ -23,23 +23,21 @@ UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* Mask
 	return Material;
 }
 
-void FVitruvioMesh::AddReferencedObjects(FReferenceCollector& Collector)
+FVitruvioMesh::~FVitruvioMesh()
 {
-	if (StaticMesh)
+	VitruvioModule* VitruvioModule = VitruvioModule::Get().GetUnchecked();
+	if (StaticMesh && VitruvioModule)
 	{
-		Collector.AddReferencedObject(StaticMesh);
+		VitruvioModule->UnregisterMesh(StaticMesh);
 	}
-}
-
-void FVitruvioMesh::Invalidate()
-{
-	StaticMesh = nullptr;
 }
 
 void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
 						  TMap<FString, Vitruvio::FTextureData>& TextureCache, UMaterial* OpaqueParent, UMaterial* MaskedParent,
 						  UMaterial* TranslucentParent)
 {
+	check(IsInGameThread());
+	
 	if (StaticMesh)
 	{
 		return;
@@ -48,6 +46,8 @@ void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttribute
 	FString MeshName = Name.Replace(TEXT("."), TEXT(""));
 	const FName StaticMeshName = MakeUniqueObjectName(nullptr, UStaticMesh::StaticClass(), FName(MeshName));
 	StaticMesh = NewObject<UStaticMesh>(GetTransientPackage(), StaticMeshName, RF_Transient | RF_DuplicateTransient | RF_TextExportTransient);
+	VitruvioModule::Get().RegisterMesh(StaticMesh);
+	
 	TMap<UMaterialInstanceDynamic*, FName> MaterialSlots;
 
 	FStaticMeshAttributes MeshAttributes(MeshDescription);

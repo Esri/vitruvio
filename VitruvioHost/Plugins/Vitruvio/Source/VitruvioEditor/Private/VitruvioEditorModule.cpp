@@ -278,7 +278,7 @@ void VitruvioEditorModule::OnMapChanged(UWorld* World, EMapChangeType ChangeType
 {
 	if (ChangeType == EMapChangeType::TearDownWorld)
 	{
-		VitruvioModule::Get().GetMeshCache().Invalidate();
+		VitruvioModule::Get().GetMeshCache().Empty();
 	}
 }
 
