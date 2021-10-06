@@ -25,7 +25,7 @@ UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* Mask
 
 FVitruvioMesh::~FVitruvioMesh()
 {
-	VitruvioModule* VitruvioModule = VitruvioModule::Get().GetUnchecked();
+	VitruvioModule* VitruvioModule = VitruvioModule::GetUnchecked();
 	if (StaticMesh && VitruvioModule)
 	{
 		VitruvioModule->UnregisterMesh(StaticMesh);
