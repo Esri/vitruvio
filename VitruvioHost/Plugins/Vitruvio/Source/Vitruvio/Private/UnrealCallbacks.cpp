@@ -171,10 +171,14 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 
 	if (BaseVertexIndex > 0)
 	{
-		TSharedPtr<FVitruvioMesh> VitruvioMesh = MakeShared<FVitruvioMesh>(UriString, Description, MeshMaterials);
-		TSharedPtr<FVitruvioMesh> CachedMesh =
-			!UriString.IsEmpty() ? VitruvioModule::Get().GetMeshCache().InsertOrGet(UriString, VitruvioMesh) : VitruvioMesh;
-		Meshes.Add(prototypeId, CachedMesh);
+		TSharedPtr<FVitruvioMesh> Mesh = MakeShared<FVitruvioMesh>(UriString, Description, MeshMaterials);
+
+		if (!UriString.IsEmpty())
+		{
+			Mesh = VitruvioModule::Get().GetMeshCache().InsertOrGet(UriString, Mesh);
+		}
+		
+		Meshes.Add(prototypeId, Mesh);
 		Names.Add(prototypeId, NameString);
 	}
 }
