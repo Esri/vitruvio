@@ -247,8 +247,8 @@ void VitruvioModule::InitializePrt()
 	PRTPluginsPaths.Add(const_cast<wchar_t*>(TCHAR_TO_WCHAR(*EncoderExtensionPath)));
 	PRTPluginsPaths.Add(const_cast<wchar_t*>(TCHAR_TO_WCHAR(*PrtExtensionPaths)));
 
-	LogHandler = new UnrealLogHandler;
-	prt::addLogHandler(LogHandler);
+	LogHandler = MakeUnique<UnrealLogHandler>();
+	prt::addLogHandler(LogHandler.Get());
 
 	prt::Status Status;
 	PrtLibrary = prt::init(PRTPluginsPaths.GetData(), PRTPluginsPaths.Num(), prt::LogLevel::LOG_TRACE, &Status);
@@ -304,8 +304,6 @@ void VitruvioModule::ShutdownModule()
 	CleanupTempRpkFolder();
 
 	UE_LOG(LogUnrealPrt, Display, TEXT("Shutdown complete"))
-
-	delete LogHandler;
 }
 
 Vitruvio::FTextureData VitruvioModule::DecodeTexture(UObject* Outer, const FString& Path, const FString& Key) const

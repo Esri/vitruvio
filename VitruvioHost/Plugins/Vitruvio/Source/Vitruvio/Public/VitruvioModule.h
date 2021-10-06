@@ -269,7 +269,7 @@ private:
 	prt::Object const* PrtLibrary = nullptr;
 	CacheObjectUPtr PrtCache;
 
-	UnrealLogHandler* LogHandler = nullptr;
+	TUniquePtr<UnrealLogHandler> LogHandler;
 
 	TAtomic<bool> Initialized = false;
 
