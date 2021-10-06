@@ -18,7 +18,7 @@ struct FCollisionData
 	}
 };
 
-class FVitruvioMesh : public FGCObject
+class FVitruvioMesh
 {
 	FString Uri;
 
@@ -35,8 +35,8 @@ public:
 	{
 	}
 
-	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
-
+	~FVitruvioMesh();
+	
 	FString GetUri() const
 	{
 		return Uri;
@@ -56,8 +56,6 @@ public:
 	{
 		return CollisionData;
 	}
-
-	void Invalidate();
 
 	void Build(const FString& Name, TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
 			   TMap<FString, Vitruvio::FTextureData>& TextureCache, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent);

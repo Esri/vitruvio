@@ -20,13 +20,8 @@ TSharedPtr<FVitruvioMesh> FMeshCache::InsertOrGet(const FString& Uri, const TSha
 	return Mesh;
 }
 
-void FMeshCache::Invalidate()
+void FMeshCache::Empty()
 {
 	FScopeLock Lock(&MeshCacheCriticalSection);
-	for (auto& Entry : Cache)
-	{
-		Entry.Value->Invalidate();
-	}
-
 	Cache.Empty();
 }
