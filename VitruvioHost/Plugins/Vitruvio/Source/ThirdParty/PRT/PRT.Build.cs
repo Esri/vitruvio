@@ -124,7 +124,7 @@ public class PRT : ModuleRules
 		Directory.CreateDirectory(ModuleBinariesDir);
 		PublicRuntimeLibraryPaths.Add(ModuleBinariesDir);
 
-		// Copy PRT core libraries
+		// Add PRT core libraries
 		if (Debug) Console.WriteLine("Adding PRT core libraries");
 		foreach (string FilePath in Directory.GetFiles(BinDir))
 		{
@@ -132,41 +132,14 @@ public class PRT : ModuleRules
 
 			Platform.AddPrtCoreLibrary(FilePath, LibraryName, this);
 		}
+		
+		// Add extension libraries as run-time dependencies
+		if (Debug) Console.WriteLine("Adding PRT extension libraries");
+		Platform.AddExtensionLibraries(LibDir, this);
 
 		// Add include search path
 		if (Debug) Console.WriteLine("Adding include search path " + IncludeDir);
 		PublicSystemIncludePaths.Add(IncludeDir);
-	}
-
-	private void CopyLibraryFile(string SrcLibDir, string SrcFile, string DstLibFile)
-	{
-		string SrcLib = Path.Combine(SrcLibDir, SrcFile);
-		if (!System.IO.File.Exists(DstLibFile) || System.IO.File.GetCreationTime(SrcLib) > System.IO.File.GetCreationTime(DstLibFile))
-		{
-		
-			if (Debug) Console.WriteLine("\tCopying " + SrcFile + " to " + DstLibFile);
-
-			try
-			{
-				// For some reason File.Copy does not always preserve the creation time so we set it manually
-				DateTime CreationTime = System.IO.File.GetCreationTime(SrcLib);
-				System.IO.File.Copy(SrcLib, DstLibFile, true);
-				System.IO.File.SetCreationTime(DstLibFile, CreationTime);
-			} 
-			catch (IOException Ex)
-			{
-				// Check if the library is currently locked (happens if a build is triggered which needs to redownload/install PRT while Unreal is running).
-				// If so, we abort the build and let the user know that a build from "source" is required (with Unreal closed).
-				long Win32ErrorCode = Ex.HResult & 0xFFFF;
-				if (Win32ErrorCode == ErrorSharingViolation || Win32ErrorCode == ErrorLockViolation)
-				{
-					string ErroMessage = string.Format("'{0}'is currently locked by another process. Trying to install new PRT library while Unreal is running is only possible from a source build.", DstLibFile);
-					throw new Exception(ErroMessage);
-				}
-				throw Ex;
-			}
-
-		}
 	}
 
 	void Copy(string SrcDir, string DstDir, List<string> Filter = null)
@@ -266,6 +239,19 @@ public class PRT : ModuleRules
 		public AbstractPlatform(bool Debug)
 		{
 			this.Debug = Debug;
+		}
+
+		public virtual void AddExtensionLibraries(string SourceFolder, ModuleRules Rules)
+		{
+			foreach (string Dir in Directory.GetDirectories(SourceFolder))
+			{
+				AddExtensionLibraries(Dir, Rules);
+			}
+			
+			foreach (string FilePath in Directory.GetFiles(SourceFolder))
+			{
+				Rules.RuntimeDependencies.Add(FilePath);
+			}
 		}
 
 		public virtual void AddPrtCoreLibrary(string LibraryPath, string LibraryName, ModuleRules Rules)
