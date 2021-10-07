@@ -147,7 +147,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 
 					for (size_t UVSet = 0; UVSet < uvSets; ++UVSet)
 					{
-						if (uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex] > 0)
+						if (uvCounts[UVSet] != nullptr && uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex] > 0)
 						{
 							check(uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex] == FaceVertexCount);
 							const uint32_t UVIndex = uvIndices[UVSet][BaseUVIndex[UVSet] + FaceVertexIndex] * 2;
@@ -161,7 +161,10 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 				BaseVertexIndex += FaceVertexCount;
 				for (size_t UVSet = 0; UVSet < uvSets; ++UVSet)
 				{
-					BaseUVIndex[UVSet] += uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex];
+					if (uvCounts[UVSet] != nullptr)
+					{
+						BaseUVIndex[UVSet] += uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex];
+					}
 				}
 			}
 		}
