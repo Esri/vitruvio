@@ -22,29 +22,29 @@ namespace
 {
 enum class EMaterialPropertyType
 {
-	TEXTURE,
-	LINEAR_COLOR,
-	SCALAR,
-	STRING
+	Texture,
+	LinearColor,
+	Scalar,
+	String
 };
 
 // clang-format off
 const TMap<FString, EMaterialPropertyType> KeyToTypeMap = {
-	{TEXT("diffuseMap"), EMaterialPropertyType::TEXTURE},
-	{TEXT("opacityMap"), EMaterialPropertyType::TEXTURE},
-	{TEXT("emissiveMap"), EMaterialPropertyType::TEXTURE},
-	{TEXT("metallicMap"), EMaterialPropertyType::TEXTURE},
-	{TEXT("roughnessMap"), EMaterialPropertyType::TEXTURE},
-	{TEXT("normalMap"), EMaterialPropertyType::TEXTURE},
+	{TEXT("diffuseMap"), EMaterialPropertyType::Texture},
+	{TEXT("opacityMap"), EMaterialPropertyType::Texture},
+	{TEXT("emissiveMap"), EMaterialPropertyType::Texture},
+	{TEXT("metallicMap"), EMaterialPropertyType::Texture},
+	{TEXT("roughnessMap"), EMaterialPropertyType::Texture},
+	{TEXT("normalMap"), EMaterialPropertyType::Texture},
 	
-	{TEXT("diffuseColor"), EMaterialPropertyType::LINEAR_COLOR},
-	{TEXT("emissiveColor"), EMaterialPropertyType::LINEAR_COLOR},
+	{TEXT("diffuseColor"), EMaterialPropertyType::LinearColor},
+	{TEXT("emissiveColor"), EMaterialPropertyType::LinearColor},
 
-	{TEXT("metallic"), EMaterialPropertyType::SCALAR},
-	{TEXT("opacity"), EMaterialPropertyType::SCALAR},
-	{TEXT("roughness"), EMaterialPropertyType::SCALAR},
+	{TEXT("metallic"), EMaterialPropertyType::Scalar},
+	{TEXT("opacity"), EMaterialPropertyType::Scalar},
+	{TEXT("roughness"), EMaterialPropertyType::Scalar},
 
-	{TEXT("shader"), EMaterialPropertyType::STRING},
+	{TEXT("shader"), EMaterialPropertyType::String},
 };
 // clang-format on
 
@@ -124,16 +124,16 @@ FMaterialAttributeContainer::FMaterialAttributeContainer(const prt::AttributeMap
 		const EMaterialPropertyType Type = KeyToTypeMap[KeyString];
 		switch (Type)
 		{
-		case EMaterialPropertyType::TEXTURE:
+		case EMaterialPropertyType::Texture:
 			TextureProperties.Add(KeyString, FirstValidTextureUri(AttributeMap, Key));
 			break;
-		case EMaterialPropertyType::LINEAR_COLOR:
+		case EMaterialPropertyType::LinearColor:
 			ColorProperties.Add(KeyString, GetLinearColor(AttributeMap, Key));
 			break;
-		case EMaterialPropertyType::SCALAR:
+		case EMaterialPropertyType::Scalar:
 			ScalarProperties.Add(KeyString, AttributeMap->getFloat(Key));
 			break;
-		case EMaterialPropertyType::STRING:
+		case EMaterialPropertyType::String:
 			StringProperties.Add(KeyString, AttributeMap->getString(Key));
 			break;
 		default:;
