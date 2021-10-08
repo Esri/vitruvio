@@ -145,13 +145,13 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 					check(NormalIndex + 2 < nrmSize);
 					Normals[InstanceId] = FVector(nrm[NormalIndex], nrm[NormalIndex + 2], nrm[NormalIndex + 1]);
 
-					for (size_t UVSet = 0; UVSet < uvSets; ++UVSet)
+					for (size_t PrtUVSet = 0; PrtUVSet < uvSets; ++PrtUVSet)
 					{
-						if (uvCounts[UVSet] != nullptr && uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex] > 0)
+						if (uvCounts[PrtUVSet] != nullptr && uvCounts[PrtUVSet][PolygonGroupStartIndex + FaceIndex] > 0)
 						{
-							check(uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex] == FaceVertexCount);
-							const uint32_t UVIndex = uvIndices[UVSet][BaseUVIndex[UVSet] + FaceVertexIndex] * 2;
-							VertexUVs.Set(InstanceId, UVSet, FVector2D(uvs[UVSet][UVIndex], -uvs[UVSet][UVIndex + 1]));
+							check(uvCounts[PrtUVSet][PolygonGroupStartIndex + FaceIndex] == FaceVertexCount);
+							const uint32_t UVIndex = uvIndices[PrtUVSet][BaseUVIndex[PrtUVSet] + FaceVertexIndex] * 2;
+							VertexUVs.Set(InstanceId, PrtUVSet, FVector2D(uvs[PrtUVSet][UVIndex], -uvs[PrtUVSet][UVIndex + 1]));
 						}
 					}
 				}
@@ -159,11 +159,11 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 				Description.CreatePolygon(PolygonGroupId, PolygonVertexInstances);
 				PolygonFaces++;
 				BaseVertexIndex += FaceVertexCount;
-				for (size_t UVSet = 0; UVSet < uvSets; ++UVSet)
+				for (size_t PrtUVSet = 0; PrtUVSet < uvSets; ++PrtUVSet)
 				{
-					if (uvCounts[UVSet] != nullptr)
+					if (uvCounts[PrtUVSet] != nullptr)
 					{
-						BaseUVIndex[UVSet] += uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex];
+						BaseUVIndex[PrtUVSet] += uvCounts[PrtUVSet][PolygonGroupStartIndex + FaceIndex];
 					}
 				}
 			}
