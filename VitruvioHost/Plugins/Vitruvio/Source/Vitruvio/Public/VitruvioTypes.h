@@ -25,6 +25,33 @@
 namespace Vitruvio
 {
 
+enum class EUnrealUvSetType : int32
+{
+	None = -1,
+	DiffuseMap = 0, //skip 1 because unreal engine saves lightmaps per default in uv set 1
+	DirtMap = 2,
+	OpacityMap = 3,
+	NormalMap = 4,
+	EmissiveMap = 5,
+	RoughnessMap = 6,
+	MetallicMap = 7
+};
+
+enum class EPrtUvSetType : int32
+{
+	None = -1,
+	ColorMap = 0,
+	BumpMap = 1,
+	DirtMap = 2,
+	SpecularMap = 3,
+	OpacityMap = 4,
+	NormalMap = 5,
+	EmissiveMap = 6,
+	OcclusionMap = 7,
+	RoughnessMap = 8,
+	MetallicMap = 9
+};
+
 struct FMaterialAttributeContainer
 {
 	TMap<FString, FString> TextureProperties;
