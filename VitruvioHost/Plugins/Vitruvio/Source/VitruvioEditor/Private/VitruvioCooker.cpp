@@ -291,12 +291,13 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 			AActor* CookedActor = Actor->GetWorld()->SpawnActor<AActor>(Actor->GetActorLocation(), Actor->GetActorRotation());
 
 			USceneComponent* RootComponent = NewObject<USceneComponent>(CookedActor, "Root");
-			CookedActor->AddOwnedComponent(RootComponent);
-			CookedActor->SetRootComponent(RootComponent);
 			RootComponent->SetMobility(EComponentMobility::Movable);
-			RootComponent->OnComponentCreated();
+			CookedActor->SetRootComponent(RootComponent);
+			CookedActor->AddOwnedComponent(RootComponent);
+
 			RootComponent->SetWorldRotation(Actor->GetActorRotation());
 			RootComponent->SetWorldLocation(Actor->GetActorLocation());
+			RootComponent->OnComponentCreated();
 			RootComponent->RegisterComponent();
 
 			if (OldAttachParent)
