@@ -230,6 +230,7 @@ UStaticMesh* SaveStaticMesh(UStaticMesh* Mesh, const FString& Path, FStaticMeshC
 	SrcModel.BuildSettings.bRecomputeNormals = false;
 	SrcModel.BuildSettings.bRecomputeTangents = false;
 	SrcModel.BuildSettings.bRemoveDegenerates = true;
+	PersistedMesh->GetBodySetup()->CollisionTraceFlag = ECollisionTraceFlag::CTF_UseComplexAsSimple;
 	
 	PersistedMesh->PostEditChange();
 	PersistedMesh->MarkPackageDirty();
@@ -334,6 +335,15 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 					auto* InstancedStaticMeshComponent = AttachMeshComponent<UHierarchicalInstancedStaticMeshComponent>(
 						CookedActor, PersistedMesh, Name, GeneratedModelHismComponent->GetComponentTransform());
 
+					for (int32 MaterialIndex = 0; MaterialIndex < GeneratedModelHismComponent->GetNumOverrideMaterials(); ++MaterialIndex)
+					{
+						UMaterialInstanceDynamic* DynamicMaterial = Cast<UMaterialInstanceDynamic>(GeneratedModelHismComponent->OverrideMaterials[MaterialIndex]);
+						check(DynamicMaterial);
+						UMaterialInstanceConstant* NewMaterial = SaveMaterial(DynamicMaterial, CookPath, MaterialCache, TextureCache);
+						
+						InstancedStaticMeshComponent->SetMaterial(MaterialIndex, NewMaterial);
+					}
+					
 					for (int32 InstanceIndex = 0; InstanceIndex < GeneratedModelHismComponent->GetInstanceCount(); ++InstanceIndex)
 					{
 						FTransform Transform;
