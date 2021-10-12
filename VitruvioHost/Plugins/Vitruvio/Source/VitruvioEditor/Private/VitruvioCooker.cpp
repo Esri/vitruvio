@@ -230,6 +230,7 @@ UStaticMesh* SaveStaticMesh(UStaticMesh* Mesh, const FString& Path, FStaticMeshC
 	SrcModel.BuildSettings.bRecomputeNormals = false;
 	SrcModel.BuildSettings.bRecomputeTangents = false;
 	SrcModel.BuildSettings.bRemoveDegenerates = true;
+	PersistedMesh->GetBodySetup()->CollisionTraceFlag = ECollisionTraceFlag::CTF_UseComplexAsSimple;
 	
 	PersistedMesh->PostEditChange();
 	PersistedMesh->MarkPackageDirty();
