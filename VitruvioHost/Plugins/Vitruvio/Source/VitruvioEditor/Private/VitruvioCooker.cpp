@@ -334,15 +334,13 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 					auto* InstancedStaticMeshComponent = AttachMeshComponent<UHierarchicalInstancedStaticMeshComponent>(
 						CookedActor, PersistedMesh, Name, GeneratedModelHismComponent->GetComponentTransform());
 
-					int MaterialIndex = 0;
-					for (UMaterialInterface* OverrideMaterial : GeneratedModelHismComponent->OverrideMaterials)
+					for (int32 MaterialIndex = 0; MaterialIndex < GeneratedModelHismComponent->GetNumOverrideMaterials(); ++MaterialIndex)
 					{
-						UMaterialInstanceDynamic* DynamicMaterial = Cast<UMaterialInstanceDynamic>(OverrideMaterial);
+						UMaterialInstanceDynamic* DynamicMaterial = Cast<UMaterialInstanceDynamic>(GeneratedModelHismComponent->OverrideMaterials[MaterialIndex]);
 						check(DynamicMaterial);
 						UMaterialInstanceConstant* NewMaterial = SaveMaterial(DynamicMaterial, CookPath, MaterialCache, TextureCache);
 						
 						InstancedStaticMeshComponent->SetMaterial(MaterialIndex, NewMaterial);
-						MaterialIndex++;
 					}
 					
 					for (int32 InstanceIndex = 0; InstanceIndex < GeneratedModelHismComponent->GetInstanceCount(); ++InstanceIndex)
