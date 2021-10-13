@@ -49,7 +49,8 @@ public class Vitruvio : ModuleRules
 				"ImageWrapper",
 				"ImageCore",
 				"PRT",
-				"UnrealGeometryEncoderLib"
+				"UnrealGeometryEncoderLib",
+				"GeometricObjects"
 			}
 		);
 		

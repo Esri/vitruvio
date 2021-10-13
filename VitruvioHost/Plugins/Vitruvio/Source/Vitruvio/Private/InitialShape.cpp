@@ -17,6 +17,7 @@
 #include "PolygonWindings.h"
 #include "VitruvioComponent.h"
 
+#include "CompGeom/PolygonTriangulation.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 
@@ -104,6 +105,29 @@ bool HasValidGeometry(const TArray<FInitialShapeFace>& InFaces)
 	}
 
 	return false;
+}
+
+void FlipInitialShapeUp(bool bInitialShapeIsFlipped, TArray<FVector>& VerticesOut)
+{
+	// Reverse vertices if first plane normal shows down
+	if (VerticesOut.Num() >= 3)
+	{
+		FVector3f PlanePointOut;
+		FVector3f PlaneNormalOut;
+		PolygonTriangulation::ComputePolygonPlane(static_cast<TArray<FVector3f>>(VerticesOut), PlaneNormalOut, PlanePointOut);
+
+		float Dot = FVector::DotProduct(FVector::UpVector, static_cast<FVector>(PlaneNormalOut));
+
+		if (bInitialShapeIsFlipped)
+		{
+			Dot *= -1;
+		}
+		
+		if (Dot < 0)
+		{
+			Algo::Reverse(VerticesOut);
+		}
+	}
 }
 } // namespace
 
@@ -259,7 +283,10 @@ void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component)
 	TArray<FInitialShapeFace> InitialShapeFaces;
 	for (const TArray<FVector>& FaceVertices : Windings)
 	{
-		InitialShapeFaces.Push(FInitialShapeFace{FaceVertices});
+		TArray<FVector> FlippedVertices = FaceVertices;
+		FlipInitialShapeUp(Component->bFlipInitialShape, FlippedVertices);
+
+		InitialShapeFaces.Push(FInitialShapeFace{FlippedVertices});
 	}
 	SetFaces(InitialShapeFaces);
 }
@@ -410,19 +437,7 @@ void USplineInitialShape::Initialize(UVitruvioComponent* Component)
 		}
 	}
 
-	// Reverse vertices if first three vertices are counter clockwise
-	if (Vertices.Num() >= 3)
-	{
-		const FVector V1 = Vertices[1] - Vertices[0];
-		const FVector V2 = Vertices[2] - Vertices[0];
-		const FVector Normal = FVector::CrossProduct(V1, V2);
-		const float Dot = FVector::DotProduct(FVector::UpVector, Normal);
-
-		if (Dot > 0)
-		{
-			Algo::Reverse(Vertices);
-		}
-	}
+	FlipInitialShapeUp(Component->bFlipInitialShape, Vertices);
 
 	SetFaces({FInitialShapeFace{Vertices}});
 }
