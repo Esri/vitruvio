@@ -97,12 +97,7 @@ public:
 	virtual void Uninitialize();
 
 #if WITH_EDITOR
-	virtual bool IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent)
-	{
-		unimplemented();
-		return false;
-	}
-
+	virtual bool IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent);
 #endif
 };
 

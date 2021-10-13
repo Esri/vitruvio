@@ -67,6 +67,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Generate Automatically", Category = "Vitruvio")
 	bool GenerateAutomatically = true;
 
+	/** Flip the direction geometry is generated from the initial shape. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Flip Initial Shape", Category = "Vitruvio")
+	bool bFlipInitialShape = false;
+	
 	/** Automatically hide initial shape after generation. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Hide Initial Shape after Generation", Category = "Vitruvio")
 	bool HideAfterGeneration = false;
