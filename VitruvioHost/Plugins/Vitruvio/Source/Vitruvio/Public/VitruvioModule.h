@@ -27,6 +27,8 @@
 
 #include "HAL/ThreadSafeCounter.h"
 #include "Modules/ModuleManager.h"
+#include "Engine/StaticMesh.h"
+
 #include "UnrealLogHandler.h"
 #include "VitruvioTypes.h"
 
