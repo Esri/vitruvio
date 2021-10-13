@@ -123,6 +123,14 @@ void UInitialShape::SetFaces(const TArray<FInitialShapeFace>& InFaces)
 	bIsValid = HasValidGeometry(InFaces);
 }
 
+void UInitialShape::FlipFaces()
+{
+	for(auto& Face : Faces)
+	{
+		Algo::Reverse(Face.Vertices);
+	}
+}
+
 bool UInitialShape::CanDestroy()
 {
 	return !InitialShapeSceneComponent || InitialShapeSceneComponent->CreationMethod == EComponentCreationMethod::Instance;
