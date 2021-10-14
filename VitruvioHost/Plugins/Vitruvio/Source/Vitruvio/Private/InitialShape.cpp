@@ -112,11 +112,18 @@ TArray<FVector> GetInitialShapeFlippedUp(const bool bInitialShapeIsFlipped,const
 	// Reverse vertices if first plane normal shows down
 	if (Vertices.Num() >= 3)
 	{
+		TArray<FVector3f> VertexPositions;
+		VertexPositions.Reserve(Vertices.Num());
+		for (auto& Vertex : Vertices)
+		{
+			VertexPositions.Add(FVector3f(Vertex.X, Vertex.Y, Vertex.Z));
+		}
 		FVector3f PlanePointOut;
 		FVector3f PlaneNormalOut;
-		PolygonTriangulation::ComputePolygonPlane(static_cast<TArray<FVector3f>>(Vertices), PlaneNormalOut, PlanePointOut);
+		PolygonTriangulation::ComputePolygonPlane(VertexPositions, PlaneNormalOut, PlanePointOut);
 
-		float Dot = FVector::DotProduct(FVector::UpVector, static_cast<FVector>(PlaneNormalOut));
+		const FVector PlaneNormal(PlaneNormalOut.X, PlaneNormalOut.Y,PlaneNormalOut.Z);
+		float Dot = FVector::DotProduct(FVector::UpVector, PlaneNormal);
 
 		if (bInitialShapeIsFlipped)
 		{
