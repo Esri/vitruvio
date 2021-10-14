@@ -80,7 +80,7 @@ Selecting a *Vitruvio Actor* will display all its attributes in the details pane
 
 # Advanced
 
-### Initial Shapes from CityEngine to Unreal Engine (Experimental)
+### Initial Shapes from CityEngine to Unreal Engine
 
 This section explains how to export a set of building footprints from CityEngine and how to import them into Unreal to use them as initial shapes for building generation.
 
