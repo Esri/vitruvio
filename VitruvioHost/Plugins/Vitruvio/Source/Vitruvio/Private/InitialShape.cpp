@@ -192,11 +192,7 @@ void UInitialShape::Uninitialize()
 #if WITH_EDITOR
 bool UInitialShape::IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent)
 {
-	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, bFlipInitialShape))
-	{
-		return true;
-	}
-	return false;
+	return PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, bFlipInitialShape);
 }
 #endif
 
@@ -365,8 +361,7 @@ bool USplineInitialShape::CanConstructFrom(AActor* Owner) const
 
 bool USplineInitialShape::IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent)
 {
-	const bool bIsRelevantParentProperty = Super::IsRelevantProperty(Object, PropertyChangedEvent);
-	if (bIsRelevantParentProperty)
+	if (Super::IsRelevantProperty(Object, PropertyChangedEvent))
 	{
 		return true;
 	}
@@ -382,8 +377,7 @@ bool USplineInitialShape::IsRelevantProperty(UObject* Object, const FPropertyCha
 
 bool UStaticMeshInitialShape::IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent)
 {
-	const bool bIsRelevantParentProperty = Super::IsRelevantProperty(Object, PropertyChangedEvent);
-	if (bIsRelevantParentProperty)
+	if (Super::IsRelevantProperty(Object, PropertyChangedEvent))
 	{
 		return true;
 	}
