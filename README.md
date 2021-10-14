@@ -23,7 +23,7 @@ External documentation:
 ## Requirements
 
 * Windows 10
-* [Unreal Engine 4.26](https://www.unrealengine.com/en-US/download)
+* [Unreal Engine 4.27](https://www.unrealengine.com/en-US/download)
 * Visual Studio (for development only)
 
 ## Issues
