@@ -73,8 +73,6 @@ public:
 
 	void SetFaces(const TArray<FInitialShapeFace>& InFaces);
 	
-	void FlipFaces();
-
 	virtual void Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces)
 	{
 		unimplemented();

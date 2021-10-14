@@ -685,11 +685,6 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 	{
 		bComponentPropertyChanged = true;
 	}
-
-	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, bFlipInitialShape))
-	{
-		InitialShape->FlipFaces();
-	}
 	
 	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, HideAfterGeneration))
 	{
