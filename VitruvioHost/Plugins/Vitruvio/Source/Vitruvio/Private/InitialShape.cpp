@@ -107,14 +107,14 @@ bool HasValidGeometry(const TArray<FInitialShapeFace>& InFaces)
 	return false;
 }
 
-void FlipInitialShapeUp(bool bInitialShapeIsFlipped, TArray<FVector>& VerticesOut)
+TArray<FVector> GetInitialShapeFlippedUp(const bool bInitialShapeIsFlipped,const TArray<FVector>& Vertices)
 {
 	// Reverse vertices if first plane normal shows down
-	if (VerticesOut.Num() >= 3)
+	if (Vertices.Num() >= 3)
 	{
 		FVector3f PlanePointOut;
 		FVector3f PlaneNormalOut;
-		PolygonTriangulation::ComputePolygonPlane(static_cast<TArray<FVector3f>>(VerticesOut), PlaneNormalOut, PlanePointOut);
+		PolygonTriangulation::ComputePolygonPlane(static_cast<TArray<FVector3f>>(Vertices), PlaneNormalOut, PlanePointOut);
 
 		float Dot = FVector::DotProduct(FVector::UpVector, static_cast<FVector>(PlaneNormalOut));
 
@@ -125,9 +125,16 @@ void FlipInitialShapeUp(bool bInitialShapeIsFlipped, TArray<FVector>& VerticesOu
 		
 		if (Dot < 0)
 		{
-			Algo::Reverse(VerticesOut);
+			TArray<FVector> ReversedVertices(Vertices);
+			Algo::Reverse(ReversedVertices);
+			return ReversedVertices;
+		}
+		else
+		{
+			return Vertices;
 		}
 	}
+	return Vertices;
 }
 } // namespace
 
@@ -290,8 +297,7 @@ void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component)
 	TArray<FInitialShapeFace> InitialShapeFaces;
 	for (const TArray<FVector>& FaceVertices : Windings)
 	{
-		TArray<FVector> FlippedVertices = FaceVertices;
-		FlipInitialShapeUp(Component->bFlipInitialShape, FlippedVertices);
+		const TArray<FVector> FlippedVertices(GetInitialShapeFlippedUp(Component->bFlipInitialShape, FaceVertices));
 
 		InitialShapeFaces.Push(FInitialShapeFace{FlippedVertices});
 	}
@@ -454,9 +460,9 @@ void USplineInitialShape::Initialize(UVitruvioComponent* Component)
 		}
 	}
 
-	FlipInitialShapeUp(Component->bFlipInitialShape, Vertices);
+	const TArray<FVector> FlippedVertices(GetInitialShapeFlippedUp(Component->bFlipInitialShape, Vertices));
 
-	SetFaces({FInitialShapeFace{Vertices}});
+	SetFaces({FInitialShapeFace{FlippedVertices}});
 }
 
 void USplineInitialShape::Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces)
