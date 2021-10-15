@@ -65,6 +65,7 @@ const TMap<Vitruvio::EPrtUvSetType, Vitruvio::EUnrealUvSetType> PRTToUnrealUVSet
 	{Vitruvio::EPrtUvSetType::DirtMap,      Vitruvio::EUnrealUvSetType::DirtMap}};
 
 const TMap<Vitruvio::EUnrealUvSetType, FString> UnrealUVSetToMaterialParamStringMap = {
+	{Vitruvio::EUnrealUvSetType::DirtMap,      TEXT("HasDirtMapUV")},
 	{Vitruvio::EUnrealUvSetType::OpacityMap,   TEXT("HasOpacityMapUV")},
 	{Vitruvio::EUnrealUvSetType::NormalMap,    TEXT("HasNormalMapUV")},  
 	{Vitruvio::EUnrealUvSetType::EmissiveMap,  TEXT("HasEmissiveMapUV")},
@@ -88,15 +89,7 @@ TMap<FString, double> CreateAvailableUVSetAttributeMap(uint32_t const* const* UV
 			bool bHasUVSet = UVCounts[PrtUvSet] != nullptr;
 
 			const Vitruvio::EUnrealUvSetType UnrealUVSet = *UnrealUVSetPtr;
-			if (UnrealUVSet == Vitruvio::EUnrealUvSetType::DiffuseMap)
-			{
-				bool bHasDirtMapUvs = UVCounts[static_cast<size_t>(Vitruvio::EPrtUvSetType::DirtMap)] != nullptr;
-				if (!bHasUVSet && bHasDirtMapUvs)
-				{
-					AvailableUvSetAttributeMap.Add(TEXT("UseDirtMapUVForDiffuseMap"), 1.0);
-				}
-			}
-			else
+			if (UnrealUVSet != Vitruvio::EUnrealUvSetType::ColorMap && UnrealUVSet != Vitruvio::EUnrealUvSetType::None)
 			{
 				const FString UVSetMaterialParamString(UnrealUVSetToMaterialParamStringMap.FindRef(UnrealUVSet));
 

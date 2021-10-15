@@ -63,6 +63,22 @@ FString FirstValidTextureUri(const prt::AttributeMap* MaterialAttributes, wchar_
 	return TEXT("");
 }
 
+FString GetTextureUriFromIdx(const prt::AttributeMap* MaterialAttributes, wchar_t const* Key, size_t Index)
+{
+	size_t ValuesCount = 0;
+	wchar_t const* const* Values = MaterialAttributes->getStringArray(Key, &ValuesCount);
+	if (ValuesCount > Index)
+	{
+		FString TextureUri(Values[Index]);
+
+		if (TextureUri.Len() > 0)
+		{
+			return TextureUri;
+		}
+	}
+	return TEXT("");
+}
+
 FLinearColor GetLinearColor(const prt::AttributeMap* MaterialAttributes, wchar_t const* Key)
 {
 	size_t count;
@@ -125,7 +141,24 @@ FMaterialAttributeContainer::FMaterialAttributeContainer(const prt::AttributeMap
 		switch (Type)
 		{
 		case EMaterialPropertyType::Texture:
-			TextureProperties.Add(KeyString, FirstValidTextureUri(AttributeMap, Key));
+			if (KeyString.Equals(TEXT("diffuseMap")))
+			{
+				FString ColorMapUri = GetTextureUriFromIdx(AttributeMap, Key, 0);
+				FString DirtMapUri = GetTextureUriFromIdx(AttributeMap, Key, 1);
+
+				if(ColorMapUri.Len() > 0)
+				{
+					TextureProperties.Add(TEXT("colorMap"), ColorMapUri);
+				}
+				if(DirtMapUri.Len() > 0)
+				{
+					TextureProperties.Add(TEXT("dirtMap"), DirtMapUri);
+				}
+			}
+			else
+			{
+				TextureProperties.Add(KeyString, FirstValidTextureUri(AttributeMap, Key));
+			}
 			break;
 		case EMaterialPropertyType::LinearColor:
 			ColorProperties.Add(KeyString, GetLinearColor(AttributeMap, Key));
