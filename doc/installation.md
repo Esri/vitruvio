@@ -1,6 +1,6 @@
 # Vitruvio Installation
 
-This page describes how to install the Vitruvio Plugin for Unreal 4.26.
+This page describes how to install the Vitruvio Plugin for Unreal 4.27.
 
 ## Download
 
