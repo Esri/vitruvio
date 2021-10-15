@@ -28,7 +28,7 @@ namespace Vitruvio
 enum class EUnrealUvSetType : int32
 {
 	None = -1,
-	DiffuseMap = 0, //skip 1 because unreal engine saves lightmaps per default in uv set 1
+	ColorMap = 0, //skip 1 because unreal engine saves lightmaps per default in uv set 1
 	DirtMap = 2,
 	OpacityMap = 3,
 	NormalMap = 4,

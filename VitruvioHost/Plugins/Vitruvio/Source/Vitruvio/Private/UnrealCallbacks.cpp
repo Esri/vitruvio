@@ -56,7 +56,7 @@ constexpr float PRT_DIVISOR_LIMIT = 1e-25f;
 
 // clang-format off
 const TMap<Vitruvio::EPrtUvSetType, Vitruvio::EUnrealUvSetType> PRTToUnrealUVSetMap = {
-	{Vitruvio::EPrtUvSetType::ColorMap,     Vitruvio::EUnrealUvSetType::DiffuseMap},
+	{Vitruvio::EPrtUvSetType::ColorMap,     Vitruvio::EUnrealUvSetType::ColorMap},
 	{Vitruvio::EPrtUvSetType::OpacityMap,   Vitruvio::EUnrealUvSetType::OpacityMap},
 	{Vitruvio::EPrtUvSetType::NormalMap,    Vitruvio::EUnrealUvSetType::NormalMap},
 	{Vitruvio::EPrtUvSetType::EmissiveMap,  Vitruvio::EUnrealUvSetType::EmissiveMap},
