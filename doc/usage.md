@@ -4,6 +4,8 @@ Vitruvio leverages CityEngine's Procedural Runtime (PRT) to generate buildings. 
 
 This section describes how to use the Vitruvio Actor in Unreal Engine 4 (UE4), export rule packages from CityEngine and how to import or create initial shapes.
 
+**Note** that the Plugin contains a demo folder with a simple level to try out Vitruvio. First, enable *Show Engine Content* and *Show Plugin Content* in the View Options (bottom right) of the Content Browser. The demo content can now be found in the *Vitruvio Content/Demo/* folder.
+
 ## Vitruvio Actor and Component
 
 The *Vitruvio Component* allows the user to access the procedural generation. It can be attached to any Unreal Actor. If the Actor already has a valid initial shape component attached it will automatically be used as the initial shape for the building generation. Refer to [Initial Shapes](#Initial-Shapes) for more information.
