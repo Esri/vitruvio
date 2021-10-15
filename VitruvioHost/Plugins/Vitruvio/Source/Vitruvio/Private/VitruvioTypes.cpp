@@ -157,7 +157,12 @@ FMaterialAttributeContainer::FMaterialAttributeContainer(const prt::AttributeMap
 			}
 			else
 			{
-				TextureProperties.Add(KeyString, FirstValidTextureUri(AttributeMap, Key));
+				FString MapUri = FirstValidTextureUri(AttributeMap, Key);
+
+				if(MapUri.Len() > 0)
+				{
+					TextureProperties.Add(KeyString, MapUri);
+				}
 			}
 			break;
 		case EMaterialPropertyType::LinearColor:
