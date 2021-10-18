@@ -132,7 +132,6 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 	FStaticMeshAttributes Attributes(Description);
 	Attributes.Register();
 
-	// Need at least 1 uv set (can be empty) otherwise will crash when building the mesh
 	const auto VertexUVs = Attributes.GetVertexInstanceUVs();
 	VertexUVs.SetNumIndices(8);
 
