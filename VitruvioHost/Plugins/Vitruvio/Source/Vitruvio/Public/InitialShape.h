@@ -72,7 +72,7 @@ public:
 	}
 
 	void SetFaces(const TArray<FInitialShapeFace>& InFaces);
-
+	
 	virtual void Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces)
 	{
 		unimplemented();
@@ -95,12 +95,7 @@ public:
 	virtual void Uninitialize();
 
 #if WITH_EDITOR
-	virtual bool IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent)
-	{
-		unimplemented();
-		return false;
-	}
-
+	virtual bool IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent);
 #endif
 };
 

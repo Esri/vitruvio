@@ -17,6 +17,7 @@
 #include "PolygonWindings.h"
 #include "VitruvioComponent.h"
 
+#include "CompGeom/PolygonTriangulation.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 
@@ -105,6 +106,43 @@ bool HasValidGeometry(const TArray<FInitialShapeFace>& InFaces)
 
 	return false;
 }
+
+TArray<FVector> GetInitialShapeFlippedUp(const bool bInitialShapeIsFlipped,const TArray<FVector>& Vertices)
+{
+	// Reverse vertices if first plane normal shows down
+	if (Vertices.Num() >= 3)
+	{
+		TArray<FVector3f> VertexPositions;
+		VertexPositions.Reserve(Vertices.Num());
+		for (auto& Vertex : Vertices)
+		{
+			VertexPositions.Add(FVector3f(Vertex.X, Vertex.Y, Vertex.Z));
+		}
+		FVector3f PlanePointOut;
+		FVector3f PlaneNormalOut;
+		PolygonTriangulation::ComputePolygonPlane(VertexPositions, PlaneNormalOut, PlanePointOut);
+
+		const FVector PlaneNormal(PlaneNormalOut.X, PlaneNormalOut.Y,PlaneNormalOut.Z);
+		float Dot = FVector::DotProduct(FVector::UpVector, PlaneNormal);
+
+		if (bInitialShapeIsFlipped)
+		{
+			Dot *= -1;
+		}
+		
+		if (Dot < 0)
+		{
+			TArray<FVector> ReversedVertices(Vertices);
+			Algo::Reverse(ReversedVertices);
+			return ReversedVertices;
+		}
+		else
+		{
+			return Vertices;
+		}
+	}
+	return Vertices;
+}
 } // namespace
 
 TArray<FVector> UInitialShape::GetVertices() const
@@ -156,6 +194,13 @@ void UInitialShape::Uninitialize()
 		VitruvioComponent = nullptr;
 	}
 }
+
+#if WITH_EDITOR
+bool UInitialShape::IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent)
+{
+	return PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, bFlipInitialShape);
+}
+#endif
 
 void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component)
 {
@@ -251,7 +296,9 @@ void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component)
 	TArray<FInitialShapeFace> InitialShapeFaces;
 	for (const TArray<FVector>& FaceVertices : Windings)
 	{
-		InitialShapeFaces.Push(FInitialShapeFace{FaceVertices});
+		const TArray<FVector> FlippedVertices(GetInitialShapeFlippedUp(Component->bFlipInitialShape, FaceVertices));
+
+		InitialShapeFaces.Push(FInitialShapeFace{FlippedVertices});
 	}
 	SetFaces(InitialShapeFaces);
 }
@@ -319,6 +366,11 @@ bool USplineInitialShape::CanConstructFrom(AActor* Owner) const
 
 bool USplineInitialShape::IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent)
 {
+	if (Super::IsRelevantProperty(Object, PropertyChangedEvent))
+	{
+		return true;
+	}
+	
 	if (Object)
 	{
 		FProperty* Property = PropertyChangedEvent.Property;
@@ -330,6 +382,11 @@ bool USplineInitialShape::IsRelevantProperty(UObject* Object, const FPropertyCha
 
 bool UStaticMeshInitialShape::IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent)
 {
+	if (Super::IsRelevantProperty(Object, PropertyChangedEvent))
+	{
+		return true;
+	}
+
 	if (Object)
 	{
 		FProperty* Property = PropertyChangedEvent.Property;
@@ -402,21 +459,9 @@ void USplineInitialShape::Initialize(UVitruvioComponent* Component)
 		}
 	}
 
-	// Reverse vertices if first three vertices are counter clockwise
-	if (Vertices.Num() >= 3)
-	{
-		const FVector V1 = Vertices[1] - Vertices[0];
-		const FVector V2 = Vertices[2] - Vertices[0];
-		const FVector Normal = FVector::CrossProduct(V1, V2);
-		const float Dot = FVector::DotProduct(FVector::UpVector, Normal);
+	const TArray<FVector> FlippedVertices(GetInitialShapeFlippedUp(Component->bFlipInitialShape, Vertices));
 
-		if (Dot > 0)
-		{
-			Algo::Reverse(Vertices);
-		}
-	}
-
-	SetFaces({FInitialShapeFace{Vertices}});
+	SetFaces({FInitialShapeFace{FlippedVertices}});
 }
 
 void USplineInitialShape::Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces)
