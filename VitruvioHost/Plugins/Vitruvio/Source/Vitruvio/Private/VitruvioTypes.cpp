@@ -67,7 +67,7 @@ FString GetTextureUriFromIdx(const prt::AttributeMap* MaterialAttributes, wchar_
 {
 	size_t ValuesCount = 0;
 	wchar_t const* const* Values = MaterialAttributes->getStringArray(Key, &ValuesCount);
-	if (ValuesCount > Index)
+	if (Index < ValuesCount)
 	{
 		FString TextureUri(Values[Index]);
 
