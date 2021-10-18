@@ -74,7 +74,7 @@ const TMap<Vitruvio::EUnrealUvSetType, FString> UnrealUVSetToMaterialParamString
 };
 // clang-format on
 
-TMap<FString, double> CreateAvailableUVSetAttributeMap(uint32_t const* const* UVCounts, size_t UVSets)
+TMap<FString, double> CreateAvailableUVSetMaterialParameterMap(uint32_t const* const* UVCounts, size_t UVSets)
 {
 	TMap<FString, double> AvailableUvSetAttributeMap;
 
@@ -159,7 +159,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 		Vitruvio::FMaterialAttributeContainer MaterialContainer(materials[PolygonGroupIndex]);
 		const FName MaterialSlot = FName(MaterialContainer.Name);
 		Attributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlot;
-		TMap<FString, double> AvailableUvSetAttributeMap = CreateAvailableUVSetAttributeMap(uvCounts, uvSets);
+		TMap<FString, double> AvailableUvSetAttributeMap = CreateAvailableUVSetMaterialParameterMap(uvCounts, uvSets);
 		for (auto& AvailableUvSetAttribute : AvailableUvSetAttributeMap)
 		{
 			MaterialContainer.ScalarProperties.Add(AvailableUvSetAttribute);
