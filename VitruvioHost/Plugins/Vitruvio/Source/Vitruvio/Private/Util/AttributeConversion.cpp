@@ -99,6 +99,130 @@ URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt:
 		return nullptr;
 	}
 }
+
+constexpr int AttributeGroupOrderNone = INT32_MAX;
+
+FString ConvertGroupsToStringKey(const FString ImportPath, const TArray<FString> Groups)
+{
+	const FString Delimiter = TEXT(".");
+	return ImportPath + Delimiter + FString::Join(Groups, *Delimiter);
+}
+
+// maps the highest attribute order from all attributes within a group to its group string key
+TMap<FString,int> GetGlobalGroupOrderMap(const TMap<FString, URuleAttribute*>& Attributes) {
+	TMap<FString,int> GlobalGroupOrderMap;
+	
+	for (const auto& AttributeTuple : Attributes) {
+		URuleAttribute* Attribute = AttributeTuple.Value;
+		TArray<FString> CurrGroups;
+		for (const FString& CurrGroup : Attribute->Groups) {
+			CurrGroups.Add(CurrGroup);
+
+			int& ValueRef = GlobalGroupOrderMap.FindOrAdd(ConvertGroupsToStringKey(Attribute->ImportPath, CurrGroups), AttributeGroupOrderNone);
+			ValueRef = FMath::Min(ValueRef, Attribute->GroupOrder);
+		}
+	}
+	return GlobalGroupOrderMap;
+}
+
+bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribute& OtherAttribute, const TMap<FString,int> GlobalGroupOrderMap)
+{
+	auto AreStringsInAlphabeticalOrder = [](const FString A, const FString B) {
+		return A.ToLower() < B.ToLower();
+	};
+	
+	auto AreImportPathsInOrder = [&](const URuleAttribute& A, const URuleAttribute& B) {
+		// sort main rule attributes before the rest
+		if (A.ImportPath.Len() == 0)
+		{
+			return true;
+		}
+		
+		if (B.ImportPath.Len() == 0)
+		{
+			return false;
+		}
+	
+		return AreStringsInAlphabeticalOrder(A.ImportPath, B.ImportPath);
+	};
+	
+	auto IsChildOf = [](const URuleAttribute& Child, const URuleAttribute& Parent) {
+		const size_t ParentGroupNum = Parent.Groups.Num();
+		const size_t ChildGroupNum = Child.Groups.Num();
+	
+		// parent path must be shorter
+		if (ParentGroupNum >= ChildGroupNum)
+		{
+			return false;
+		}
+	
+		// parent and child paths must be identical
+		for (size_t i = 0; i < ParentGroupNum; i++) {
+			if (Parent.Groups[i] != Child.Groups[i])
+			{
+				return false;
+			}
+		}
+		return true;
+	};
+	
+	auto GetFirstDifferentGroupInA = [](const URuleAttribute& A, const URuleAttribute& B) {
+		check(A.Groups.Num() == B.Groups.Num());
+		size_t i = 0;
+		
+		while ((i < A.Groups.Num()) && (A.Groups[i] == B.Groups[i])) {
+			i++;
+		}
+		return A.Groups[i];
+	};
+	
+	auto GetGlobalGroupOrder = [&GlobalGroupOrderMap](const URuleAttribute& RuleAttribute) {
+		const int* GroupOrderPtr  = GlobalGroupOrderMap.Find(ConvertGroupsToStringKey(RuleAttribute.ImportPath, RuleAttribute.Groups));
+		return (GroupOrderPtr == nullptr) ? (*GroupOrderPtr) : AttributeGroupOrderNone;
+	};
+	
+	auto AreAttributeGroupsInOrder = [&](const URuleAttribute& A, const URuleAttribute& B) {
+		if (IsChildOf(A, B))
+			return false; // child A should be sorted after parent B
+	
+		if (IsChildOf(B, A))
+			return true; // child B should be sorted after parent A
+	
+		const auto GlobalOrderA = GetGlobalGroupOrder(A);
+		const auto GlobalOrderB = GetGlobalGroupOrder(B);
+		if (GlobalOrderA != GlobalOrderB)
+		{
+			return (GlobalOrderA < GlobalOrderB);
+		}
+	
+		// sort higher level before lower level
+		if (A.Groups.Num() != B.Groups.Num())
+		{
+			return (A.Groups.Num() < B.Groups.Num());
+		}
+		return AreStringsInAlphabeticalOrder(GetFirstDifferentGroupInA(A, B), GetFirstDifferentGroupInA(B, A));
+	};
+	
+	auto AreAttributesInOrder = [&](const URuleAttribute& A, const URuleAttribute& B) {
+		if (A.ImportPath != B.ImportPath)
+		{
+			return AreImportPathsInOrder(A, B);
+		}
+
+		if (A.Groups != B.Groups)
+		{
+			return AreAttributeGroupsInOrder(A, B);
+		}
+		
+		if (A.Order == AttributeGroupOrderNone && B.Order == AttributeGroupOrderNone)
+		{
+			return AreStringsInAlphabeticalOrder(A.Name, B.Name);
+		}
+		return A.Order < B.Order;
+	};
+
+	return AreAttributesInOrder(Attribute, OtherAttribute);
+}
 } // namespace
 
 namespace Vitruvio
@@ -146,6 +270,10 @@ TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& Attri
 			}
 		}
 	}
+	TMap<FString, int> GlobalGroupOrder = GetGlobalGroupOrderMap(UnrealAttributeMap);
+	UnrealAttributeMap.ValueSort([&GlobalGroupOrder](const URuleAttribute& A, const URuleAttribute& B) {
+		return IsAttributeBeforeOther(A, B, GlobalGroupOrder);
+	});
 	return UnrealAttributeMap;
 }
 
