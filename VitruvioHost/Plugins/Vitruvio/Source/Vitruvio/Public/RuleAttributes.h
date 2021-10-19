@@ -113,7 +113,9 @@ public:
 	FString Name;
 	UPROPERTY()
 	FString DisplayName;
-
+	UPROPERTY()
+	FString ImportPath;
+	
 	UPROPERTY()
 	FString Description;
 	UPROPERTY()

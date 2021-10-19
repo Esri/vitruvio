@@ -284,30 +284,48 @@ FResetToDefaultOverride ResetToDefaultOverride(URuleAttribute* Attribute, UVitru
 	return ResetToDefaultOverride;
 }
 
-IDetailGroup* GetOrCreateGroups(IDetailGroup& Root, const TArray<FString>& Groups, TMap<FString, IDetailGroup*>& GroupCache)
+IDetailGroup* GetOrCreateGroups(IDetailGroup& Root, const URuleAttribute* Attribute, TMap<FString, IDetailGroup*>& GroupCache)
 {
-	if (Groups.Num() == 0)
-	{
-		return &Root;
-	}
+	const FString Delimiter = TEXT(".");
+	const TArray<FString>& Groups = Attribute->Groups;
 
-	auto GetOrCreateGroup = [&GroupCache](IDetailGroup& Parent, FString Name) -> IDetailGroup* {
-		const auto CacheResult = GroupCache.Find(Name);
+	TArray<FString> Imports;
+	Attribute->ImportPath.ParseIntoArray(Imports, *Delimiter);
+
+	IDetailGroup* AttributeGroupRoot = &Root;
+	FString AttributeGroupImportPath;
+	
+	auto GetOrCreateGroup = [&GroupCache](IDetailGroup& Parent, FString ImportPath, FString Name) -> IDetailGroup* {
+		const FString CacheGroupKey = ImportPath + Name;
+		const auto CacheResult = GroupCache.Find(CacheGroupKey);
 		if (CacheResult)
 		{
 			return *CacheResult;
 		}
 		IDetailGroup& Group = Parent.AddGroup(*Name, FText::FromString(Name), true);
-		GroupCache.Add(Name, &Group);
+		GroupCache.Add(CacheGroupKey, &Group);
+
 		return &Group;
 	};
 
+	for (const FString& CurrImport : Imports)
+	{
+		AttributeGroupRoot = GetOrCreateGroup(*AttributeGroupRoot, AttributeGroupImportPath,CurrImport);
+		
+		AttributeGroupImportPath += CurrImport + Delimiter;
+	}
+	
+	if (Groups.Num() == 0)
+	{
+		return AttributeGroupRoot;
+	}
+	
 	FString QualifiedIdentifier = Groups[0];
-	IDetailGroup* CurrentGroup = GetOrCreateGroup(Root, QualifiedIdentifier);
+	IDetailGroup* CurrentGroup = GetOrCreateGroup(*AttributeGroupRoot, AttributeGroupImportPath, QualifiedIdentifier);
 	for (auto GroupIndex = 1; GroupIndex < Groups.Num(); ++GroupIndex)
 	{
 		QualifiedIdentifier += Groups[GroupIndex];
-		CurrentGroup = GetOrCreateGroup(*CurrentGroup, Groups[GroupIndex]);
+		CurrentGroup = GetOrCreateGroup(*CurrentGroup, AttributeGroupImportPath, Groups[GroupIndex]);
 	}
 
 	return CurrentGroup;
@@ -599,7 +617,7 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailLayoutBuilder& Detai
 	{
 		URuleAttribute* Attribute = AttributeEntry.Value;
 
-		IDetailGroup* Group = GetOrCreateGroups(RootGroup, Attribute->Groups, GroupCache);
+		IDetailGroup* Group = GetOrCreateGroups(RootGroup, Attribute, GroupCache);
 
 		FPropertyRowGeneratorArgs Args;
 		const auto Generator = PropertyEditorModule.CreatePropertyRowGenerator(Args);

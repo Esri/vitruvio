@@ -133,8 +133,10 @@ TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& Attri
 		{
 			const FString AttributeName = WCHAR_TO_TCHAR(Name.c_str());
 			const FString DisplayName = WCHAR_TO_TCHAR(prtu::removeImport(prtu::removeStyle(Name.c_str())).c_str());
+			const FString ImportPath = WCHAR_TO_TCHAR(prtu::getFullImportPath(Name.c_str()).c_str());
 			Attribute->Name = AttributeName;
 			Attribute->DisplayName = DisplayName;
+			Attribute->ImportPath = ImportPath;
 
 			ParseAttributeAnnotations(AttrInfo, *Attribute, Outer);
 
