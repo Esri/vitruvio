@@ -100,17 +100,45 @@ URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt:
 	}
 }
 
+struct FGroupOrderKey
+{
+	TArray<FString> Groups;
+	FString ImportPath;
+
+	explicit FGroupOrderKey(const URuleAttribute& Attribute)
+	{
+		Groups = Attribute.Groups;
+		ImportPath = Attribute.ImportPath;
+	}
+
+	friend bool operator==(const FGroupOrderKey& A, const FGroupOrderKey& B)
+	{
+		const bool bGroupsEqual = A.Groups == B.Groups;
+		const bool bImportPathEqual = A.ImportPath.Equals(B.ImportPath);
+		return bGroupsEqual && bImportPathEqual;
+	}
+
+	friend bool operator!=(const FGroupOrderKey& Lhs, const FGroupOrderKey& RHS)
+	{
+		return !(Lhs == RHS);
+	}
+
+	friend uint32 GetTypeHash(const FGroupOrderKey& Object)
+	{
+		uint32 Hash = 0x844310C5;
+		for (const auto& Group : Object.Groups)
+		{
+			Hash = HashCombine(Hash, GetTypeHash(Group));
+		}
+		return HashCombine(Hash, GetTypeHash(Object.ImportPath));
+	}
+};
+
 constexpr int AttributeGroupOrderNone = INT32_MAX;
 
-FString ConvertGroupsToStringKey(const FString ImportPath, const TArray<FString> Groups)
-{
-	const FString Delimiter = TEXT(".");
-	return ImportPath + Delimiter + FString::Join(Groups, *Delimiter);
-}
-
 // maps the highest attribute order from all attributes within a group to its group string key
-TMap<FString,int> GetGlobalGroupOrderMap(const TMap<FString, URuleAttribute*>& Attributes) {
-	TMap<FString,int> GlobalGroupOrderMap;
+TMap<FGroupOrderKey, int> GetGlobalGroupOrderMap(const TMap<FString, URuleAttribute*>& Attributes) {
+	TMap<FGroupOrderKey,int> GlobalGroupOrderMap;
 	
 	for (const auto& AttributeTuple : Attributes) {
 		URuleAttribute* Attribute = AttributeTuple.Value;
@@ -118,14 +146,14 @@ TMap<FString,int> GetGlobalGroupOrderMap(const TMap<FString, URuleAttribute*>& A
 		for (const FString& CurrGroup : Attribute->Groups) {
 			CurrGroups.Add(CurrGroup);
 
-			int& ValueRef = GlobalGroupOrderMap.FindOrAdd(ConvertGroupsToStringKey(Attribute->ImportPath, CurrGroups), AttributeGroupOrderNone);
+			int& ValueRef = GlobalGroupOrderMap.FindOrAdd(FGroupOrderKey(*Attribute), AttributeGroupOrderNone);
 			ValueRef = FMath::Min(ValueRef, Attribute->GroupOrder);
 		}
 	}
 	return GlobalGroupOrderMap;
 }
 
-bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribute& OtherAttribute, const TMap<FString,int> GlobalGroupOrderMap)
+bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribute& OtherAttribute, const TMap<FGroupOrderKey,int> GlobalGroupOrderMap)
 {
 	auto AreStringsInAlphabeticalOrder = [](const FString A, const FString B) {
 		return A.ToLower() < B.ToLower();
@@ -177,7 +205,7 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 	};
 	
 	auto GetGlobalGroupOrder = [&GlobalGroupOrderMap](const URuleAttribute& RuleAttribute) {
-		const int* GroupOrderPtr  = GlobalGroupOrderMap.Find(ConvertGroupsToStringKey(RuleAttribute.ImportPath, RuleAttribute.Groups));
+		const int* GroupOrderPtr  = GlobalGroupOrderMap.Find(FGroupOrderKey(RuleAttribute));
 		return (GroupOrderPtr == nullptr) ? (*GroupOrderPtr) : AttributeGroupOrderNone;
 	};
 	
@@ -270,7 +298,7 @@ TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& Attri
 			}
 		}
 	}
-	TMap<FString, int> GlobalGroupOrder = GetGlobalGroupOrderMap(UnrealAttributeMap);
+	TMap<FGroupOrderKey, int> GlobalGroupOrder = GetGlobalGroupOrderMap(UnrealAttributeMap);
 	UnrealAttributeMap.ValueSort([&GlobalGroupOrder](const URuleAttribute& A, const URuleAttribute& B) {
 		return IsAttributeBeforeOther(A, B, GlobalGroupOrder);
 	});
