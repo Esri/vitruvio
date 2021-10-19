@@ -121,9 +121,9 @@ public:
 	UPROPERTY()
 	TArray<FString> Groups;
 	UPROPERTY()
-	int Order;
+	int Order = INT32_MAX;
 	UPROPERTY()
-	int GroupOrder;
+	int GroupOrder = INT32_MAX;
 
 	UPROPERTY()
 	bool bHidden;
