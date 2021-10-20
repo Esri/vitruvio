@@ -295,14 +295,14 @@ IDetailGroup* GetOrCreateGroups(IDetailGroup& Root, const URuleAttribute* Attrib
 	IDetailGroup* AttributeGroupRoot = &Root;
 	FString AttributeGroupImportPath;
 	
-	auto GetOrCreateGroup = [&GroupCache](IDetailGroup& Parent, FString ImportPath, FString Name) -> IDetailGroup* {
-		const FString CacheGroupKey = ImportPath + Name;
+	auto GetOrCreateGroup = [&GroupCache, Delimiter](IDetailGroup& Parent, FString ImportPath, FString Name) -> IDetailGroup* {
+		const FString CacheGroupKey = ImportPath  + Delimiter + Name;
 		const auto CacheResult = GroupCache.Find(CacheGroupKey);
 		if (CacheResult)
 		{
 			return *CacheResult;
 		}
-		IDetailGroup& Group = Parent.AddGroup(*Name, FText::FromString(Name), true);
+		IDetailGroup& Group = Parent.AddGroup(*CacheGroupKey, FText::FromString(Name));
 		GroupCache.Add(CacheGroupKey, &Group);
 
 		return &Group;
@@ -435,7 +435,8 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 		
 		// Header Row
 		const TSharedPtr<IDetailPropertyRow> HeaderPropertyRow = ArrayRoot->GetRow();
-		IDetailGroup& ArrayHeader = Group.AddGroup(TEXT(""), FText::GetEmpty(), true);
+		FString ArrayGroupKey = Attribute->ImportPath + TEXT(".") + Attribute->Name;
+		IDetailGroup& ArrayHeader = Group.AddGroup(*ArrayGroupKey, FText::GetEmpty());
 		FDetailWidgetRow& Row = ArrayHeader.HeaderRow();
 		HeaderPropertyRow->OverrideResetToDefault(ResetToDefaultOverride(Attribute, VitruvioActor));
 
@@ -575,7 +576,7 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailLayoutBuilder& Detai
 
 	Generators.Empty();
 
-	IDetailGroup& RootGroup = RootCategory.AddGroup("Attributes", FText::FromString("Attributes"), true, true);
+	IDetailGroup& RootGroup = RootCategory.AddGroup("Attributes", FText::FromString("Attributes"), true);
 	TSharedPtr<IPropertyHandle> AttributesHandle = DetailBuilder.GetProperty(FName(TEXT("Attributes")));
 	
 	// Create Attributes header widget
