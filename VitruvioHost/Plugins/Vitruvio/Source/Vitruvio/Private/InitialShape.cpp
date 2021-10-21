@@ -107,7 +107,7 @@ bool HasValidGeometry(const TArray<FInitialShapeFace>& InFaces)
 	return false;
 }
 
-TArray<FVector> GetInitialShapeFlippedUp(const bool bInitialShapeIsFlipped,const TArray<FVector>& Vertices)
+TArray<FVector> GetInitialShapeFlippedUp(const TArray<FVector>& Vertices)
 {
 	// Reverse vertices if first plane normal shows down
 	if (Vertices.Num() >= 3)
@@ -124,11 +124,6 @@ TArray<FVector> GetInitialShapeFlippedUp(const bool bInitialShapeIsFlipped,const
 
 		const FVector PlaneNormal(PlaneNormalOut.X, PlaneNormalOut.Y,PlaneNormalOut.Z);
 		float Dot = FVector::DotProduct(FVector::UpVector, PlaneNormal);
-
-		if (bInitialShapeIsFlipped)
-		{
-			Dot *= -1;
-		}
 		
 		if (Dot < 0)
 		{
@@ -194,13 +189,6 @@ void UInitialShape::Uninitialize()
 		VitruvioComponent = nullptr;
 	}
 }
-
-#if WITH_EDITOR
-bool UInitialShape::IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent)
-{
-	return PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, bFlipInitialShape);
-}
-#endif
 
 void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component)
 {
@@ -296,7 +284,7 @@ void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component)
 	TArray<FInitialShapeFace> InitialShapeFaces;
 	for (const TArray<FVector>& FaceVertices : Windings)
 	{
-		const TArray<FVector> FlippedVertices(GetInitialShapeFlippedUp(Component->bFlipInitialShape, FaceVertices));
+		const TArray<FVector> FlippedVertices(GetInitialShapeFlippedUp(FaceVertices));
 
 		InitialShapeFaces.Push(FInitialShapeFace{FlippedVertices});
 	}
@@ -366,11 +354,6 @@ bool USplineInitialShape::CanConstructFrom(AActor* Owner) const
 
 bool USplineInitialShape::IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent)
 {
-	if (Super::IsRelevantProperty(Object, PropertyChangedEvent))
-	{
-		return true;
-	}
-	
 	if (Object)
 	{
 		FProperty* Property = PropertyChangedEvent.Property;
@@ -382,11 +365,6 @@ bool USplineInitialShape::IsRelevantProperty(UObject* Object, const FPropertyCha
 
 bool UStaticMeshInitialShape::IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent)
 {
-	if (Super::IsRelevantProperty(Object, PropertyChangedEvent))
-	{
-		return true;
-	}
-
 	if (Object)
 	{
 		FProperty* Property = PropertyChangedEvent.Property;
@@ -459,7 +437,7 @@ void USplineInitialShape::Initialize(UVitruvioComponent* Component)
 		}
 	}
 
-	const TArray<FVector> FlippedVertices(GetInitialShapeFlippedUp(Component->bFlipInitialShape, Vertices));
+	const TArray<FVector> FlippedVertices(GetInitialShapeFlippedUp(Vertices));
 
 	SetFaces({FInitialShapeFace{FlippedVertices}});
 }
