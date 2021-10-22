@@ -113,15 +113,17 @@ public:
 	FString Name;
 	UPROPERTY()
 	FString DisplayName;
-
+	UPROPERTY()
+	FString ImportPath;
+	
 	UPROPERTY()
 	FString Description;
 	UPROPERTY()
 	TArray<FString> Groups;
 	UPROPERTY()
-	int Order;
+	int Order = INT32_MAX;
 	UPROPERTY()
-	int GroupOrder;
+	int GroupOrder = INT32_MAX;
 
 	UPROPERTY()
 	bool bHidden;
