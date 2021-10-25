@@ -446,8 +446,20 @@ void USplineInitialShape::Initialize(UVitruvioComponent* Component, const TArray
 {
 
 	AActor* Owner = Component->GetOwner();
+	
+	//create small default square footprint, if there is no startMesh
+	TArray<FInitialShapeFace> CurrInitialFaces = InitialFaces;
+	if (InitialFaces.Num() == 0)
+	{
+		FInitialShapeFace ShapeFace;
+		ShapeFace.Vertices.Add(FVector(1000,-1000,0));
+		ShapeFace.Vertices.Add(FVector(1000,1000,0));
+		ShapeFace.Vertices.Add(FVector(-1000,1000,0));
+		ShapeFace.Vertices.Add(FVector(-1000,-1000,0));
+		CurrInitialFaces.Add(ShapeFace);
+	}
 
-	for (const FInitialShapeFace& Face : InitialFaces)
+	for (const FInitialShapeFace& Face : CurrInitialFaces)
 	{
 		auto UniqueName = MakeUniqueObjectName(Owner, USplineComponent::StaticClass(), TEXT("InitialShapeSpline"));
 		USplineComponent* Spline = AttachComponent<USplineComponent>(Owner, UniqueName.ToString());
