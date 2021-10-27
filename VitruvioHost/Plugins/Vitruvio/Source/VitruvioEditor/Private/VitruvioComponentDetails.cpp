@@ -393,6 +393,7 @@ void AddScalarWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, 
 	DetailPropertyRow.OverrideResetToDefault(ResetToDefaultOverride(Attribute, VitruvioActor));
 	FDetailWidgetRow& ValueRow = DetailPropertyRow.CustomWidget();
 
+	PropertyHandle->SetPropertyDisplayName(FText::FromString(Attribute->DisplayName));
 	TSharedPtr<SWidget> NameWidget;
 	TSharedPtr<SWidget> ValueWidget;
 
@@ -617,6 +618,11 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailLayoutBuilder& Detai
 	for (const auto& AttributeEntry : VitruvioActor->GetAttributes())
 	{
 		URuleAttribute* Attribute = AttributeEntry.Value;
+		Attribute->SetFlags(RF_Transactional);
+		Attribute->SetOnUndo(FSimpleDelegate::CreateLambda([VitruvioActor]()
+		{
+			VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
+		}));
 
 		IDetailGroup* Group = GetOrCreateGroups(RootGroup, Attribute, GroupCache);
 
