@@ -635,9 +635,8 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailLayoutBuilder& Detai
 					ArrayAttribute->InitializeDefaultArrayValue(ArrayIndex);
 				}
 			}
-			
-			VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
 			Attribute->bUserSet = true;
+			VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
 		});
 		const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes = Generator->GetRootTreeNodes();
 
