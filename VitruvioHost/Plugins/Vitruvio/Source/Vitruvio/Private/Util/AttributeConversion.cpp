@@ -38,12 +38,14 @@ std::vector<const wchar_t*> ToPtrVector(const TArray<FString>& Input)
 URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt::RuleFileInfo::Entry* AttrInfo, UObject* const Outer)
 {
 	const std::wstring Name(AttrInfo->getName());
+	const FName AttributeName = WCHAR_TO_TCHAR(Name.c_str());;
 	switch (AttrInfo->getReturnType())
 	{
 	case prt::AAT_BOOL:
 	{
 		UBoolAttribute* BoolAttribute = NewObject<UBoolAttribute>(Outer);
 		BoolAttribute->Value = AttributeMap->getBool(Name.c_str());
+		BoolAttribute->SetFlags(RF_Transactional);
 		return BoolAttribute;
 	}
 	case prt::AAT_INT:
@@ -51,12 +53,14 @@ URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt:
 	{
 		UFloatAttribute* FloatAttribute = NewObject<UFloatAttribute>(Outer);
 		FloatAttribute->Value = AttributeMap->getFloat(Name.c_str());
+		FloatAttribute->SetFlags(RF_Transactional);
 		return FloatAttribute;
 	}
 	case prt::AAT_STR:
 	{
 		UStringAttribute* StringAttribute = NewObject<UStringAttribute>(Outer);
 		StringAttribute->Value = WCHAR_TO_TCHAR(AttributeMap->getString(Name.c_str()));
+		StringAttribute->SetFlags(RF_Transactional);
 		return StringAttribute;
 	}
 	case prt::AAT_STR_ARRAY:
@@ -68,6 +72,7 @@ URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt:
 		{
 			StringArrayAttribute->Values.Add(Arr[Index]);
 		}
+		StringArrayAttribute->SetFlags(RF_Transactional);
 		return StringArrayAttribute;
 	}
 	case prt::AAT_BOOL_ARRAY:
@@ -79,6 +84,7 @@ URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt:
 		{
 			BoolArrayAttribute->Values.Add(Arr[Index]);
 		}
+		BoolArrayAttribute->SetFlags(RF_Transactional);
 		return BoolArrayAttribute;
 	}
 	case prt::AAT_FLOAT_ARRAY:
@@ -90,6 +96,7 @@ URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt:
 		{
 			FloatArrayAttribute->Values.Add(Arr[Index]);
 		}
+		FloatArrayAttribute->SetFlags(RF_Transactional);
 		return FloatArrayAttribute;
 	}
 	case prt::AAT_UNKNOWN:
