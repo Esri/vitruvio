@@ -138,6 +138,167 @@ TArray<FVector> GetInitialShapeFlippedUp(const TArray<FVector>& Vertices)
 	}
 	return Vertices;
 }
+
+TArray<FInitialShapeFace> CreateInitialFacesFromStaticMesh(const UStaticMesh* StaticMesh)
+{
+	TArray<FVector> MeshVertices;
+	TArray<int32> RemappedIndices;
+	TArray<int32> MeshIndices;
+
+	if (StaticMesh->GetRenderData() && StaticMesh->GetRenderData()->LODResources.IsValidIndex(0))
+	{
+		const FStaticMeshLODResources& LOD = StaticMesh->GetRenderData()->LODResources[0];
+
+		for (auto SectionIndex = 0; SectionIndex < LOD.Sections.Num(); ++SectionIndex)
+		{
+			for (uint32 VertexIndex = 0; VertexIndex < LOD.VertexBuffers.PositionVertexBuffer.GetNumVertices(); ++VertexIndex)
+			{
+				FVector Vertex = LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(VertexIndex);
+
+				auto VertexFindPredicate = [Vertex](const FVector& In) {
+					return Vertex.Equals(In);
+				};
+				int32 MappedVertexIndex = MeshVertices.IndexOfByPredicate(VertexFindPredicate);
+
+				if (MappedVertexIndex == INDEX_NONE)
+				{
+					RemappedIndices.Add(MeshVertices.Num());
+					MeshVertices.Add(Vertex);
+				}
+				else
+				{
+					RemappedIndices.Add(MappedVertexIndex);
+				}
+			}
+
+			const FStaticMeshSection& Section = LOD.Sections[SectionIndex];
+			FIndexArrayView IndicesView = LOD.IndexBuffer.GetArrayView();
+
+			for (uint32 Triangle = 0; Triangle < Section.NumTriangles; ++Triangle)
+			{
+				for (uint32 TriangleVertexIndex = 0; TriangleVertexIndex < 3; ++TriangleVertexIndex)
+				{
+					const uint32 OriginalMeshIndex = IndicesView[Section.FirstIndex + Triangle * 3 + TriangleVertexIndex];
+					const uint32 MeshVertIndex = RemappedIndices[OriginalMeshIndex];
+					MeshIndices.Add(MeshVertIndex);
+				}
+			}
+		}
+	}
+
+	const TArray<TArray<FVector>> Windings = Vitruvio::GetOutsideWindings(MeshVertices, MeshIndices);
+
+	TArray<FInitialShapeFace> InitialShapeFaces;
+	for (const TArray<FVector>& FaceVertices : Windings)
+	{
+		const TArray<FVector> FlippedVertices(GetInitialShapeFlippedUp(FaceVertices));
+
+		InitialShapeFaces.Push(FInitialShapeFace{FlippedVertices});
+	}
+	return InitialShapeFaces;
+}
+
+TArray<FInitialShapeFace> CreateInitialFacesFromSpline(const USplineComponent* SplineComponent, const uint32 SplineApproximationPoints)
+{
+	TArray<FVector> Vertices;
+	const int32 NumPoints = SplineComponent->GetNumberOfSplinePoints();
+	for (int32 SplinePointIndex = 0; SplinePointIndex < NumPoints; ++SplinePointIndex)
+	{
+		const ESplinePointType::Type SplineType = SplineComponent->GetSplinePointType(SplinePointIndex);
+		if (SplineType == ESplinePointType::Linear)
+		{
+			Vertices.Add(SplineComponent->GetLocationAtSplinePoint(SplinePointIndex, ESplineCoordinateSpace::Local));
+		}
+		else
+		{
+			const int32 NextPointIndex = SplinePointIndex + 1;
+			float Position = SplineComponent->GetDistanceAlongSplineAtSplinePoint(SplinePointIndex);
+			const float EndDistance = NextPointIndex < NumPoints ? SplineComponent->GetDistanceAlongSplineAtSplinePoint(NextPointIndex)
+			                                                     : SplineComponent->GetSplineLength();
+			const float Distance = SplineComponent->GetSplineLength() / SplineApproximationPoints;
+			while (Position < EndDistance)
+			{
+				Vertices.Add(SplineComponent->GetLocationAtDistanceAlongSpline(Position, ESplineCoordinateSpace::Local));
+				Position += Distance;
+			}
+		}
+	}
+
+	const TArray<FVector> FlippedVertices(GetInitialShapeFlippedUp(Vertices));
+	return {FInitialShapeFace{FlippedVertices}};
+}
+
+TArray<FInitialShapeFace> CreateDefaultInitialFaces()
+{
+	TArray<FInitialShapeFace> InitialFaces;
+	FInitialShapeFace InitialShapeFace;
+	InitialShapeFace.Vertices.Add(FVector(1000,-1000,0));
+	InitialShapeFace.Vertices.Add(FVector(-1000,-1000,0));
+	InitialShapeFace.Vertices.Add(FVector(-1000,1000,0));
+	InitialShapeFace.Vertices.Add(FVector(1000,1000,0));
+	InitialFaces.Add(InitialShapeFace);
+
+	return InitialFaces;
+}
+
+UStaticMesh* CreateStaticMeshFromInitialFaces(const TArray<FInitialShapeFace>& InitialFaces)
+{
+	TArray<FInitialShapeFace> CurrInitialFaces = InitialFaces;
+	if (InitialFaces.Num() == 0)
+	{
+		CurrInitialFaces = CreateDefaultInitialFaces();
+	}
+
+	FMeshDescription MeshDescription = CreateMeshDescription(CurrInitialFaces);
+	MeshDescription.TriangulateMesh();
+
+	TArray<const FMeshDescription*> MeshDescriptions;
+	MeshDescriptions.Emplace(&MeshDescription);
+
+	UStaticMesh* StaticMesh;
+#if WITH_EDITOR
+	const FString InitialShapeName = TEXT("InitialShape");
+	const FString PackageName = TEXT("/Game/Vitruvio/") + InitialShapeName;
+	UPackage* Package = CreatePackage(*PackageName);
+	const FName StaticMeshName = MakeUniqueObjectName(Package, UStaticMesh::StaticClass(), FName(InitialShapeName));
+
+	StaticMesh = NewObject<UStaticMesh>(Package, StaticMeshName, RF_Public | RF_Standalone);
+#else
+	StaticMesh = NewObject<UStaticMesh>();
+#endif
+
+	StaticMesh->BuildFromMeshDescriptions(MeshDescriptions);
+	return StaticMesh;
+}
+
+TArray<TArray<FSplinePoint>> CreateSplinePointsFromInitialFaces(const TArray<FInitialShapeFace>& InitialFaces)
+{
+	//create small default square footprint, if there is no startMesh
+	TArray<FInitialShapeFace> CurrInitialFaces = InitialFaces;
+	if (InitialFaces.Num() == 0)
+	{
+		CurrInitialFaces = CreateDefaultInitialFaces();
+	}
+
+	TArray<TArray<FSplinePoint>> Splines;
+	
+	for (const FInitialShapeFace& Face : CurrInitialFaces)
+	{
+		TArray<FSplinePoint> SplinePoints;
+		int32 PointIndex = 0;
+		for (const FVector& Position : Face.Vertices)
+		{
+			FSplinePoint SplinePoint;
+			SplinePoint.Position = Position;
+			SplinePoint.Type = ESplinePointType::Linear;
+			SplinePoint.InputKey = PointIndex;
+			SplinePoints.Add(SplinePoint);
+			PointIndex++;
+		}
+		Splines.Add(SplinePoints);
+	}
+	return Splines;
+}
 } // namespace
 
 TArray<FVector> UInitialShape::GetVertices() const
@@ -234,60 +395,7 @@ void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component)
 	}
 #endif
 
-	TArray<FVector> MeshVertices;
-	TArray<int32> RemappedIndices;
-	TArray<int32> MeshIndices;
-
-	if (StaticMesh->GetRenderData() && StaticMesh->GetRenderData()->LODResources.IsValidIndex(0))
-	{
-		const FStaticMeshLODResources& LOD = StaticMesh->GetRenderData()->LODResources[0];
-
-		for (auto SectionIndex = 0; SectionIndex < LOD.Sections.Num(); ++SectionIndex)
-		{
-			for (uint32 VertexIndex = 0; VertexIndex < LOD.VertexBuffers.PositionVertexBuffer.GetNumVertices(); ++VertexIndex)
-			{
-				FVector Vertex = LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(VertexIndex);
-
-				auto VertexFindPredicate = [Vertex](const FVector& In) {
-					return Vertex.Equals(In);
-				};
-				int32 MappedVertexIndex = MeshVertices.IndexOfByPredicate(VertexFindPredicate);
-
-				if (MappedVertexIndex == INDEX_NONE)
-				{
-					RemappedIndices.Add(MeshVertices.Num());
-					MeshVertices.Add(Vertex);
-				}
-				else
-				{
-					RemappedIndices.Add(MappedVertexIndex);
-				}
-			}
-
-			const FStaticMeshSection& Section = LOD.Sections[SectionIndex];
-			FIndexArrayView IndicesView = LOD.IndexBuffer.GetArrayView();
-
-			for (uint32 Triangle = 0; Triangle < Section.NumTriangles; ++Triangle)
-			{
-				for (uint32 TriangleVertexIndex = 0; TriangleVertexIndex < 3; ++TriangleVertexIndex)
-				{
-					const uint32 OriginalMeshIndex = IndicesView[Section.FirstIndex + Triangle * 3 + TriangleVertexIndex];
-					const uint32 MeshVertIndex = RemappedIndices[OriginalMeshIndex];
-					MeshIndices.Add(MeshVertIndex);
-				}
-			}
-		}
-	}
-
-	const TArray<TArray<FVector>> Windings = Vitruvio::GetOutsideWindings(MeshVertices, MeshIndices);
-
-	TArray<FInitialShapeFace> InitialShapeFaces;
-	for (const TArray<FVector>& FaceVertices : Windings)
-	{
-		const TArray<FVector> FlippedVertices(GetInitialShapeFlippedUp(FaceVertices));
-
-		InitialShapeFaces.Push(FInitialShapeFace{FlippedVertices});
-	}
+	const TArray<FInitialShapeFace> InitialShapeFaces = CreateInitialFacesFromStaticMesh(StaticMesh);
 	SetFaces(InitialShapeFaces);
 }
 
@@ -299,25 +407,7 @@ void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component, const TA
 		return;
 	}
 
-	FMeshDescription MeshDescription = CreateMeshDescription(InitialFaces);
-	MeshDescription.TriangulateMesh();
-
-	TArray<const FMeshDescription*> MeshDescriptions;
-	MeshDescriptions.Emplace(&MeshDescription);
-
-	UStaticMesh* StaticMesh;
-#if WITH_EDITOR
-	const FString InitialShapeName = TEXT("InitialShape");
-	const FString PackageName = TEXT("/Game/Vitruvio/") + InitialShapeName;
-	UPackage* Package = CreatePackage(*PackageName);
-	const FName StaticMeshName = MakeUniqueObjectName(Package, UStaticMesh::StaticClass(), FName(InitialShapeName));
-
-	StaticMesh = NewObject<UStaticMesh>(Package, StaticMeshName, RF_Public | RF_Standalone);
-#else
-	StaticMesh = NewObject<UStaticMesh>();
-#endif
-
-	StaticMesh->BuildFromMeshDescriptions(MeshDescriptions);
+	UStaticMesh* StaticMesh = CreateStaticMeshFromInitialFaces(InitialFaces);
 
 	UStaticMeshComponent* AttachedStaticMeshComponent = AttachComponent<UStaticMeshComponent>(Owner, TEXT("InitialShapeStaticMesh"));
 	AttachedStaticMeshComponent->SetStaticMesh(StaticMesh);
@@ -413,64 +503,28 @@ void USplineInitialShape::Initialize(UVitruvioComponent* Component)
 
 	InitialShapeSceneComponent = SplineComponent;
 
-	TArray<FVector> Vertices;
-	const int32 NumPoints = SplineComponent->GetNumberOfSplinePoints();
-	for (int32 SplinePointIndex = 0; SplinePointIndex < NumPoints; ++SplinePointIndex)
-	{
-		const ESplinePointType::Type SplineType = SplineComponent->GetSplinePointType(SplinePointIndex);
-		if (SplineType == ESplinePointType::Linear)
-		{
-			Vertices.Add(SplineComponent->GetLocationAtSplinePoint(SplinePointIndex, ESplineCoordinateSpace::Local));
-		}
-		else
-		{
-			const int32 NextPointIndex = SplinePointIndex + 1;
-			float Position = SplineComponent->GetDistanceAlongSplineAtSplinePoint(SplinePointIndex);
-			const float EndDistance = NextPointIndex < NumPoints ? SplineComponent->GetDistanceAlongSplineAtSplinePoint(NextPointIndex)
-																 : SplineComponent->GetSplineLength();
-			const float Distance = SplineComponent->GetSplineLength() / SplineApproximationPoints;
-			while (Position < EndDistance)
-			{
-				Vertices.Add(SplineComponent->GetLocationAtDistanceAlongSpline(Position, ESplineCoordinateSpace::Local));
-				Position += Distance;
-			}
-		}
-	}
-
-	const TArray<FVector> FlippedVertices(GetInitialShapeFlippedUp(Vertices));
-
-	SetFaces({FInitialShapeFace{FlippedVertices}});
+	const TArray<FInitialShapeFace> InitialShapeFaces = CreateInitialFacesFromSpline(SplineComponent, SplineApproximationPoints);
+	SetFaces(InitialShapeFaces);
 }
 
 void USplineInitialShape::Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces)
 {
-
 	AActor* Owner = Component->GetOwner();
-	
-	//create small default square footprint, if there is no startMesh
-	TArray<FInitialShapeFace> CurrInitialFaces = InitialFaces;
-	if (InitialFaces.Num() == 0)
+	if (!Owner)
 	{
-		FInitialShapeFace ShapeFace;
-		ShapeFace.Vertices.Add(FVector(1000,-1000,0));
-		ShapeFace.Vertices.Add(FVector(1000,1000,0));
-		ShapeFace.Vertices.Add(FVector(-1000,1000,0));
-		ShapeFace.Vertices.Add(FVector(-1000,-1000,0));
-		CurrInitialFaces.Add(ShapeFace);
+		return;
 	}
 
-	for (const FInitialShapeFace& Face : CurrInitialFaces)
+	TArray<TArray<FSplinePoint>> Splines = CreateSplinePointsFromInitialFaces(InitialFaces);
+
+	for (const auto SplinePoints : Splines)
 	{
 		auto UniqueName = MakeUniqueObjectName(Owner, USplineComponent::StaticClass(), TEXT("InitialShapeSpline"));
 		USplineComponent* Spline = AttachComponent<USplineComponent>(Owner, UniqueName.ToString());
 		Spline->ClearSplinePoints(true);
-
-		int32 PointIndex = 0;
-		for (const FVector& Position : Face.Vertices)
+		for (const auto Point : SplinePoints)
 		{
-			Spline->AddSplineLocalPoint(Position);
-			Spline->SetSplinePointType(PointIndex, ESplinePointType::Linear, true);
-			PointIndex++;
+			Spline->AddPoint(Point, true);
 		}
 	}
 
