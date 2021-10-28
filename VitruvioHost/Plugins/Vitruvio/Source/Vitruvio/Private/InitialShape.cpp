@@ -271,6 +271,11 @@ UStaticMesh* CreateStaticMeshFromInitialFaces(const TArray<FInitialShapeFace>& I
 	return StaticMesh;
 }
 
+UStaticMesh* CreateDefaultStaticMesh()
+{
+	return CreateStaticMeshFromInitialFaces(CreateDefaultInitialFaces());
+}
+
 TArray<TArray<FSplinePoint>> CreateSplinePointsFromInitialFaces(const TArray<FInitialShapeFace>& InitialFaces)
 {
 	//create small default square footprint, if there is no startMesh
@@ -372,8 +377,8 @@ void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component)
 
 	if (StaticMesh == nullptr)
 	{
-		bIsValid = false;
-		return;
+		StaticMesh = CreateDefaultStaticMesh();
+		StaticMeshComponent->SetStaticMesh(StaticMesh);
 	}
 
 #if WITH_EDITORONLY_DATA
