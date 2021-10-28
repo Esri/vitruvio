@@ -23,6 +23,7 @@
 namespace Vitruvio
 {
 TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo, UObject* Outer);
+void UpdateAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo, UObject* const Outer);
 
 AttributeMapUPtr CreateAttributeMap(const TMap<FString, URuleAttribute*>& Attributes);
 } // namespace Vitruvio

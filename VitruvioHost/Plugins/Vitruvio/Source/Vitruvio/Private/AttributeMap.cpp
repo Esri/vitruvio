@@ -21,3 +21,8 @@ TMap<FString, URuleAttribute*> FAttributeMap::ConvertToUnrealAttributeMap(UObjec
 {
 	return Vitruvio::ConvertAttributeMap(AttributeMap, RuleInfo, Outer);
 }
+
+void FAttributeMap::UpdateUnrealAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, UObject* const Outer)
+{
+	Vitruvio::UpdateAttributeMap(AttributeMapOut, AttributeMap, RuleInfo, Outer);
+}

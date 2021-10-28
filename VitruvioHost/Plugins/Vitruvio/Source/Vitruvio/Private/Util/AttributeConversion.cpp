@@ -312,6 +312,80 @@ TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& Attri
 	return UnrealAttributeMap;
 }
 
+void UpdateAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo, UObject* const Outer)
+{
+	if (AttributeMapOut.Num() == 0)
+	{
+		AttributeMapOut = ConvertAttributeMap(AttributeMap, RuleInfo, Outer);
+		return;
+	}
+	bool bNeedsResorting = false;
+	for (size_t AttributeIndex = 0; AttributeIndex < RuleInfo->getNumAttributes(); AttributeIndex++)
+	{
+		const prt::RuleFileInfo::Entry* AttrInfo = RuleInfo->getAttribute(AttributeIndex);
+		if (AttrInfo->getNumParameters() != 0)
+		{
+			continue;
+		}
+
+		// We only support the default style for the moment
+		FString Style(WCHAR_TO_TCHAR(prtu::getStyle(AttrInfo->getName()).c_str()));
+		if (Style != DEFAULT_STYLE)
+		{
+			continue;
+		}
+
+		const std::wstring Name(AttrInfo->getName());
+		URuleAttribute* Attribute = CreateAttribute(AttributeMap, AttrInfo, Outer);
+
+		if (Attribute)
+		{
+			const FString AttributeName = WCHAR_TO_TCHAR(Name.c_str());
+			Attribute->Name = AttributeName;
+			
+			if (!Attribute->bHidden)
+			{
+				//update/add attributes if they aren't hidden
+				if (AttributeMapOut.Contains(AttributeName))
+				{
+					const URuleAttribute* OutAttribute = AttributeMapOut[AttributeName];
+					if(!OutAttribute->bUserSet)
+					{
+						AttributeMapOut[AttributeName]->CopyValue(Attribute);
+					}
+				}
+				else
+				{
+					const FString DisplayName = WCHAR_TO_TCHAR(prtu::removeImport(prtu::removeStyle(Name.c_str())).c_str());
+					const FString ImportPath = WCHAR_TO_TCHAR(prtu::getFullImportPath(Name.c_str()).c_str());
+
+					Attribute->DisplayName = DisplayName;
+					Attribute->ImportPath = ImportPath;
+
+					ParseAttributeAnnotations(AttrInfo, *Attribute, Outer);
+					AttributeMapOut.Add(AttributeName, Attribute);
+					bNeedsResorting = true;
+				}
+			}
+			else
+			{
+				//remove attributes, that should be hidden
+				if (AttributeMapOut.Contains(AttributeName))
+				{
+					AttributeMapOut.Remove(AttributeName);
+				}
+			}
+		}
+	}
+	if (bNeedsResorting)
+	{
+		TMap<FGroupOrderKey, int> GlobalGroupOrder = GetGlobalGroupOrderMap(AttributeMapOut);
+		AttributeMapOut.ValueSort([&GlobalGroupOrder](const URuleAttribute& A, const URuleAttribute& B) {
+			return IsAttributeBeforeOther(A, B, GlobalGroupOrder);
+		});
+	}
+}
+
 AttributeMapUPtr CreateAttributeMap(const TMap<FString, URuleAttribute*>& Attributes)
 {
 	AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());

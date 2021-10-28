@@ -469,30 +469,10 @@ void UVitruvioComponent::ProcessAttributesEvaluationQueue()
 	{
 		FAttributesEvaluation AttributesEvaluation;
 		AttributesEvaluationQueue.Dequeue(AttributesEvaluation);
-		TMap<FString, URuleAttribute*> NewAttributes = AttributesEvaluation.AttributeMap->ConvertToUnrealAttributeMap(this);
 
-		if(Attributes.Num() == 0)
-		{
-			Attributes = NewAttributes;
-		}
-		else
-		{
-			for (const auto NewAttribute : NewAttributes)
-			{
-				if(Attributes.Contains(NewAttribute.Key))
-				{
-					URuleAttribute* Value = Attributes[NewAttribute.Key];
-					if(!Value->bUserSet)
-					{
-						Value->CopyValue(NewAttribute.Value);
-						Value->bUserSet = NewAttribute.Value->bUserSet;
-					}
-				}
-			}
-		}
-
+		AttributesEvaluation.AttributeMap->UpdateUnrealAttributeMap(Attributes, this);
+		
 		bAttributesReady = true;
-
 		bNotifyAttributeChange = true;
 
 		if (GenerateAutomatically || AttributesEvaluation.bForceRegenerate)
