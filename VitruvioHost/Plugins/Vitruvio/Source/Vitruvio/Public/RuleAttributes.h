@@ -115,8 +115,12 @@ protected:
 		{
 			OnUndo.Execute();
 		}
-	};
-
+	}
+	virtual void Serialize(FArchive& Ar) override
+	{
+		Super::Serialize(Ar);
+		SetFlags(RF_Transactional);
+	}
 public:
 	UPROPERTY()
 	FString Name;
