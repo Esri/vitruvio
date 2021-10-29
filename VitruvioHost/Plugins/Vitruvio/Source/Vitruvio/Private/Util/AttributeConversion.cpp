@@ -209,7 +209,7 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 	
 	auto GetGlobalGroupOrder = [&GlobalGroupOrderMap](const URuleAttribute& RuleAttribute) {
 		const int* GroupOrderPtr  = GlobalGroupOrderMap.Find(FGroupOrderKey(RuleAttribute));
-		return (GroupOrderPtr == nullptr) ? (*GroupOrderPtr) : AttributeGroupOrderNone;
+		return (GroupOrderPtr == nullptr) ? AttributeGroupOrderNone :  (*GroupOrderPtr) ;
 	};
 	
 	auto AreAttributeGroupsInOrder = [&](const URuleAttribute& A, const URuleAttribute& B) {
