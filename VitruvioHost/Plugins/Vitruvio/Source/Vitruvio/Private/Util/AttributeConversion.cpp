@@ -161,12 +161,12 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 	
 	auto AreImportPathsInOrder = [&](const URuleAttribute& A, const URuleAttribute& B) {
 		// sort main rule attributes before the rest
-		if (A.ImportPath.Len() == 0)
+		if (A.ImportPath.Len() == 0 && B.ImportPath.Len() > 0)
 		{
 			return true;
 		}
 		
-		if (B.ImportPath.Len() == 0)
+		if (B.ImportPath.Len() == 0 && A.ImportPath.Len() > 0)
 		{
 			return false;
 		}
