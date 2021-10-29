@@ -148,7 +148,10 @@ UFilesystemAnnotation* ParseFileAnnotation(const prt::Annotation* Annotation, UO
 
 int ParseOrder(const prt::Annotation* Annotation)
 {
-	return 0;
+	if (Annotation->getNumArguments() >= 1 && Annotation->getArgument(0)->getType() == prt::AAT_FLOAT) {
+		return static_cast<int>(Annotation->getArgument(0)->getFloat());
+	}
+	return INT32_MAX;
 }
 
 void ParseGroups(const prt::Annotation* Annotation, URuleAttribute& InAttribute)
