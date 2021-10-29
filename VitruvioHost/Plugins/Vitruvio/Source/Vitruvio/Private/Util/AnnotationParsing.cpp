@@ -27,6 +27,8 @@ constexpr const wchar_t* ANNOT_DIR = L"@Directory";
 constexpr const wchar_t* ANNOT_FILE = L"@File";
 constexpr const wchar_t* ANNOT_ORDER = L"@Order";
 constexpr const wchar_t* ANNOT_GROUP = L"@Group";
+constexpr const wchar_t* ANNOT_IMPORTS = L"_$IMPORTS";
+constexpr const wchar_t* ANNOT_IMPORTS_KEY = L"fullPrefix";
 
 constexpr const wchar_t* NULL_KEY = L"#NULL#";
 constexpr const wchar_t* MIN_KEY = L"min";
@@ -226,5 +228,28 @@ void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, UR
 			ParseGroups(CEAnnotation, InAttribute);
 		}
 	}
+}
+
+TMap<FString, int> ParseImportOrderMap(const RuleFileInfoUPtr& RuleFileInfo) {
+	TMap<FString, int> ImportOrderMap;
+	int ImportOrder = 0;
+	for (size_t i = 0; i < RuleFileInfo->getNumAnnotations(); i++) {
+		const prt::Annotation* Annotation = RuleFileInfo->getAnnotation(i);
+		const wchar_t* AnnotationName = Annotation->getName();
+		
+		if (!(std::wcscmp(AnnotationName, ANNOT_IMPORTS))) {
+			for (int Index = 0; Index < Annotation->getNumArguments(); Index++) {
+				if (Annotation->getArgument(Index)->getType() == prt::AAT_STR) {
+					const wchar_t* AnnotationKey = Annotation->getArgument(Index)->getKey();
+					
+					if(!(std::wcscmp(AnnotationKey, ANNOT_IMPORTS_KEY))) {
+						FString ImportRule = WCHAR_TO_TCHAR(Annotation->getArgument(Index)->getStr());
+						ImportOrderMap.Add(ImportRule, ImportOrder++);
+					}
+				}
+			}
+		}
+	}
+	return ImportOrderMap;
 }
 } // namespace Vitruvio

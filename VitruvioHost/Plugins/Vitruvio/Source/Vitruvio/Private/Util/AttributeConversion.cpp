@@ -171,6 +171,9 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 			return false;
 		}
 	
+		if(A.ImportOrder != B.ImportOrder)
+			return A.ImportOrder < B.ImportOrder;
+			
 		return AreStringsInAlphabeticalOrder(A.ImportPath, B.ImportPath);
 	};
 	
@@ -258,6 +261,8 @@ namespace Vitruvio
 TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo, UObject* const Outer)
 {
 	TMap<FString, URuleAttribute*> UnrealAttributeMap;
+	TMap<FString, int> ImportOrderMap = ParseImportOrderMap(RuleInfo);
+	
 	for (size_t AttributeIndex = 0; AttributeIndex < RuleInfo->getNumAttributes(); AttributeIndex++)
 	{
 		const prt::RuleFileInfo::Entry* AttrInfo = RuleInfo->getAttribute(AttributeIndex);
@@ -289,6 +294,11 @@ TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& Attri
 			Attribute->Name = AttributeName;
 			Attribute->DisplayName = DisplayName;
 			Attribute->ImportPath = ImportPath;
+			int* ImportOrder = ImportOrderMap.Find(ImportPath);
+			if (ImportOrder != nullptr)
+			{
+				Attribute->ImportOrder = *ImportOrder;
+			}
 
 			ParseAttributeAnnotations(AttrInfo, *Attribute, Outer);
 

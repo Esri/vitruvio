@@ -21,4 +21,6 @@
 namespace Vitruvio
 {
 void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, URuleAttribute& InAttribute, UObject* const Outer);
+
+TMap<FString, int> ParseImportOrderMap(const RuleFileInfoUPtr& RuleFileInfo);
 }
