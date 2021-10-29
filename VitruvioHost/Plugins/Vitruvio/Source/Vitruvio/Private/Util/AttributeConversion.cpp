@@ -242,7 +242,7 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 			return AreAttributeGroupsInOrder(A, B);
 		}
 		
-		if (A.Order == AttributeGroupOrderNone && B.Order == AttributeGroupOrderNone)
+		if (A.Order == B.Order)
 		{
 			return AreStringsInAlphabeticalOrder(A.Name, B.Name);
 		}
