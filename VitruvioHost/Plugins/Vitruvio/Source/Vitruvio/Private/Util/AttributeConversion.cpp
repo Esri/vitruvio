@@ -172,7 +172,9 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 		}
 	
 		if(A.ImportOrder != B.ImportOrder)
+		{
 			return A.ImportOrder < B.ImportOrder;
+		}
 			
 		return AreStringsInAlphabeticalOrder(A.ImportPath, B.ImportPath);
 	};
@@ -214,10 +216,14 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 	
 	auto AreAttributeGroupsInOrder = [&](const URuleAttribute& A, const URuleAttribute& B) {
 		if (IsChildOf(A, B))
+		{
 			return false; // child A should be sorted after parent B
+		}
 	
 		if (IsChildOf(B, A))
+		{
 			return true; // child B should be sorted after parent A
+		}
 	
 		const auto GlobalOrderA = GetGlobalGroupOrder(A);
 		const auto GlobalOrderB = GetGlobalGroupOrder(B);
