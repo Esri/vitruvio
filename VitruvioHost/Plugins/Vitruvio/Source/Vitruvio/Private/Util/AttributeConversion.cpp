@@ -313,14 +313,6 @@ void UpdateAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, const A
 					bNeedsResorting = true;
 				}
 			}
-			else
-			{
-				//remove attributes, that should be hidden
-				if (AttributeMapOut.Contains(AttributeName))
-				{
-					AttributeMapOut.Remove(AttributeName);
-				}
-			}
 		}
 	}
 	if (bNeedsResorting)
