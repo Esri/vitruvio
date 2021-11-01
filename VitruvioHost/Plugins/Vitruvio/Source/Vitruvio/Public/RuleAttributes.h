@@ -137,6 +137,8 @@ public:
 	int Order = INT32_MAX;
 	UPROPERTY()
 	int GroupOrder = INT32_MAX;
+	UPROPERTY()
+	int ImportOrder = INT32_MAX;
 
 	UPROPERTY()
 	bool bHidden;

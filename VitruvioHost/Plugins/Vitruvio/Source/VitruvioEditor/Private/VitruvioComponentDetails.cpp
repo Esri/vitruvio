@@ -321,11 +321,11 @@ IDetailGroup* GetOrCreateGroups(IDetailGroup& Root, const URuleAttribute* Attrib
 	}
 	
 	FString QualifiedIdentifier = Groups[0];
-	IDetailGroup* CurrentGroup = GetOrCreateGroup(*AttributeGroupRoot, AttributeGroupImportPath, QualifiedIdentifier);
+	IDetailGroup* CurrentGroup = GetOrCreateGroup(*AttributeGroupRoot, AttributeGroupImportPath + Delimiter, QualifiedIdentifier);
 	for (auto GroupIndex = 1; GroupIndex < Groups.Num(); ++GroupIndex)
 	{
 		QualifiedIdentifier += Groups[GroupIndex];
-		CurrentGroup = GetOrCreateGroup(*CurrentGroup, AttributeGroupImportPath, Groups[GroupIndex]);
+		CurrentGroup = GetOrCreateGroup(*CurrentGroup, AttributeGroupImportPath + Delimiter, Groups[GroupIndex]);
 	}
 
 	return CurrentGroup;

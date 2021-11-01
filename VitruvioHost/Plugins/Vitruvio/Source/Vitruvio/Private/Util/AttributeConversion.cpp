@@ -168,16 +168,21 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 	
 	auto AreImportPathsInOrder = [&](const URuleAttribute& A, const URuleAttribute& B) {
 		// sort main rule attributes before the rest
-		if (A.ImportPath.Len() == 0)
+		if (A.ImportPath.Len() == 0 && B.ImportPath.Len() > 0)
 		{
 			return true;
 		}
 		
-		if (B.ImportPath.Len() == 0)
+		if (B.ImportPath.Len() == 0 && A.ImportPath.Len() > 0)
 		{
 			return false;
 		}
 	
+		if(A.ImportOrder != B.ImportOrder)
+		{
+			return A.ImportOrder < B.ImportOrder;
+		}
+			
 		return AreStringsInAlphabeticalOrder(A.ImportPath, B.ImportPath);
 	};
 	
@@ -213,15 +218,19 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 	
 	auto GetGlobalGroupOrder = [&GlobalGroupOrderMap](const URuleAttribute& RuleAttribute) {
 		const int* GroupOrderPtr  = GlobalGroupOrderMap.Find(FGroupOrderKey(RuleAttribute));
-		return (GroupOrderPtr == nullptr) ? (*GroupOrderPtr) : AttributeGroupOrderNone;
+		return (GroupOrderPtr == nullptr) ? AttributeGroupOrderNone :  (*GroupOrderPtr) ;
 	};
 	
 	auto AreAttributeGroupsInOrder = [&](const URuleAttribute& A, const URuleAttribute& B) {
 		if (IsChildOf(A, B))
+		{
 			return false; // child A should be sorted after parent B
+		}
 	
 		if (IsChildOf(B, A))
+		{
 			return true; // child B should be sorted after parent A
+		}
 	
 		const auto GlobalOrderA = GetGlobalGroupOrder(A);
 		const auto GlobalOrderB = GetGlobalGroupOrder(B);
@@ -249,7 +258,7 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 			return AreAttributeGroupsInOrder(A, B);
 		}
 		
-		if (A.Order == AttributeGroupOrderNone && B.Order == AttributeGroupOrderNone)
+		if (A.Order == B.Order)
 		{
 			return AreStringsInAlphabeticalOrder(A.Name, B.Name);
 		}
@@ -266,6 +275,8 @@ namespace Vitruvio
 void UpdateAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo, UObject* const Outer)
 {
 	bool bNeedsResorting = false;
+	TMap<FString, int> ImportOrderMap = ParseImportOrderMap(RuleInfo);
+	
 	for (size_t AttributeIndex = 0; AttributeIndex < RuleInfo->getNumAttributes(); AttributeIndex++)
 	{
 		const prt::RuleFileInfo::Entry* AttrInfo = RuleInfo->getAttribute(AttributeIndex);
@@ -288,7 +299,7 @@ void UpdateAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, const A
 		{
 			const FString AttributeName = WCHAR_TO_TCHAR(Name.c_str());
 			Attribute->Name = AttributeName;
-			
+
 			ParseAttributeAnnotations(AttrInfo, *Attribute, Outer);
 			if (!Attribute->bHidden)
 			{
@@ -308,7 +319,11 @@ void UpdateAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, const A
 
 					Attribute->DisplayName = DisplayName;
 					Attribute->ImportPath = ImportPath;
-
+					int* ImportOrder = ImportOrderMap.Find(ImportPath);
+					if (ImportOrder != nullptr)
+					{
+						Attribute->ImportOrder = *ImportOrder;
+					}
 					AttributeMapOut.Add(AttributeName, Attribute);
 					bNeedsResorting = true;
 				}
