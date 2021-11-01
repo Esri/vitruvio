@@ -27,8 +27,6 @@ public:
 
 	FAttributeMap(AttributeMapUPtr AttributeMap, RuleFileInfoUPtr RuleInfo) : AttributeMap(std::move(AttributeMap)), RuleInfo(std::move(RuleInfo)) {}
 
-	TMap<FString, URuleAttribute*> ConvertToUnrealAttributeMap(UObject* const Outer);
-	
 	void UpdateUnrealAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, UObject* const Outer);
 
 private:

@@ -262,63 +262,9 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 
 namespace Vitruvio
 {
-TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo, UObject* const Outer)
-{
-	TMap<FString, URuleAttribute*> UnrealAttributeMap;
-	for (size_t AttributeIndex = 0; AttributeIndex < RuleInfo->getNumAttributes(); AttributeIndex++)
-	{
-		const prt::RuleFileInfo::Entry* AttrInfo = RuleInfo->getAttribute(AttributeIndex);
-		if (AttrInfo->getNumParameters() != 0)
-		{
-			continue;
-		}
-
-		// We only support the default style for the moment
-		FString Style(WCHAR_TO_TCHAR(prtu::getStyle(AttrInfo->getName()).c_str()));
-		if (Style != DEFAULT_STYLE)
-		{
-			continue;
-		}
-
-		const std::wstring Name(AttrInfo->getName());
-		if (UnrealAttributeMap.Contains(WCHAR_TO_TCHAR(Name.c_str())))
-		{
-			continue;
-		}
-
-		URuleAttribute* Attribute = CreateAttribute(AttributeMap, AttrInfo, Outer);
-
-		if (Attribute)
-		{
-			const FString AttributeName = WCHAR_TO_TCHAR(Name.c_str());
-			const FString DisplayName = WCHAR_TO_TCHAR(prtu::removeImport(prtu::removeStyle(Name.c_str())).c_str());
-			const FString ImportPath = WCHAR_TO_TCHAR(prtu::getFullImportPath(Name.c_str()).c_str());
-			Attribute->Name = AttributeName;
-			Attribute->DisplayName = DisplayName;
-			Attribute->ImportPath = ImportPath;
-
-			ParseAttributeAnnotations(AttrInfo, *Attribute, Outer);
-
-			if (!Attribute->bHidden)
-			{
-				UnrealAttributeMap.Add(AttributeName, Attribute);
-			}
-		}
-	}
-	TMap<FGroupOrderKey, int> GlobalGroupOrder = GetGlobalGroupOrderMap(UnrealAttributeMap);
-	UnrealAttributeMap.ValueSort([&GlobalGroupOrder](const URuleAttribute& A, const URuleAttribute& B) {
-		return IsAttributeBeforeOther(A, B, GlobalGroupOrder);
-	});
-	return UnrealAttributeMap;
-}
 
 void UpdateAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo, UObject* const Outer)
 {
-	if (AttributeMapOut.Num() == 0)
-	{
-		AttributeMapOut = ConvertAttributeMap(AttributeMap, RuleInfo, Outer);
-		return;
-	}
 	bool bNeedsResorting = false;
 	for (size_t AttributeIndex = 0; AttributeIndex < RuleInfo->getNumAttributes(); AttributeIndex++)
 	{
@@ -343,6 +289,7 @@ void UpdateAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, const A
 			const FString AttributeName = WCHAR_TO_TCHAR(Name.c_str());
 			Attribute->Name = AttributeName;
 			
+			ParseAttributeAnnotations(AttrInfo, *Attribute, Outer);
 			if (!Attribute->bHidden)
 			{
 				//update/add attributes if they aren't hidden
@@ -362,7 +309,6 @@ void UpdateAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, const A
 					Attribute->DisplayName = DisplayName;
 					Attribute->ImportPath = ImportPath;
 
-					ParseAttributeAnnotations(AttrInfo, *Attribute, Outer);
 					AttributeMapOut.Add(AttributeName, Attribute);
 					bNeedsResorting = true;
 				}
