@@ -38,12 +38,14 @@ std::vector<const wchar_t*> ToPtrVector(const TArray<FString>& Input)
 URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt::RuleFileInfo::Entry* AttrInfo, UObject* const Outer)
 {
 	const std::wstring Name(AttrInfo->getName());
+	const FName AttributeName = WCHAR_TO_TCHAR(Name.c_str());;
 	switch (AttrInfo->getReturnType())
 	{
 	case prt::AAT_BOOL:
 	{
 		UBoolAttribute* BoolAttribute = NewObject<UBoolAttribute>(Outer);
 		BoolAttribute->Value = AttributeMap->getBool(Name.c_str());
+		BoolAttribute->SetFlags(RF_Transactional);
 		return BoolAttribute;
 	}
 	case prt::AAT_INT:
@@ -51,12 +53,14 @@ URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt:
 	{
 		UFloatAttribute* FloatAttribute = NewObject<UFloatAttribute>(Outer);
 		FloatAttribute->Value = AttributeMap->getFloat(Name.c_str());
+		FloatAttribute->SetFlags(RF_Transactional);
 		return FloatAttribute;
 	}
 	case prt::AAT_STR:
 	{
 		UStringAttribute* StringAttribute = NewObject<UStringAttribute>(Outer);
 		StringAttribute->Value = WCHAR_TO_TCHAR(AttributeMap->getString(Name.c_str()));
+		StringAttribute->SetFlags(RF_Transactional);
 		return StringAttribute;
 	}
 	case prt::AAT_STR_ARRAY:
@@ -68,6 +72,7 @@ URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt:
 		{
 			StringArrayAttribute->Values.Add(Arr[Index]);
 		}
+		StringArrayAttribute->SetFlags(RF_Transactional);
 		return StringArrayAttribute;
 	}
 	case prt::AAT_BOOL_ARRAY:
@@ -79,6 +84,7 @@ URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt:
 		{
 			BoolArrayAttribute->Values.Add(Arr[Index]);
 		}
+		BoolArrayAttribute->SetFlags(RF_Transactional);
 		return BoolArrayAttribute;
 	}
 	case prt::AAT_FLOAT_ARRAY:
@@ -90,6 +96,7 @@ URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt:
 		{
 			FloatArrayAttribute->Values.Add(Arr[Index]);
 		}
+		FloatArrayAttribute->SetFlags(RF_Transactional);
 		return FloatArrayAttribute;
 	}
 	case prt::AAT_UNKNOWN:
@@ -264,9 +271,10 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 
 namespace Vitruvio
 {
-TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo, UObject* const Outer)
+
+void UpdateAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo, UObject* const Outer)
 {
-	TMap<FString, URuleAttribute*> UnrealAttributeMap;
+	bool bNeedsResorting = false;
 	TMap<FString, int> ImportOrderMap = ParseImportOrderMap(RuleInfo);
 	
 	for (size_t AttributeIndex = 0; AttributeIndex < RuleInfo->getNumAttributes(); AttributeIndex++)
@@ -285,40 +293,50 @@ TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& Attri
 		}
 
 		const std::wstring Name(AttrInfo->getName());
-		if (UnrealAttributeMap.Contains(WCHAR_TO_TCHAR(Name.c_str())))
-		{
-			continue;
-		}
-
 		URuleAttribute* Attribute = CreateAttribute(AttributeMap, AttrInfo, Outer);
 
 		if (Attribute)
 		{
 			const FString AttributeName = WCHAR_TO_TCHAR(Name.c_str());
-			const FString DisplayName = WCHAR_TO_TCHAR(prtu::removeImport(prtu::removeStyle(Name.c_str())).c_str());
-			const FString ImportPath = WCHAR_TO_TCHAR(prtu::getFullImportPath(Name.c_str()).c_str());
 			Attribute->Name = AttributeName;
-			Attribute->DisplayName = DisplayName;
-			Attribute->ImportPath = ImportPath;
-			int* ImportOrder = ImportOrderMap.Find(ImportPath);
-			if (ImportOrder != nullptr)
-			{
-				Attribute->ImportOrder = *ImportOrder;
-			}
 
 			ParseAttributeAnnotations(AttrInfo, *Attribute, Outer);
-
 			if (!Attribute->bHidden)
 			{
-				UnrealAttributeMap.Add(AttributeName, Attribute);
+				//update/add attributes if they aren't hidden
+				if (AttributeMapOut.Contains(AttributeName))
+				{
+					const URuleAttribute* OutAttribute = AttributeMapOut[AttributeName];
+					if(!OutAttribute->bUserSet)
+					{
+						AttributeMapOut[AttributeName]->CopyValue(Attribute);
+					}
+				}
+				else
+				{
+					const FString DisplayName = WCHAR_TO_TCHAR(prtu::removeImport(prtu::removeStyle(Name.c_str())).c_str());
+					const FString ImportPath = WCHAR_TO_TCHAR(prtu::getFullImportPath(Name.c_str()).c_str());
+
+					Attribute->DisplayName = DisplayName;
+					Attribute->ImportPath = ImportPath;
+					int* ImportOrder = ImportOrderMap.Find(ImportPath);
+					if (ImportOrder != nullptr)
+					{
+						Attribute->ImportOrder = *ImportOrder;
+					}
+					AttributeMapOut.Add(AttributeName, Attribute);
+					bNeedsResorting = true;
+				}
 			}
 		}
 	}
-	TMap<FGroupOrderKey, int> GlobalGroupOrder = GetGlobalGroupOrderMap(UnrealAttributeMap);
-	UnrealAttributeMap.ValueSort([&GlobalGroupOrder](const URuleAttribute& A, const URuleAttribute& B) {
-		return IsAttributeBeforeOther(A, B, GlobalGroupOrder);
-	});
-	return UnrealAttributeMap;
+	if (bNeedsResorting)
+	{
+		TMap<FGroupOrderKey, int> GlobalGroupOrder = GetGlobalGroupOrderMap(AttributeMapOut);
+		AttributeMapOut.ValueSort([&GlobalGroupOrder](const URuleAttribute& A, const URuleAttribute& B) {
+			return IsAttributeBeforeOther(A, B, GlobalGroupOrder);
+		});
+	}
 }
 
 AttributeMapUPtr CreateAttributeMap(const TMap<FString, URuleAttribute*>& Attributes)

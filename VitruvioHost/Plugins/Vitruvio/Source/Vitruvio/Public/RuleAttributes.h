@@ -107,7 +107,20 @@ class VITRUVIO_API URuleAttribute : public UObject
 protected:
 	UPROPERTY()
 	UAttributeAnnotation* Annotation;
-
+	FSimpleDelegate OnUndo;
+	virtual void PostEditUndo() override
+	{
+		Super::PostEditUndo();
+		if (OnUndo.IsBound())
+		{
+			OnUndo.Execute();
+		}
+	}
+	virtual void Serialize(FArchive& Ar) override
+	{
+		Super::Serialize(Ar);
+		SetFlags(RF_Transactional);
+	}
 public:
 	UPROPERTY()
 	FString Name;
@@ -139,6 +152,8 @@ public:
 	}
 
 	virtual void CopyValue(const URuleAttribute* FromAttribute){}
+
+	void SetOnUndo(const FSimpleDelegate InOnUndo){OnUndo = InOnUndo;};
 };
 
 UCLASS()
