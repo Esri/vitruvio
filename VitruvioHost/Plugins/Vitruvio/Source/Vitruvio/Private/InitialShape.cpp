@@ -241,6 +241,40 @@ TArray<FInitialShapeFace> CreateDefaultInitialFaces()
 	return InitialFaces;
 }
 
+bool IsCongruentToDefaultInitialShape(const TArray<FInitialShapeFace>& InitialFaces)
+{
+	const TArray<FInitialShapeFace> DefaultInitialFaces = CreateDefaultInitialFaces();
+	check(DefaultInitialFaces.Num() == 1);
+	const TArray<FVector> DefaultVertices = DefaultInitialFaces[0].Vertices;
+	check(DefaultVertices.Num() == 4);
+
+	if (InitialFaces.Num() == DefaultInitialFaces.Num())
+	{
+		const TArray<FVector> Vertices = InitialFaces[0].Vertices;
+
+		if(Vertices.Num() == DefaultVertices.Num())
+		{
+			const FVector FirstVertex = DefaultVertices[0];
+			int32 InitialIndexOffset;
+			if(Vertices.Find(FirstVertex,InitialIndexOffset))
+			{
+				bool bIsDefaultInitialShape = true;
+				int32 IndexOffset = 0;
+				for (int32 CurrentIndex = 0; CurrentIndex < DefaultVertices.Num(); CurrentIndex++)
+				{
+					if (Vertices[(InitialIndexOffset + CurrentIndex) % DefaultVertices.Num()] != DefaultVertices[CurrentIndex])
+					{
+						bIsDefaultInitialShape = false;
+					}
+					IndexOffset++;
+				}
+				return bIsDefaultInitialShape;
+			}
+		}
+	}
+	return false;
+}
+
 UStaticMesh* CreateDefaultStaticMesh()
 {
 	UStaticMesh* StaticMesh;
@@ -288,6 +322,10 @@ UStaticMesh* CreateDefaultStaticMesh()
 
 UStaticMesh* CreateStaticMeshFromInitialFaces(const TArray<FInitialShapeFace>& InitialFaces)
 {
+	if(IsCongruentToDefaultInitialShape(InitialFaces))
+	{
+		return CreateDefaultStaticMesh();
+	}
 	TArray<FInitialShapeFace> CurrInitialFaces = InitialFaces;
 	if (InitialFaces.Num() == 0)
 	{
