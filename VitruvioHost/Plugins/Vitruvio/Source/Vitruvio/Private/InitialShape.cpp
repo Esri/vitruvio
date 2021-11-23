@@ -241,6 +241,51 @@ TArray<FInitialShapeFace> CreateDefaultInitialFaces()
 	return InitialFaces;
 }
 
+UStaticMesh* CreateDefaultStaticMesh()
+{
+	UStaticMesh* StaticMesh;
+
+#if WITH_EDITOR
+	const FString InitialShapeName = TEXT("DefaultInitialShape");
+	const FName StaticMeshName = FName(InitialShapeName);
+	const FString PackageName = TEXT("/Game/Vitruvio/") + InitialShapeName;
+	
+	UPackage* Package = LoadPackage(nullptr, ToCStr(PackageName), LOAD_None);
+	
+	if (Package != nullptr)
+	{
+		StaticMesh = FindObjectFast<UStaticMesh>(Package, StaticMeshName);
+		if (StaticMesh != nullptr)
+		{
+			return StaticMesh;
+		}
+	}
+#endif
+	
+	const TArray<FInitialShapeFace> CurrInitialFaces = CreateDefaultInitialFaces();
+	FMeshDescription MeshDescription = CreateMeshDescription(CurrInitialFaces);
+	MeshDescription.TriangulateMesh();
+
+	TArray<const FMeshDescription*> MeshDescriptions;
+	MeshDescriptions.Emplace(&MeshDescription);
+
+#if WITH_EDITOR
+	Package = CreatePackage(*PackageName);
+	StaticMesh = NewObject<UStaticMesh>(Package, StaticMeshName, RF_Public | RF_Standalone);
+#else
+	StaticMesh = NewObject<UStaticMesh>();
+#endif
+	
+	StaticMesh->BuildFromMeshDescriptions(MeshDescriptions);
+
+#if WITH_EDITOR
+	const FString PackageFileName = FPackageName::LongPackageNameToFilename(PackageName, FPackageName::GetAssetPackageExtension());
+	UPackage::SavePackage(Package, StaticMesh, RF_Public | RF_Standalone, *PackageFileName);
+#endif
+	
+	return StaticMesh;
+}
+
 UStaticMesh* CreateStaticMeshFromInitialFaces(const TArray<FInitialShapeFace>& InitialFaces)
 {
 	TArray<FInitialShapeFace> CurrInitialFaces = InitialFaces;
@@ -269,11 +314,6 @@ UStaticMesh* CreateStaticMeshFromInitialFaces(const TArray<FInitialShapeFace>& I
 
 	StaticMesh->BuildFromMeshDescriptions(MeshDescriptions);
 	return StaticMesh;
-}
-
-UStaticMesh* CreateDefaultStaticMesh()
-{
-	return CreateStaticMeshFromInitialFaces(CreateDefaultInitialFaces());
 }
 
 TArray<TArray<FSplinePoint>> CreateSplinePointsFromInitialFaces(const TArray<FInitialShapeFace>& InitialFaces)
