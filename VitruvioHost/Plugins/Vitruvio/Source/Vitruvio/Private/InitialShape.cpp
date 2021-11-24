@@ -26,7 +26,7 @@ namespace
 template <typename T>
 T* AttachComponent(AActor* Owner, const FString& Name)
 {
-	T* Component = NewObject<T>(Owner, *Name);
+	T* Component = NewObject<T>(Owner, *Name, RF_Transactional);
 	Component->Mobility = EComponentMobility::Movable;
 	Owner->AddInstanceComponent(Component);
 	Component->AttachToComponent(Owner->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
