@@ -648,40 +648,37 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 	{
 		return;
 	}
+	bool bComponentPropertyChanged = false;
 
 	// Happens for example during import from copy paste
 	if (!PropertyChangedEvent.Property)
 	{
-		return;
-	}
+		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Rpk))
+		{
+			Attributes.Empty();
+			bAttributesReady = false;
+			bComponentPropertyChanged = true;
+			bNotifyAttributeChange = true;
+		}
 
-	bool bComponentPropertyChanged = false;
+		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, RandomSeed))
+		{
+			bValidRandomSeed = true;
+			bComponentPropertyChanged = true;
+		}
 
-	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Rpk))
-	{
-		Attributes.Empty();
-		bAttributesReady = false;
-		bComponentPropertyChanged = true;
-		bNotifyAttributeChange = true;
-	}
-
-	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, RandomSeed))
-	{
-		bValidRandomSeed = true;
-		bComponentPropertyChanged = true;
-	}
-
-	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateCollision))
-	{
-		bComponentPropertyChanged = true;
-	}
+		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateCollision))
+		{
+			bComponentPropertyChanged = true;
+		}
 	
-	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, HideAfterGeneration))
-	{
-		InitialShape->SetHidden(HideAfterGeneration && HasGeneratedMesh);
+		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, HideAfterGeneration))
+		{
+			InitialShape->SetHidden(HideAfterGeneration && HasGeneratedMesh);
+		}
 	}
 
-	const bool bRelevantProperty = InitialShape && InitialShape->IsRelevantProperty(Object, PropertyChangedEvent);
+	const bool bRelevantProperty = InitialShape != nullptr;
 	const bool bRecreateInitialShape = IsRelevantObject(this, Object) && bRelevantProperty;
 
 	// If a property has changed which is used for creating the initial shape we have to recreate it
