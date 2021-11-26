@@ -34,6 +34,9 @@ class VITRUVIO_API UGeneratedModelStaticMeshComponent : public UStaticMeshCompon
 		}
 
 		TriCollisionData->Indices = CollisionData.Indices;
+		TArray<uint16> MaterialIndices;
+		MaterialIndices.SetNumZeroed(CollisionData.Indices.Num());
+		TriCollisionData->MaterialIndices = MaterialIndices;
 		TriCollisionData->Vertices = CollisionData.Vertices;
 		TriCollisionData->bFlipNormals = true;
 		return true;
