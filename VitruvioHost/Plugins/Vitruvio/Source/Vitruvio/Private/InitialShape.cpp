@@ -258,17 +258,16 @@ bool IsCongruentToDefaultInitialShape(const TArray<FInitialShapeFace>& InitialFa
 			int32 InitialIndexOffset;
 			if(Vertices.Find(FirstVertex,InitialIndexOffset))
 			{
-				bool bIsDefaultInitialShape = true;
 				int32 IndexOffset = 0;
 				for (int32 CurrentIndex = 0; CurrentIndex < DefaultVertices.Num(); CurrentIndex++)
 				{
 					if (!Vertices[(InitialIndexOffset + CurrentIndex) % Vertices.Num()].Equals(DefaultVertices[CurrentIndex]))
 					{
-						bIsDefaultInitialShape = false;
+						return false;
 					}
 					IndexOffset++;
 				}
-				return bIsDefaultInitialShape;
+				return true;
 			}
 		}
 	}
