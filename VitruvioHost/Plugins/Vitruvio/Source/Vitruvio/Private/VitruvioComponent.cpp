@@ -650,7 +650,6 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 	}
 	bool bComponentPropertyChanged = false;
 
-	// Happens for example during import from copy paste
 	if (!PropertyChangedEvent.Property)
 	{
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Rpk))
