@@ -678,7 +678,10 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		}
 	}
 
-	const bool bRelevantProperty = InitialShape != nullptr;
+	// If a property was changed via an undo command, the PropertyChangedEvent is empty i.e. (Property == nullptr)
+	// This is not optimal since it can also happens in other cases (i.e. during import from copy paste) and might be improved later
+	const bool bRelevantProperty = InitialShape != nullptr && (PropertyChangedEvent.Property == nullptr || InitialShape->IsRelevantProperty(
+		                                                           Object, PropertyChangedEvent));;
 	const bool bRecreateInitialShape = IsRelevantObject(this, Object) && bRelevantProperty;
 
 	// If a property has changed which is used for creating the initial shape we have to recreate it
