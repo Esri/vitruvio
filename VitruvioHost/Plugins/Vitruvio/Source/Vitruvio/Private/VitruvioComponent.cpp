@@ -677,10 +677,12 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		}
 	}
 
-	// If a spline was changed via an undo command, the PropertyChangedEvent.Property is null
-	// Therefore we can only check if the ObjectType matches USplineComponent and check if the Property is null (=likely undo event)
-	// This is suboptimal since it can also happen during undo on irrelevant spline properties and other cases and might be improved later
+	// If a object was changed via an undo command, the PropertyChangedEvent.Property is null
+	// Therefore we can only check if the ObjectType and check if the Property is null (=likely undo event)
+	// This is suboptimal since it can also happen during undo on irrelevant properties and other cases and might be improved later
 	const bool bIsSplinePropertyUndo = Object->IsA(USplineComponent::StaticClass()) && PropertyChangedEvent.Property == nullptr;
+	const bool bIsAttributeUndo = Object->IsA(URuleAttribute::StaticClass()) && PropertyChangedEvent.Property == nullptr;;
+
 	const bool bRelevantProperty = InitialShape != nullptr && (
 		                               bIsSplinePropertyUndo || InitialShape->IsRelevantProperty(Object, PropertyChangedEvent));;
 	const bool bRecreateInitialShape = IsRelevantObject(this, Object) && bRelevantProperty;
@@ -706,9 +708,10 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		RemoveGeneratedMeshes();
 	}
 
-	if (HasValidInputData() && !bAttributesReady)
+	if (HasValidInputData() && (!bAttributesReady || bIsAttributeUndo))
 	{
-		EvaluateRuleAttributes();
+		//Force regeneration on attribute undo
+		EvaluateRuleAttributes(bIsAttributeUndo);
 	}
 }
 
