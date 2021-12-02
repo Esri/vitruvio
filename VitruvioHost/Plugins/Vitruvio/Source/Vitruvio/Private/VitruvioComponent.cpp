@@ -677,12 +677,14 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		}
 	}
 
-	// If a property was changed via an undo command, the PropertyChangedEvent is empty i.e. (Property == nullptr)
-	// This is not optimal since it can also happens in other cases (i.e. during import from copy paste) and might be improved later
-	const bool bRelevantProperty = InitialShape != nullptr && (PropertyChangedEvent.Property == nullptr || InitialShape->IsRelevantProperty(
-		                                                           Object, PropertyChangedEvent));;
+	// If a spline was changed via an undo command, the PropertyChangedEvent.Property is null
+	// Therefore we can only check if the ObjectType matches USplineComponent and check if the Property is null (=likely undo event)
+	// This is suboptimal since it can also happen during undo on irrelevant spline properties and other cases and might be improved later
+	const bool bIsSplinePropertyUndo = Object->IsA(USplineComponent::StaticClass()) && PropertyChangedEvent.Property == nullptr;
+	const bool bRelevantProperty = InitialShape != nullptr && (
+		                               bIsSplinePropertyUndo || InitialShape->IsRelevantProperty(Object, PropertyChangedEvent));;
 	const bool bRecreateInitialShape = IsRelevantObject(this, Object) && bRelevantProperty;
-
+	
 	// If a property has changed which is used for creating the initial shape we have to recreate it
 	if (bRecreateInitialShape)
 	{
