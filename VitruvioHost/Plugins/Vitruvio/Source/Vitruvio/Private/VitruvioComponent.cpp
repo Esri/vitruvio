@@ -677,9 +677,9 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		}
 	}
 
-	// If a object was changed via an undo command, the PropertyChangedEvent.Property is null
-	// Therefore we can only check if the ObjectType and check if the Property is null (=likely undo event)
-	// This is suboptimal since it can also happen during undo on irrelevant properties and other cases and might be improved later
+	// If an object was changed via an undo command, the PropertyChangedEvent.Property is null
+	// Therefore, we can only check the ObjectType and check if the Property is null (=likely undo event)
+	// This is suboptimal, since it can also happen during undo commands on irrelevant properties of that object. Might be improved later...
 	const bool bIsSplinePropertyUndo = Object->IsA(USplineComponent::StaticClass()) && PropertyChangedEvent.Property == nullptr;
 	const bool bIsAttributeUndo = Object->IsA(URuleAttribute::StaticClass()) && PropertyChangedEvent.Property == nullptr;;
 
