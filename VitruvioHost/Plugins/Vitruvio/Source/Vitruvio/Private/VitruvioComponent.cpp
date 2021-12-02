@@ -650,7 +650,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 	}
 	bool bComponentPropertyChanged = false;
 
-	if (!PropertyChangedEvent.Property)
+	if (PropertyChangedEvent.Property != nullptr)
 	{
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Rpk))
 		{
