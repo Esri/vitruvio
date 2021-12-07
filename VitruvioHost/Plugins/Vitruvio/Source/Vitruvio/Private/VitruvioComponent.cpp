@@ -681,10 +681,10 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 	// Therefore, we can only check the ObjectType and check if the Property is null (=likely undo event)
 	// This is suboptimal, since it can also happen during undo commands on irrelevant properties of that object. Might be improved later...
 	const bool bIsSplinePropertyUndo = Object->IsA(USplineComponent::StaticClass()) && PropertyChangedEvent.Property == nullptr;
-	const bool bIsAttributeUndo = Object->IsA(URuleAttribute::StaticClass()) && PropertyChangedEvent.Property == nullptr;;
+	const bool bIsAttributeUndo = Object->IsA(URuleAttribute::StaticClass()) && PropertyChangedEvent.Property == nullptr;
 
 	const bool bRelevantProperty = InitialShape != nullptr && (
-		                               bIsSplinePropertyUndo || InitialShape->IsRelevantProperty(Object, PropertyChangedEvent));;
+		                               bIsSplinePropertyUndo || InitialShape->IsRelevantProperty(Object, PropertyChangedEvent));
 	const bool bRecreateInitialShape = IsRelevantObject(this, Object) && bRelevantProperty;
 	
 	// If a property has changed which is used for creating the initial shape we have to recreate it
