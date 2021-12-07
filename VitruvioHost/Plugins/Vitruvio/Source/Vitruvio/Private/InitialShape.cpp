@@ -241,8 +241,90 @@ TArray<FInitialShapeFace> CreateDefaultInitialFaces()
 	return InitialFaces;
 }
 
+bool IsCongruentToDefaultInitialShape(const TArray<FInitialShapeFace>& InitialFaces)
+{
+	const TArray<FInitialShapeFace> DefaultInitialFaces = CreateDefaultInitialFaces();
+	check(DefaultInitialFaces.Num() == 1);
+	const TArray<FVector> DefaultVertices = DefaultInitialFaces[0].Vertices;
+	check(DefaultVertices.Num() == 4);
+
+	if (InitialFaces.Num() == DefaultInitialFaces.Num())
+	{
+		const TArray<FVector> Vertices = InitialFaces[0].Vertices;
+
+		if(Vertices.Num() == DefaultVertices.Num())
+		{
+			const FVector FirstVertex = DefaultVertices[0];
+			int32 InitialIndexOffset;
+			if(Vertices.Find(FirstVertex,InitialIndexOffset))
+			{
+				int32 IndexOffset = 0;
+				for (int32 CurrentIndex = 0; CurrentIndex < DefaultVertices.Num(); CurrentIndex++)
+				{
+					if (!Vertices[(InitialIndexOffset + CurrentIndex) % Vertices.Num()].Equals(DefaultVertices[CurrentIndex]))
+					{
+						return false;
+					}
+					IndexOffset++;
+				}
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+UStaticMesh* CreateDefaultStaticMesh()
+{
+	UStaticMesh* StaticMesh;
+
+#if WITH_EDITOR
+	const FString InitialShapeName = TEXT("DefaultInitialShape");
+	const FName StaticMeshName = FName(InitialShapeName);
+	const FString PackageName = TEXT("/Game/Vitruvio/") + InitialShapeName;
+	
+	UPackage* Package = LoadPackage(nullptr, ToCStr(PackageName), LOAD_None);
+	
+	if (Package != nullptr)
+	{
+		StaticMesh = FindObjectFast<UStaticMesh>(Package, StaticMeshName);
+		if (StaticMesh != nullptr)
+		{
+			return StaticMesh;
+		}
+	}
+#endif
+	
+	const TArray<FInitialShapeFace> CurrInitialFaces = CreateDefaultInitialFaces();
+	FMeshDescription MeshDescription = CreateMeshDescription(CurrInitialFaces);
+	MeshDescription.TriangulateMesh();
+
+	TArray<const FMeshDescription*> MeshDescriptions;
+	MeshDescriptions.Emplace(&MeshDescription);
+
+#if WITH_EDITOR
+	Package = CreatePackage(*PackageName);
+	StaticMesh = NewObject<UStaticMesh>(Package, StaticMeshName, RF_Public | RF_Standalone);
+#else
+	StaticMesh = NewObject<UStaticMesh>();
+#endif
+	
+	StaticMesh->BuildFromMeshDescriptions(MeshDescriptions);
+
+#if WITH_EDITOR
+	const FString PackageFileName = FPackageName::LongPackageNameToFilename(PackageName, FPackageName::GetAssetPackageExtension());
+	UPackage::SavePackage(Package, StaticMesh, RF_Public | RF_Standalone, *PackageFileName);
+#endif
+	
+	return StaticMesh;
+}
+
 UStaticMesh* CreateStaticMeshFromInitialFaces(const TArray<FInitialShapeFace>& InitialFaces)
 {
+	if(IsCongruentToDefaultInitialShape(InitialFaces))
+	{
+		return CreateDefaultStaticMesh();
+	}
 	TArray<FInitialShapeFace> CurrInitialFaces = InitialFaces;
 	if (InitialFaces.Num() == 0)
 	{
@@ -269,11 +351,6 @@ UStaticMesh* CreateStaticMeshFromInitialFaces(const TArray<FInitialShapeFace>& I
 
 	StaticMesh->BuildFromMeshDescriptions(MeshDescriptions);
 	return StaticMesh;
-}
-
-UStaticMesh* CreateDefaultStaticMesh()
-{
-	return CreateStaticMeshFromInitialFaces(CreateDefaultInitialFaces());
 }
 
 TArray<TArray<FSplinePoint>> CreateSplinePointsFromInitialFaces(const TArray<FInitialShapeFace>& InitialFaces)
