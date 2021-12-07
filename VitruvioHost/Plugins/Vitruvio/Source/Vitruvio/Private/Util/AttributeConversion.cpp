@@ -38,7 +38,7 @@ std::vector<const wchar_t*> ToPtrVector(const TArray<FString>& Input)
 URuleAttribute* CreateAttribute(const AttributeMapUPtr& AttributeMap, const prt::RuleFileInfo::Entry* AttrInfo, UObject* const Outer)
 {
 	const std::wstring Name(AttrInfo->getName());
-	const FName AttributeName = WCHAR_TO_TCHAR(Name.c_str());;
+	const FName AttributeName = WCHAR_TO_TCHAR(Name.c_str());
 	switch (AttrInfo->getReturnType())
 	{
 	case prt::AAT_BOOL:

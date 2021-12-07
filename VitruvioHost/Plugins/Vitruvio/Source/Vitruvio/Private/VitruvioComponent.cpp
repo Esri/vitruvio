@@ -648,42 +648,45 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 	{
 		return;
 	}
-
-	// Happens for example during import from copy paste
-	if (!PropertyChangedEvent.Property)
-	{
-		return;
-	}
-
 	bool bComponentPropertyChanged = false;
 
-	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Rpk))
+	if (PropertyChangedEvent.Property != nullptr)
 	{
-		Attributes.Empty();
-		bAttributesReady = false;
-		bComponentPropertyChanged = true;
-		bNotifyAttributeChange = true;
-	}
+		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, Rpk))
+		{
+			Attributes.Empty();
+			bAttributesReady = false;
+			bComponentPropertyChanged = true;
+			bNotifyAttributeChange = true;
+		}
 
-	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, RandomSeed))
-	{
-		bValidRandomSeed = true;
-		bComponentPropertyChanged = true;
-	}
+		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, RandomSeed))
+		{
+			bValidRandomSeed = true;
+			bComponentPropertyChanged = true;
+		}
 
-	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateCollision))
-	{
-		bComponentPropertyChanged = true;
-	}
+		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateCollision))
+		{
+			bComponentPropertyChanged = true;
+		}
 	
-	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, HideAfterGeneration))
-	{
-		InitialShape->SetHidden(HideAfterGeneration && HasGeneratedMesh);
+		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, HideAfterGeneration))
+		{
+			InitialShape->SetHidden(HideAfterGeneration && HasGeneratedMesh);
+		}
 	}
 
-	const bool bRelevantProperty = InitialShape && InitialShape->IsRelevantProperty(Object, PropertyChangedEvent);
-	const bool bRecreateInitialShape = IsRelevantObject(this, Object) && bRelevantProperty;
+	// If an object was changed via an undo command, the PropertyChangedEvent.Property is null
+	// Therefore, we can only check the ObjectType and check if the Property is null (=likely undo event)
+	// This is suboptimal, since it can also happen during undo commands on irrelevant properties of that object. Might be improved later...
+	const bool bIsSplinePropertyUndo = Object->IsA(USplineComponent::StaticClass()) && PropertyChangedEvent.Property == nullptr;
+	const bool bIsAttributeUndo = Object->IsA(URuleAttribute::StaticClass()) && PropertyChangedEvent.Property == nullptr;
 
+	const bool bRelevantProperty = InitialShape != nullptr && (
+		                               bIsSplinePropertyUndo || InitialShape->IsRelevantProperty(Object, PropertyChangedEvent));
+	const bool bRecreateInitialShape = IsRelevantObject(this, Object) && bRelevantProperty;
+	
 	// If a property has changed which is used for creating the initial shape we have to recreate it
 	if (bRecreateInitialShape)
 	{
@@ -705,9 +708,10 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		RemoveGeneratedMeshes();
 	}
 
-	if (HasValidInputData() && !bAttributesReady)
+	if (HasValidInputData() && (!bAttributesReady || bIsAttributeUndo))
 	{
-		EvaluateRuleAttributes();
+		//Force regeneration on attribute undo
+		EvaluateRuleAttributes(bIsAttributeUndo);
 	}
 }
 

@@ -618,10 +618,6 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailLayoutBuilder& Detai
 	for (const auto& AttributeEntry : VitruvioActor->GetAttributes())
 	{
 		URuleAttribute* Attribute = AttributeEntry.Value;
-		Attribute->SetOnUndo(FSimpleDelegate::CreateLambda([VitruvioActor]()
-		{
-			VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
-		}));
 
 		IDetailGroup* Group = GetOrCreateGroups(RootGroup, Attribute, GroupCache);
 
