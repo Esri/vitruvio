@@ -58,7 +58,7 @@ public class PRT : ModuleRules
 		
 		string PrtCorePath = Path.Combine(BinDir, PrtCoreDllName);
 		bool PrtCoreExists = File.Exists(PrtCorePath);
-		bool PrtVersionMatch = PrtCoreExists && CheckDllVersion(PrtCorePath, PrtMajor, PrtMinor, PrtBuild);
+		bool PrtVersionMatch = PrtCoreExists && CheckDllVersion(Platform, PrtCorePath, PrtMajor, PrtMinor, PrtBuild);
 
 		if (!PrtInstalled || !PrtVersionMatch)
 		{
@@ -160,17 +160,21 @@ public class PRT : ModuleRules
 		}
 	}
 
-	public bool CheckDllVersion(string DllPath, int Major, int Minor, int Build)
+	private bool CheckDllVersion(AbstractPlatform Platform, string DllPath, int Major, int Minor, int Build)
 	{
-		FileVersionInfo Info = FileVersionInfo.GetVersionInfo(DllPath);
-		string[] BuildVersions = Info.ProductVersion.Split(' ');
+		string FileVersion = Platform.GetFileVersionInfo(ModuleDirectory, DllPath);
+		string[] BuildVersions = FileVersion.Split(' ');
+		string ProductVersion = BuildVersions[0];
+		string[] ProductVersions = ProductVersion.Split(".");
+		int FileMajor = int.Parse(ProductVersions[0]);
+		int FileMinor = int.Parse(ProductVersions[1]);
 		int DllBuild = int.Parse(BuildVersions[BuildVersions.Length - 1]);
-
-		bool Match = Info.FileMajorPart == Major && Info.FileMinorPart == Minor && DllBuild == Build;
+		
+		bool Match = FileMajor == Major && FileMinor == Minor && DllBuild == Build;
 		if (Debug && !Match)
 		{
 			Console.WriteLine(string.Format("Version {0}.{1}.{2} of \"{3}\" does not match expected version of Build file {4}.{5}.{6}",
-				 Info.FileMajorPart, Info.FileMinorPart, DllBuild, Path.GetFileName(DllPath), Major, Minor, Build));
+				FileMajor, FileMinor, DllBuild, Path.GetFileName(DllPath), Major, Minor, Build));
 		}
 		return Match;
 	}
@@ -264,6 +268,7 @@ public class PRT : ModuleRules
 				Rules.PublicDelayLoadDLLs.Add(LibraryName);
 			}
 		}
+		public abstract string GetFileVersionInfo(string WorkingDir, string Path);
 	}
 
 	private class WindowsPlatform : AbstractPlatform
@@ -289,6 +294,33 @@ public class PRT : ModuleRules
 				Rules.PublicAdditionalLibraries.Add(LibraryPath);
 			}
 		}
+		
+
+		public override string GetFileVersionInfo(string WorkingDir, string Path)
+		{
+			var GetFileInfoCommand = "/c PowerShell -Command \"(Get-Item \"{0}\").VersionInfo.FileVersion\"";
+			var ExpandedFileInfoCommand = string.Format(GetFileInfoCommand, Path);
+
+			ProcessStartInfo ProcStartInfo = new System.Diagnostics.ProcessStartInfo("cmd", ExpandedFileInfoCommand)
+			{
+				WorkingDirectory = WorkingDir,
+				UseShellExecute = false,
+				CreateNoWindow = true,
+				RedirectStandardOutput = true
+			};
+
+			Process FileVersionProcess = new Process
+			{
+				StartInfo = ProcStartInfo,
+				EnableRaisingEvents = true
+			};
+			FileVersionProcess.Start();
+			
+			string Output = FileVersionProcess.StandardOutput.ReadToEnd();
+			FileVersionProcess.WaitForExit();
+
+			return Output;
+		}
 	}
 
 	private class MacPlatform : AbstractPlatform
@@ -302,5 +334,10 @@ public class PRT : ModuleRules
 		public override string Name { get { return "Mac"; } }
 		public override string PrtPlatform { get { return "osx12-ac81-x86_64-rel-opt"; } }
 		public override string DynamicLibExtension { get { return ".dylib"; } }
+		
+		public override string GetFileVersionInfo(string WorkingDir, string Path)
+		{
+			return "";
+		}
 	}
 }
