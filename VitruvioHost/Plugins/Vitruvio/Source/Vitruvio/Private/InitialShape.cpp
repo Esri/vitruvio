@@ -312,7 +312,7 @@ UStaticMesh* CreateDefaultStaticMesh()
 	StaticMesh->BuildFromMeshDescriptions(MeshDescriptions);
 
 #if WITH_EDITOR
-	const FString PackageFileName = FPackageName::LongPackageNameToFilename(PackageName, FPackageName::GetAssetPackageExtension());
+	const FString PackageFileName = InitialShapeName + FPackageName::GetAssetPackageExtension();
 	UPackage::SavePackage(Package, StaticMesh, RF_Public | RF_Standalone, *PackageFileName);
 #endif
 	
