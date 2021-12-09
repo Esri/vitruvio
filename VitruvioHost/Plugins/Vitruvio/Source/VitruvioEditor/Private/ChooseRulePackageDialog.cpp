@@ -64,7 +64,7 @@ void SCRulePackagePicker::Construct(const FArguments& InArgs)
 	FDetailsViewArgs DetailsViewArgs;
 	DetailsViewArgs.bAllowSearch = false;
 	DetailsViewArgs.bLockable = false;
-	DetailsViewArgs.bShowActorLabel = false;
+	DetailsViewArgs.bShowObjectLabel = false;
 	DetailsViewArgs.bShowOptions = false;
 	DetailsViewArgs.bUpdatesFromSelection = false;
 	DetailsViewArgs.bHideSelectionTip = false;
