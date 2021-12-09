@@ -214,19 +214,6 @@ public class PRT : ModuleRules
 		}
 	}
 
-	private class UnixZipExtractor : AbstractZipExtractor
-	{
-		public override string Command { get { return "unzip"; } }
-
-		public override string Arguments
-		{
-			get
-			{
-				return "-q {0} -d {1}";
-			}
-		}
-	}
-
 	private abstract class AbstractPlatform
 	{
 		public abstract AbstractZipExtractor ZipExtractor { get; }
