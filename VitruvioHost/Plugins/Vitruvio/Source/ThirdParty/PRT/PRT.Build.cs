@@ -4,7 +4,6 @@ using System.IO;
 using System;
 using System.Diagnostics;
 using System.Security.Cryptography;
-using System.Net;
 using UnrealBuildTool;
 using System.ComponentModel.Design;
 using System.Collections.Generic;
@@ -79,11 +78,8 @@ public class PRT : ModuleRules
 				}
 
 				if (Debug) System.Console.WriteLine("Downloading " + PrtDownloadUrl + "...");
-
-				using (var Client = new WebClient())
-				{
-					Client.DownloadFile(PrtDownloadUrl, Path.Combine(ModuleDirectory, PrtLibZipFile));
-				}
+				
+				Platform.DownloadFile(PrtDownloadUrl, Path.Combine(ModuleDirectory, PrtLibZipFile));
 
 				if (Debug) System.Console.WriteLine("Extracting " + PrtLibZipFile + "...");
 
@@ -252,6 +248,7 @@ public class PRT : ModuleRules
 			}
 		}
 		public abstract string GetFileVersionInfo(string WorkingDir, string Path);
+		public abstract void DownloadFile(string Url, string Destination);
 	}
 
 	private class WindowsPlatform : AbstractPlatform
@@ -303,6 +300,26 @@ public class PRT : ModuleRules
 			FileVersionProcess.WaitForExit();
 
 			return Output;
+		}
+		
+		public override void DownloadFile(string Url, string Destination)
+		{
+			var DownloadFileCommand = "/c PowerShell -Command \"Invoke-WebRequest -Uri {0} -OutFile {1}\"";
+			var ExpandedDownloadFileCommand = string.Format(DownloadFileCommand, Url, Destination);
+
+			ProcessStartInfo ProcStartInfo = new System.Diagnostics.ProcessStartInfo("cmd", ExpandedDownloadFileCommand)
+			{
+				UseShellExecute = false,
+				CreateNoWindow = true,
+			};
+
+			Process FileVersionProcess = new Process
+			{
+				StartInfo = ProcStartInfo,
+				EnableRaisingEvents = true
+			};
+			FileVersionProcess.Start();
+			FileVersionProcess.WaitForExit();
 		}
 	}
 }
