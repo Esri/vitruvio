@@ -40,10 +40,6 @@ public class PRT : ModuleRules
 		{
 			Platform = new WindowsPlatform(Debug);
 		}
-		else if (Target.Platform == UnrealTargetPlatform.Mac)
-		{
-			Platform = new MacPlatform(Debug);
-		}
 		else
 		{
 			throw new System.PlatformNotSupportedException();
@@ -320,24 +316,6 @@ public class PRT : ModuleRules
 			FileVersionProcess.WaitForExit();
 
 			return Output;
-		}
-	}
-
-	private class MacPlatform : AbstractPlatform
-	{
-		public override AbstractZipExtractor ZipExtractor {	get { return new UnixZipExtractor(); } }
-		
-		public MacPlatform(bool Debug) : base(Debug)
-		{
-		} 
-		
-		public override string Name { get { return "Mac"; } }
-		public override string PrtPlatform { get { return "osx12-ac81-x86_64-rel-opt"; } }
-		public override string DynamicLibExtension { get { return ".dylib"; } }
-		
-		public override string GetFileVersionInfo(string WorkingDir, string Path)
-		{
-			return "";
 		}
 	}
 }
