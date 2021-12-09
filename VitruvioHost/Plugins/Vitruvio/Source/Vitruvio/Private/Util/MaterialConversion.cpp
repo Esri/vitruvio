@@ -218,6 +218,7 @@ public:
 	void DoTask(ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
 	{
 		QUICK_SCOPE_CYCLE_COUNTER(STAT_MaterialConversion_LoadTexture);
+		FTaskTagScope Scope(ETaskTag::EParallelRenderingThread);
 		Vitruvio::FTextureData TextureData = VitruvioModule::Get().DecodeTexture(Outer, ImagePath, TextureKey);
 		{
 			FScopeLock CacheLock(&CacheCriticalSection);
