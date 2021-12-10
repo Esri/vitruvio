@@ -96,6 +96,8 @@ void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttribute
 	TArray<const FMeshDescription*> MeshDescriptionPtrs;
 	MeshDescriptionPtrs.Emplace(&MeshDescription);
 
-	StaticMesh->BuildFromMeshDescriptions(MeshDescriptionPtrs);
+	UStaticMesh::FBuildMeshDescriptionsParams Params;
+	Params.bFastBuild = true;
+	StaticMesh->BuildFromMeshDescriptions(MeshDescriptionPtrs, Params);
 	CollisionData = {Indices, Vertices};
 }
