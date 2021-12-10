@@ -150,8 +150,15 @@ UMaterialInstanceConstant* SaveMaterial(UMaterialInstanceDynamic* Material, cons
 		Material->GetTextureParameterValue(Info, Value);
 		if (Value)
 		{
-			UTexture2D* PersistedTexture = SaveTexture(Cast<UTexture2D>(Value), Path, TextureCache);
-			NewMaterial->SetTextureParameterValueEditorOnly(Info, PersistedTexture);
+			if (Value->HasAnyFlags(RF_Transient))
+			{
+				UTexture2D* PersistedTexture = SaveTexture(Cast<UTexture2D>(Value), Path, TextureCache);
+				NewMaterial->SetTextureParameterValueEditorOnly(Info, PersistedTexture);
+			}
+			else
+			{
+				NewMaterial->SetTextureParameterValueEditorOnly(Info, Value);
+			}
 		}
 	}
 
