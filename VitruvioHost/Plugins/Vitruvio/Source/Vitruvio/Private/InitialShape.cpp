@@ -43,7 +43,7 @@ FMeshDescription CreateMeshDescription(const TArray<FInitialShapeFace>& InFaces)
 
 	// Need at least 1 uv set (can be empty) otherwise will crash when building the mesh
 	const auto VertexUVs = Attributes.GetVertexInstanceUVs();
-	VertexUVs.SetNumIndices(1);
+	VertexUVs.SetNumChannels(1);
 
 	const auto VertexPositions = Attributes.GetVertexPositions();
 	const FPolygonGroupID PolygonGroupId = Description.CreatePolygonGroup();
@@ -85,7 +85,7 @@ bool HasValidGeometry(const TArray<FInitialShapeFace>& InFaces)
 	const auto VertexPositions = Attributes.GetVertexPositions();
 	for (const FPolygonID& PolygonID : Description.Polygons().GetElementIDs())
 	{
-		for (const FTriangleID TriangleID : Description.GetPolygonTriangleIDs(PolygonID))
+		for (const FTriangleID TriangleID : Description.GetPolygonTriangles(PolygonID))
 		{
 			TArrayView<const FVertexInstanceID> TriangleVertexInstances = Description.GetTriangleVertexInstances(TriangleID);
 			const FVertexID VertexID0 = Description.GetVertexInstanceVertex(TriangleVertexInstances[0]);

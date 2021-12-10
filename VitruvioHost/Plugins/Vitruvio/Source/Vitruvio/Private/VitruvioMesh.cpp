@@ -82,9 +82,9 @@ void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttribute
 		++MaterialIndex;
 
 		// cache collision data
-		for (FPolygonID PolygonID : MeshDescription.GetPolygonGroupPolygons(PolygonGroupId))
+		for (FPolygonID PolygonID : MeshDescription.GetPolygonGroupPolygonIDs(PolygonGroupId))
 		{
-			for (FTriangleID TriangleID : MeshDescription.GetPolygonTriangleIDs(PolygonID))
+			for (FTriangleID TriangleID : MeshDescription.GetPolygonTriangles(PolygonID))
 			{
 				auto TriangleVertexInstances = MeshDescription.GetTriangleVertexInstances(TriangleID);
 

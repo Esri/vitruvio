@@ -133,7 +133,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 	Attributes.Register();
 
 	const auto VertexUVs = Attributes.GetVertexInstanceUVs();
-	VertexUVs.SetNumIndices(8);
+	VertexUVs.SetNumChannels(8);
 
 	// Convert vertices and vertex instances
 	const auto VertexPositions = Attributes.GetVertexPositions();
