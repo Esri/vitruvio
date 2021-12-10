@@ -6,7 +6,7 @@
 UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
                                         TMap<FString, Vitruvio::FTextureData>& TextureCache,
                                         TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-                                        const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, const FName& Name, UObject* Outer)
+                                        const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, UObject* Outer)
 {
 	check(IsInGameThread());
 
@@ -16,7 +16,7 @@ UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* Mask
 		return *Result;
 	}
 	
-	const FName UniqueMaterialName(Name);
+	const FName UniqueMaterialName(MaterialAttributes.Name);
 	UMaterialInstanceDynamic* Material = Vitruvio::GameThread_CreateMaterialInstance(Outer, UniqueMaterialName, OpaqueParent, MaskedParent,
 																					 TranslucentParent, MaterialAttributes, TextureCache);
 	MaterialCache.Add(MaterialAttributes, Material);
@@ -64,20 +64,12 @@ void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttribute
 	size_t MaterialIndex = 0;
 	for (const auto& PolygonGroupId : PolygonGroups.GetElementIDs())
 	{
-		const FName MaterialName = MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId];
 		UMaterialInstanceDynamic* Material = CacheMaterial(OpaqueParent, MaskedParent, TranslucentParent, TextureCache, MaterialCache,
-														   Materials[MaterialIndex], MaterialName, StaticMesh);
+														   Materials[MaterialIndex], StaticMesh);
 
-		if (MaterialSlots.Contains(Material))
-		{
-			MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlots[Material];
-		}
-		else
-		{
-			const FName SlotName = StaticMesh->AddMaterial(Material);
-			MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = SlotName;
-			MaterialSlots.Add(Material, SlotName);
-		}
+		const FName SlotName = StaticMesh->AddMaterial(Material);
+		MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = SlotName;
+		MaterialSlots.Add(Material, SlotName);
 
 		++MaterialIndex;
 

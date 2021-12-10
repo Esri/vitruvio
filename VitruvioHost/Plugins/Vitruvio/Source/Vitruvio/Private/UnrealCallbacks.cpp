@@ -150,22 +150,30 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 
 	size_t PolygonGroupStartIndex = 0;
 	TArray<Vitruvio::FMaterialAttributeContainer> MeshMaterials;
+	TMap<Vitruvio::FMaterialAttributeContainer, FPolygonGroupID> MeshMaterialMap;
 	for (size_t PolygonGroupIndex = 0; PolygonGroupIndex < faceRangesSize; ++PolygonGroupIndex)
 	{
 		const size_t PolygonFaceCount = faceRanges[PolygonGroupIndex];
 
-		const FPolygonGroupID PolygonGroupId = Description.CreatePolygonGroup();
-
 		Vitruvio::FMaterialAttributeContainer MaterialContainer(materials[PolygonGroupIndex]);
-		const FName MaterialSlot = FName(MaterialContainer.Name);
-		Attributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlot;
 		TMap<FString, double> AvailableUvSetAttributeMap = CreateAvailableUVSetMaterialParameterMap(uvCounts, uvSets);
 		for (auto& AvailableUvSetAttribute : AvailableUvSetAttributeMap)
 		{
 			MaterialContainer.ScalarProperties.Add(AvailableUvSetAttribute);
 		}
-		MeshMaterials.Add(MaterialContainer);
 
+		FPolygonGroupID PolygonGroupId;
+		if (MeshMaterialMap.Contains(MaterialContainer))
+		{
+			PolygonGroupId = MeshMaterialMap[MaterialContainer];
+		}
+		else
+		{
+			MeshMaterials.Add(MaterialContainer);
+			PolygonGroupId = Description.CreatePolygonGroup();
+			MeshMaterialMap.Add(MaterialContainer, PolygonGroupId);
+		}
+		
 		// Create Geometry
 		const auto Normals = Attributes.GetVertexInstanceNormals();
 		int PolygonFaces = 0;
