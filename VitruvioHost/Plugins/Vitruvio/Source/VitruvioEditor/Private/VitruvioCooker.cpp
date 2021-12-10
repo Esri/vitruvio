@@ -76,7 +76,7 @@ UTexture2D* SaveTexture(UTexture2D* Original, const FString& Path, FTextureCache
 		return TextureCache[Original];
 	}
 	FString AssetName;
-	UPackage* TexturePackage = CreateUniquePackage(FPaths::Combine(Path, TEXT("Textures")), AssetName);
+	UPackage* TexturePackage = CreateUniquePackage(FPaths::Combine(Path, TEXT("Textures"), Original->GetName()), AssetName);
 	UTexture2D* NewTexture = NewObject<UTexture2D>(TexturePackage, *AssetName, RF_Public | RF_Standalone);
 
 	NewTexture->PlatformData = new FTexturePlatformData();
