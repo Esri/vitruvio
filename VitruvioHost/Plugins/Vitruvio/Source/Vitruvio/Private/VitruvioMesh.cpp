@@ -25,6 +25,10 @@ UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* Mask
 
 FVitruvioMesh::~FVitruvioMesh()
 {
+	if (IsEngineExitRequested())
+	{
+		return;
+	}
 	VitruvioModule* VitruvioModule = VitruvioModule::GetUnchecked();
 	if (StaticMesh && VitruvioModule)
 	{
