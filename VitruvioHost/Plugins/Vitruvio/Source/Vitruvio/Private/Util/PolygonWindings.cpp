@@ -17,43 +17,129 @@
 
 #include "PolygonWindings.h"
 
+#include "Engine/Polys.h"
+
 namespace
 {
 struct FWindingEdge
 {
 	const int32 Index0;
 	const int32 Index1;
+	int32 Connectivity;
 
-	int32 Count;
+	FWindingEdge() : Index0(-1), Index1(-1), Connectivity(-1) {}
 
-	FWindingEdge() : Index0(-1), Index1(-1), Count(0) {}
-
-	FWindingEdge(const int32 Index0, const int32 Index1) : Index0(Index0), Index1(Index1), Count(1) {}
+	FWindingEdge(const int32 Index0, const int32 Index1, const int32 Connectivity) : Index0(Index0), Index1(Index1), Connectivity(Connectivity) {}
 
 	bool operator==(const FWindingEdge& E) const
 	{
-		return (E.Index0 == Index0 && E.Index1 == Index1) || (E.Index0 == Index1 && E.Index1 == Index0);
+		return (E.Index0 == Index0 && E.Index1 == Index1);
 	}
+};
+
+struct FWinding
+{
+	TArray<int32> Indices;
+	int Connectivity;
+
+	FWinding(const TArray<int32>& Indices, const int Connectivity) : Indices(Indices), Connectivity(Connectivity) {}
 };
 
 uint32 GetTypeHash(const FWindingEdge& Edge)
 {
-	// Use a modified version of cantor paring to make the hash function commutative. See
-	// https://math.stackexchange.com/questions/882877/produce-unique-number-given-two-integers
-	const int32 MaxIndex = FMath::Max(Edge.Index0, Edge.Index1);
-	const int32 MinIndex = FMath::Min(Edge.Index0, Edge.Index1);
-	return (MaxIndex * (MaxIndex + 1)) / 2 + MinIndex;
+	std::size_t Hash = 0x04C76972;
+	Hash = HashCombine(Hash, Edge.Index0);
+	return HashCombine(Hash, Edge.Index1);
+}
+
+void MarkVisited(FWindingEdge& Edge, TSortedMap<int32, TArray<FWindingEdge>>& EdgeMap, TSet<FWindingEdge>& Visited, int Connectivity)
+{
+	if (Visited.Contains(Edge))
+	{
+		return;
+	}
+
+	Edge.Connectivity = Connectivity;
+	Visited.Add(Edge);
+	for (FWindingEdge& Connected : EdgeMap[Edge.Index0])
+	{
+		MarkVisited(Connected, EdgeMap, Visited, Connectivity);
+	}
+	for (FWindingEdge& Connected : EdgeMap[Edge.Index1])
+	{
+		MarkVisited(Connected, EdgeMap, Visited, Connectivity);
+	}
+}
+
+bool IsInsidePolygon2D(const TArray<int32>& Polygon, const FVector& Test, const TArray<FVector>& Vertices)
+{
+	static const FVector TRACE_OFFSET = {1e6, 0, 0};
+	const FVector TraceEndPoint = Test + TRACE_OFFSET;
+
+	if (Polygon.Num() < 3)
+	{
+		return false;
+	}
+
+	int NumIntersections = 0;
+	for (int32 Index = 0; Index < Polygon.Num(); Index++)
+	{
+		const int32 CurrentIndex = Polygon[Index];
+		const int32 NextIndex = Polygon[Index + 1 >= Polygon.Num() ? 0 : Index + 1];
+		FVector TraceResult;
+		const bool Intersected = FMath::SegmentIntersection2D(Vertices[CurrentIndex], Vertices[NextIndex], Test, TraceEndPoint, TraceResult);
+		if (Intersected)
+		{
+			NumIntersections++;
+		}
+	}
+
+	return NumIntersections % 2 == 1;
+}
+
+bool IsInsideOf2D(const TArray<int32>& FaceA, const TArray<int32>& FaceB, const TArray<FVector>& Vertices)
+{
+	if (FaceB.Num() == 1)
+	{
+		return false;
+	}
+
+	for (int IndexA = 0; IndexA < FaceA.Num() - 1; IndexA++)
+	{
+		for (int IndexB = 0; IndexB < FaceB.Num() - 1; IndexB++)
+		{
+			FVector Intersection;
+			const bool Intersected = FMath::SegmentIntersection2D(Vertices[FaceA[IndexA]], Vertices[FaceA[IndexA + 1]], Vertices[FaceB[IndexB]],
+																  Vertices[FaceB[IndexB + 1]], Intersection);
+			if (Intersected)
+			{
+				return false;
+			}
+		}
+	}
+
+	return IsInsidePolygon2D(FaceB, Vertices[FaceA[0]], Vertices);
 }
 
 } // namespace
 
 namespace Vitruvio
 {
-TArray<TArray<int32>> GetOutsideWindings(const TArray<int32>& InIndices)
+
+FPolygon GetPolygon(const TArray<FVector>& InVertices, const TArray<int32>& InIndices)
 {
+	// The algorithm works as follows:
+	// 1. We construct a graph of all edges and "color" all connected edges. Note that we can have multiple faces (with holes) in a single polygon
+	// and we need to be able to find which hole belongs to which face.
+	// 2. We find and remove opposite edges, this will leave us with all edges at the outside of a face or a hole.
+	// 3. We combine all connected edges which form either faces or holes. Note that the ordering is already correct. Holes will have opposite
+	// ordering of their encircling face.
+	// 4. We check which hole belongs to which face by projecting the face/hole onto the xy plane and then doing edge intersection tests.
+	// This might break with certain non planar polygons but CityEngine handles holes in a similar way.
+
 	const int32 NumTriangles = InIndices.Num() / 3;
 
-	// Create a list of edges and count the number of times they are used
+	// Construct edges
 	TSet<FWindingEdge> Edges;
 	for (int32 TriangleIndex = 0; TriangleIndex < NumTriangles; ++TriangleIndex)
 	{
@@ -61,38 +147,53 @@ TArray<TArray<int32>> GetOutsideWindings(const TArray<int32>& InIndices)
 		{
 			const int32 Index0 = InIndices[TriangleIndex * 3 + VertexIndex];
 			const int32 Index1 = InIndices[TriangleIndex * 3 + (VertexIndex + 1) % 3];
-
-			const FWindingEdge Edge(Index0, Index1);
-			FWindingEdge* ExistingEdge = Edges.Find(Edge);
-			if (ExistingEdge)
-			{
-				ExistingEdge->Count++;
-			}
-			else
-			{
-				Edges.Add(Edge);
-			}
+			Edges.Add({Index0, Index1, -1});
 		}
 	}
 
-	// Only save edges which are used exactly once, this will leave edges at the outside of the shape
-	TSortedMap<int32, FWindingEdge> EdgeMap;
+	// Mark connected edges
+	TSortedMap<int32, TArray<FWindingEdge>> EdgeMap;
 	for (const FWindingEdge& Edge : Edges)
 	{
-		if (Edge.Count == 1)
+		EdgeMap.FindOrAdd(Edge.Index0).Add(Edge);
+	}
+
+	TSet<FWindingEdge> Visited;
+	int CurrentConnectivity = 0;
+	for (auto& KeyValue : EdgeMap)
+	{
+		for (FWindingEdge& Edge : KeyValue.Value)
 		{
-			EdgeMap.Add(Edge.Index0, Edge);
+			if (!Visited.Contains(Edge))
+			{
+				MarkVisited(Edge, EdgeMap, Visited, CurrentConnectivity++);
+			}
 		}
 	}
 
-	// Organize the remaining edges in the list so that the vertices will meet up to form a continuous outline around the shapes
-	TArray<TArray<int32>> Windings;
-	while (EdgeMap.Num() > 0)
+	// Remove opposite edges to only keep the outside of either a face or a hole
+	TSortedMap<int32, FWindingEdge> WindingEdgeMap;
+	for (auto& KeyValue : EdgeMap)
+	{
+		for (const FWindingEdge& Current : KeyValue.Value)
+		{
+			const FWindingEdge Opposite(Current.Index1, Current.Index0, Current.Connectivity);
+			if (!Edges.Contains(Opposite))
+			{
+				// Note that at this point there should not be multiple edges connected to a single vertex
+				WindingEdgeMap.Add(Current.Index0, Current);
+			}
+		}
+	}
+
+	// Organize the remaining edges in the list so that the vertices will meet up to form a continuous outline of either a face or a hole
+	TArray<FWinding> Windings;
+	while (WindingEdgeMap.Num() > 0)
 	{
 		TArray<int32> WindingIndices;
 
 		// Get and remove first edge
-		auto EdgeIter = EdgeMap.CreateIterator();
+		auto EdgeIter = WindingEdgeMap.CreateIterator();
 		const FWindingEdge FirstEdge = EdgeIter.Value();
 		EdgeIter.RemoveCurrent();
 
@@ -100,16 +201,70 @@ TArray<TArray<int32>> GetOutsideWindings(const TArray<int32>& InIndices)
 		int NextIndex = FirstEdge.Index1;
 
 		// Find connected edges
-		while (EdgeMap.Contains(NextIndex))
+		while (WindingEdgeMap.Contains(NextIndex))
 		{
-			const FWindingEdge& Current = EdgeMap.FindAndRemoveChecked(NextIndex);
+			const FWindingEdge& Current = WindingEdgeMap.FindAndRemoveChecked(NextIndex);
 			WindingIndices.Add(Current.Index0);
 			NextIndex = Current.Index1;
 		}
 
-		Windings.Add(WindingIndices);
+		Windings.Add({WindingIndices, FirstEdge.Connectivity});
 	}
 
-	return Windings;
+	// Find the relation between the faces
+	TMap<int32, int32> InsideOf;
+	for (int32 IndexA = 0; IndexA < Windings.Num(); IndexA++)
+	{
+		for (int32 IndexB = IndexA + 1; IndexB < Windings.Num(); IndexB++)
+		{
+			// No possible relation if they are not connected
+			if (Windings[IndexA].Connectivity != Windings[IndexB].Connectivity)
+			{
+				continue;
+			}
+
+			if (IsInsideOf2D(Windings[IndexA].Indices, Windings[IndexB].Indices, InVertices))
+			{
+				InsideOf.Add(IndexA, IndexB);
+			}
+			else if (IsInsideOf2D(Windings[IndexB].Indices, Windings[IndexA].Indices, InVertices))
+			{
+				InsideOf.Add(IndexB, IndexA);
+			}
+		}
+	}
+
+	TSet<int32> OpenSet;
+	for (int32 FaceIndex = 0; FaceIndex < Windings.Num(); ++FaceIndex)
+	{
+		OpenSet.Add(FaceIndex);
+	}
+
+	TMap<int32, FFace> FaceMap;
+	// First find all faces
+	for (int32 FaceIndex = 0; FaceIndex < Windings.Num(); ++FaceIndex)
+	{
+		if (!InsideOf.Contains(FaceIndex))
+		{
+			FaceMap.Add(FaceIndex, FFace{Windings[FaceIndex].Indices});
+			OpenSet.Remove(FaceIndex);
+		}
+	}
+
+	// Then assign the holes
+	for (int32 FaceIndex : OpenSet)
+	{
+		int32 InsideOfIndex = InsideOf[FaceIndex];
+		if (FaceMap.Contains(InsideOfIndex))
+		{
+			FFace& ParentFace = FaceMap[InsideOfIndex];
+			ParentFace.Holes.Add(FHole{Windings[FaceIndex].Indices});
+		}
+	}
+
+	TArray<FFace> Faces;
+	FaceMap.GenerateValueArray(Faces);
+	FPolygon Result = {Faces};
+	return Result;
 }
 } // namespace Vitruvio
