@@ -22,9 +22,6 @@ public class PRT : ModuleRules
 
 	private static readonly List<string> FilteredExtensionLibraries = new List<string>() { "DatasmithSDK.dll", "FreeImage317.dll", "com.esri.prt.unreal.dll" };
 
-	private const long ErrorSharingViolation = 0x20;
-	private const long ErrorLockViolation = 0x21;
-
 	public PRT(ReadOnlyTargetRules Target) : base(Target)
 	{
 		// Debug print only enabled when plugin is installed directly into project (not in Engine)
