@@ -138,7 +138,7 @@ public class PRT : ModuleRules
 	{
 		Directory.CreateDirectory(DstDir);
 
-		foreach (var CopyFile in Directory.GetFiles(SrcDir))
+		foreach (string CopyFile in Directory.GetFiles(SrcDir))
 		{
 			if (Filter == null || !Filter.Contains(Path.GetFileName(CopyFile)))
 			{
@@ -146,7 +146,7 @@ public class PRT : ModuleRules
 			}
 		}
 
-		foreach (var Dir in Directory.GetDirectories(SrcDir))
+		foreach (string Dir in Directory.GetDirectories(SrcDir))
 		{
 			Copy(Dir, Path.Combine(DstDir, Path.GetFileName(Dir)));
 		}
@@ -175,7 +175,7 @@ public class PRT : ModuleRules
 	{
 		public void Unzip(string WorkingDir, string ZipFile, string Destination)
 		{
-			var ExpandedArguments = string.Format(Arguments, ZipFile, Destination);
+			string ExpandedArguments = string.Format(Arguments, ZipFile, Destination);
 
 			ProcessStartInfo ProcStartInfo = new System.Diagnostics.ProcessStartInfo(Command, ExpandedArguments)
 			{
@@ -278,8 +278,8 @@ public class PRT : ModuleRules
 
 		public override string GetFileVersionInfo(string WorkingDir, string Path)
 		{
-			var GetFileInfoCommand = "/c PowerShell -Command \"(Get-Item \"{0}\").VersionInfo.FileVersion\"";
-			var ExpandedFileInfoCommand = string.Format(GetFileInfoCommand, Path);
+			string GetFileInfoCommand = "/c PowerShell -Command \"(Get-Item \"{0}\").VersionInfo.FileVersion\"";
+			string ExpandedFileInfoCommand = string.Format(GetFileInfoCommand, Path);
 
 			ProcessStartInfo ProcStartInfo = new System.Diagnostics.ProcessStartInfo("cmd", ExpandedFileInfoCommand)
 			{
@@ -304,8 +304,8 @@ public class PRT : ModuleRules
 		
 		public override void DownloadFile(string Url, string Destination)
 		{
-			var DownloadFileCommand = "/c PowerShell -Command \"Invoke-WebRequest -Uri {0} -OutFile {1}\"";
-			var ExpandedDownloadFileCommand = string.Format(DownloadFileCommand, Url, Destination);
+			string DownloadFileCommand = "/c PowerShell -Command \"Invoke-WebRequest -Uri {0} -OutFile {1}\"";
+			string ExpandedDownloadFileCommand = string.Format(DownloadFileCommand, Url, Destination);
 
 			ProcessStartInfo ProcStartInfo = new System.Diagnostics.ProcessStartInfo("cmd", ExpandedDownloadFileCommand)
 			{
