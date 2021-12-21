@@ -76,7 +76,7 @@ UTexture2D* SaveTexture(UTexture2D* Original, const FString& Path, FTextureCache
 		return TextureCache[Original];
 	}
 	FString AssetName;
-	UPackage* TexturePackage = CreateUniquePackage(FPaths::Combine(Path, TEXT("Textures")), AssetName);
+	UPackage* TexturePackage = CreateUniquePackage(FPaths::Combine(Path, TEXT("Textures"), Original->GetName()), AssetName);
 	UTexture2D* NewTexture = NewObject<UTexture2D>(TexturePackage, *AssetName, RF_Public | RF_Standalone);
 
 	NewTexture->PlatformData = new FTexturePlatformData();
@@ -102,7 +102,7 @@ UTexture2D* SaveTexture(UTexture2D* Original, const FString& Path, FTextureCache
 	FMemory::Memcpy(TextureData, SourcePixels, OriginalMip.BulkData.GetBulkDataSize());
 	Mip->BulkData.Unlock();
 
-	NewTexture->Source.Init(Original->PlatformData->SizeX, Original->PlatformData->SizeY, 1, 1, ETextureSourceFormat::TSF_BGRA8, SourcePixels);
+	NewTexture->Source.Init(Original->PlatformData->SizeX, Original->PlatformData->SizeY, 1, 1, Original->Source.GetFormat(), SourcePixels);
 	OriginalMip.BulkData.Unlock();
 
 	NewTexture->PostEditChange();
@@ -150,8 +150,15 @@ UMaterialInstanceConstant* SaveMaterial(UMaterialInstanceDynamic* Material, cons
 		Material->GetTextureParameterValue(Info, Value);
 		if (Value)
 		{
-			UTexture2D* PersistedTexture = SaveTexture(Cast<UTexture2D>(Value), Path, TextureCache);
-			NewMaterial->SetTextureParameterValueEditorOnly(Info, PersistedTexture);
+			if (Value->HasAnyFlags(RF_Transient))
+			{
+				UTexture2D* PersistedTexture = SaveTexture(Cast<UTexture2D>(Value), Path, TextureCache);
+				NewMaterial->SetTextureParameterValueEditorOnly(Info, PersistedTexture);
+			}
+			else
+			{
+				NewMaterial->SetTextureParameterValueEditorOnly(Info, Value);
+			}
 		}
 	}
 

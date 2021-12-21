@@ -400,6 +400,11 @@ FGenerateResultDescription VitruvioModule::Generate(const TArray<FInitialShapeFa
 
 	// Notify generate complete callback on game thread
 	AsyncTask(ENamedThreads::GameThread, [this, GenerateCalls]() {
+		if (!Initialized)
+		{
+			return;
+		}
+		
 		OnGenerateCompleted.Broadcast(GenerateCalls);
 
 		if (GenerateCalls == 0)

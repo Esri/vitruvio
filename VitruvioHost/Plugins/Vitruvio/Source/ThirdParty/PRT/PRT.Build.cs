@@ -4,7 +4,6 @@ using System.IO;
 using System;
 using System.Diagnostics;
 using System.Security.Cryptography;
-using System.Net;
 using UnrealBuildTool;
 using System.ComponentModel.Design;
 using System.Collections.Generic;
@@ -23,9 +22,6 @@ public class PRT : ModuleRules
 
 	private static readonly List<string> FilteredExtensionLibraries = new List<string>() { "DatasmithSDK.dll", "FreeImage317.dll", "com.esri.prt.unreal.dll" };
 
-	private const long ErrorSharingViolation = 0x20;
-	private const long ErrorLockViolation = 0x21;
-
 	public PRT(ReadOnlyTargetRules Target) : base(Target)
 	{
 		// Debug print only enabled when plugin is installed directly into project (not in Engine)
@@ -39,10 +35,6 @@ public class PRT : ModuleRules
 		if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
 			Platform = new WindowsPlatform(Debug);
-		}
-		else if (Target.Platform == UnrealTargetPlatform.Mac)
-		{
-			Platform = new MacPlatform(Debug);
 		}
 		else
 		{
@@ -58,7 +50,7 @@ public class PRT : ModuleRules
 		
 		string PrtCorePath = Path.Combine(BinDir, PrtCoreDllName);
 		bool PrtCoreExists = File.Exists(PrtCorePath);
-		bool PrtVersionMatch = PrtCoreExists && CheckDllVersion(PrtCorePath, PrtMajor, PrtMinor, PrtBuild);
+		bool PrtVersionMatch = PrtCoreExists && CheckDllVersion(Platform, PrtCorePath, PrtMajor, PrtMinor, PrtBuild);
 
 		if (!PrtInstalled || !PrtVersionMatch)
 		{
@@ -83,11 +75,8 @@ public class PRT : ModuleRules
 				}
 
 				if (Debug) System.Console.WriteLine("Downloading " + PrtDownloadUrl + "...");
-
-				using (var Client = new WebClient())
-				{
-					Client.DownloadFile(PrtDownloadUrl, Path.Combine(ModuleDirectory, PrtLibZipFile));
-				}
+				
+				Platform.DownloadFile(PrtDownloadUrl, Path.Combine(ModuleDirectory, PrtLibZipFile));
 
 				if (Debug) System.Console.WriteLine("Extracting " + PrtLibZipFile + "...");
 
@@ -146,7 +135,7 @@ public class PRT : ModuleRules
 	{
 		Directory.CreateDirectory(DstDir);
 
-		foreach (var CopyFile in Directory.GetFiles(SrcDir))
+		foreach (string CopyFile in Directory.GetFiles(SrcDir))
 		{
 			if (Filter == null || !Filter.Contains(Path.GetFileName(CopyFile)))
 			{
@@ -154,23 +143,27 @@ public class PRT : ModuleRules
 			}
 		}
 
-		foreach (var Dir in Directory.GetDirectories(SrcDir))
+		foreach (string Dir in Directory.GetDirectories(SrcDir))
 		{
 			Copy(Dir, Path.Combine(DstDir, Path.GetFileName(Dir)));
 		}
 	}
 
-	public bool CheckDllVersion(string DllPath, int Major, int Minor, int Build)
+	private bool CheckDllVersion(AbstractPlatform Platform, string DllPath, int Major, int Minor, int Build)
 	{
-		FileVersionInfo Info = FileVersionInfo.GetVersionInfo(DllPath);
-		string[] BuildVersions = Info.ProductVersion.Split(' ');
+		string FileVersion = Platform.GetFileVersionInfo(ModuleDirectory, DllPath);
+		string[] BuildVersions = FileVersion.Split(' ');
+		string ProductVersion = BuildVersions[0];
+		string[] ProductVersions = ProductVersion.Split(".");
+		int FileMajor = int.Parse(ProductVersions[0]);
+		int FileMinor = int.Parse(ProductVersions[1]);
 		int DllBuild = int.Parse(BuildVersions[BuildVersions.Length - 1]);
-
-		bool Match = Info.FileMajorPart == Major && Info.FileMinorPart == Minor && DllBuild == Build;
+		
+		bool Match = FileMajor == Major && FileMinor == Minor && DllBuild == Build;
 		if (Debug && !Match)
 		{
 			Console.WriteLine(string.Format("Version {0}.{1}.{2} of \"{3}\" does not match expected version of Build file {4}.{5}.{6}",
-				 Info.FileMajorPart, Info.FileMinorPart, DllBuild, Path.GetFileName(DllPath), Major, Minor, Build));
+				FileMajor, FileMinor, DllBuild, Path.GetFileName(DllPath), Major, Minor, Build));
 		}
 		return Match;
 	}
@@ -179,7 +172,7 @@ public class PRT : ModuleRules
 	{
 		public void Unzip(string WorkingDir, string ZipFile, string Destination)
 		{
-			var ExpandedArguments = string.Format(Arguments, ZipFile, Destination);
+			string ExpandedArguments = string.Format(Arguments, ZipFile, Destination);
 
 			ProcessStartInfo ProcStartInfo = new System.Diagnostics.ProcessStartInfo(Command, ExpandedArguments)
 			{
@@ -210,19 +203,6 @@ public class PRT : ModuleRules
 			get
 			{
 				return "/c PowerShell -Command \" & Expand-Archive -Path {0} -DestinationPath {1}\"";
-			}
-		}
-	}
-
-	private class UnixZipExtractor : AbstractZipExtractor
-	{
-		public override string Command { get { return "unzip"; } }
-
-		public override string Arguments
-		{
-			get
-			{
-				return "-q {0} -d {1}";
 			}
 		}
 	}
@@ -264,6 +244,8 @@ public class PRT : ModuleRules
 				Rules.PublicDelayLoadDLLs.Add(LibraryName);
 			}
 		}
+		public abstract string GetFileVersionInfo(string WorkingDir, string Path);
+		public abstract void DownloadFile(string Url, string Destination);
 	}
 
 	private class WindowsPlatform : AbstractPlatform
@@ -289,18 +271,52 @@ public class PRT : ModuleRules
 				Rules.PublicAdditionalLibraries.Add(LibraryPath);
 			}
 		}
-	}
+		
 
-	private class MacPlatform : AbstractPlatform
-	{
-		public override AbstractZipExtractor ZipExtractor {	get { return new UnixZipExtractor(); } }
-		
-		public MacPlatform(bool Debug) : base(Debug)
+		public override string GetFileVersionInfo(string WorkingDir, string Path)
 		{
-		} 
+			string GetFileInfoCommand = "/c PowerShell -Command \"(Get-Item \"{0}\").VersionInfo.FileVersion\"";
+			string ExpandedFileInfoCommand = string.Format(GetFileInfoCommand, Path);
+
+			ProcessStartInfo ProcStartInfo = new System.Diagnostics.ProcessStartInfo("cmd", ExpandedFileInfoCommand)
+			{
+				WorkingDirectory = WorkingDir,
+				UseShellExecute = false,
+				CreateNoWindow = true,
+				RedirectStandardOutput = true
+			};
+
+			Process FileVersionProcess = new Process
+			{
+				StartInfo = ProcStartInfo,
+				EnableRaisingEvents = true
+			};
+			FileVersionProcess.Start();
+			
+			string Output = FileVersionProcess.StandardOutput.ReadToEnd();
+			FileVersionProcess.WaitForExit();
+
+			return Output;
+		}
 		
-		public override string Name { get { return "Mac"; } }
-		public override string PrtPlatform { get { return "osx12-ac81-x86_64-rel-opt"; } }
-		public override string DynamicLibExtension { get { return ".dylib"; } }
+		public override void DownloadFile(string Url, string Destination)
+		{
+			string DownloadFileCommand = "/c PowerShell -Command \"Invoke-WebRequest -Uri {0} -OutFile {1}\"";
+			string ExpandedDownloadFileCommand = string.Format(DownloadFileCommand, Url, Destination);
+
+			ProcessStartInfo ProcStartInfo = new System.Diagnostics.ProcessStartInfo("cmd", ExpandedDownloadFileCommand)
+			{
+				UseShellExecute = false,
+				CreateNoWindow = true,
+			};
+
+			Process FileVersionProcess = new Process
+			{
+				StartInfo = ProcStartInfo,
+				EnableRaisingEvents = true
+			};
+			FileVersionProcess.Start();
+			FileVersionProcess.WaitForExit();
+		}
 	}
 }
