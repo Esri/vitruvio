@@ -173,7 +173,7 @@ TSharedPtr<SHorizontalBox> CreateColorInputWidget(TSharedPtr<IPropertyHandle> Co
 				return FReply::Handled();
 			})
 			.UseSRGB(true)
-			.IgnoreAlpha(true)
+			.AlphaDisplayMode(EColorBlockAlphaDisplayMode::Ignore)
 			.Size(FVector2D(35.0f, 12.0f))
 		];
 	// clang-format on
