@@ -675,6 +675,11 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		{
 			InitialShape->SetHidden(HideAfterGeneration && HasGeneratedMesh);
 		}
+
+		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateAutomatically))
+		{
+			bComponentPropertyChanged = true;
+		}
 	}
 
 	// If an object was changed via an undo command, the PropertyChangedEvent.Property is null
