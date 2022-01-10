@@ -275,7 +275,7 @@ public class PRT : ModuleRules
 
 		public override string GetFileVersionInfo(string WorkingDir, string Path)
 		{
-			string GetFileInfoCommand = "/c PowerShell -Command \"(Get-Item \"{0}\").VersionInfo.FileVersion\"";
+			string GetFileInfoCommand = "/c PowerShell -Command \"(Get-Item \'{0}\').VersionInfo.FileVersion\"";
 			string ExpandedFileInfoCommand = string.Format(GetFileInfoCommand, Path);
 
 			ProcessStartInfo ProcStartInfo = new System.Diagnostics.ProcessStartInfo("cmd", ExpandedFileInfoCommand)
