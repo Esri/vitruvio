@@ -1,6 +1,6 @@
-# Vitruvio - CityEngine Plugin for Unreal Engine 4
+# Vitruvio - CityEngine Plugin for Unreal Engine 5
 
-Vitruvio is an [Unreal Engine 4](https://www.unrealengine.com/) (UE4) plugin which enables the use of ArcGIS CityEngine shape grammar rules in UE4 for the generation of procedural buildings. With Vitruvio, game designers or artists do not have to leave UE4 to make use of CityEngine’s procedural modeling power. The buildings stay procedural all time and artists can change the height, style and appearance of buildings easily with a parametric interface. In addition, buildings can also be generated at runtime.
+Vitruvio is an [Unreal Engine 5](https://www.unrealengine.com/en-US/unreal-engine-5) (UE5) plugin which enables the use of ArcGIS CityEngine shape grammar rules in UE5 for the generation of procedural buildings. With Vitruvio, game designers or artists do not have to leave UE5 to make use of CityEngine’s procedural modeling power. The buildings stay procedural all time and artists can change the height, style and appearance of buildings easily with a parametric interface. In addition, buildings can also be generated at runtime.
 
 As input Vitruvio requires rule packages (RPK) which are authored in CityEngine. An RPK includes assets and a CGA rule file which encodes an architectural style. The download section below provides links to the several RPKs which can be used out-of-the-box in Vitruvio.
 
@@ -23,7 +23,7 @@ External documentation:
 ## Requirements
 
 * Windows 10
-* [Unreal Engine 4.27](https://www.unrealengine.com/en-US/download)
+* [Unreal Engine 5](https://www.unrealengine.com/en-US/unreal-engine-5)
 * Visual Studio (for development only)
 
 ## Issues
