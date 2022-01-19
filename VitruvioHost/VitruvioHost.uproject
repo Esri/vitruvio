@@ -27,6 +27,10 @@
 				"Linux",
 				"Mac"
 			]
+		},
+		{
+			"Name": "FunctionalTestingEditor",
+			"Enabled": true
 		}
 	]
 }
