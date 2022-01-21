@@ -15,8 +15,8 @@ public class PRT : ModuleRules
 	
 	// PRT version and toolchain (needs to be correct for download URL)
 	private const int PrtMajor = 2;
-	private const int PrtMinor = 4;
-	private const int PrtBuild = 7316;
+	private const int PrtMinor = 6;
+	private const int PrtBuild = 8135;
 
 	private const string PrtCoreDllName = "com.esri.prt.core.dll";
 
