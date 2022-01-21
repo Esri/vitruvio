@@ -29,7 +29,7 @@
 #include "Engine/StaticMeshActor.h"
 #include "ObjectEditorUtils.h"
 #include "PhysicsEngine/BodySetup.h"
-#include "PolygonWindings.h"
+#include "Util/PolygonWindings.h"
 #include "StaticMeshAttributes.h"
 
 #if WITH_EDITOR

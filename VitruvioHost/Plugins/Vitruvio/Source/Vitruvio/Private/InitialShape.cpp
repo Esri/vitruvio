@@ -14,7 +14,7 @@
  */
 
 #include "InitialShape.h"
-#include "PolygonWindings.h"
+#include "Util/PolygonWindings.h"
 #include "VitruvioComponent.h"
 
 #include "CompGeom/PolygonTriangulation.h"

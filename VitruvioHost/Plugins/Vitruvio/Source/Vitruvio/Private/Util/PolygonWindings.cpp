@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "PolygonWindings.h"
+#include "Util/PolygonWindings.h"
 
 namespace
 {

@@ -31,6 +31,10 @@
 		{
 			"Name": "FunctionalTestingEditor",
 			"Enabled": true
+		},
+		{
+			"Name": "EditorTests",
+			"Enabled": true
 		}
 	]
 }
