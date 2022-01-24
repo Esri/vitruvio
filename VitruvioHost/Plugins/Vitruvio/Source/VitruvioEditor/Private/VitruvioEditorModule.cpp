@@ -255,10 +255,12 @@ void VitruvioEditorModule::OnPostEngineInit()
 	OnAssetReloadHandle = GEditor->GetEditorSubsystem<UImportSubsystem>()->OnAssetReimport.AddLambda([](UObject* Object)
 	{
 		URulePackage* RulePackage = Cast<URulePackage>(Object);
-		if (RulePackage)
+		if (!RulePackage)
 		{
-			VitruvioModule::Get().EvictFromResolveMapCache(RulePackage);
+			return;
 		}
+
+		VitruvioModule::Get().EvictFromResolveMapCache(RulePackage);
 
 		for (FActorIterator It(GEditor->GetEditorWorldContext().World()); It; ++It)
 		{
