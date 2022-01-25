@@ -20,7 +20,7 @@
 #include "VitruvioComponent.h"
 #include "VitruvioActor.generated.h"
 
-UCLASS()
+UCLASS(NotBlueprintable)
 class VITRUVIO_API AVitruvioActor : public AActor
 {
 	GENERATED_BODY()
