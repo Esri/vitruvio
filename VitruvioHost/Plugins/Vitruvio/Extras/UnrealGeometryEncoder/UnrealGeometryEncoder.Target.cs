@@ -17,7 +17,7 @@ using System;
 using UnrealBuildTool;
 using System.Collections.Generic;
 using System.IO;
-using Tools.DotNETCommon;
+using EpicGames.Core;
 
 public class UnrealGeometryEncoderTarget : TargetRules
 {
