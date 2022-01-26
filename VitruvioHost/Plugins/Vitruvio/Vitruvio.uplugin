@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"Version": 2,
+	"Version": 3,
 	"VersionName": "2021.0 (CE SDK v2.4.7316)",
 	"FriendlyName": "Vitruvio",
 	"Description": "Vitruvio adds support for CityEngine's procedural runtime (PRT)",
