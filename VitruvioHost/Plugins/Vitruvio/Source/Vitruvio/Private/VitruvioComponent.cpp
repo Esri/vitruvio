@@ -91,9 +91,10 @@ bool SetAttribute(UVitruvioComponent* VitruvioComponent, TMap<FString, URuleAttr
 	}
 
 	TAttribute->Value = Value;
+	TAttribute->bUserSet = true;
 	if (VitruvioComponent->GenerateAutomatically && VitruvioComponent->IsReadyToGenerate())
 	{
-		VitruvioComponent->Generate();
+		VitruvioComponent->EvaluateRuleAttributes(true);
 	}
 
 	return true;
