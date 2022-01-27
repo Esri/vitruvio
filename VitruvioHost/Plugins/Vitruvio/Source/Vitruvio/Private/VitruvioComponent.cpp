@@ -91,9 +91,10 @@ bool SetAttribute(UVitruvioComponent* VitruvioComponent, TMap<FString, URuleAttr
 	}
 
 	TAttribute->Value = Value;
+	TAttribute->bUserSet = true;
 	if (VitruvioComponent->GenerateAutomatically && VitruvioComponent->IsReadyToGenerate())
 	{
-		VitruvioComponent->Generate();
+		VitruvioComponent->EvaluateRuleAttributes(true);
 	}
 
 	return true;
@@ -747,9 +748,11 @@ void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& T
 
 void UVitruvioComponent::EvaluateRuleAttributes(bool ForceRegenerate)
 {
-	check(Rpk);
-	check(InitialShape);
-
+	if (!HasValidInputData())
+	{
+		return;
+	}
+	
 	// Since we can not abort an ongoing generate call from PRT, we invalidate the result and evaluate the attributes again after the current request
 	// has completed.
 	if (EvalAttributesInvalidationToken)
