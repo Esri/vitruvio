@@ -234,6 +234,10 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, DisplayName = "Random Seed", Category = "Vitruvio", meta = (AllowPrivateAccess = "true"))
 	int32 RandomSeed;
 
+	/** CGA Reports from generation. */
+	UPROPERTY(EditAnywhere, DisplayName = "Reports", Category = "Vitruvio")
+	FReportArray Reports;
+	
 	TQueue<FGenerateResultDescription> GenerateQueue;
 	TQueue<FAttributesEvaluation> AttributesEvaluationQueue;
 

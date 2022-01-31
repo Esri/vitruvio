@@ -374,6 +374,8 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		FConvertedGenerateResult ConvertedResult =
 			BuildResult(Result, VitruvioModule::Get().GetMaterialCache(), VitruvioModule::Get().GetTextureCache());
 
+		Reports = ConvertedResult.Reports;
+
 		QUICK_SCOPE_CYCLE_COUNTER(STAT_VitruvioActor_CreateModelActors);
 
 		USceneComponent* InitialShapeComponent = InitialShape->GetComponent();
