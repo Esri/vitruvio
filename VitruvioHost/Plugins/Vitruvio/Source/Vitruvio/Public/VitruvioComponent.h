@@ -37,6 +37,7 @@ struct FConvertedGenerateResult
 {
 	TSharedPtr<FVitruvioMesh> ShapeMesh;
 	TArray<FInstance> Instances;
+	FReportArray Reports;
 };
 
 struct FAttributesEvaluation

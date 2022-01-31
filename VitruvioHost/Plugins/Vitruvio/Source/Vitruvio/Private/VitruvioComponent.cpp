@@ -555,8 +555,8 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 	TSharedPtr<FVitruvioMesh> ShapeMesh = GenerateResult.Meshes.Contains(UnrealCallbacks::NO_PROTOTYPE_INDEX)
 											  ? GenerateResult.Meshes[UnrealCallbacks::NO_PROTOTYPE_INDEX]
 											  : TSharedPtr<FVitruvioMesh>{};
-
-	return {ShapeMesh, Instances};
+	
+	return {ShapeMesh, Instances, GenerateResult.Reports};
 }
 
 void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
