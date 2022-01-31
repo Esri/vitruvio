@@ -551,6 +551,19 @@ void encodeMesh(IUnrealCallbacks* cb, const SerializedGeometry& sg, wchar_t cons
 
 				faceRanges.data(), faceRanges.size(), matAttrMaps.v.empty() ? nullptr : matAttrMaps.v.data());
 }
+
+const prtx::PRTUtils::AttributeMapPtr convertReportToAttributeMap(const prtx::ReportsPtr& r) {
+	prtx::PRTUtils::AttributeMapBuilderPtr amb(prt::AttributeMapBuilder::create());
+
+	for (const auto& b : r->mBools)
+		amb->setBool(b.first->c_str(), b.second);
+	for (const auto& f : r->mFloats)
+		amb->setFloat(f.first->c_str(), f.second);
+	for (const auto& s : r->mStrings)
+		amb->setString(s.first->c_str(), s.second->c_str());
+
+	return prtx::PRTUtils::AttributeMapPtr{amb->createAttributeMap()};
+}
 } // namespace
 
 UnrealGeometryEncoder::UnrealGeometryEncoder(const std::wstring& id, const prt::AttributeMap* options, prt::Callbacks* callbacks)
@@ -579,17 +592,12 @@ void UnrealGeometryEncoder::encode(prtx::GenerateContext& context, size_t initia
 	prtx::EncodePreparatorPtr encPrep = prtx::EncodePreparator::create(true, namePrep, nsMesh, nsMaterial);
 
 	// generate geometry
-	prtx::ReportsAccumulatorPtr reportsAccumulator{prtx::WriteFirstReportsAccumulator::create()};
-	prtx::ReportingStrategyPtr reportsCollector{prtx::LeafShapeReportingStrategy::create(context, initialShapeIndex, reportsAccumulator)};
+	prtx::ReportsAccumulatorPtr reportsAccumulator{prtx::SummarizingReportsAccumulator::create()};
+	prtx::ReportingStrategyPtr reportsCollector{prtx::AllShapesReportingStrategy::create(context, initialShapeIndex, reportsAccumulator)};
 	prtx::LeafIteratorPtr li = prtx::LeafIterator::create(context, initialShapeIndex);
 	for (prtx::ShapePtr shape = li->getNext(); shape; shape = li->getNext())
 	{
-		prtx::ReportsPtr r = reportsCollector->getReports(shape->getID());
-		encPrep->add(context.getCache(), shape, initialShape.getAttributeMap(), r);
-
-		// get final values of generic attributes
-		if (emitAttrs)
-			forwardGenericAttributes(cb, initialShapeIndex, initialShape, shape);
+		encPrep->add(context.getCache(), shape, initialShape.getAttributeMap());
 	}
 
 	const prtx::EncodePreparator::PreparationFlags PREP_FLAGS =
@@ -607,6 +615,14 @@ void UnrealGeometryEncoder::encode(prtx::GenerateContext& context, size_t initia
 	prtx::EncodePreparator::InstanceVector instances;
 	encPrep->fetchFinalizedInstances(instances, PREP_FLAGS);
 	convertGeometry(initialShape, instances, cb);
+
+	if (emitAttrs) {
+		const prtx::ReportsPtr& reports = reportsCollector->getReports();
+		if (reports != nullptr) {
+			auto reportMap = convertReportToAttributeMap(reports);
+			cb->addReport(reportMap);
+		}
+	}
 }
 
 void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialShape, const prtx::EncodePreparator::InstanceVector& instances,
