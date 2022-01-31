@@ -246,6 +246,51 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 	}
 }
 
+FReportArray ExtractReports(const prtx::PRTUtils::AttributeMapPtr reports) {
+	FReportArray ReportMap;
+	size_t KeyCount = 0;
+	auto Keys = reports->getKeys(&KeyCount);
+	ReportMap.Reserve(KeyCount);
+	
+	for (size_t i = 0; i < KeyCount; ++i) {
+		auto key = Keys[i];
+
+		FReportAttribute ReportAttribute;
+		ReportAttribute.Name = key;
+		ReportAttribute.Type = reports->getType(key);
+
+		switch (ReportAttribute.Type) {
+		case prt::AttributeMap::PrimitiveType::PT_BOOL:
+			ReportAttribute.Value = FVariant(reports->getBool(key));
+			break;
+		case prt::AttributeMap::PrimitiveType::PT_STRING:
+			ReportAttribute.Value = FVariant(reports->getString(key));
+			break;
+		case prt::AttributeMap::PrimitiveType::PT_FLOAT:
+			ReportAttribute.Value = FVariant(reports->getFloat(key));
+			break;
+		case prt::AttributeMap::PrimitiveType::PT_INT:
+			ReportAttribute.Value = FVariant(reports->getInt(key));
+			break;
+		default:
+			UE_LOG(LogUnrealCallbacks, Error, TEXT("Type of report not supported."));
+			break;
+		}
+
+		ReportMap.Emplace(ReportAttribute);
+	}
+	return ReportMap;
+}
+
+void UnrealCallbacks::addReport(const prtx::PRTUtils::AttributeMapPtr reports) {
+	if (!reports) {
+		UE_LOG(LogUnrealCallbacks, Warning, TEXT("Trying to add empty report, ignoring."));
+		return;
+	}
+
+	Reports = ExtractReports(reports);
+}
+
 void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform, const prt::AttributeMap** instanceMaterials,
 								  size_t numInstanceMaterials)
 {
