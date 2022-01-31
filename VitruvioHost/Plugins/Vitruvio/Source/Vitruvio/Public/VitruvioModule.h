@@ -22,6 +22,7 @@
 #include "PRTTypes.h"
 #include "RuleAttributes.h"
 #include "RulePackage.h"
+#include "ReportAttribute.h"
 
 #include "prt/Object.h"
 
@@ -42,6 +43,7 @@ struct FGenerateResultDescription
 {
 	Vitruvio::FInstanceMap Instances;
 	TMap<int32, TSharedPtr<FVitruvioMesh>> Meshes;
+	FReportArray Reports;
 	TMap<int32, FString> Names;
 };
 
