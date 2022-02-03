@@ -154,7 +154,7 @@ public class PRT : ModuleRules
 		string FileVersion = Platform.GetFileVersionInfo(ModuleDirectory, DllPath);
 		string[] BuildVersions = FileVersion.Split(' ');
 		string ProductVersion = BuildVersions[0];
-		string[] ProductVersions = ProductVersion.Split(".");
+		string[] ProductVersions = ProductVersion.Split('.');
 		int FileMajor = int.Parse(ProductVersions[0]);
 		int FileMinor = int.Parse(ProductVersions[1]);
 		int DllBuild = int.Parse(BuildVersions[BuildVersions.Length - 1]);
