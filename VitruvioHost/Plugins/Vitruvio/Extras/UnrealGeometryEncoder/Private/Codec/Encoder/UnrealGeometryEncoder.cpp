@@ -619,8 +619,8 @@ void UnrealGeometryEncoder::encode(prtx::GenerateContext& context, size_t initia
 	if (emitAttrs) {
 		const prtx::ReportsPtr& reports = reportsCollector->getReports();
 		if (reports) {
-			auto reportMap = convertReportToAttributeMap(reports);
-			cb->addReport(reportMap);
+			prtx::PRTUtils::AttributeMapPtr reportMap = convertReportToAttributeMap(reports);
+			cb->addReport(reportMap.get());
 		}
 	}
 }

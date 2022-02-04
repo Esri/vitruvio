@@ -124,7 +124,7 @@ public:
 	 *
 	 * @param reports an attribute map that stores all report attributes
 	 */
-	virtual void addReport(const prtx::PRTUtils::AttributeMapPtr reports) override;
+	virtual void addReport(const prt::AttributeMap* reports) override;
 
 	prt::Status generateError(size_t /*isIndex*/, prt::Status /*status*/, const wchar_t* message) override
 	{

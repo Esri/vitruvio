@@ -246,7 +246,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 	}
 }
 
-FReportArray ExtractReports(const prtx::PRTUtils::AttributeMapPtr& reports) {
+FReportArray ExtractReports(const prt::AttributeMap* reports) {
 	FReportArray ReportMap;
 	size_t KeyCount = 0;
 	auto Keys = reports->getKeys(&KeyCount);
@@ -282,7 +282,7 @@ FReportArray ExtractReports(const prtx::PRTUtils::AttributeMapPtr& reports) {
 	return ReportMap;
 }
 
-void UnrealCallbacks::addReport(const prtx::PRTUtils::AttributeMapPtr reports) {
+void UnrealCallbacks::addReport(const prt::AttributeMap* reports) {
 	if (!reports) {
 		UE_LOG(LogUnrealCallbacks, Warning, TEXT("Trying to add empty report, ignoring."));
 		return;
