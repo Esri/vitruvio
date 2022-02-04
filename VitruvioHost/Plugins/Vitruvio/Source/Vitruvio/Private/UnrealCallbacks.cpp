@@ -255,29 +255,29 @@ FReportArray ExtractReports(const prtx::PRTUtils::AttributeMapPtr& reports) {
 	for (size_t i = 0; i < KeyCount; ++i) {
 		auto key = Keys[i];
 
-		FReportAttribute ReportAttribute;
-		ReportAttribute.Name = key;
-		ReportAttribute.Type = reports->getType(key);
+		FReport Report;
+		Report.Key = key;
+		Report.Type = reports->getType(key);
 
-		switch (ReportAttribute.Type) {
+		switch (Report.Type) {
 		case prt::AttributeMap::PrimitiveType::PT_BOOL:
-			ReportAttribute.Value = FVariant(reports->getBool(key));
+			Report.Value = FVariant(reports->getBool(key));
 			break;
 		case prt::AttributeMap::PrimitiveType::PT_STRING:
-			ReportAttribute.Value = FVariant(reports->getString(key));
+			Report.Value = FVariant(reports->getString(key));
 			break;
 		case prt::AttributeMap::PrimitiveType::PT_FLOAT:
-			ReportAttribute.Value = FVariant(reports->getFloat(key));
+			Report.Value = FVariant(reports->getFloat(key));
 			break;
 		case prt::AttributeMap::PrimitiveType::PT_INT:
-			ReportAttribute.Value = FVariant(reports->getInt(key));
+			Report.Value = FVariant(reports->getInt(key));
 			break;
 		default:
 			UE_LOG(LogUnrealCallbacks, Error, TEXT("Type of report not supported."));
 			break;
 		}
 
-		ReportMap.Emplace(ReportAttribute);
+		ReportMap.Emplace(Report);
 	}
 	return ReportMap;
 }

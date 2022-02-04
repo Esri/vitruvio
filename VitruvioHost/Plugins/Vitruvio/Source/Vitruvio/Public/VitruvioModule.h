@@ -22,7 +22,7 @@
 #include "PRTTypes.h"
 #include "RuleAttributes.h"
 #include "RulePackage.h"
-#include "ReportAttribute.h"
+#include "Report.h"
 
 #include "prt/Object.h"
 

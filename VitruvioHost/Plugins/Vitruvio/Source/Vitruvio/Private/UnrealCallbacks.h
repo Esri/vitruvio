@@ -19,7 +19,7 @@
 
 #include "Codec/Encoder/IUnrealCallbacks.h"
 #include "VitruvioTypes.h"
-#include "ReportAttribute.h"
+#include "Report.h"
 
 #include "Core.h"
 #include "Engine/StaticMesh.h"

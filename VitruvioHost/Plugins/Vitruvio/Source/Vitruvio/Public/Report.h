@@ -1,4 +1,4 @@
-﻿/* Copyright 2021 Esri
+﻿ /* Copyright 2021 Esri
 *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,12 +21,12 @@
 
 #include "Misc/Variant.h"
 
-struct FReportAttribute {
-	FString Name;
+struct FReport {
+	FString Key;
 	prt::AttributeMap::PrimitiveType Type = prt::AttributeMap::PT_UNDEFINED;
 	FVariant Value; //supports string int double bool and int
-	FReportAttribute() = default;
+	FReport() = default;
 };
 
-using FReportArray = TArray<FReportAttribute>;
+using FReportArray = TArray<FReport>;
 
