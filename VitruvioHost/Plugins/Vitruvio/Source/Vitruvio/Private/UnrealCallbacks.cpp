@@ -246,7 +246,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 	}
 }
 
-FReportArray ExtractReports(const prtx::PRTUtils::AttributeMapPtr reports) {
+FReportArray ExtractReports(const prtx::PRTUtils::AttributeMapPtr& reports) {
 	FReportArray ReportMap;
 	size_t KeyCount = 0;
 	auto Keys = reports->getKeys(&KeyCount);
