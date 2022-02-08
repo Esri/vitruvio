@@ -374,6 +374,8 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		FConvertedGenerateResult ConvertedResult =
 			BuildResult(Result, VitruvioModule::Get().GetMaterialCache(), VitruvioModule::Get().GetTextureCache());
 
+		Reports = ConvertedResult.Reports;
+
 		QUICK_SCOPE_CYCLE_COUNTER(STAT_VitruvioActor_CreateModelActors);
 
 		USceneComponent* InitialShapeComponent = InitialShape->GetComponent();
@@ -555,8 +557,8 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 	TSharedPtr<FVitruvioMesh> ShapeMesh = GenerateResult.Meshes.Contains(UnrealCallbacks::NO_PROTOTYPE_INDEX)
 											  ? GenerateResult.Meshes[UnrealCallbacks::NO_PROTOTYPE_INDEX]
 											  : TSharedPtr<FVitruvioMesh>{};
-
-	return {ShapeMesh, Instances};
+	
+	return {ShapeMesh, Instances, GenerateResult.Reports};
 }
 
 void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)

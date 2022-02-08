@@ -37,6 +37,7 @@ struct FConvertedGenerateResult
 {
 	TSharedPtr<FVitruvioMesh> ShapeMesh;
 	TArray<FInstance> Instances;
+	FReportArray Reports;
 };
 
 struct FAttributesEvaluation
@@ -233,6 +234,9 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, DisplayName = "Random Seed", Category = "Vitruvio", meta = (AllowPrivateAccess = "true"))
 	int32 RandomSeed;
 
+	/** CGA Reports from generation. */
+	FReportArray Reports;
+	
 	TQueue<FGenerateResultDescription> GenerateQueue;
 	TQueue<FAttributesEvaluation> AttributesEvaluationQueue;
 

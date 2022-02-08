@@ -430,7 +430,7 @@ FGenerateResultDescription VitruvioModule::Generate(const TArray<FInitialShapeFa
 		}
 	});
 
-	return FGenerateResultDescription {OutputHandler->GetInstances(), OutputHandler->GetMeshes(), OutputHandler->GetNames() };
+	return FGenerateResultDescription {OutputHandler->GetInstances(), OutputHandler->GetMeshes(), OutputHandler->GetReports(), OutputHandler->GetNames() };
 }
 
 FAttributeMapResult VitruvioModule::EvaluateRuleAttributesAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage,
