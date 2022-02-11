@@ -81,10 +81,12 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 	EPixelFormat PixelFormat = TextureMetadata.PixelFormat;
 
 	// Workaround: Also convert grayscale images to rgba, since texture params don't automatically update their sample method
-	if (TextureMetadata.PixelFormat == PF_R8G8B8A8 || TextureMetadata.PixelFormat == PF_G8 || TextureMetadata.PixelFormat == PF_G16)
+	if (TextureMetadata.PixelFormat == EPixelFormat::PF_R8G8B8A8 ||
+	    TextureMetadata.PixelFormat == EPixelFormat::PF_G8 ||
+	    TextureMetadata.PixelFormat == EPixelFormat::PF_G16)
 	{
 		const size_t BytesPerBand = TextureMetadata.BytesPerBand;
-		PixelFormat = (BytesPerBand == 2) ? PF_A16B16G16R16 : PF_B8G8R8A8;
+		PixelFormat = (BytesPerBand == 2) ? EPixelFormat::PF_A16B16G16R16 : EPixelFormat::PF_B8G8R8A8;
 		const bool bIsColor = (TextureMetadata.Bands >= 3);
 
 		size_t NewBufferSize = TextureMetadata.Width * TextureMetadata.Height * 4 * TextureMetadata.BytesPerBand;
