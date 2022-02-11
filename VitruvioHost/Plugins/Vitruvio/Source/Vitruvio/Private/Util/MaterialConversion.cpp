@@ -85,7 +85,7 @@ EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMa
 {
 	const UTexture2D* OpacityMap = OpacityMapData.Texture;
 	const EPixelFormat PixelFormat = OpacityMap->GetPixelFormat();
-	check(PixelFormat == PF_B8G8R8A8 || PixelFormat == PF_G8 || PixelFormat == PF_G16);
+	check(PixelFormat == PF_B8G8R8A8 || PixelFormat == PF_A16B16G16R16);
 
 	uint32 BlackPixels = 0;
 	uint32 WhitePixels = 0;
@@ -100,13 +100,7 @@ EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMa
 		CountOpacityMapPixels(ImageData, UseAlphaAsOpacity, OpacityMap->GetSizeX(), OpacityMap->GetSizeY(), BlackPixels, WhitePixels);
 		break;
 	}
-	case PF_G8:
-	{
-		const uint8* ImageData = reinterpret_cast<const uint8*>(OpacityMap->PlatformData->Mips[0].BulkData.LockReadOnly());
-		CountOpacityMapPixels(ImageData, OpacityMap->GetSizeX(), OpacityMap->GetSizeY(), BlackPixels, WhitePixels);
-		break;
-	}
-	case PF_G16:
+	case PF_A16B16G16R16:
 	{
 		const uint16* ImageData = reinterpret_cast<const uint16*>(OpacityMap->PlatformData->Mips[0].BulkData.LockReadOnly());
 		CountOpacityMapPixels(ImageData, OpacityMap->GetSizeX(), OpacityMap->GetSizeY(), BlackPixels, WhitePixels);
