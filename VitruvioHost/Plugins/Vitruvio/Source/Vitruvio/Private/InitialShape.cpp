@@ -107,46 +107,16 @@ bool HasValidGeometry(const TArray<FInitialShapeFace>& InFaces)
 	return false;
 }
 
-TArray<FVector> GetInitialShapeFlippedUp(const TArray<FVector>& Vertices)
-{
-	// Reverse vertices if first plane normal shows down
-	if (Vertices.Num() >= 3)
-	{
-		TArray<FVector3f> VertexPositions;
-		VertexPositions.Reserve(Vertices.Num());
-		for (auto& Vertex : Vertices)
-		{
-			VertexPositions.Add(FVector3f(Vertex.X, Vertex.Y, Vertex.Z));
-		}
-		FVector3f PlanePointOut;
-		FVector3f PlaneNormalOut;
-		PolygonTriangulation::ComputePolygonPlane(VertexPositions, PlaneNormalOut, PlanePointOut);
-
-		const FVector PlaneNormal(PlaneNormalOut.X, PlaneNormalOut.Y,PlaneNormalOut.Z);
-		float Dot = FVector::DotProduct(FVector::UpVector, PlaneNormal);
-		
-		if (Dot < 0)
-		{
-			TArray<FVector> ReversedVertices(Vertices);
-			Algo::Reverse(ReversedVertices);
-			return ReversedVertices;
-		}
-		else
-		{
-			return Vertices;
-		}
-	}
-	return Vertices;
-}
-
 TArray<FInitialShapeFace> CreateInitialFacesFromStaticMesh(const UStaticMesh* StaticMesh)
 {
 	TArray<FVector> MeshVertices;
-	TArray<int32> RemappedIndices;
 	TArray<int32> MeshIndices;
-
+	TArray<FTextureCoordinateSet> MeshTextureCoordinates;
+	MeshTextureCoordinates.AddDefaulted(8);
+	
 	if (StaticMesh->GetRenderData() && StaticMesh->GetRenderData()->LODResources.IsValidIndex(0))
 	{
+		TArray<int32> RemappedIndices;
 		const FStaticMeshLODResources& LOD = StaticMesh->GetRenderData()->LODResources[0];
 
 		for (auto SectionIndex = 0; SectionIndex < LOD.Sections.Num(); ++SectionIndex)
@@ -164,6 +134,11 @@ TArray<FInitialShapeFace> CreateInitialFacesFromStaticMesh(const UStaticMesh* St
 				{
 					RemappedIndices.Add(MeshVertices.Num());
 					MeshVertices.Add(Vertex);
+					for (uint32 TextCoordIndex = 0; TextCoordIndex < LOD.VertexBuffers.StaticMeshVertexBuffer.GetNumTexCoords(); ++TextCoordIndex)
+					{
+						FVector2D TexCoord = LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(VertexIndex, TextCoordIndex);
+						MeshTextureCoordinates[TextCoordIndex].TextureCoordinates.Add(TexCoord);
+					}
 				}
 				else
 				{
@@ -186,14 +161,31 @@ TArray<FInitialShapeFace> CreateInitialFacesFromStaticMesh(const UStaticMesh* St
 		}
 	}
 
-	const TArray<TArray<FVector>> Windings = Vitruvio::GetOutsideWindings(MeshVertices, MeshIndices);
+	const TArray<TArray<int32>> WindingIndices = Vitruvio::GetOutsideWindings(MeshIndices);
+	
+	const TArray<TArray<FTextureCoordinateSet>> WindingTexCoords;
 
 	TArray<FInitialShapeFace> InitialShapeFaces;
-	for (const TArray<FVector>& FaceVertices : Windings)
+	for (const TArray<int32>& Indices : WindingIndices)
 	{
-		const TArray<FVector> FlippedVertices(GetInitialShapeFlippedUp(FaceVertices));
-
-		InitialShapeFaces.Push(FInitialShapeFace{FlippedVertices});
+		TArray<FVector> WindingVertices;
+		TArray<FTextureCoordinateSet> WindingTextureCoordinates;
+		WindingTextureCoordinates.AddDefaulted(8);
+		for (const int32 Index : Indices)
+		{
+			WindingVertices.Add(MeshVertices[Index]);
+			for (int32 TextureCoordinateSet = 0; TextureCoordinateSet < WindingTextureCoordinates.Num(); TextureCoordinateSet++)
+			{
+				if (Index < MeshTextureCoordinates[TextureCoordinateSet].TextureCoordinates.Num())
+				{
+					WindingTextureCoordinates[TextureCoordinateSet].TextureCoordinates.Add(MeshTextureCoordinates[TextureCoordinateSet].TextureCoordinates[Index]);
+				}
+			}
+		}
+		
+		FInitialShapeFace Face = { WindingVertices, WindingTextureCoordinates };
+		Face.FixOrientation();
+		InitialShapeFaces.Push(Face);
 	}
 	return InitialShapeFaces;
 }
@@ -224,8 +216,9 @@ TArray<FInitialShapeFace> CreateInitialFacesFromSpline(const USplineComponent* S
 		}
 	}
 
-	const TArray<FVector> FlippedVertices(GetInitialShapeFlippedUp(Vertices));
-	return {FInitialShapeFace{FlippedVertices}};
+	FInitialShapeFace Face = { Vertices };
+	Face.FixOrientation();
+	return { Face };
 }
 
 TArray<FInitialShapeFace> CreateDefaultInitialFaces()
@@ -382,6 +375,34 @@ TArray<TArray<FSplinePoint>> CreateSplinePointsFromInitialFaces(const TArray<FIn
 	return Splines;
 }
 } // namespace
+
+void FInitialShapeFace::FixOrientation()
+{
+	if (Vertices.Num() < 3)
+	{
+		return;
+	}
+	
+	// Reverse vertices if plane normal points down
+	TArray<FVector3f> VertexPositions;
+	VertexPositions.Reserve(Vertices.Num());
+	for (const auto& Vertex : Vertices)
+	{
+		VertexPositions.Add(FVector3f(Vertex.X, Vertex.Y, Vertex.Z));
+	}
+	FVector3f PlanePointOut;
+	FVector3f PlaneNormalOut;
+	PolygonTriangulation::ComputePolygonPlane(VertexPositions, PlaneNormalOut, PlanePointOut);
+
+	const FVector PlaneNormal(PlaneNormalOut.X, PlaneNormalOut.Y,PlaneNormalOut.Z);
+	float Dot = FVector::DotProduct(FVector::UpVector, PlaneNormal);
+	
+	if (Dot < 0)
+	{
+		Algo::Reverse(Vertices);
+		Algo::Reverse(TextureCoordinates);
+	}
+}
 
 TArray<FVector> UInitialShape::GetVertices() const
 {

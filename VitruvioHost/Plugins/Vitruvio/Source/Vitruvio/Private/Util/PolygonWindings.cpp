@@ -49,7 +49,7 @@ uint32 GetTypeHash(const FWindingEdge& Edge)
 
 namespace Vitruvio
 {
-TArray<TArray<FVector>> GetOutsideWindings(const TArray<FVector>& InVertices, const TArray<int32>& InIndices)
+TArray<TArray<int32>> GetOutsideWindings(const TArray<int32>& InIndices)
 {
 	const int32 NumTriangles = InIndices.Num() / 3;
 
@@ -86,28 +86,28 @@ TArray<TArray<FVector>> GetOutsideWindings(const TArray<FVector>& InVertices, co
 	}
 
 	// Organize the remaining edges in the list so that the vertices will meet up to form a continuous outline around the shapes
-	TArray<TArray<FVector>> Windings;
+	TArray<TArray<int32>> Windings;
 	while (EdgeMap.Num() > 0)
 	{
-		TArray<FVector> WindingVertices;
+		TArray<int32> WindingIndices;
 
 		// Get and remove first edge
 		auto EdgeIter = EdgeMap.CreateIterator();
 		const FWindingEdge FirstEdge = EdgeIter.Value();
 		EdgeIter.RemoveCurrent();
 
-		WindingVertices.Add(InVertices[FirstEdge.Index0]);
+		WindingIndices.Add(FirstEdge.Index0);
 		int NextIndex = FirstEdge.Index1;
 
 		// Find connected edges
 		while (EdgeMap.Contains(NextIndex))
 		{
 			const FWindingEdge& Current = EdgeMap.FindAndRemoveChecked(NextIndex);
-			WindingVertices.Add(InVertices[Current.Index0]);
+			WindingIndices.Add(Current.Index0);
 			NextIndex = Current.Index1;
 		}
 
-		Windings.Add(WindingVertices);
+		Windings.Add(WindingIndices);
 	}
 
 	return Windings;

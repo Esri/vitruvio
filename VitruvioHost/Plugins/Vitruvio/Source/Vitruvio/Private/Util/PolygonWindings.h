@@ -23,8 +23,7 @@ namespace Vitruvio
  *
  * Note: This function is adapted from FPoly#GetOutsideWindings.
  *
- * @param InVertices	Input vertices
  * @param InIndices		Input triangle indices
  */
-TArray<TArray<FVector>> GetOutsideWindings(const TArray<FVector>& InVertices, const TArray<int32>& InIndices);
+TArray<TArray<int32>> GetOutsideWindings(const TArray<int32>& InIndices);
 } // namespace Vitruvio

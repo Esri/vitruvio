@@ -148,6 +148,26 @@ void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder,
 	{
 		UE_LOG(LogUnrealPrt, Error, TEXT("InitialShapeBuilder setGeometry failed status = %hs"), prt::getStatusDescription(SetGeometryStatus))
 	}
+	
+	for (int32 UVSet = 0; UVSet < 8; ++UVSet)
+	{
+		std::vector<double> uvCoords;
+		for (const FInitialShapeFace& Face : InitialShape)
+        {
+            for (const auto& UV : Face.TextureCoordinates[UVSet].TextureCoordinates)
+            {
+            	uvCoords.push_back(UV.X);
+            	uvCoords.push_back(-UV.Y);
+            }
+        }
+		
+		if (uvCoords.empty())
+		{
+			continue;
+		}
+		
+        InitialShapeBuilder->setUVs(uvCoords.data(), uvCoords.size(), indices.data(), indices.size(), faceCounts.data(), faceCounts.size(), UVSet);
+	}
 }
 
 AttributeMapUPtr EvaluateRuleAttribtues(const std::wstring& RuleFile, const std::wstring& StartRule, AttributeMapUPtr Attributes, const ResolveMapSPtr& ResolveMapPtr,
