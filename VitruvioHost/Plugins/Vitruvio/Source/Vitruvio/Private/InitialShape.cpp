@@ -107,6 +107,34 @@ bool HasValidGeometry(const TArray<FInitialShapeFace>& InFaces)
 	return false;
 }
 
+TArray<FInitialShapeFace> CreateFacesFromWindings(const TArray<TArray<int32>>& WindingIndices, const TArray<FVector>& MeshVertices,
+	const TArray<FTextureCoordinateSet>& MeshTextureCoordinateSets)
+{
+	TArray<FInitialShapeFace> InitialShapeFaces;
+	for (const TArray<int32>& Indices : WindingIndices)
+	{
+		TArray<FVector> WindingVertices;
+		TArray<FTextureCoordinateSet> WindingTextureCoordinateSets;
+		WindingTextureCoordinateSets.AddDefaulted(8);
+		for (const int32 Index : Indices)
+		{
+			WindingVertices.Add(MeshVertices[Index]);
+			for (int32 TextureCoordinateSet = 0; TextureCoordinateSet < WindingTextureCoordinateSets.Num(); TextureCoordinateSet++)
+			{
+				if (Index < MeshTextureCoordinateSets[TextureCoordinateSet].TextureCoordinates.Num())
+				{
+					WindingTextureCoordinateSets[TextureCoordinateSet].TextureCoordinates.Add(MeshTextureCoordinateSets[TextureCoordinateSet].TextureCoordinates[Index]);
+				}
+			}
+		}
+		
+		FInitialShapeFace Face = { WindingVertices, WindingTextureCoordinateSets };
+		Face.FixOrientation();
+		InitialShapeFaces.Push(Face);
+	}
+	return InitialShapeFaces;
+}
+
 TArray<FInitialShapeFace> CreateInitialFacesFromStaticMesh(const UStaticMesh* StaticMesh)
 {
 	TArray<FVector> MeshVertices;
@@ -163,29 +191,7 @@ TArray<FInitialShapeFace> CreateInitialFacesFromStaticMesh(const UStaticMesh* St
 
 	const TArray<TArray<int32>> WindingIndices = Vitruvio::GetOutsideWindings(MeshIndices);
 	
-	TArray<FInitialShapeFace> InitialShapeFaces;
-	for (const TArray<int32>& Indices : WindingIndices)
-	{
-		TArray<FVector> WindingVertices;
-		TArray<FTextureCoordinateSet> WindingTextureCoordinateSets;
-		WindingTextureCoordinateSets.AddDefaulted(8);
-		for (const int32 Index : Indices)
-		{
-			WindingVertices.Add(MeshVertices[Index]);
-			for (int32 TextureCoordinateSet = 0; TextureCoordinateSet < WindingTextureCoordinateSets.Num(); TextureCoordinateSet++)
-			{
-				if (Index < MeshTextureCoordinateSets[TextureCoordinateSet].TextureCoordinates.Num())
-				{
-					WindingTextureCoordinateSets[TextureCoordinateSet].TextureCoordinates.Add(MeshTextureCoordinateSets[TextureCoordinateSet].TextureCoordinates[Index]);
-				}
-			}
-		}
-		
-		FInitialShapeFace Face = { WindingVertices, WindingTextureCoordinateSets };
-		Face.FixOrientation();
-		InitialShapeFaces.Push(Face);
-	}
-	return InitialShapeFaces;
+	return CreateFacesFromWindings(WindingIndices, MeshVertices, MeshTextureCoordinateSets);
 }
 
 TArray<FInitialShapeFace> CreateInitialFacesFromSpline(const USplineComponent* SplineComponent, const uint32 SplineApproximationPoints)
