@@ -152,10 +152,19 @@ void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder,
 	for (int32 UVSet = 0; UVSet < 8; ++UVSet)
 	{
 		std::vector<double> uvCoords;
+		std::vector<uint32_t> uvIndices;
+		
+		uint32_t CurrentUVIndex = 0;
 		for (const FInitialShapeFace& Face : InitialShape)
         {
+			if (UVSet >= Face.TextureCoordinates.Num())
+			{
+				continue;
+			}
+			
             for (const auto& UV : Face.TextureCoordinates[UVSet].TextureCoordinates)
             {
+            	uvIndices.push_back(CurrentUVIndex++);
             	uvCoords.push_back(UV.X);
             	uvCoords.push_back(-UV.Y);
             }
@@ -166,7 +175,7 @@ void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder,
 			continue;
 		}
 		
-        InitialShapeBuilder->setUVs(uvCoords.data(), uvCoords.size(), indices.data(), indices.size(), faceCounts.data(), faceCounts.size(), UVSet);
+        InitialShapeBuilder->setUVs(uvCoords.data(), uvCoords.size(), uvIndices.data(), uvIndices.size(), faceCounts.data(), faceCounts.size(), UVSet);
 	}
 }
 
