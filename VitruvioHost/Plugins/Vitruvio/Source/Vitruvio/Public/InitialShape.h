@@ -43,7 +43,7 @@ struct VITRUVIO_API FInitialShapeFace
 	TArray<FVector> Vertices;
 
 	UPROPERTY()
-	TArray<FTextureCoordinateSet> TextureCoordinates;
+	TArray<FTextureCoordinateSet> TextureCoordinateSets;
 
 	void FixOrientation();
 };

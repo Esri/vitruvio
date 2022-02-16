@@ -111,8 +111,8 @@ TArray<FInitialShapeFace> CreateInitialFacesFromStaticMesh(const UStaticMesh* St
 {
 	TArray<FVector> MeshVertices;
 	TArray<int32> MeshIndices;
-	TArray<FTextureCoordinateSet> MeshTextureCoordinates;
-	MeshTextureCoordinates.AddDefaulted(8);
+	TArray<FTextureCoordinateSet> MeshTextureCoordinateSets;
+	MeshTextureCoordinateSets.AddDefaulted(8);
 	
 	if (StaticMesh->GetRenderData() && StaticMesh->GetRenderData()->LODResources.IsValidIndex(0))
 	{
@@ -137,7 +137,7 @@ TArray<FInitialShapeFace> CreateInitialFacesFromStaticMesh(const UStaticMesh* St
 					for (uint32 TextCoordIndex = 0; TextCoordIndex < LOD.VertexBuffers.StaticMeshVertexBuffer.GetNumTexCoords(); ++TextCoordIndex)
 					{
 						FVector2D TexCoord = LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(VertexIndex, TextCoordIndex);
-						MeshTextureCoordinates[TextCoordIndex].TextureCoordinates.Add(TexCoord);
+						MeshTextureCoordinateSets[TextCoordIndex].TextureCoordinates.Add(TexCoord);
 					}
 				}
 				else
@@ -169,21 +169,21 @@ TArray<FInitialShapeFace> CreateInitialFacesFromStaticMesh(const UStaticMesh* St
 	for (const TArray<int32>& Indices : WindingIndices)
 	{
 		TArray<FVector> WindingVertices;
-		TArray<FTextureCoordinateSet> WindingTextureCoordinates;
-		WindingTextureCoordinates.AddDefaulted(8);
+		TArray<FTextureCoordinateSet> WindingTextureCoordinateSets;
+		WindingTextureCoordinateSets.AddDefaulted(8);
 		for (const int32 Index : Indices)
 		{
 			WindingVertices.Add(MeshVertices[Index]);
-			for (int32 TextureCoordinateSet = 0; TextureCoordinateSet < WindingTextureCoordinates.Num(); TextureCoordinateSet++)
+			for (int32 TextureCoordinateSet = 0; TextureCoordinateSet < WindingTextureCoordinateSets.Num(); TextureCoordinateSet++)
 			{
-				if (Index < MeshTextureCoordinates[TextureCoordinateSet].TextureCoordinates.Num())
+				if (Index < MeshTextureCoordinateSets[TextureCoordinateSet].TextureCoordinates.Num())
 				{
-					WindingTextureCoordinates[TextureCoordinateSet].TextureCoordinates.Add(MeshTextureCoordinates[TextureCoordinateSet].TextureCoordinates[Index]);
+					WindingTextureCoordinateSets[TextureCoordinateSet].TextureCoordinates.Add(MeshTextureCoordinateSets[TextureCoordinateSet].TextureCoordinates[Index]);
 				}
 			}
 		}
 		
-		FInitialShapeFace Face = { WindingVertices, WindingTextureCoordinates };
+		FInitialShapeFace Face = { WindingVertices, WindingTextureCoordinateSets };
 		Face.FixOrientation();
 		InitialShapeFaces.Push(Face);
 	}
@@ -400,7 +400,7 @@ void FInitialShapeFace::FixOrientation()
 	if (Dot < 0)
 	{
 		Algo::Reverse(Vertices);
-		Algo::Reverse(TextureCoordinates);
+		Algo::Reverse(TextureCoordinateSets);
 	}
 }
 

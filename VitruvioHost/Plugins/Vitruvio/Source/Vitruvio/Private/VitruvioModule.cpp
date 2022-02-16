@@ -157,12 +157,12 @@ void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder,
 		uint32_t CurrentUVIndex = 0;
 		for (const FInitialShapeFace& Face : InitialShape)
         {
-			if (UVSet >= Face.TextureCoordinates.Num())
+			if (UVSet >= Face.TextureCoordinateSets.Num())
 			{
 				continue;
 			}
 			
-            for (const auto& UV : Face.TextureCoordinates[UVSet].TextureCoordinates)
+            for (const auto& UV : Face.TextureCoordinateSets[UVSet].TextureCoordinates)
             {
             	uvIndices.push_back(CurrentUVIndex++);
             	uvCoords.push_back(UV.X);
