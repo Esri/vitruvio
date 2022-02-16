@@ -163,8 +163,6 @@ TArray<FInitialShapeFace> CreateInitialFacesFromStaticMesh(const UStaticMesh* St
 
 	const TArray<TArray<int32>> WindingIndices = Vitruvio::GetOutsideWindings(MeshIndices);
 	
-	const TArray<TArray<FTextureCoordinateSet>> WindingTexCoords;
-
 	TArray<FInitialShapeFace> InitialShapeFaces;
 	for (const TArray<int32>& Indices : WindingIndices)
 	{
