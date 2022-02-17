@@ -20,7 +20,7 @@ FTextureSettings GetTextureSettings(const FString& Key, EPixelFormat PixelFormat
 	{
 		return {false, TC_Masks};
 	}
-	bool IsGrayscale = PixelFormat == EPixelFormat::PF_G8 || PixelFormat == EPixelFormat::PF_G16;
+	bool IsGrayscale = PixelFormat == EPixelFormat::PF_G8 || PixelFormat == EPixelFormat::PF_G16 || EPixelFormat::PF_R32_FLOAT;
 	return {!IsGrayscale, TC_Default};
 }
 } // namespace
@@ -83,10 +83,32 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 	// Workaround: Also convert grayscale images to rgba, since texture params don't automatically update their sample method
 	if (TextureMetadata.PixelFormat == EPixelFormat::PF_R8G8B8A8 ||
 	    TextureMetadata.PixelFormat == EPixelFormat::PF_G8 ||
-	    TextureMetadata.PixelFormat == EPixelFormat::PF_G16)
+	    TextureMetadata.PixelFormat == EPixelFormat::PF_G16 ||
+	    TextureMetadata.PixelFormat == EPixelFormat::PF_R32_FLOAT)
 	{
 		const size_t BytesPerBand = TextureMetadata.BytesPerBand;
-		PixelFormat = (BytesPerBand == 2) ? EPixelFormat::PF_A16B16G16R16 : EPixelFormat::PF_B8G8R8A8;
+		
+		switch (TextureMetadata.PixelFormat)
+		{
+		case PF_G8:
+		case PF_R8G8B8A8:
+		{
+			PixelFormat = EPixelFormat::PF_B8G8R8A8;
+			break;
+		}
+		case PF_R32_FLOAT:
+		{
+			PixelFormat = EPixelFormat::PF_A32B32G32R32F;
+			break;
+		}
+		case PF_G16:
+		{
+			PixelFormat = EPixelFormat::PF_A16B16G16R16;
+			break;
+		}
+		default:;
+		}
+		
 		const bool bIsColor = (TextureMetadata.Bands >= 3);
 
 		size_t NewBufferSize = TextureMetadata.Width * TextureMetadata.Height * 4 * TextureMetadata.BytesPerBand;
