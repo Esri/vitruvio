@@ -100,10 +100,10 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 				const int OldOffset = ((TextureMetadata.Height - Y - 1) * TextureMetadata.Width + X) * TextureMetadata.Bands * BytesPerBand;
 				for (int B = 0; B < BytesPerBand; ++B)
 				{
-					NewBuffer[NewOffset + 0 * BytesPerBand + B] = Buffer[OldOffset + 2 * bIsColor + B];
-					NewBuffer[NewOffset + 1 * BytesPerBand + B] = Buffer[OldOffset + 1 * bIsColor + B];
-					NewBuffer[NewOffset + 2 * BytesPerBand + B] = Buffer[OldOffset + 0 * bIsColor + B];
-					NewBuffer[NewOffset + 3 * BytesPerBand + B] = (TextureMetadata.Bands == 4) ? Buffer[OldOffset + 3 * bIsColor + B] : 0;
+					NewBuffer[NewOffset + 0 * BytesPerBand + B] = bIsColor ? Buffer[OldOffset + 2 + B] : Buffer[OldOffset + B];
+					NewBuffer[NewOffset + 1 * BytesPerBand + B] = bIsColor ? Buffer[OldOffset + 1 + B] : Buffer[OldOffset + B];
+					NewBuffer[NewOffset + 2 * BytesPerBand + B] = bIsColor ? Buffer[OldOffset + 0 + B] : Buffer[OldOffset + B];
+					NewBuffer[NewOffset + 3 * BytesPerBand + B] = (TextureMetadata.Bands == 4) ? Buffer[OldOffset + 3 + B] : 0;
 				}
 			}
 		}
