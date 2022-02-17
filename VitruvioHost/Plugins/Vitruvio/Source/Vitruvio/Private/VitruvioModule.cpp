@@ -148,9 +148,38 @@ void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder,
 	{
 		UE_LOG(LogUnrealPrt, Error, TEXT("InitialShapeBuilder setGeometry failed status = %hs"), prt::getStatusDescription(SetGeometryStatus))
 	}
+	
+	for (int32 UVSet = 0; UVSet < 8; ++UVSet)
+	{
+		std::vector<double> uvCoords;
+		std::vector<uint32_t> uvIndices;
+		
+		uint32_t CurrentUVIndex = 0;
+		for (const FInitialShapeFace& Face : InitialShape)
+        {
+			if (UVSet >= Face.TextureCoordinateSets.Num())
+			{
+				continue;
+			}
+			
+            for (const auto& UV : Face.TextureCoordinateSets[UVSet].TextureCoordinates)
+            {
+            	uvIndices.push_back(CurrentUVIndex++);
+            	uvCoords.push_back(UV.X);
+            	uvCoords.push_back(-UV.Y);
+            }
+        }
+		
+		if (uvCoords.empty())
+		{
+			continue;
+		}
+		
+        InitialShapeBuilder->setUVs(uvCoords.data(), uvCoords.size(), uvIndices.data(), uvIndices.size(), faceCounts.data(), faceCounts.size(), UVSet);
+	}
 }
 
-AttributeMapUPtr EvaluateRuleAttribtues(const std::wstring& RuleFile, const std::wstring& StartRule, AttributeMapUPtr Attributes, const ResolveMapSPtr& ResolveMapPtr,
+AttributeMapUPtr EvaluateRuleAttributes(const std::wstring& RuleFile, const std::wstring& StartRule, AttributeMapUPtr Attributes, const ResolveMapSPtr& ResolveMapPtr,
 										   const TArray<FInitialShapeFace>& InitialShape, prt::Cache* Cache, const int32 RandomSeed)
 {
 	AttributeMapBuilderUPtr UnrealCallbacksAttributeBuilder(prt::AttributeMapBuilder::create());
@@ -471,7 +500,7 @@ FAttributeMapResult VitruvioModule::EvaluateRuleAttributesAsync(const TArray<FIn
 		}
 
 		AttributeMapUPtr DefaultAttributeMap(
-			EvaluateRuleAttribtues(RuleFile.c_str(), StartRule.c_str(), std::move(Attributes), ResolveMap, InitialShape, PrtCache.get(), RandomSeed));
+			EvaluateRuleAttributes(RuleFile.c_str(), StartRule.c_str(), std::move(Attributes), ResolveMap, InitialShape, PrtCache.get(), RandomSeed));
 
 		LoadAttributesCounter.Decrement();
 

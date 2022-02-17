@@ -26,12 +26,26 @@
 class UVitruvioComponent;
 
 USTRUCT()
+struct VITRUVIO_API FTextureCoordinateSet
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<FVector2D> TextureCoordinates;
+};
+
+USTRUCT()
 struct VITRUVIO_API FInitialShapeFace
 {
 	GENERATED_BODY()
 
 	UPROPERTY()
 	TArray<FVector> Vertices;
+
+	UPROPERTY()
+	TArray<FTextureCoordinateSet> TextureCoordinateSets;
+
+	void FixOrientation();
 };
 
 UCLASS(Abstract)
