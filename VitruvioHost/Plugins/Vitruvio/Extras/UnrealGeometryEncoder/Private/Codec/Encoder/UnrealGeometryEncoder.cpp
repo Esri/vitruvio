@@ -220,7 +220,6 @@ std::wstring uriToPath(const prtx::TexturePtr& t)
 		L"dirtmap",
 		L"normalmap",
 		L"opacitymap",
-		L"opacitymap.mode",
 		L"specularmap",
 		L"emissive.b",
 		L"emissive.g",
