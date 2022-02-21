@@ -81,10 +81,10 @@ void CountOpacityMapPixels(const uint16* SrcColors, int32 SizeX, int32 SizeY, ui
 								 [](const uint16* Color) { return static_cast<float>(*Color) / 0xFFFF; });
 }
 
-void CountOpacityMapPixels(const uint32* SrcColors, int32 SizeX, int32 SizeY, uint32& BlackPixels, uint32& WhitePixels)
+void CountOpacityMapPixels(const float* SrcColors, int32 SizeX, int32 SizeY, uint32& BlackPixels, uint32& WhitePixels)
 {
 	return CountOpacityMapPixels(SrcColors, SizeX, SizeY, BlackPixels, WhitePixels,
-								 [](const uint32* Color) { return static_cast<float>(*Color) / 0xFFFFFF; });
+								 [](const float* Color) { return static_cast<float>(*Color); });
 }
 
 EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMapData, bool UseAlphaAsOpacity)
@@ -108,7 +108,7 @@ EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMa
 	}
 	case PF_A32B32G32R32F:
 	{
-		const uint32* ImageData = reinterpret_cast<const uint32*>(OpacityMap->PlatformData->Mips[0].BulkData.LockReadOnly());
+		const float* ImageData = reinterpret_cast<const float*>(OpacityMap->PlatformData->Mips[0].BulkData.LockReadOnly());
 		CountOpacityMapPixels(ImageData, OpacityMap->GetSizeX(), OpacityMap->GetSizeY(), BlackPixels, WhitePixels);
 		break;
 	}
