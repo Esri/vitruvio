@@ -56,7 +56,7 @@ void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttribute
 
 	FStaticMeshAttributes MeshAttributes(MeshDescription);
 
-	TArray<FVector> Vertices;
+	TArray<FVector3f> Vertices;
 	auto VertexPositions = MeshAttributes.GetVertexPositions();
 	for (int32 VertexIndex = 0; VertexIndex < VertexPositions.GetNumElements(); ++VertexIndex)
 	{

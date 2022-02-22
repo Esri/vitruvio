@@ -96,11 +96,12 @@ EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMa
 	uint32 BlackPixels = 0;
 	uint32 WhitePixels = 0;
 
+	const FTexturePlatformData* PlatformData = OpacityMap->GetPlatformData();
 	switch (PixelFormat)
 	{
 	case PF_B8G8R8A8:
 	{
-		const FColor* ImageData = reinterpret_cast<const FColor*>(OpacityMap->PlatformData->Mips[0].BulkData.LockReadOnly());
+		const FColor* ImageData = reinterpret_cast<const FColor*>(PlatformData->Mips[0].BulkData.LockReadOnly());
 
 		// Now count the black and white pixels of the appropriate opacity map channel to determine the opacity mode
 		CountOpacityMapPixels(ImageData, UseAlphaAsOpacity, OpacityMap->GetSizeX(), OpacityMap->GetSizeY(), BlackPixels, WhitePixels);
@@ -108,13 +109,13 @@ EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMa
 	}
 	case PF_A32B32G32R32F:
 	{
-		const float* ImageData = reinterpret_cast<const float*>(OpacityMap->PlatformData->Mips[0].BulkData.LockReadOnly());
+		const float* ImageData = reinterpret_cast<const float*>(PlatformData->Mips[0].BulkData.LockReadOnly());
 		CountOpacityMapPixels(ImageData, OpacityMap->GetSizeX(), OpacityMap->GetSizeY(), BlackPixels, WhitePixels);
 		break;
 	}
 	case PF_A16B16G16R16:
 	{
-		const uint16* ImageData = reinterpret_cast<const uint16*>(OpacityMap->PlatformData->Mips[0].BulkData.LockReadOnly());
+		const uint16* ImageData = reinterpret_cast<const uint16*>(PlatformData->Mips[0].BulkData.LockReadOnly());
 		CountOpacityMapPixels(ImageData, OpacityMap->GetSizeX(), OpacityMap->GetSizeY(), BlackPixels, WhitePixels);
 		break;
 	}
@@ -122,7 +123,7 @@ EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMa
 		check(0)
 	}
 
-	OpacityMap->PlatformData->Mips[0].BulkData.Unlock();
+	OpacityMap->GetPlatformData()->Mips[0].BulkData.Unlock();
 
 	const uint32 TotalPixels = OpacityMap->GetSizeX() * OpacityMap->GetSizeY();
 	if (WhitePixels >= TotalPixels * OPACITY_THRESHOLD)

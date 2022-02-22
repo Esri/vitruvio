@@ -210,7 +210,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 						{
 							check(uvCounts[PrtUVSet][PolygonGroupStartIndex + FaceIndex] == FaceVertexCount);
 							const uint32_t UVIndex = uvIndices[PrtUVSet][BaseUVIndex[PrtUVSet] + FaceVertexIndex] * 2;
-							FVector2D UVCoords = FVector2D(uvs[PrtUVSet][UVIndex], -uvs[PrtUVSet][UVIndex + 1]);
+							FVector2f UVCoords = FVector2f(uvs[PrtUVSet][UVIndex], -uvs[PrtUVSet][UVIndex + 1]);
 							VertexUVs.Set(InstanceId, static_cast<int32>(*UnrealUVSetPtr), UVCoords);
 						}
 					}

@@ -20,6 +20,7 @@
 #include "CompGeom/PolygonTriangulation.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
+#include "UObject/SavePackage.h"
 
 namespace
 {
@@ -164,7 +165,7 @@ TArray<FInitialShapeFace> CreateInitialFacesFromStaticMesh(const UStaticMesh* St
 					MeshVertices.Add(Vertex);
 					for (uint32 TextCoordIndex = 0; TextCoordIndex < LOD.VertexBuffers.StaticMeshVertexBuffer.GetNumTexCoords(); ++TextCoordIndex)
 					{
-						FVector2D TexCoord = LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(VertexIndex, TextCoordIndex);
+						FVector2f TexCoord = LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(VertexIndex, TextCoordIndex);
 						MeshTextureCoordinateSets[TextCoordIndex].TextureCoordinates.Add(TexCoord);
 					}
 				}
@@ -310,7 +311,9 @@ UStaticMesh* CreateDefaultStaticMesh()
 
 #if WITH_EDITOR
 	const FString PackageFileName = InitialShapeName + FPackageName::GetAssetPackageExtension();
-	UPackage::SavePackage(Package, StaticMesh, RF_Public | RF_Standalone, *PackageFileName);
+	FSavePackageArgs Args;
+	Args.TopLevelFlags = RF_Public | RF_Standalone;
+	UPackage::SavePackage(Package, StaticMesh, *PackageFileName, Args);
 #endif
 	
 	return StaticMesh;

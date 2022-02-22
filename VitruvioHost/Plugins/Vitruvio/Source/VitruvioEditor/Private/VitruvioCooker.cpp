@@ -78,22 +78,25 @@ UTexture2D* SaveTexture(UTexture2D* Original, const FString& Path, FTextureCache
 	FString AssetName;
 	UPackage* TexturePackage = CreateUniquePackage(FPaths::Combine(Path, TEXT("Textures"), Original->GetName()), AssetName);
 	UTexture2D* NewTexture = NewObject<UTexture2D>(TexturePackage, *AssetName, RF_Public | RF_Standalone);
-
-	NewTexture->PlatformData = new FTexturePlatformData();
-	NewTexture->PlatformData->SizeX = Original->PlatformData->SizeX;
-	NewTexture->PlatformData->SizeY = Original->PlatformData->SizeY;
-	NewTexture->PlatformData->PixelFormat = Original->PlatformData->PixelFormat;
 	NewTexture->CompressionSettings = Original->CompressionSettings;
 	NewTexture->SRGB = Original->SRGB;
+	
+	FTexturePlatformData* PlatformData = new FTexturePlatformData();
+	const FTexturePlatformData* OriginalPlatformData = Original->GetPlatformData();
+	PlatformData->SizeX = OriginalPlatformData->SizeX;
+	PlatformData->SizeY = OriginalPlatformData->SizeY;
+	PlatformData->PixelFormat = OriginalPlatformData->PixelFormat;
 
 	// Allocate first mipmap and upload the pixel data
 	FTexture2DMipMap* Mip = new FTexture2DMipMap();
-	FTexture2DMipMap& OriginalMip = Original->PlatformData->Mips[0];
+	const FTexture2DMipMap& OriginalMip = OriginalPlatformData->Mips[0];
 
-	NewTexture->PlatformData->Mips.Add(Mip);
+	PlatformData->Mips.Add(Mip);
 
 	Mip->SizeX = OriginalMip.SizeX;
 	Mip->SizeY = OriginalMip.SizeY;
+	
+	NewTexture->SetPlatformData(PlatformData);
 
 	const uint8* SourcePixels = static_cast<const uint8*>(OriginalMip.BulkData.LockReadOnly());
 	Mip->BulkData.Lock(LOCK_READ_WRITE);
@@ -102,7 +105,7 @@ UTexture2D* SaveTexture(UTexture2D* Original, const FString& Path, FTextureCache
 	FMemory::Memcpy(TextureData, SourcePixels, OriginalMip.BulkData.GetBulkDataSize());
 	Mip->BulkData.Unlock();
 
-	NewTexture->Source.Init(Original->PlatformData->SizeX, Original->PlatformData->SizeY, 1, 1, ETextureSourceFormat::TSF_BGRA8, SourcePixels);
+	NewTexture->Source.Init(OriginalPlatformData->SizeX, OriginalPlatformData->SizeY, 1, 1, ETextureSourceFormat::TSF_BGRA8, SourcePixels);
 	OriginalMip.BulkData.Unlock();
 
 	NewTexture->PostEditChange();
