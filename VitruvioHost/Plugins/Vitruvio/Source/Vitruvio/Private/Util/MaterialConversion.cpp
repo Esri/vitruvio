@@ -81,11 +81,17 @@ void CountOpacityMapPixels(const uint16* SrcColors, int32 SizeX, int32 SizeY, ui
 								 [](const uint16* Color) { return static_cast<float>(*Color) / 0xFFFF; });
 }
 
+void CountOpacityMapPixels(const float* SrcColors, int32 SizeX, int32 SizeY, uint32& BlackPixels, uint32& WhitePixels)
+{
+	return CountOpacityMapPixels(SrcColors, SizeX, SizeY, BlackPixels, WhitePixels,
+								 [](const float* Color) { return static_cast<float>(*Color); });
+}
+
 EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMapData, bool UseAlphaAsOpacity)
 {
 	const UTexture2D* OpacityMap = OpacityMapData.Texture;
 	const EPixelFormat PixelFormat = OpacityMap->GetPixelFormat();
-	check(PixelFormat == PF_B8G8R8A8 || PixelFormat == PF_G8 || PixelFormat == PF_G16);
+	check(PixelFormat == PF_B8G8R8A8 || PixelFormat == PF_A16B16G16R16 || PixelFormat == PF_A32B32G32R32F);
 
 	uint32 BlackPixels = 0;
 	uint32 WhitePixels = 0;
@@ -100,13 +106,13 @@ EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMa
 		CountOpacityMapPixels(ImageData, UseAlphaAsOpacity, OpacityMap->GetSizeX(), OpacityMap->GetSizeY(), BlackPixels, WhitePixels);
 		break;
 	}
-	case PF_G8:
+	case PF_A32B32G32R32F:
 	{
-		const uint8* ImageData = reinterpret_cast<const uint8*>(OpacityMap->PlatformData->Mips[0].BulkData.LockReadOnly());
+		const float* ImageData = reinterpret_cast<const float*>(OpacityMap->PlatformData->Mips[0].BulkData.LockReadOnly());
 		CountOpacityMapPixels(ImageData, OpacityMap->GetSizeX(), OpacityMap->GetSizeY(), BlackPixels, WhitePixels);
 		break;
 	}
-	case PF_G16:
+	case PF_A16B16G16R16:
 	{
 		const uint16* ImageData = reinterpret_cast<const uint16*>(OpacityMap->PlatformData->Mips[0].BulkData.LockReadOnly());
 		CountOpacityMapPixels(ImageData, OpacityMap->GetSizeX(), OpacityMap->GetSizeY(), BlackPixels, WhitePixels);
