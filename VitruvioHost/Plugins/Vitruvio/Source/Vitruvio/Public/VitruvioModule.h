@@ -256,7 +256,12 @@ public:
 	{
 		Collector.AddReferencedObjects(MaterialCache);
 		Collector.AddReferencedObjects(RegisteredMeshes);
-	};
+	}
+	
+	FString GetReferencerName() const override
+	{
+		return TEXT("Vitruvio");
+	}
 
 	static VitruvioModule& Get()
 	{
