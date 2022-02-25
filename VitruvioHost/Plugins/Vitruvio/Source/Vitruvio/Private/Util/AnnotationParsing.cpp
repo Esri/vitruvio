@@ -148,7 +148,8 @@ UFilesystemAnnotation* ParseFileAnnotation(const prt::Annotation* Annotation, UO
 
 int ParseOrder(const prt::Annotation* Annotation)
 {
-	if (Annotation->getNumArguments() >= 1 && Annotation->getArgument(0)->getType() == prt::AAT_FLOAT) {
+	if (Annotation->getNumArguments() >= 1 && Annotation->getArgument(0)->getType() == prt::AAT_FLOAT)
+	{
 		return static_cast<int>(Annotation->getArgument(0)->getFloat());
 	}
 	return INT32_MAX;
@@ -233,19 +234,25 @@ void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, UR
 	}
 }
 
-TMap<FString, int> ParseImportOrderMap(const RuleFileInfoUPtr& RuleFileInfo) {
+TMap<FString, int> ParseImportOrderMap(const RuleFileInfoUPtr& RuleFileInfo)
+{
 	TMap<FString, int> ImportOrderMap;
 	int ImportOrder = 0;
-	for (size_t i = 0; i < RuleFileInfo->getNumAnnotations(); i++) {
+	for (size_t i = 0; i < RuleFileInfo->getNumAnnotations(); i++)
+	{
 		const prt::Annotation* Annotation = RuleFileInfo->getAnnotation(i);
 		const wchar_t* AnnotationName = Annotation->getName();
-		
-		if (!(std::wcscmp(AnnotationName, ANNOT_IMPORTS))) {
-			for (int Index = 0; Index < Annotation->getNumArguments(); Index++) {
-				if (Annotation->getArgument(Index)->getType() == prt::AAT_STR) {
+
+		if (!(std::wcscmp(AnnotationName, ANNOT_IMPORTS)))
+		{
+			for (int Index = 0; Index < Annotation->getNumArguments(); Index++)
+			{
+				if (Annotation->getArgument(Index)->getType() == prt::AAT_STR)
+				{
 					const wchar_t* AnnotationKey = Annotation->getArgument(Index)->getKey();
-					
-					if(!(std::wcscmp(AnnotationKey, ANNOT_IMPORTS_KEY))) {
+
+					if (!(std::wcscmp(AnnotationKey, ANNOT_IMPORTS_KEY)))
+					{
 						FString ImportRule = WCHAR_TO_TCHAR(Annotation->getArgument(Index)->getStr());
 						ImportOrderMap.Add(ImportRule, ImportOrder++);
 					}

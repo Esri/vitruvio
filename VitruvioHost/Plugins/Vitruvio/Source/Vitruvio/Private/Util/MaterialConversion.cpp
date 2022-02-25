@@ -83,8 +83,7 @@ void CountOpacityMapPixels(const uint16* SrcColors, int32 SizeX, int32 SizeY, ui
 
 void CountOpacityMapPixels(const float* SrcColors, int32 SizeX, int32 SizeY, uint32& BlackPixels, uint32& WhitePixels)
 {
-	return CountOpacityMapPixels(SrcColors, SizeX, SizeY, BlackPixels, WhitePixels,
-								 [](const float* Color) { return static_cast<float>(*Color); });
+	return CountOpacityMapPixels(SrcColors, SizeX, SizeY, BlackPixels, WhitePixels, [](const float* Color) { return static_cast<float>(*Color); });
 }
 
 EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMapData, bool UseAlphaAsOpacity)

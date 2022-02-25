@@ -80,7 +80,7 @@ UTexture2D* SaveTexture(UTexture2D* Original, const FString& Path, FTextureCache
 	UTexture2D* NewTexture = NewObject<UTexture2D>(TexturePackage, *AssetName, RF_Public | RF_Standalone);
 	NewTexture->CompressionSettings = Original->CompressionSettings;
 	NewTexture->SRGB = Original->SRGB;
-	
+
 	FTexturePlatformData* PlatformData = new FTexturePlatformData();
 	const FTexturePlatformData* OriginalPlatformData = Original->GetPlatformData();
 	PlatformData->SizeX = OriginalPlatformData->SizeX;
@@ -95,7 +95,7 @@ UTexture2D* SaveTexture(UTexture2D* Original, const FString& Path, FTextureCache
 
 	Mip->SizeX = OriginalMip.SizeX;
 	Mip->SizeY = OriginalMip.SizeY;
-	
+
 	NewTexture->SetPlatformData(PlatformData);
 
 	const uint8* SourcePixels = static_cast<const uint8*>(OriginalMip.BulkData.LockReadOnly());
@@ -241,7 +241,7 @@ UStaticMesh* SaveStaticMesh(UStaticMesh* Mesh, const FString& Path, FStaticMeshC
 	SrcModel.BuildSettings.bRecomputeTangents = false;
 	SrcModel.BuildSettings.bRemoveDegenerates = true;
 	PersistedMesh->GetBodySetup()->CollisionTraceFlag = ECollisionTraceFlag::CTF_UseComplexAsSimple;
-	
+
 	PersistedMesh->PostEditChange();
 	PersistedMesh->MarkPackageDirty();
 
@@ -282,7 +282,7 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 		// Cook actors after all models have been generated and their meshes constructed
 		FScopedSlowTask CookTask(Actors.Num(), FText::FromString("Cooking models..."));
 		CookTask.MakeDialog();
-		
+
 		FMaterialCache MaterialCache;
 		FTextureCache TextureCache;
 		FStaticMeshCache MeshCache;
@@ -290,7 +290,7 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 		for (AActor* Actor : Actors)
 		{
 			CookTask.EnterProgressFrame(1);
-			
+
 			UVitruvioComponent* VitruvioComponent = Actor->FindComponentByClass<UVitruvioComponent>();
 			if (!VitruvioComponent)
 			{
@@ -325,8 +325,7 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 				UStaticMesh* GeneratedMesh = StaticMeshComponent->GetStaticMesh();
 
 				UStaticMesh* PersistedMesh = SaveStaticMesh(GeneratedMesh, CookPath, MeshCache, MaterialCache, TextureCache);
-				AttachMeshComponent<UStaticMeshComponent>(CookedActor, PersistedMesh, TEXT("Model"),
-														  StaticMeshComponent->GetComponentTransform());
+				AttachMeshComponent<UStaticMeshComponent>(CookedActor, PersistedMesh, TEXT("Model"), StaticMeshComponent->GetComponentTransform());
 			}
 
 			// Persist instanced Component
@@ -347,13 +346,14 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 
 					for (int32 MaterialIndex = 0; MaterialIndex < GeneratedModelHismComponent->GetNumOverrideMaterials(); ++MaterialIndex)
 					{
-						UMaterialInstanceDynamic* DynamicMaterial = Cast<UMaterialInstanceDynamic>(GeneratedModelHismComponent->OverrideMaterials[MaterialIndex]);
+						UMaterialInstanceDynamic* DynamicMaterial =
+							Cast<UMaterialInstanceDynamic>(GeneratedModelHismComponent->OverrideMaterials[MaterialIndex]);
 						check(DynamicMaterial);
 						UMaterialInstanceConstant* NewMaterial = SaveMaterial(DynamicMaterial, CookPath, MaterialCache, TextureCache);
-						
+
 						InstancedStaticMeshComponent->SetMaterial(MaterialIndex, NewMaterial);
 					}
-					
+
 					for (int32 InstanceIndex = 0; InstanceIndex < GeneratedModelHismComponent->GetInstanceCount(); ++InstanceIndex)
 					{
 						FTransform Transform;

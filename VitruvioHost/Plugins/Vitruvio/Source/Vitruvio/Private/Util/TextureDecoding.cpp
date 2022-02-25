@@ -81,13 +81,11 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 	EPixelFormat PixelFormat = TextureMetadata.PixelFormat;
 
 	// Workaround: Also convert grayscale images to rgba, since texture params don't automatically update their sample method
-	if (TextureMetadata.PixelFormat == EPixelFormat::PF_R8G8B8A8 ||
-	    TextureMetadata.PixelFormat == EPixelFormat::PF_G8 ||
-	    TextureMetadata.PixelFormat == EPixelFormat::PF_G16 ||
-	    TextureMetadata.PixelFormat == EPixelFormat::PF_R32_FLOAT)
+	if (TextureMetadata.PixelFormat == EPixelFormat::PF_R8G8B8A8 || TextureMetadata.PixelFormat == EPixelFormat::PF_G8 ||
+		TextureMetadata.PixelFormat == EPixelFormat::PF_G16 || TextureMetadata.PixelFormat == EPixelFormat::PF_R32_FLOAT)
 	{
 		const size_t BytesPerBand = TextureMetadata.BytesPerBand;
-		
+
 		switch (TextureMetadata.PixelFormat)
 		{
 		case PF_G8:
@@ -108,7 +106,7 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 		}
 		default:;
 		}
-		
+
 		const bool bIsColor = (TextureMetadata.Bands >= 3);
 
 		size_t NewBufferSize = TextureMetadata.Width * TextureMetadata.Height * 4 * TextureMetadata.BytesPerBand;
@@ -142,7 +140,7 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 	UTexture2D* NewTexture = NewObject<UTexture2D>(GetTransientPackage(), TextureName, RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
 	NewTexture->CompressionSettings = Settings.Compression;
 	NewTexture->SRGB = Settings.SRGB;
-	
+
 	FTexturePlatformData* PlatformData = new FTexturePlatformData();
 	PlatformData = new FTexturePlatformData();
 	PlatformData->SizeX = TextureMetadata.Width;
@@ -158,7 +156,7 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 	void* TextureData = Mip->BulkData.Realloc(CalculateImageBytes(TextureMetadata.Width, TextureMetadata.Height, 0, PixelFormat));
 	FMemory::Memcpy(TextureData, Buffer.get(), BufferSize);
 	Mip->BulkData.Unlock();
-	
+
 	NewTexture->SetPlatformData(PlatformData);
 
 	NewTexture->UpdateResource();

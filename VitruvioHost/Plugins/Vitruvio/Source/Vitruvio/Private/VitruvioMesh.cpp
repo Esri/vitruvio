@@ -1,12 +1,12 @@
 #include "VitruvioMesh.h"
-#include "VitruvioModule.h"
 #include "MaterialConversion.h"
 #include "StaticMeshAttributes.h"
+#include "VitruvioModule.h"
 
 UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
-                                        TMap<FString, Vitruvio::FTextureData>& TextureCache,
-                                        TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-                                        const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, UObject* Outer)
+										TMap<FString, Vitruvio::FTextureData>& TextureCache,
+										TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+										const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, UObject* Outer)
 {
 	check(IsInGameThread());
 
@@ -15,7 +15,7 @@ UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* Mask
 	{
 		return *Result;
 	}
-	
+
 	const FName UniqueMaterialName(MaterialAttributes.Name);
 	UMaterialInstanceDynamic* Material = Vitruvio::GameThread_CreateMaterialInstance(Outer, UniqueMaterialName, OpaqueParent, MaskedParent,
 																					 TranslucentParent, MaterialAttributes, TextureCache);
@@ -41,7 +41,7 @@ void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttribute
 						  UMaterial* TranslucentParent)
 {
 	check(IsInGameThread());
-	
+
 	if (StaticMesh)
 	{
 		return;
@@ -51,7 +51,7 @@ void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttribute
 	const FName StaticMeshName = MakeUniqueObjectName(nullptr, UStaticMesh::StaticClass(), FName(MeshName));
 	StaticMesh = NewObject<UStaticMesh>(GetTransientPackage(), StaticMeshName, RF_Transient | RF_DuplicateTransient | RF_TextExportTransient);
 	VitruvioModule::Get().RegisterMesh(StaticMesh);
-	
+
 	TMap<UMaterialInstanceDynamic*, FName> MaterialSlots;
 
 	FStaticMeshAttributes MeshAttributes(MeshDescription);
@@ -68,8 +68,8 @@ void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttribute
 	size_t MaterialIndex = 0;
 	for (const auto& PolygonGroupId : PolygonGroups.GetElementIDs())
 	{
-		UMaterialInstanceDynamic* Material = CacheMaterial(OpaqueParent, MaskedParent, TranslucentParent, TextureCache, MaterialCache,
-														   Materials[MaterialIndex], StaticMesh);
+		UMaterialInstanceDynamic* Material =
+			CacheMaterial(OpaqueParent, MaskedParent, TranslucentParent, TextureCache, MaterialCache, Materials[MaterialIndex], StaticMesh);
 
 		const FName SlotName = StaticMesh->AddMaterial(Material);
 		MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = SlotName;
