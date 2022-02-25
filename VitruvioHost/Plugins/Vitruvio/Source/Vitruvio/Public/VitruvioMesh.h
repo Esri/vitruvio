@@ -10,7 +10,7 @@ UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* Mask
 struct FCollisionData
 {
 	TArray<FTriIndices> Indices;
-	TArray<FVector> Vertices;
+	TArray<FVector3f> Vertices;
 
 	bool IsValid() const
 	{

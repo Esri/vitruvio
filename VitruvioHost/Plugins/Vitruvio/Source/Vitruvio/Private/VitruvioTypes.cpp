@@ -146,11 +146,11 @@ FMaterialAttributeContainer::FMaterialAttributeContainer(const prt::AttributeMap
 				FString ColorMapUri = GetTextureUriFromIdx(AttributeMap, Key, 0);
 				FString DirtMapUri = GetTextureUriFromIdx(AttributeMap, Key, 1);
 
-				if(ColorMapUri.Len() > 0)
+				if (ColorMapUri.Len() > 0)
 				{
 					TextureProperties.Add(TEXT("colorMap"), ColorMapUri);
 				}
-				if(DirtMapUri.Len() > 0)
+				if (DirtMapUri.Len() > 0)
 				{
 					TextureProperties.Add(TEXT("dirtMap"), DirtMapUri);
 				}
@@ -159,7 +159,7 @@ FMaterialAttributeContainer::FMaterialAttributeContainer(const prt::AttributeMap
 			{
 				FString MapUri = FirstValidTextureUri(AttributeMap, Key);
 
-				if(MapUri.Len() > 0)
+				if (MapUri.Len() > 0)
 				{
 					TextureProperties.Add(KeyString, MapUri);
 				}

@@ -81,13 +81,11 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 	EPixelFormat PixelFormat = TextureMetadata.PixelFormat;
 
 	// Workaround: Also convert grayscale images to rgba, since texture params don't automatically update their sample method
-	if (TextureMetadata.PixelFormat == EPixelFormat::PF_R8G8B8A8 ||
-	    TextureMetadata.PixelFormat == EPixelFormat::PF_G8 ||
-	    TextureMetadata.PixelFormat == EPixelFormat::PF_G16 ||
-	    TextureMetadata.PixelFormat == EPixelFormat::PF_R32_FLOAT)
+	if (TextureMetadata.PixelFormat == EPixelFormat::PF_R8G8B8A8 || TextureMetadata.PixelFormat == EPixelFormat::PF_G8 ||
+		TextureMetadata.PixelFormat == EPixelFormat::PF_G16 || TextureMetadata.PixelFormat == EPixelFormat::PF_R32_FLOAT)
 	{
 		const size_t BytesPerBand = TextureMetadata.BytesPerBand;
-		
+
 		switch (TextureMetadata.PixelFormat)
 		{
 		case PF_G8:
@@ -108,7 +106,7 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 		}
 		default:;
 		}
-		
+
 		const bool bIsColor = (TextureMetadata.Bands >= 3);
 
 		size_t NewBufferSize = TextureMetadata.Width * TextureMetadata.Height * 4 * TextureMetadata.BytesPerBand;
@@ -140,23 +138,26 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 	const FString TextureBaseName = TEXT("T_") + FPaths::GetBaseFilename(Path);
 	const FName TextureName = MakeUniqueObjectName(GetTransientPackage(), UTexture2D::StaticClass(), *TextureBaseName);
 	UTexture2D* NewTexture = NewObject<UTexture2D>(GetTransientPackage(), TextureName, RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
-
-	NewTexture->PlatformData = new FTexturePlatformData();
-	NewTexture->PlatformData->SizeX = TextureMetadata.Width;
-	NewTexture->PlatformData->SizeY = TextureMetadata.Height;
-	NewTexture->PlatformData->PixelFormat = PixelFormat;
 	NewTexture->CompressionSettings = Settings.Compression;
 	NewTexture->SRGB = Settings.SRGB;
 
+	FTexturePlatformData* PlatformData = new FTexturePlatformData();
+	PlatformData = new FTexturePlatformData();
+	PlatformData->SizeX = TextureMetadata.Width;
+	PlatformData->SizeY = TextureMetadata.Height;
+	PlatformData->PixelFormat = PixelFormat;
+
 	// Allocate first mipmap and upload the pixel data
 	FTexture2DMipMap* Mip = new FTexture2DMipMap();
-	NewTexture->PlatformData->Mips.Add(Mip);
+	PlatformData->Mips.Add(Mip);
 	Mip->SizeX = TextureMetadata.Width;
 	Mip->SizeY = TextureMetadata.Height;
 	Mip->BulkData.Lock(LOCK_READ_WRITE);
 	void* TextureData = Mip->BulkData.Realloc(CalculateImageBytes(TextureMetadata.Width, TextureMetadata.Height, 0, PixelFormat));
 	FMemory::Memcpy(TextureData, Buffer.get(), BufferSize);
 	Mip->BulkData.Unlock();
+
+	NewTexture->SetPlatformData(PlatformData);
 
 	NewTexture->UpdateResource();
 

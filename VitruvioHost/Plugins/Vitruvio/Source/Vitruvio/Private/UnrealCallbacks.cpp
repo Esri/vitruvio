@@ -116,7 +116,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 
 	const FString UriString(uri);
 	const FString NameString(name);
-	
+
 	if (!UriString.IsEmpty())
 	{
 		TSharedPtr<FVitruvioMesh> Mesh = VitruvioModule::Get().GetMeshCache().Get(UriString);
@@ -173,7 +173,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 			PolygonGroupId = Description.CreatePolygonGroup();
 			MeshMaterialMap.Add(MaterialContainer, PolygonGroupId);
 		}
-		
+
 		// Create Geometry
 		const auto Normals = Attributes.GetVertexInstanceNormals();
 		int PolygonFaces = 0;
@@ -210,7 +210,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 						{
 							check(uvCounts[PrtUVSet][PolygonGroupStartIndex + FaceIndex] == FaceVertexCount);
 							const uint32_t UVIndex = uvIndices[PrtUVSet][BaseUVIndex[PrtUVSet] + FaceVertexIndex] * 2;
-							FVector2D UVCoords = FVector2D(uvs[PrtUVSet][UVIndex], -uvs[PrtUVSet][UVIndex + 1]);
+							FVector2f UVCoords = FVector2f(uvs[PrtUVSet][UVIndex], -uvs[PrtUVSet][UVIndex + 1]);
 							VertexUVs.Set(InstanceId, static_cast<int32>(*UnrealUVSetPtr), UVCoords);
 						}
 					}
@@ -240,26 +240,29 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 		{
 			Mesh = VitruvioModule::Get().GetMeshCache().InsertOrGet(UriString, Mesh);
 		}
-		
+
 		Meshes.Add(prototypeId, Mesh);
 		Names.Add(prototypeId, NameString);
 	}
 }
 
-FReportArray ExtractReports(const prt::AttributeMap* reports) {
+FReportArray ExtractReports(const prt::AttributeMap* reports)
+{
 	FReportArray ReportMap;
 	size_t KeyCount = 0;
 	auto Keys = reports->getKeys(&KeyCount);
 	ReportMap.Reserve(KeyCount);
-	
-	for (size_t i = 0; i < KeyCount; ++i) {
+
+	for (size_t i = 0; i < KeyCount; ++i)
+	{
 		auto key = Keys[i];
 
 		FReport Report;
 		Report.Key = key;
 		Report.Type = reports->getType(key);
 
-		switch (Report.Type) {
+		switch (Report.Type)
+		{
 		case prt::AttributeMap::PrimitiveType::PT_BOOL:
 			Report.Value = FVariant(reports->getBool(key));
 			break;
@@ -282,8 +285,10 @@ FReportArray ExtractReports(const prt::AttributeMap* reports) {
 	return ReportMap;
 }
 
-void UnrealCallbacks::addReport(const prt::AttributeMap* reports) {
-	if (!reports) {
+void UnrealCallbacks::addReport(const prt::AttributeMap* reports)
+{
+	if (!reports)
+	{
 		UE_LOG(LogUnrealCallbacks, Warning, TEXT("Trying to add empty report, ignoring."));
 		return;
 	}

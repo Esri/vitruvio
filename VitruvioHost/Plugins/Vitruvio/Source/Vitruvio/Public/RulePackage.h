@@ -17,6 +17,7 @@
 
 #include "Containers/Array.h"
 #include "UObject/Object.h"
+#include "UObject/ObjectSaveContext.h"
 
 #include "RulePackage.generated.h"
 
@@ -31,16 +32,17 @@ public:
 	UPROPERTY()
 	FString SourcePath;
 
-	void PreSave(const ITargetPlatform* TargetPlatform) override
+
+	virtual void PreSave(FObjectPreSaveContext SaveContext) override
 	{
-		Super::PreSave(TargetPlatform);
+		Super::PreSave(SaveContext);
 
 		// Create a unique ID for this object which can be used by FLazyObjectPtr to reference loaded/unloaded objects
 		// The ID would be automatically generated the first time a FLazyObjectPtr of this object is created,
 		// but it will mark the object as dirty and require a save.
 		FUniqueObjectGuid::GetOrCreateIDForObject(this);
 	}
-
+	
 	virtual void Serialize(FArchive& Ar) override
 	{
 		Super::Serialize(Ar);

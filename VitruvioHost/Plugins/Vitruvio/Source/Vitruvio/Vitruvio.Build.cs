@@ -50,7 +50,7 @@ public class Vitruvio : ModuleRules
 				"ImageCore",
 				"PRT",
 				"UnrealGeometryEncoderLib",
-				"GeometricObjects"
+				"GeometryCore"
 			}
 		);
 		

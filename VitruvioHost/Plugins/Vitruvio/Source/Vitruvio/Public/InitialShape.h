@@ -31,7 +31,7 @@ struct VITRUVIO_API FTextureCoordinateSet
 	GENERATED_BODY()
 
 	UPROPERTY()
-	TArray<FVector2D> TextureCoordinates;
+	TArray<FVector2f> TextureCoordinates;
 };
 
 USTRUCT()

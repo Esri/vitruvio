@@ -473,7 +473,7 @@ void UVitruvioComponent::ProcessAttributesEvaluationQueue()
 		AttributesEvaluationQueue.Dequeue(AttributesEvaluation);
 
 		AttributesEvaluation.AttributeMap->UpdateUnrealAttributeMap(Attributes, this);
-		
+
 		bAttributesReady = true;
 		bNotifyAttributeChange = true;
 
@@ -557,7 +557,7 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 	TSharedPtr<FVitruvioMesh> ShapeMesh = GenerateResult.Meshes.Contains(UnrealCallbacks::NO_PROTOTYPE_INDEX)
 											  ? GenerateResult.Meshes[UnrealCallbacks::NO_PROTOTYPE_INDEX]
 											  : TSharedPtr<FVitruvioMesh>{};
-	
+
 	return {ShapeMesh, Instances, GenerateResult.Reports};
 }
 
@@ -672,7 +672,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		{
 			bComponentPropertyChanged = true;
 		}
-	
+
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, HideAfterGeneration))
 		{
 			InitialShape->SetHidden(HideAfterGeneration && HasGeneratedMesh);
@@ -690,10 +690,10 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 	const bool bIsSplinePropertyUndo = Object->IsA(USplineComponent::StaticClass()) && PropertyChangedEvent.Property == nullptr;
 	const bool bIsAttributeUndo = Object->IsA(URuleAttribute::StaticClass()) && PropertyChangedEvent.Property == nullptr;
 
-	const bool bRelevantProperty = InitialShape != nullptr && (
-		                               bIsSplinePropertyUndo || InitialShape->IsRelevantProperty(Object, PropertyChangedEvent));
+	const bool bRelevantProperty =
+		InitialShape != nullptr && (bIsSplinePropertyUndo || InitialShape->IsRelevantProperty(Object, PropertyChangedEvent));
 	const bool bRecreateInitialShape = IsRelevantObject(this, Object) && bRelevantProperty;
-	
+
 	// If a property has changed which is used for creating the initial shape we have to recreate it
 	if (bRecreateInitialShape)
 	{
@@ -717,7 +717,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 
 	if (HasValidInputData() && (!bAttributesReady || bIsAttributeUndo))
 	{
-		//Force regeneration on attribute undo
+		// Force regeneration on attribute undo
 		EvaluateRuleAttributes(bIsAttributeUndo);
 	}
 }
@@ -761,7 +761,8 @@ void UVitruvioComponent::EvaluateRuleAttributes(bool ForceRegenerate)
 
 	bAttributesReady = false;
 
-	FAttributeMapResult AttributesResult = VitruvioModule::Get().EvaluateRuleAttributesAsync(InitialShape->GetFaces(), Rpk, Vitruvio::CreateAttributeMap(Attributes), RandomSeed);
+	FAttributeMapResult AttributesResult =
+		VitruvioModule::Get().EvaluateRuleAttributesAsync(InitialShape->GetFaces(), Rpk, Vitruvio::CreateAttributeMap(Attributes), RandomSeed);
 
 	EvalAttributesInvalidationToken = AttributesResult.Token;
 
@@ -772,7 +773,7 @@ void UVitruvioComponent::EvaluateRuleAttributes(bool ForceRegenerate)
 		{
 			return;
 		}
-		
+
 		EvalAttributesInvalidationToken.Reset();
 		if (Result.Token->IsReEvaluateRequested())
 		{
