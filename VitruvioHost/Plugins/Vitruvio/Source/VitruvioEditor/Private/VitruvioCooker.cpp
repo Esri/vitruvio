@@ -318,10 +318,8 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 
 			// Persist Mesh
 			UGeneratedModelStaticMeshComponent* StaticMeshComponent = Actor->FindComponentByClass<UGeneratedModelStaticMeshComponent>();
-			if (StaticMeshComponent)
+			if (StaticMeshComponent && StaticMeshComponent->GetStaticMesh())
 			{
-				check(StaticMeshComponent->GetStaticMesh());
-
 				UStaticMesh* GeneratedMesh = StaticMeshComponent->GetStaticMesh();
 
 				UStaticMesh* PersistedMesh = SaveStaticMesh(GeneratedMesh, CookPath, MeshCache, MaterialCache, TextureCache);
