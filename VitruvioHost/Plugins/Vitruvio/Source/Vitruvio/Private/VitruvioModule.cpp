@@ -339,13 +339,19 @@ void VitruvioModule::ShutdownModule()
 
 Vitruvio::FTextureData VitruvioModule::DecodeTexture(UObject* Outer, const FString& Path, const FString& Key) const
 {
-	const prt::AttributeMap* TextureMetadataAttributeMap = prt::createTextureMetadata(*Path, PrtCache.get());
-	Vitruvio::FTextureMetadata TextureMetadata = Vitruvio::ParseTextureMetadata(TextureMetadataAttributeMap);
+	size_t BufferSize = 0;
+	std::unique_ptr<uint8_t[]> Buffer;
+	Vitruvio::FTextureMetadata TextureMetadata;
+	{
+		FScopeLock Lock(&PrtCacheLock);
+		const prt::AttributeMap* TextureMetadataAttributeMap = prt::createTextureMetadata(*Path, PrtCache.get());
+		TextureMetadata = Vitruvio::ParseTextureMetadata(TextureMetadataAttributeMap);
 
-	size_t BufferSize = TextureMetadata.Width * TextureMetadata.Height * TextureMetadata.Bands * TextureMetadata.BytesPerBand;
-	auto Buffer = std::make_unique<uint8_t[]>(BufferSize);
+		BufferSize = TextureMetadata.Width * TextureMetadata.Height * TextureMetadata.Bands * TextureMetadata.BytesPerBand;
+		Buffer = std::make_unique<uint8_t[]>(BufferSize);
 
-	prt::getTexturePixeldata(*Path, Buffer.get(), BufferSize, PrtCache.get());
+		prt::getTexturePixeldata(*Path, Buffer.get(), BufferSize, PrtCache.get());
+	}
 
 	return Vitruvio::DecodeTexture(Outer, Key, Path, TextureMetadata, std::move(Buffer), BufferSize);
 }
@@ -414,12 +420,15 @@ FGenerateResultDescription VitruvioModule::Generate(const TArray<FInitialShapeFa
 
 	InitialShapeNOPtrVector Shapes = {Shape.get()};
 
-	const prt::Status GenerateStatus = prt::generate(Shapes.data(), Shapes.size(), nullptr, EncoderIds.data(), EncoderIds.size(),
-													 EncoderOptions.data(), OutputHandler.Get(), PrtCache.get(), nullptr);
-
-	if (GenerateStatus != prt::STATUS_OK)
 	{
-		UE_LOG(LogUnrealPrt, Error, TEXT("PRT generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
+		FScopeLock Lock(&PrtCacheLock);
+		const prt::Status GenerateStatus = prt::generate(Shapes.data(), Shapes.size(), nullptr, EncoderIds.data(), EncoderIds.size(),
+														 EncoderOptions.data(), OutputHandler.Get(), PrtCache.get(), nullptr);
+
+		if (GenerateStatus != prt::STATUS_OK)
+		{
+			UE_LOG(LogUnrealPrt, Error, TEXT("PRT generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
+		}
 	}
 
 	const int GenerateCalls = GenerateCallsCounter.Decrement();
@@ -491,6 +500,7 @@ FAttributeMapResult VitruvioModule::EvaluateRuleAttributesAsync(const TArray<FIn
 		const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
 		const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
 
+		FScopeLock Lock(&PrtCacheLock);
 		prt::Status InfoStatus;
 		RuleFileInfoUPtr RuleInfo(prt::createRuleFileInfo(RuleFileUri, PrtCache.get(), &InfoStatus));
 		if (!RuleInfo || InfoStatus != prt::STATUS_OK)
@@ -523,6 +533,7 @@ void VitruvioModule::EvictFromResolveMapCache(URulePackage* RulePackage)
 {
 	const TLazyObjectPtr<URulePackage> LazyRulePackagePtr(RulePackage);
 	FScopeLock Lock(&LoadResolveMapLock);
+	FScopeLock CacheLock(&PrtCacheLock);
 	ResolveMapCache.Remove(LazyRulePackagePtr);
 	PrtCache->flushAll();
 }
