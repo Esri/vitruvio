@@ -81,16 +81,16 @@ void CountOpacityMapPixels(const uint16* SrcColors, int32 SizeX, int32 SizeY, ui
 								 [](const uint16* Color) { return static_cast<float>(*Color) / 0xFFFF; });
 }
 
-void CountOpacityMapPixels(const float* SrcColors, int32 SizeX, int32 SizeY, uint32& BlackPixels, uint32& WhitePixels)
+void CountOpacityMapPixels(const FFloat16* SrcColors, int32 SizeX, int32 SizeY, uint32& BlackPixels, uint32& WhitePixels)
 {
-	return CountOpacityMapPixels(SrcColors, SizeX, SizeY, BlackPixels, WhitePixels, [](const float* Color) { return static_cast<float>(*Color); });
+	return CountOpacityMapPixels(SrcColors, SizeX, SizeY, BlackPixels, WhitePixels, [](const FFloat16* Color) { return static_cast<float>(*Color); });
 }
 
 EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMapData, bool UseAlphaAsOpacity)
 {
 	const UTexture2D* OpacityMap = OpacityMapData.Texture;
 	const EPixelFormat PixelFormat = OpacityMap->GetPixelFormat();
-	check(PixelFormat == PF_B8G8R8A8 || PixelFormat == PF_A16B16G16R16 || PixelFormat == PF_A32B32G32R32F);
+	check(PixelFormat == PF_B8G8R8A8 || PixelFormat == PF_A16B16G16R16 || PixelFormat == PF_FloatRGBA);
 
 	uint32 BlackPixels = 0;
 	uint32 WhitePixels = 0;
@@ -106,9 +106,9 @@ EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMa
 		CountOpacityMapPixels(ImageData, UseAlphaAsOpacity, OpacityMap->GetSizeX(), OpacityMap->GetSizeY(), BlackPixels, WhitePixels);
 		break;
 	}
-	case PF_A32B32G32R32F:
+	case PF_FloatRGBA:
 	{
-		const float* ImageData = reinterpret_cast<const float*>(PlatformData->Mips[0].BulkData.LockReadOnly());
+		const FFloat16* ImageData = reinterpret_cast<const FFloat16*>(PlatformData->Mips[0].BulkData.LockReadOnly());
 		CountOpacityMapPixels(ImageData, OpacityMap->GetSizeX(), OpacityMap->GetSizeY(), BlackPixels, WhitePixels);
 		break;
 	}
