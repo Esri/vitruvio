@@ -181,13 +181,6 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 										 CookVitruvioActorsAction);
 			}
 
-			MenuBuilder.EndSection();
-		}));
-
-	Extender->AddMenuExtension(
-		"SelectMatinee", EExtensionHook::After, CommandList, FMenuExtensionDelegate::CreateLambda([SelectedActors](FMenuBuilder& MenuBuilder) {
-			MenuBuilder.BeginSection("SelectPossibleVitruvio", FText::FromString("Vitruvio"));
-
 			const FUIAction SelectAllViableVitruvioActorsAction(FExecuteAction::CreateStatic(SelectAllViableVitruvioActors, SelectedActors));
 			MenuBuilder.AddMenuEntry(FText::FromString("Select All Viable Initial Shapes In Hierarchy"),
 									 FText::FromString("Selects all Actors which are viable initial shapes in hierarchy."), FSlateIcon(),
