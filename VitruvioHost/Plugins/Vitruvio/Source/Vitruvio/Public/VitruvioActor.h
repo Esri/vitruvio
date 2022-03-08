@@ -20,7 +20,7 @@
 #include "VitruvioComponent.h"
 #include "VitruvioActor.generated.h"
 
-UCLASS()
+UCLASS(NotBlueprintable)
 class VITRUVIO_API AVitruvioActor : public AActor
 {
 	GENERATED_BODY()
@@ -28,7 +28,7 @@ class VITRUVIO_API AVitruvioActor : public AActor
 public:
 	AVitruvioActor();
 
-	UPROPERTY(VisibleAnywhere, Category = "Vitruvio")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Vitruvio")
 	UVitruvioComponent* VitruvioComponent;
 
 	virtual void Tick(float DeltaSeconds) override;
