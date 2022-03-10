@@ -145,10 +145,6 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 		}
 	}
 
-	Buffer.reset();
-	BufferSize = NewBufferSize;
-	Buffer = std::move(NewBuffer);
-
 	EPixelFormat UnrealPixelFormat = GetUnrealPixelFormat(TextureMetadata.PixelFormat);
 	const FTextureSettings Settings = GetTextureSettings(Key, UnrealPixelFormat);
 
@@ -171,7 +167,7 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 	Mip->SizeY = TextureMetadata.Height;
 	Mip->BulkData.Lock(LOCK_READ_WRITE);
 	void* TextureData = Mip->BulkData.Realloc(CalculateImageBytes(TextureMetadata.Width, TextureMetadata.Height, 0, UnrealPixelFormat));
-	FMemory::Memcpy(TextureData, Buffer.get(), BufferSize);
+	FMemory::Memcpy(TextureData, NewBuffer.get(), NewBufferSize);
 	Mip->BulkData.Unlock();
 
 	NewTexture->SetPlatformData(PlatformData);
