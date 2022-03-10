@@ -41,54 +41,55 @@ FTextureMetadata ParseTextureMetadata(const prt::AttributeMap* TextureMetadata)
 	{
 		Result.BytesPerBand = 1;
 		Result.Bands = 1;
-		Result.PixelFormat = EPixelFormat::PF_G8;
+		Result.PixelFormat = EPRTPixelFormat::GREY8;
 	}
 	else if (Format == TEXT("GREY16"))
 	{
 		Result.BytesPerBand = 2;
 		Result.Bands = 1;
-		Result.PixelFormat = EPixelFormat::PF_G16;
+		Result.PixelFormat = EPRTPixelFormat::GREY16;
 	}
 	else if (Format == TEXT("FLOAT32"))
 	{
 		Result.BytesPerBand = 4;
 		Result.Bands = 1;
-		Result.PixelFormat = EPixelFormat::PF_R32_FLOAT;
+		Result.PixelFormat = EPRTPixelFormat::FLOAT32;
 	}
 	else if (Format == TEXT("RGB8"))
 	{
 		Result.BytesPerBand = 1;
 		Result.Bands = 3;
-		Result.PixelFormat = EPixelFormat::PF_R8G8B8A8;
+		Result.PixelFormat = EPRTPixelFormat::RGB8;
 	}
 	else if (Format == TEXT("RGBA8"))
 	{
 		Result.BytesPerBand = 1;
 		Result.Bands = 4;
-		Result.PixelFormat = EPixelFormat::PF_R8G8B8A8;
+		Result.PixelFormat = EPRTPixelFormat::RGBA8;
 	}
 	else
 	{
-		Result.PixelFormat = EPixelFormat::PF_Unknown;
+		Result.PixelFormat = EPRTPixelFormat::Unknown;
 	}
 
 	return Result;
 }
 
-EPixelFormat GetUnrealPixelFormat(EPixelFormat PixelFormat)
+EPixelFormat GetUnrealPixelFormat(EPRTPixelFormat PRTPixelFormat)
 {
-	switch (PixelFormat)
+	switch (PRTPixelFormat)
 	{
-	case PF_G8:
-	case PF_R8G8B8A8:
+	case EPRTPixelFormat::GREY8:
+	case EPRTPixelFormat::RGB8:
+	case EPRTPixelFormat::RGBA8:
 	{
 		return EPixelFormat::PF_B8G8R8A8;
 	}
-	case PF_R32_FLOAT:
+	case EPRTPixelFormat::FLOAT32:
 	{
 		return EPixelFormat::PF_FloatRGBA;
 	}
-	case PF_G16:
+	case EPRTPixelFormat::GREY16:
 	{
 		return EPixelFormat::PF_A16B16G16R16;
 	}
@@ -114,7 +115,7 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 		{
 			const int NewOffset = (Y * TextureMetadata.Width + X) * 4 * BytesPerBand;
 			// Convert 32 bit float textures to 16 bit
-			if (TextureMetadata.PixelFormat == PF_R32_FLOAT)
+			if (TextureMetadata.PixelFormat == EPRTPixelFormat::FLOAT32)
 			{
 				const int OldOffset = ((TextureMetadata.Height - Y - 1) * TextureMetadata.Width + X) * TextureMetadata.Bands;
 				const float* FloatBuffer = reinterpret_cast<const float*>(Buffer.get());
