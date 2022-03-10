@@ -104,57 +104,53 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 {
 	EPixelFormat PixelFormat = TextureMetadata.PixelFormat;
 
-	// Workaround: Also convert grayscale images to rgba, since texture params don't automatically update their sample method
-	if (TextureMetadata.PixelFormat == PF_R8G8B8A8 || TextureMetadata.PixelFormat == PF_G8 || TextureMetadata.PixelFormat == PF_G16 ||
-		TextureMetadata.PixelFormat == PF_R32_FLOAT)
+	const size_t BytesPerBand = FMath::Min<size_t>(2, TextureMetadata.BytesPerBand);
+	const bool bIsColor = (TextureMetadata.Bands >= 3);
+
+	PixelFormat = GetDefaultPixelFormat(TextureMetadata.PixelFormat);
+
+	size_t NewBufferSize = TextureMetadata.Width * TextureMetadata.Height * 4 * BytesPerBand;
+	auto NewBuffer = std::make_unique<uint8_t[]>(NewBufferSize);
+
+	for (int Y = 0; Y < TextureMetadata.Height; ++Y)
 	{
-		const size_t BytesPerBand = FMath::Min<size_t>(2, TextureMetadata.BytesPerBand);
-		const bool bIsColor = (TextureMetadata.Bands >= 3);
-
-		PixelFormat = GetDefaultPixelFormat(TextureMetadata.PixelFormat);
-
-		size_t NewBufferSize = TextureMetadata.Width * TextureMetadata.Height * 4 * BytesPerBand;
-		auto NewBuffer = std::make_unique<uint8_t[]>(NewBufferSize);
-
-		for (int Y = 0; Y < TextureMetadata.Height; ++Y)
+		for (int X = 0; X < TextureMetadata.Width; ++X)
 		{
-			for (int X = 0; X < TextureMetadata.Width; ++X)
+			const int NewOffset = (Y * TextureMetadata.Width + X) * 4 * BytesPerBand;
+			// Convert 32 bit float textures to 16 bit
+			if (TextureMetadata.PixelFormat == PF_R32_FLOAT)
 			{
-				const int NewOffset = (Y * TextureMetadata.Width + X) * 4 * BytesPerBand;
-				// Convert 32 bit float textures to 16 bit  
-				if (TextureMetadata.PixelFormat == PF_R32_FLOAT)
-				{
-					const int OldOffset = ((TextureMetadata.Height - Y - 1) * TextureMetadata.Width + X) * TextureMetadata.Bands;
-					const float* FloatBuffer = reinterpret_cast<const float*>(Buffer.get());
+				const int OldOffset = ((TextureMetadata.Height - Y - 1) * TextureMetadata.Width + X) * TextureMetadata.Bands;
+				const float* FloatBuffer = reinterpret_cast<const float*>(Buffer.get());
 
-					FFloat16 CurrVal = FFloat16(FloatBuffer[OldOffset]);
-					const uint8_t* FloatAsByteArray = reinterpret_cast<uint8_t*>(&CurrVal);
-					for (int B = 0; B < BytesPerBand; ++B)
-					{
-						NewBuffer[NewOffset + 0 * BytesPerBand + B] = FloatAsByteArray[B];
-						NewBuffer[NewOffset + 1 * BytesPerBand + B] = FloatAsByteArray[B];
-						NewBuffer[NewOffset + 2 * BytesPerBand + B] = FloatAsByteArray[B];
-						NewBuffer[NewOffset + 3 * BytesPerBand + B] = 0;
-					}
-				}
-				else
+				FFloat16 CurrVal = FFloat16(FloatBuffer[OldOffset]);
+				const uint8_t* FloatAsByteArray = reinterpret_cast<uint8_t*>(&CurrVal);
+				for (int B = 0; B < BytesPerBand; ++B)
 				{
-					const int OldOffset = ((TextureMetadata.Height - Y - 1) * TextureMetadata.Width + X) * TextureMetadata.Bands * BytesPerBand;
-					for (int B = 0; B < BytesPerBand; ++B)
-					{
-						NewBuffer[NewOffset + 0 * BytesPerBand + B] = bIsColor ? Buffer[OldOffset + 2 + B] : Buffer[OldOffset + B];
-						NewBuffer[NewOffset + 1 * BytesPerBand + B] = bIsColor ? Buffer[OldOffset + 1 + B] : Buffer[OldOffset + B];
-						NewBuffer[NewOffset + 2 * BytesPerBand + B] = bIsColor ? Buffer[OldOffset + 0 + B] : Buffer[OldOffset + B];
-						NewBuffer[NewOffset + 3 * BytesPerBand + B] = (TextureMetadata.Bands == 4) ? Buffer[OldOffset + 3 + B] : 0;
-					}
+					NewBuffer[NewOffset + 0 * BytesPerBand + B] = FloatAsByteArray[B];
+					NewBuffer[NewOffset + 1 * BytesPerBand + B] = FloatAsByteArray[B];
+					NewBuffer[NewOffset + 2 * BytesPerBand + B] = FloatAsByteArray[B];
+					NewBuffer[NewOffset + 3 * BytesPerBand + B] = 0;
+				}
+			}
+			else
+			{
+				// Workaround: Also convert grayscale images to rgba, since texture params don't automatically update their sample method
+				const int OldOffset = ((TextureMetadata.Height - Y - 1) * TextureMetadata.Width + X) * TextureMetadata.Bands * BytesPerBand;
+				for (int B = 0; B < BytesPerBand; ++B)
+				{
+					NewBuffer[NewOffset + 0 * BytesPerBand + B] = bIsColor ? Buffer[OldOffset + 2 + B] : Buffer[OldOffset + B];
+					NewBuffer[NewOffset + 1 * BytesPerBand + B] = bIsColor ? Buffer[OldOffset + 1 + B] : Buffer[OldOffset + B];
+					NewBuffer[NewOffset + 2 * BytesPerBand + B] = bIsColor ? Buffer[OldOffset + 0 + B] : Buffer[OldOffset + B];
+					NewBuffer[NewOffset + 3 * BytesPerBand + B] = (TextureMetadata.Bands == 4) ? Buffer[OldOffset + 3 + B] : 0;
 				}
 			}
 		}
-		
-		Buffer.reset();
-		BufferSize = NewBufferSize;
-		Buffer = std::move(NewBuffer);
 	}
+
+	Buffer.reset();
+	BufferSize = NewBufferSize;
+	Buffer = std::move(NewBuffer);
 
 	const FTextureSettings Settings = GetTextureSettings(Key, PixelFormat);
 
