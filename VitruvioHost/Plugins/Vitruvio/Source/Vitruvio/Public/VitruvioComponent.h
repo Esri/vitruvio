@@ -331,6 +331,10 @@ public:
 
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGenerateCompleted, UVitruvioComponent*, VitruvioComponent);
+	UPROPERTY(BlueprintAssignable)
+	FOnGenerateCompleted OnGenerateCompleted;
+
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 

@@ -602,7 +602,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 			Result.CallbackProxy->OnGenerateCompletedCpp.Broadcast();
 			Result.CallbackProxy->SetReadyToDestroy();
 		}
-		OnGenerateCompleted.Broadcast();
+		OnGenerateCompleted.Broadcast(this);
 	}
 }
 
