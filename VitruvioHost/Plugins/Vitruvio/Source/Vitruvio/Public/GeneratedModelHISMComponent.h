@@ -42,6 +42,13 @@ class VITRUVIO_API UGeneratedModelHISMComponent : public UHierarchicalInstancedS
 		return true;
 	}
 
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	void UpdateStaticMesh(UStaticMesh* NewMesh)
+	{
+		EmptyOverrideMaterials();
+		SetStaticMesh(NewMesh);
+	}
+
 	virtual bool ContainsPhysicsTriMeshData(bool InUseAllTriData) const override
 	{
 		return CollisionData.IsValid();
@@ -54,6 +61,5 @@ public:
 	}
 
 private:
-	
 	FCollisionData CollisionData;
 };
