@@ -113,27 +113,27 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 	{
 		for (int X = 0; X < TextureMetadata.Width; ++X)
 		{
-			const int NewOffset = (Y * TextureMetadata.Width + X) * 4 * BytesPerBand;
-			// Convert 32 bit float textures to 16 bit
 			if (TextureMetadata.PixelFormat == EPRTPixelFormat::FLOAT32)
 			{
+				// Convert 32 bit grayscale float textures to 16 bit RGBA float textures
 				const int OldOffset = ((TextureMetadata.Height - Y - 1) * TextureMetadata.Width + X) * TextureMetadata.Bands;
+				const int NewOffset = (Y * TextureMetadata.Width + X);
 				const float* FloatBuffer = reinterpret_cast<const float*>(Buffer.get());
-
-				FFloat16 CurrVal = FFloat16(FloatBuffer[OldOffset]);
-				const uint8_t* FloatAsByteArray = reinterpret_cast<uint8_t*>(&CurrVal);
-				for (int B = 0; B < BytesPerBand; ++B)
-				{
-					NewBuffer[NewOffset + 0 * BytesPerBand + B] = FloatAsByteArray[B];
-					NewBuffer[NewOffset + 1 * BytesPerBand + B] = FloatAsByteArray[B];
-					NewBuffer[NewOffset + 2 * BytesPerBand + B] = FloatAsByteArray[B];
-					NewBuffer[NewOffset + 3 * BytesPerBand + B] = 0;
-				}
+				FFloat16Color* NewFloat16Buffer = reinterpret_cast<FFloat16Color*>(NewBuffer.get());
+				const float Float32Value = FloatBuffer[OldOffset];
+				const FFloat16 Float16Value(Float32Value);
+				FFloat16Color Color;
+				Color.R = Float16Value;
+				Color.G = Float16Value;
+				Color.B = Float16Value;
+				Color.A = FFloat16(1.0f);
+				NewFloat16Buffer[NewOffset] = Color;
 			}
 			else
 			{
 				// Workaround: Also convert grayscale images to rgba, since texture params don't automatically update their sample method
 				const int OldOffset = ((TextureMetadata.Height - Y - 1) * TextureMetadata.Width + X) * TextureMetadata.Bands * BytesPerBand;
+				const int NewOffset = (Y * TextureMetadata.Width + X) * 4 * BytesPerBand;
 				for (int B = 0; B < BytesPerBand; ++B)
 				{
 					NewBuffer[NewOffset + 0 * BytesPerBand + B] = bIsColor ? Buffer[OldOffset + 2 + B] : Buffer[OldOffset + B];
