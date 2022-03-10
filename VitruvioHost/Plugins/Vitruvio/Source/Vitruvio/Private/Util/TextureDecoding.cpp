@@ -75,7 +75,7 @@ FTextureMetadata ParseTextureMetadata(const prt::AttributeMap* TextureMetadata)
 	return Result;
 }
 
-EPixelFormat GetDefaultPixelFormat(EPixelFormat PixelFormat)
+EPixelFormat GetUnrealPixelFormat(EPixelFormat PixelFormat)
 {
 	switch (PixelFormat)
 	{
@@ -102,12 +102,8 @@ EPixelFormat GetDefaultPixelFormat(EPixelFormat PixelFormat)
 FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Path, const FTextureMetadata& TextureMetadata,
 						   std::unique_ptr<uint8_t[]> Buffer, size_t BufferSize)
 {
-	EPixelFormat PixelFormat = TextureMetadata.PixelFormat;
-
 	const size_t BytesPerBand = FMath::Min<size_t>(2, TextureMetadata.BytesPerBand);
 	const bool bIsColor = (TextureMetadata.Bands >= 3);
-
-	PixelFormat = GetDefaultPixelFormat(TextureMetadata.PixelFormat);
 
 	size_t NewBufferSize = TextureMetadata.Width * TextureMetadata.Height * 4 * BytesPerBand;
 	auto NewBuffer = std::make_unique<uint8_t[]>(NewBufferSize);
@@ -152,7 +148,8 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 	BufferSize = NewBufferSize;
 	Buffer = std::move(NewBuffer);
 
-	const FTextureSettings Settings = GetTextureSettings(Key, PixelFormat);
+	EPixelFormat UnrealPixelFormat = GetUnrealPixelFormat(TextureMetadata.PixelFormat);
+	const FTextureSettings Settings = GetTextureSettings(Key, UnrealPixelFormat);
 
 	const FString TextureBaseName = TEXT("T_") + FPaths::GetBaseFilename(Path);
 	const FName TextureName = MakeUniqueObjectName(GetTransientPackage(), UTexture2D::StaticClass(), *TextureBaseName);
@@ -164,7 +161,7 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 	PlatformData = new FTexturePlatformData();
 	PlatformData->SizeX = TextureMetadata.Width;
 	PlatformData->SizeY = TextureMetadata.Height;
-	PlatformData->PixelFormat = PixelFormat;
+	PlatformData->PixelFormat = UnrealPixelFormat;
 
 	// Allocate first mipmap and upload the pixel data
 	FTexture2DMipMap* Mip = new FTexture2DMipMap();
@@ -172,7 +169,7 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 	Mip->SizeX = TextureMetadata.Width;
 	Mip->SizeY = TextureMetadata.Height;
 	Mip->BulkData.Lock(LOCK_READ_WRITE);
-	void* TextureData = Mip->BulkData.Realloc(CalculateImageBytes(TextureMetadata.Width, TextureMetadata.Height, 0, PixelFormat));
+	void* TextureData = Mip->BulkData.Realloc(CalculateImageBytes(TextureMetadata.Width, TextureMetadata.Height, 0, UnrealPixelFormat));
 	FMemory::Memcpy(TextureData, Buffer.get(), BufferSize);
 	Mip->BulkData.Unlock();
 
