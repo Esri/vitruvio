@@ -81,35 +81,23 @@ void CountOpacityMapPixels(const uint16* SrcColors, int32 SizeX, int32 SizeY, ui
 								 [](const uint16* Color) { return static_cast<float>(*Color) / 0xFFFF; });
 }
 
-void CountOpacityMapPixels(const float* SrcColors, int32 SizeX, int32 SizeY, uint32& BlackPixels, uint32& WhitePixels)
-{
-	return CountOpacityMapPixels(SrcColors, SizeX, SizeY, BlackPixels, WhitePixels, [](const float* Color) { return static_cast<float>(*Color); });
-}
-
 EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMapData, bool UseAlphaAsOpacity)
 {
 	const UTexture2D* OpacityMap = OpacityMapData.Texture;
 	const EPixelFormat PixelFormat = OpacityMap->GetPixelFormat();
-	check(PixelFormat == PF_B8G8R8A8 || PixelFormat == PF_A16B16G16R16 || PixelFormat == PF_A32B32G32R32F);
+	check(PixelFormat == PF_B8G8R8A8 || PixelFormat == PF_A16B16G16R16 || PixelFormat == PF_FloatRGBA);
 
 	uint32 BlackPixels = 0;
 	uint32 WhitePixels = 0;
 
+	// Now count the black and white pixels of the appropriate opacity map channel to determine the opacity mode
 	const FTexturePlatformData* PlatformData = OpacityMap->GetPlatformData();
 	switch (PixelFormat)
 	{
 	case PF_B8G8R8A8:
 	{
 		const FColor* ImageData = reinterpret_cast<const FColor*>(PlatformData->Mips[0].BulkData.LockReadOnly());
-
-		// Now count the black and white pixels of the appropriate opacity map channel to determine the opacity mode
 		CountOpacityMapPixels(ImageData, UseAlphaAsOpacity, OpacityMap->GetSizeX(), OpacityMap->GetSizeY(), BlackPixels, WhitePixels);
-		break;
-	}
-	case PF_A32B32G32R32F:
-	{
-		const float* ImageData = reinterpret_cast<const float*>(PlatformData->Mips[0].BulkData.LockReadOnly());
-		CountOpacityMapPixels(ImageData, OpacityMap->GetSizeX(), OpacityMap->GetSizeY(), BlackPixels, WhitePixels);
 		break;
 	}
 	case PF_A16B16G16R16:
@@ -146,7 +134,8 @@ EBlendMode ChooseBlendMode(const Vitruvio::FTextureData& OpacityMapData, double 
 	{
 		return BLEND_Masked;
 	}
-	else if (BlendMode == BLEND_Translucent && OpacityMapData.Texture)
+	else if (BlendMode == BLEND_Translucent && OpacityMapData.Texture && OpacityMapData.Texture->GetPixelFormat() != PF_FloatRGBA)
+	// explicitly don't check FloatRGBA textures as they were converted from grayscale float16/32 textures which will never have alpha channels
 	{
 		// OpacityMap exists and opacitymap.mode is blend (which is the default value) so we need to check the content of the OpacityMap
 		// to really decide which material we need for Unreal

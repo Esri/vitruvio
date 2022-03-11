@@ -69,6 +69,27 @@ void BlockUntilGenerated()
 	}
 }
 
+ETextureSourceFormat GetTextureFormatFromPixelFormat(const EPixelFormat PixelFormat)
+{
+	switch (PixelFormat)
+	{
+	case PF_B8G8R8A8:
+	{
+		return ETextureSourceFormat::TSF_BGRA8;
+	}
+	case PF_A16B16G16R16:
+	{
+		return ETextureSourceFormat::TSF_RGBA16;
+	}
+	case PF_FloatRGBA:
+	{
+		return ETextureSourceFormat::TSF_RGBA16F;
+	}
+	default:;
+		return ETextureSourceFormat::TSF_Invalid;
+	}
+}
+
 UTexture2D* SaveTexture(UTexture2D* Original, const FString& Path, FTextureCache& TextureCache)
 {
 	if (TextureCache.Contains(Original))
@@ -105,7 +126,8 @@ UTexture2D* SaveTexture(UTexture2D* Original, const FString& Path, FTextureCache
 	FMemory::Memcpy(TextureData, SourcePixels, OriginalMip.BulkData.GetBulkDataSize());
 	Mip->BulkData.Unlock();
 
-	NewTexture->Source.Init(OriginalPlatformData->SizeX, OriginalPlatformData->SizeY, 1, 1, ETextureSourceFormat::TSF_BGRA8, SourcePixels);
+	const ETextureSourceFormat SourceFormat = GetTextureFormatFromPixelFormat(OriginalPlatformData->PixelFormat);
+	NewTexture->Source.Init(OriginalPlatformData->SizeX, OriginalPlatformData->SizeY, 1, 1, SourceFormat, SourcePixels);
 	OriginalMip.BulkData.Unlock();
 
 	NewTexture->PostEditChange();

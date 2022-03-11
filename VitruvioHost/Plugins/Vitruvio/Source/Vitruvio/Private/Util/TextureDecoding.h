@@ -9,6 +9,16 @@
 namespace Vitruvio
 {
 
+enum class EPRTPixelFormat
+{
+	GREY8,
+	GREY16,
+	FLOAT32,
+	RGB8,
+	RGBA8,
+	Unknown
+};
+
 struct FTextureMetadata
 {
 	size_t Width = 0;
@@ -16,7 +26,7 @@ struct FTextureMetadata
 	size_t BytesPerBand = 0;
 	size_t Bands = 0;
 
-	EPixelFormat PixelFormat = EPixelFormat::PF_Unknown;
+	EPRTPixelFormat PixelFormat = EPRTPixelFormat::Unknown;
 };
 
 VITRUVIO_API FTextureMetadata ParseTextureMetadata(const prt::AttributeMap* TextureMetadata);

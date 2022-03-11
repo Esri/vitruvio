@@ -41,83 +41,102 @@ FTextureMetadata ParseTextureMetadata(const prt::AttributeMap* TextureMetadata)
 	{
 		Result.BytesPerBand = 1;
 		Result.Bands = 1;
-		Result.PixelFormat = EPixelFormat::PF_G8;
+		Result.PixelFormat = EPRTPixelFormat::GREY8;
 	}
 	else if (Format == TEXT("GREY16"))
 	{
 		Result.BytesPerBand = 2;
 		Result.Bands = 1;
-		Result.PixelFormat = EPixelFormat::PF_G16;
+		Result.PixelFormat = EPRTPixelFormat::GREY16;
 	}
 	else if (Format == TEXT("FLOAT32"))
 	{
 		Result.BytesPerBand = 4;
 		Result.Bands = 1;
-		Result.PixelFormat = EPixelFormat::PF_R32_FLOAT;
+		Result.PixelFormat = EPRTPixelFormat::FLOAT32;
 	}
 	else if (Format == TEXT("RGB8"))
 	{
 		Result.BytesPerBand = 1;
 		Result.Bands = 3;
-		Result.PixelFormat = EPixelFormat::PF_R8G8B8A8;
+		Result.PixelFormat = EPRTPixelFormat::RGB8;
 	}
 	else if (Format == TEXT("RGBA8"))
 	{
 		Result.BytesPerBand = 1;
 		Result.Bands = 4;
-		Result.PixelFormat = EPixelFormat::PF_R8G8B8A8;
+		Result.PixelFormat = EPRTPixelFormat::RGBA8;
 	}
 	else
 	{
-		Result.PixelFormat = EPixelFormat::PF_Unknown;
+		Result.PixelFormat = EPRTPixelFormat::Unknown;
 	}
 
 	return Result;
 }
 
+EPixelFormat GetUnrealPixelFormat(EPRTPixelFormat PRTPixelFormat)
+{
+	switch (PRTPixelFormat)
+	{
+	case EPRTPixelFormat::GREY8:
+	case EPRTPixelFormat::RGB8:
+	case EPRTPixelFormat::RGBA8:
+	{
+		return EPixelFormat::PF_B8G8R8A8;
+	}
+	case EPRTPixelFormat::FLOAT32:
+	{
+		return EPixelFormat::PF_FloatRGBA;
+	}
+	case EPRTPixelFormat::GREY16:
+	{
+		return EPixelFormat::PF_A16B16G16R16;
+	}
+	default:
+	{
+		return EPixelFormat::PF_Unknown;
+	}
+	}
+}
+
 FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Path, const FTextureMetadata& TextureMetadata,
 						   std::unique_ptr<uint8_t[]> Buffer, size_t BufferSize)
 {
-	EPixelFormat PixelFormat = TextureMetadata.PixelFormat;
+	EPixelFormat UnrealPixelFormat = GetUnrealPixelFormat(TextureMetadata.PixelFormat);
+	check(UnrealPixelFormat != EPixelFormat::PF_Unknown);
 
-	// Workaround: Also convert grayscale images to rgba, since texture params don't automatically update their sample method
-	if (TextureMetadata.PixelFormat == EPixelFormat::PF_R8G8B8A8 || TextureMetadata.PixelFormat == EPixelFormat::PF_G8 ||
-		TextureMetadata.PixelFormat == EPixelFormat::PF_G16 || TextureMetadata.PixelFormat == EPixelFormat::PF_R32_FLOAT)
+	const size_t BytesPerBand = FMath::Min<size_t>(2, TextureMetadata.BytesPerBand);
+	const bool bIsColor = (TextureMetadata.Bands >= 3);
+
+	size_t NewBufferSize = TextureMetadata.Width * TextureMetadata.Height * 4 * BytesPerBand;
+	auto NewBuffer = std::make_unique<uint8_t[]>(NewBufferSize);
+
+	for (int Y = 0; Y < TextureMetadata.Height; ++Y)
 	{
-		const size_t BytesPerBand = TextureMetadata.BytesPerBand;
-
-		switch (TextureMetadata.PixelFormat)
+		for (int X = 0; X < TextureMetadata.Width; ++X)
 		{
-		case PF_G8:
-		case PF_R8G8B8A8:
-		{
-			PixelFormat = EPixelFormat::PF_B8G8R8A8;
-			break;
-		}
-		case PF_R32_FLOAT:
-		{
-			PixelFormat = EPixelFormat::PF_A32B32G32R32F;
-			break;
-		}
-		case PF_G16:
-		{
-			PixelFormat = EPixelFormat::PF_A16B16G16R16;
-			break;
-		}
-		default:;
-		}
-
-		const bool bIsColor = (TextureMetadata.Bands >= 3);
-
-		size_t NewBufferSize = TextureMetadata.Width * TextureMetadata.Height * 4 * TextureMetadata.BytesPerBand;
-		auto NewBuffer = std::make_unique<uint8_t[]>(NewBufferSize);
-
-		for (int Y = 0; Y < TextureMetadata.Height; ++Y)
-		{
-			for (int X = 0; X < TextureMetadata.Width; ++X)
+			if (TextureMetadata.PixelFormat == EPRTPixelFormat::FLOAT32)
 			{
-				const int NewOffset = (Y * TextureMetadata.Width + X) * 4 * BytesPerBand;
+				// Convert 32 bit grayscale float textures to 16 bit RGBA float textures
+				const int OldOffset = ((TextureMetadata.Height - Y - 1) * TextureMetadata.Width + X) * TextureMetadata.Bands;
+				const int NewOffset = (Y * TextureMetadata.Width + X);
+				const float* FloatBuffer = reinterpret_cast<const float*>(Buffer.get());
+				FFloat16Color* NewFloat16Buffer = reinterpret_cast<FFloat16Color*>(NewBuffer.get());
+				const float Float32Value = FloatBuffer[OldOffset];
+				const FFloat16 Float16Value(Float32Value);
+				FFloat16Color Color;
+				Color.R = Float16Value;
+				Color.G = Float16Value;
+				Color.B = Float16Value;
+				Color.A = FFloat16(1.0f);
+				NewFloat16Buffer[NewOffset] = Color;
+			}
+			else
+			{
+				// Workaround: Also convert grayscale images to rgba, since texture params don't automatically update their sample method
 				const int OldOffset = ((TextureMetadata.Height - Y - 1) * TextureMetadata.Width + X) * TextureMetadata.Bands * BytesPerBand;
+				const int NewOffset = (Y * TextureMetadata.Width + X) * 4 * BytesPerBand;
 				for (int B = 0; B < BytesPerBand; ++B)
 				{
 					NewBuffer[NewOffset + 0 * BytesPerBand + B] = bIsColor ? Buffer[OldOffset + 2 + B] : Buffer[OldOffset + B];
@@ -127,13 +146,9 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 				}
 			}
 		}
-
-		Buffer.reset();
-		BufferSize = NewBufferSize;
-		Buffer = std::move(NewBuffer);
 	}
 
-	const FTextureSettings Settings = GetTextureSettings(Key, PixelFormat);
+	const FTextureSettings Settings = GetTextureSettings(Key, UnrealPixelFormat);
 
 	const FString TextureBaseName = TEXT("T_") + FPaths::GetBaseFilename(Path);
 	const FName TextureName = MakeUniqueObjectName(GetTransientPackage(), UTexture2D::StaticClass(), *TextureBaseName);
@@ -145,7 +160,7 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 	PlatformData = new FTexturePlatformData();
 	PlatformData->SizeX = TextureMetadata.Width;
 	PlatformData->SizeY = TextureMetadata.Height;
-	PlatformData->PixelFormat = PixelFormat;
+	PlatformData->PixelFormat = UnrealPixelFormat;
 
 	// Allocate first mipmap and upload the pixel data
 	FTexture2DMipMap* Mip = new FTexture2DMipMap();
@@ -153,8 +168,8 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 	Mip->SizeX = TextureMetadata.Width;
 	Mip->SizeY = TextureMetadata.Height;
 	Mip->BulkData.Lock(LOCK_READ_WRITE);
-	void* TextureData = Mip->BulkData.Realloc(CalculateImageBytes(TextureMetadata.Width, TextureMetadata.Height, 0, PixelFormat));
-	FMemory::Memcpy(TextureData, Buffer.get(), BufferSize);
+	void* TextureData = Mip->BulkData.Realloc(CalculateImageBytes(TextureMetadata.Width, TextureMetadata.Height, 0, UnrealPixelFormat));
+	FMemory::Memcpy(TextureData, NewBuffer.get(), NewBufferSize);
 	Mip->BulkData.Unlock();
 
 	NewTexture->SetPlatformData(PlatformData);
