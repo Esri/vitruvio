@@ -81,7 +81,7 @@ ETextureSourceFormat GetTextureFormatFromPixelFormat(const EPixelFormat PixelFor
 	{
 		return ETextureSourceFormat::TSF_RGBA16;
 	}
-	case PF_A32B32G32R32F:
+	case PF_FloatRGBA:
 	{
 		return ETextureSourceFormat::TSF_RGBA16F;
 	}
