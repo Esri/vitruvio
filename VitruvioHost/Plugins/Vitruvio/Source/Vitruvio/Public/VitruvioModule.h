@@ -20,15 +20,15 @@
 #include "MeshCache.h"
 #include "MeshDescription.h"
 #include "PRTTypes.h"
+#include "Report.h"
 #include "RuleAttributes.h"
 #include "RulePackage.h"
-#include "Report.h"
 
 #include "prt/Object.h"
 
+#include "Engine/StaticMesh.h"
 #include "HAL/ThreadSafeCounter.h"
 #include "Modules/ModuleManager.h"
-#include "Engine/StaticMesh.h"
 
 #include "UnrealLogHandler.h"
 #include "VitruvioTypes.h"
@@ -169,7 +169,7 @@ public:
 	 * \return
 	 */
 	VITRUVIO_API FAttributeMapResult EvaluateRuleAttributesAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage,
-															 AttributeMapUPtr Attributes, const int32 RandomSeed) const;
+																 AttributeMapUPtr Attributes, const int32 RandomSeed) const;
 
 	/**
 	 * \return whether PRT is initialized meaning installed and ready to use. Before initialization generation is not possible and will
@@ -248,8 +248,8 @@ public:
 	FOnGenerateCompleted OnGenerateCompleted;
 
 	/**
-	* Delegate which is called after all generate calls have completed.
-	*/
+	 * Delegate which is called after all generate calls have completed.
+	 */
 	FOnAllGenerateCompleted OnAllGenerateCompleted;
 
 	void AddReferencedObjects(FReferenceCollector& Collector) override
@@ -257,7 +257,7 @@ public:
 		Collector.AddReferencedObjects(MaterialCache);
 		Collector.AddReferencedObjects(RegisteredMeshes);
 	}
-	
+
 	FString GetReferencerName() const override
 	{
 		return TEXT("Vitruvio");
@@ -277,6 +277,7 @@ private:
 	void* PrtDllHandle = nullptr;
 	prt::Object const* PrtLibrary = nullptr;
 	CacheObjectUPtr PrtCache;
+	mutable FCriticalSection PrtCacheLock;
 
 	TUniquePtr<UnrealLogHandler> LogHandler;
 
