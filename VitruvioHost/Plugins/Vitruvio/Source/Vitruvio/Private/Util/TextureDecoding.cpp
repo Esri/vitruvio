@@ -103,6 +103,9 @@ EPixelFormat GetUnrealPixelFormat(EPRTPixelFormat PRTPixelFormat)
 FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Path, const FTextureMetadata& TextureMetadata,
 						   std::unique_ptr<uint8_t[]> Buffer, size_t BufferSize)
 {
+	EPixelFormat UnrealPixelFormat = GetUnrealPixelFormat(TextureMetadata.PixelFormat);
+	check(UnrealPixelFormat != EPixelFormat::PF_Unknown);
+
 	const size_t BytesPerBand = FMath::Min<size_t>(2, TextureMetadata.BytesPerBand);
 	const bool bIsColor = (TextureMetadata.Bands >= 3);
 
@@ -145,7 +148,6 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 		}
 	}
 
-	EPixelFormat UnrealPixelFormat = GetUnrealPixelFormat(TextureMetadata.PixelFormat);
 	const FTextureSettings Settings = GetTextureSettings(Key, UnrealPixelFormat);
 
 	const FString TextureBaseName = TEXT("T_") + FPaths::GetBaseFilename(Path);
