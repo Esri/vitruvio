@@ -353,7 +353,7 @@ UStaticMesh* CreateStaticMeshFromInitialShapePolygon(const FInitialShapePolygon&
 	return StaticMesh;
 }
 
-TArray<TArray<FSplinePoint>> CreateSplinePointsFromInitialShapePolygon(const FInitialShapePolygon& InitialShapePolygon)
+TArray<FSplinePoint> CreateSplinePointsFromInitialShapePolygon(const FInitialShapePolygon& InitialShapePolygon)
 {
 	// create small default square footprint, if there is no startMesh
 	FInitialShapePolygon CurrInitialShapePolygon = InitialShapePolygon;
@@ -362,24 +362,18 @@ TArray<TArray<FSplinePoint>> CreateSplinePointsFromInitialShapePolygon(const FIn
 		CurrInitialShapePolygon = CreateDefaultInitialShapePolygon();
 	}
 
-	TArray<TArray<FSplinePoint>> Splines;
-
-	for (const FInitialShapeFace& Face : CurrInitialShapePolygon.Faces)
+	TArray<FSplinePoint> SplinePoints;
+	int32 PointIndex = 0;
+	for (const int32& Index : CurrInitialShapePolygon.Faces[0].Indices)
 	{
-		TArray<FSplinePoint> SplinePoints;
-		int32 PointIndex = 0;
-		for (const int32& Index : Face.Indices)
-		{
-			FSplinePoint SplinePoint;
-			SplinePoint.Position = InitialShapePolygon.Vertices[Index];
-			SplinePoint.Type = ESplinePointType::Linear;
-			SplinePoint.InputKey = PointIndex;
-			SplinePoints.Add(SplinePoint);
-			PointIndex++;
-		}
-		Splines.Add(SplinePoints);
+		FSplinePoint SplinePoint;
+		SplinePoint.Position = InitialShapePolygon.Vertices[Index];
+		SplinePoint.Type = ESplinePointType::Linear;
+		SplinePoint.InputKey = PointIndex;
+		SplinePoints.Add(SplinePoint);
+		PointIndex++;
 	}
-	return Splines;
+	return SplinePoints;
 }
 
 } // namespace
@@ -621,17 +615,13 @@ void USplineInitialShape::Initialize(UVitruvioComponent* Component, const FIniti
 		return;
 	}
 
-	TArray<TArray<FSplinePoint>> Splines = CreateSplinePointsFromInitialShapePolygon(InitialShapePolygon);
-
-	for (const auto SplinePoints : Splines)
+	TArray<FSplinePoint> SplinePoints = CreateSplinePointsFromInitialShapePolygon(InitialShapePolygon);
+	const auto UniqueName = MakeUniqueObjectName(Owner, USplineComponent::StaticClass(), TEXT("InitialShapeSpline"));
+	USplineComponent* Spline = AttachComponent<USplineComponent>(Owner, UniqueName.ToString());
+	Spline->ClearSplinePoints(true);
+	for (const auto& Point : SplinePoints)
 	{
-		auto UniqueName = MakeUniqueObjectName(Owner, USplineComponent::StaticClass(), TEXT("InitialShapeSpline"));
-		USplineComponent* Spline = AttachComponent<USplineComponent>(Owner, UniqueName.ToString());
-		Spline->ClearSplinePoints(true);
-		for (const auto Point : SplinePoints)
-		{
-			Spline->AddPoint(Point, true);
-		}
+		Spline->AddPoint(Point, true);
 	}
 
 	Initialize(Component);
