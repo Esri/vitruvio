@@ -382,6 +382,11 @@ void FInitialShapePolygon::FixOrientation()
 {
 	for (FInitialShapeFace& Face : Faces)
 	{
+		if (Face.Indices.Num() < 3)
+		{
+			continue;
+		}
+
 		// Reverse all indices if plane normal points down
 		TArray<FVector3f> VertexPositions;
 		VertexPositions.Reserve(Vertices.Num());
