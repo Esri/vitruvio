@@ -71,30 +71,28 @@ void MarkVisited(FWindingEdge& Edge, TSortedMap<int32, TArray<FWindingEdge>>& Ed
 	}
 }
 
-bool IsInsidePolygon2D(const TArray<int32>& Polygon, const FVector& Test, const TArray<FVector>& Vertices)
+bool PointInPolygon2D(const FVector& Point, const TArray<int32>& PolygonIndices, const TArray<FVector>& PolygonVertices)
 {
-	static const FVector TRACE_OFFSET = {1e6, 0, 0};
-	const FVector TraceEndPoint = Test + TRACE_OFFSET;
-
-	if (Polygon.Num() < 3)
+	if (PolygonIndices.Num() < 3)
 	{
 		return false;
 	}
 
-	int NumIntersections = 0;
-	for (int32 Index = 0; Index < Polygon.Num(); Index++)
+	bool bIsInside = false;
+	for (int Index = 0; Index < PolygonIndices.Num(); Index++)
 	{
-		const int32 CurrentIndex = Polygon[Index];
-		const int32 NextIndex = Polygon[Index + 1 >= Polygon.Num() ? 0 : Index + 1];
-		FVector TraceResult;
-		const bool Intersected = FMath::SegmentIntersection2D(Vertices[CurrentIndex], Vertices[NextIndex], Test, TraceEndPoint, TraceResult);
-		if (Intersected)
+		const FVector& Current = PolygonVertices[PolygonIndices[Index]];
+		const FVector& Next = PolygonVertices[PolygonIndices[Index + 1 >= PolygonIndices.Num() ? 0 : Index + 1]];
+		if (Current.Y < Point.Y && Next.Y >= Point.Y || Next.Y < Point.Y && Current.Y >= Point.Y)
 		{
-			NumIntersections++;
+			if (Current.X + (Point.Y - Current.Y) / (Next.Y - Current.Y) * (Next.X - Current.X) < Point.X)
+			{
+				bIsInside = !bIsInside;
+			}
 		}
 	}
 
-	return NumIntersections % 2 == 1;
+	return bIsInside;
 }
 
 bool IsInsideOf2D(const TArray<int32>& FaceA, const TArray<int32>& FaceB, const TArray<FVector>& Vertices)
@@ -118,7 +116,7 @@ bool IsInsideOf2D(const TArray<int32>& FaceA, const TArray<int32>& FaceB, const 
 		}
 	}
 
-	return IsInsidePolygon2D(FaceB, Vertices[FaceA[0]], Vertices);
+	return PointInPolygon2D(Vertices[FaceA[0]], FaceB, Vertices);
 }
 
 } // namespace
