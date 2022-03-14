@@ -124,7 +124,7 @@ bool IsInsideOf2D(const TArray<int32>& FaceA, const TArray<int32>& FaceB, const 
 namespace Vitruvio
 {
 
-FPolygon GetPolygon(const TArray<FVector>& InVertices, const TArray<int32>& InIndices)
+FInitialShapePolygon GetPolygon(const TArray<FVector>& InVertices, const TArray<int32>& InIndices)
 {
 	// The algorithm works as follows:
 	// 1. We construct a graph of all edges and "color" all connected edges. Note that we can have multiple faces (with holes) in a single polygon
@@ -233,12 +233,12 @@ FPolygon GetPolygon(const TArray<FVector>& InVertices, const TArray<int32>& InIn
 	}
 
 	TSet<int32> HoleSet;
-	TMap<int32, FFace> FaceMap;
+	TMap<int32, FInitialShapeFace> FaceMap;
 	for (int32 FaceIndex = 0; FaceIndex < Windings.Num(); ++FaceIndex)
 	{
 		if (!InsideOf.Contains(FaceIndex))
 		{
-			FaceMap.Add(FaceIndex, FFace{Windings[FaceIndex].Indices});
+			FaceMap.Add(FaceIndex, FInitialShapeFace{Windings[FaceIndex].Indices});
 		}
 		else
 		{
@@ -251,14 +251,14 @@ FPolygon GetPolygon(const TArray<FVector>& InVertices, const TArray<int32>& InIn
 		int32 InsideOfIndex = InsideOf[HoleIndex];
 		if (FaceMap.Contains(InsideOfIndex))
 		{
-			FFace& ParentFace = FaceMap[InsideOfIndex];
-			ParentFace.Holes.Add(FHole{Windings[HoleIndex].Indices});
+			FInitialShapeFace& ParentFace = FaceMap[InsideOfIndex];
+			ParentFace.Holes.Add(FInitialShapeHole{Windings[HoleIndex].Indices});
 		}
 	}
 
-	TArray<FFace> Faces;
+	TArray<FInitialShapeFace> Faces;
 	FaceMap.GenerateValueArray(Faces);
-	FPolygon Result = {Faces};
+	FInitialShapePolygon Result = {Faces, InVertices};
 	return Result;
 }
 } // namespace Vitruvio

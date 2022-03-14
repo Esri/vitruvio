@@ -15,24 +15,10 @@
 
 #pragma once
 
+#include "InitialShape.h"
+
 namespace Vitruvio
 {
-
-struct FHole
-{
-	TArray<int32> Indices;
-};
-
-struct FFace
-{
-	TArray<int32> Indices;
-	TArray<FHole> Holes;
-};
-
-struct FPolygon
-{
-	TArray<FFace> Faces;
-};
 
 /**
  * Takes a triangulated input mesh (vertices and indices) and returns a polygon consisting of faces and holes.
@@ -44,6 +30,6 @@ struct FPolygon
  * @param InVertices	Input triangle vertices
  * @param InIndices		Input triangle indices
  */
-FPolygon GetPolygon(const TArray<FVector>& InVertices, const TArray<int32>& InIndices);
+FInitialShapePolygon GetPolygon(const TArray<FVector>& InVertices, const TArray<int32>& InIndices);
 
 } // namespace Vitruvio

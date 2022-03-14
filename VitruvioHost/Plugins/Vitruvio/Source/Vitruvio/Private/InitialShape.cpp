@@ -168,23 +168,7 @@ FInitialShapePolygon CreateInitialPolygonFromStaticMesh(const UStaticMesh* Stati
 		}
 	}
 
-	const Vitruvio::FPolygon Polygon = Vitruvio::GetPolygon(MeshVertices, MeshIndices);
-
-	FInitialShapePolygon InitialShapePolygon;
-	InitialShapePolygon.Vertices = MeshVertices;
-	InitialShapePolygon.TextureCoordinateSets = MeshTextureCoordinateSets;
-
-	for (const auto& Face : Polygon.Faces)
-	{
-		TArray<FInitialShapeHole> Holes;
-		for (const auto& Hole : Face.Holes)
-		{
-			Holes.Add({Hole.Indices});
-		}
-		FInitialShapeFace InitialShapeFace = {Face.Indices, Holes};
-		InitialShapePolygon.Faces.Add(InitialShapeFace);
-	}
-
+	FInitialShapePolygon InitialShapePolygon = Vitruvio::GetPolygon(MeshVertices, MeshIndices);
 	InitialShapePolygon.FixOrientation();
 
 	return InitialShapePolygon;
