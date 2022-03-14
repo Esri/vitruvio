@@ -232,31 +232,27 @@ FPolygon GetPolygon(const TArray<FVector>& InVertices, const TArray<int32>& InIn
 		}
 	}
 
-	TSet<int32> OpenSet;
-	for (int32 FaceIndex = 0; FaceIndex < Windings.Num(); ++FaceIndex)
-	{
-		OpenSet.Add(FaceIndex);
-	}
-
+	TSet<int32> HoleSet;
 	TMap<int32, FFace> FaceMap;
-	// First find all faces
 	for (int32 FaceIndex = 0; FaceIndex < Windings.Num(); ++FaceIndex)
 	{
 		if (!InsideOf.Contains(FaceIndex))
 		{
 			FaceMap.Add(FaceIndex, FFace{Windings[FaceIndex].Indices});
-			OpenSet.Remove(FaceIndex);
+		}
+		else
+		{
+			HoleSet.Add(FaceIndex);
 		}
 	}
 
-	// Then assign the holes
-	for (int32 FaceIndex : OpenSet)
+	for (int32 HoleIndex : HoleSet)
 	{
-		int32 InsideOfIndex = InsideOf[FaceIndex];
+		int32 InsideOfIndex = InsideOf[HoleIndex];
 		if (FaceMap.Contains(InsideOfIndex))
 		{
 			FFace& ParentFace = FaceMap[InsideOfIndex];
-			ParentFace.Holes.Add(FHole{Windings[FaceIndex].Indices});
+			ParentFace.Holes.Add(FHole{Windings[HoleIndex].Indices});
 		}
 	}
 
