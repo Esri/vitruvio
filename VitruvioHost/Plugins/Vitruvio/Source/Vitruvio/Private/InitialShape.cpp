@@ -321,17 +321,12 @@ UStaticMesh* CreateDefaultStaticMesh()
 
 UStaticMesh* CreateStaticMeshFromInitialShapePolygon(const FInitialShapePolygon& InitialShapePolygon)
 {
-	if (IsDefaultInitialShape(InitialShapePolygon))
+	if (IsDefaultInitialShape(InitialShapePolygon) || InitialShapePolygon.Faces.Num() == 0)
 	{
 		return CreateDefaultStaticMesh();
 	}
-	FInitialShapePolygon CurrInitialShapePolygon = InitialShapePolygon;
-	if (CurrInitialShapePolygon.Faces.Num() == 0)
-	{
-		CurrInitialShapePolygon = CreateDefaultInitialShapePolygon();
-	}
 
-	FMeshDescription MeshDescription = CreateMeshDescription(CurrInitialShapePolygon);
+	FMeshDescription MeshDescription = CreateMeshDescription(InitialShapePolygon);
 	MeshDescription.TriangulateMesh();
 
 	TArray<const FMeshDescription*> MeshDescriptions;
