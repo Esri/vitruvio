@@ -568,6 +568,21 @@ bool UStaticMeshInitialShape::IsRelevantProperty(UObject* Object, const FPropert
 	return false;
 }
 
+bool USplineInitialShape::ShouldConvert(const FInitialShapePolygon& InitialShapePolygon)
+{
+	if (InitialShapePolygon.Faces.Num() > 1 || InitialShapePolygon.Faces[0].Holes.Num() > 0)
+	{
+		auto Result = FMessageDialog::Open(EAppMsgType::OkCancel,
+										   FText::FromString(TEXT("The initial shape contains multiple faces or faces with holes which spline "
+																  "initial shapes do not support. Continuing will remove them.")));
+		if (Result == EAppReturnType::Cancel)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
 void UStaticMeshInitialShape::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 #if WITH_EDITORONLY_DATA

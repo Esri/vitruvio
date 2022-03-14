@@ -729,6 +729,11 @@ void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& T
 
 	if (InitialShape)
 	{
+		if (InitialShape->GetClass() == Type)
+		{
+			return;
+		}
+
 		const FInitialShapePolygon InitialShapePolygon = InitialShape->GetPolygon();
 		InitialShape->Uninitialize();
 

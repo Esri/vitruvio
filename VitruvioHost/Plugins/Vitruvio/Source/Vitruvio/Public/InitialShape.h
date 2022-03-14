@@ -138,6 +138,11 @@ public:
 		return false;
 	}
 
+	virtual bool ShouldConvert(const FInitialShapePolygon& InitialShapePolygon)
+	{
+		return true;
+	}
+
 #endif
 };
 
@@ -178,5 +183,6 @@ public:
 
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent) override;
+	virtual bool ShouldConvert(const FInitialShapePolygon& InitialShapePolygon) override;
 #endif
 };

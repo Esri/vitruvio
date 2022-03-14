@@ -47,9 +47,11 @@ private:
 	TArray<TWeakObjectPtr<UObject>> ObjectsBeingCustomized;
 	TWeakPtr<IDetailLayoutBuilder> CachedDetailBuilder;
 	TSharedPtr<SWidget> ColorPickerParentWidget;
+	TSharedPtr<STextComboBox> ChangeInitialShapeCombo;
 
 	TArray<TSharedPtr<FString>> InitialShapeTypes;
 	TMap<TSharedPtr<FString>, UClass*> InitialShapeTypeMap;
+	TMap<UClass*, TSharedPtr<FString>> InitialShapeClassMap;
 
 	TArray<TSharedPtr<IPropertyRowGenerator>> Generators;
 };
