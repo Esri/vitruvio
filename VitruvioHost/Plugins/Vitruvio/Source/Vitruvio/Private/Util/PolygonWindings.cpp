@@ -25,11 +25,11 @@ struct FWindingEdge
 {
 	const int32 Index0;
 	const int32 Index1;
-	int32 Connectivity;
+	int32 Color;
 
-	FWindingEdge() : Index0(-1), Index1(-1), Connectivity(-1) {}
+	FWindingEdge() : Index0(-1), Index1(-1), Color(-1) {}
 
-	FWindingEdge(const int32 Index0, const int32 Index1, const int32 Connectivity) : Index0(Index0), Index1(Index1), Connectivity(Connectivity) {}
+	FWindingEdge(const int32 Index0, const int32 Index1, const int32 Color) : Index0(Index0), Index1(Index1), Color(Color) {}
 
 	bool operator==(const FWindingEdge& E) const
 	{
@@ -40,9 +40,9 @@ struct FWindingEdge
 struct FWinding
 {
 	TArray<int32> Indices;
-	int Connectivity;
+	int Color;
 
-	FWinding(const TArray<int32>& Indices, const int Connectivity) : Indices(Indices), Connectivity(Connectivity) {}
+	FWinding(const TArray<int32>& Indices, const int Color) : Indices(Indices), Color(Color) {}
 };
 
 uint32 GetTypeHash(const FWindingEdge& Edge)
@@ -52,22 +52,22 @@ uint32 GetTypeHash(const FWindingEdge& Edge)
 	return HashCombine(Hash, Edge.Index1);
 }
 
-void MarkVisited(FWindingEdge& Edge, TSortedMap<int32, TArray<FWindingEdge>>& EdgeMap, TSet<FWindingEdge>& Visited, int Connectivity)
+void ColorEdges(FWindingEdge& Edge, TSortedMap<int32, TArray<FWindingEdge>>& EdgeMap, TSet<FWindingEdge>& Visited, int Color)
 {
 	if (Visited.Contains(Edge))
 	{
 		return;
 	}
 
-	Edge.Connectivity = Connectivity;
+	Edge.Color = Color;
 	Visited.Add(Edge);
 	for (FWindingEdge& Connected : EdgeMap[Edge.Index0])
 	{
-		MarkVisited(Connected, EdgeMap, Visited, Connectivity);
+		ColorEdges(Connected, EdgeMap, Visited, Color);
 	}
 	for (FWindingEdge& Connected : EdgeMap[Edge.Index1])
 	{
-		MarkVisited(Connected, EdgeMap, Visited, Connectivity);
+		ColorEdges(Connected, EdgeMap, Visited, Color);
 	}
 }
 
@@ -149,7 +149,7 @@ FPolygon GetPolygon(const TArray<FVector>& InVertices, const TArray<int32>& InIn
 		}
 	}
 
-	// Mark connected edges
+	// Color connected edges
 	TSortedMap<int32, TArray<FWindingEdge>> EdgeMap;
 	for (const FWindingEdge& Edge : Edges)
 	{
@@ -157,14 +157,14 @@ FPolygon GetPolygon(const TArray<FVector>& InVertices, const TArray<int32>& InIn
 	}
 
 	TSet<FWindingEdge> Visited;
-	int CurrentConnectivity = 0;
+	int CurrentColor = 0;
 	for (auto& KeyValue : EdgeMap)
 	{
 		for (FWindingEdge& Edge : KeyValue.Value)
 		{
 			if (!Visited.Contains(Edge))
 			{
-				MarkVisited(Edge, EdgeMap, Visited, CurrentConnectivity++);
+				ColorEdges(Edge, EdgeMap, Visited, CurrentColor++);
 			}
 		}
 	}
@@ -175,7 +175,7 @@ FPolygon GetPolygon(const TArray<FVector>& InVertices, const TArray<int32>& InIn
 	{
 		for (const FWindingEdge& Current : KeyValue.Value)
 		{
-			const FWindingEdge Opposite(Current.Index1, Current.Index0, Current.Connectivity);
+			const FWindingEdge Opposite(Current.Index1, Current.Index0, Current.Color);
 			if (!Edges.Contains(Opposite))
 			{
 				// Note that at this point there should not be multiple edges connected to a single vertex
@@ -206,7 +206,7 @@ FPolygon GetPolygon(const TArray<FVector>& InVertices, const TArray<int32>& InIn
 			NextIndex = Current.Index1;
 		}
 
-		Windings.Add({WindingIndices, FirstEdge.Connectivity});
+		Windings.Add({WindingIndices, FirstEdge.Color});
 	}
 
 	// Find the relation between the faces
@@ -216,7 +216,7 @@ FPolygon GetPolygon(const TArray<FVector>& InVertices, const TArray<int32>& InIn
 		for (int32 IndexB = IndexA + 1; IndexB < Windings.Num(); IndexB++)
 		{
 			// No possible relation if they are not connected
-			if (Windings[IndexA].Connectivity != Windings[IndexB].Connectivity)
+			if (Windings[IndexA].Color != Windings[IndexB].Color)
 			{
 				continue;
 			}
