@@ -285,7 +285,7 @@ void VitruvioModule::InitializePrt()
 	PrtLibrary = prt::init(PRTPluginsPaths.GetData(), PRTPluginsPaths.Num(), prt::LogLevel::LOG_TRACE, &Status);
 	Initialized = Status == prt::STATUS_OK;
 
-	PrtCache.reset(prt::CacheObject::create(prt::CacheObject::CACHE_TYPE_NONREDUNDANT));
+	PrtCache.reset(prt::CacheObject::create(prt::CacheObject::CACHE_TYPE_DEFAULT));
 
 	const FString TempDir(WCHAR_TO_TCHAR(prtu::temp_directory_path().c_str()));
 	RpkFolder = FPaths::CreateTempFilename(*TempDir, TEXT("Vitruvio_"), TEXT(""));
