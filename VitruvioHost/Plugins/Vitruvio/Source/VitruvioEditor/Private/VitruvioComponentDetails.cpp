@@ -549,6 +549,7 @@ FVitruvioComponentDetails::FVitruvioComponentDetails()
 		auto InitialShapeOption = MakeShared<FString>(DisplayName);
 		InitialShapeTypes.Add(InitialShapeOption);
 		InitialShapeTypeMap.Add(InitialShapeOption, *InitialShapeType);
+		InitialShapeClassMap.Add(*InitialShapeType, InitialShapeOption);
 	}
 
 	UVitruvioComponent::OnAttributesChanged.AddRaw(this, &FVitruvioComponentDetails::OnAttributesChanged);
@@ -667,28 +668,38 @@ void FVitruvioComponentDetails::AddSwitchInitialShapeCombobox(IDetailCategoryBui
 			.Font(IDetailLayoutBuilder::GetDetailFont())
 		]
 	];
-
+	
 	Row.ValueContent()
-	.VAlign(VAlign_Center)
-	.HAlign(HAlign_Left)
+	   .VAlign(VAlign_Center)
+	   .HAlign(HAlign_Left)
 	[
 		SNew(SHorizontalBox)
 		+ SHorizontalBox::Slot()
 		[
-			SNew(STextComboBox)
+			SAssignNew(ChangeInitialShapeCombo, STextComboBox)
 			.Font(IDetailLayoutBuilder::GetDetailFont())
 			.InitiallySelectedItem(CurrentInitialShapeType)
 			.OnSelectionChanged_Lambda([this, VitruvioComponent](TSharedPtr<FString> Selection, ESelectInfo::Type SelectInfo)
 			{
 				if (Selection.IsValid())
 				{
-					VitruvioComponent->SetInitialShapeType(InitialShapeTypeMap[Selection]);
-					VitruvioComponent->Generate();
+					UInitialShape* TempInitialShape = NewObject<UInitialShape>(GetTransientPackage(), InitialShapeTypeMap[Selection], NAME_None, RF_Transient | RF_TextExportTransient);
 
-					// Hack to refresh the property editor
-					GEditor->SelectActor(VitruvioComponent->GetOwner(), false, true, true, true);
-					GEditor->SelectActor(VitruvioComponent->GetOwner(), true, true, true, true);
-					GEditor->SelectComponent(VitruvioComponent, true, true, true);
+					if (TempInitialShape->ShouldConvert(VitruvioComponent->InitialShape->GetPolygon()))
+					{
+						VitruvioComponent->SetInitialShapeType(InitialShapeTypeMap[Selection]);
+						VitruvioComponent->Generate();
+
+						// Hack to refresh the property editor
+						GEditor->SelectActor(VitruvioComponent->GetOwner(), false, true, true, true);
+						GEditor->SelectActor(VitruvioComponent->GetOwner(), true, true, true, true);
+						GEditor->SelectComponent(VitruvioComponent, true, true, true);
+					}
+					else
+					{
+						const TSharedPtr<FString>& CurrentSelection = InitialShapeClassMap[VitruvioComponent->InitialShape->GetClass()];
+						ChangeInitialShapeCombo->SetSelectedItem(CurrentSelection);
+					}
 				}
 			})
 			.OptionsSource(&InitialShapeTypes)

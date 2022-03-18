@@ -120,29 +120,49 @@ public:
 	}
 };
 
-void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder, const TArray<FInitialShapeFace>& InitialShape)
+void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder, const FInitialShapePolygon& InitialShape)
 {
 	std::vector<double> vertexCoords;
 	std::vector<uint32_t> indices;
 	std::vector<uint32_t> faceCounts;
+	std::vector<uint32_t> holes;
 
-	uint32_t CurrentIndex = 0;
-	for (const FInitialShapeFace& Face : InitialShape)
+	for (const FVector& Vertex : InitialShape.Vertices)
 	{
-		faceCounts.push_back(Face.Vertices.Num());
-		for (const FVector& Vertex : Face.Vertices)
-		{
-			indices.push_back(CurrentIndex++);
+		const FVector CEVertex = FVector(Vertex.X, Vertex.Z, Vertex.Y) / 100.0;
+		vertexCoords.push_back(CEVertex.X);
+		vertexCoords.push_back(CEVertex.Y);
+		vertexCoords.push_back(CEVertex.Z);
+	}
 
-			const FVector CEVertex = FVector(Vertex.X, Vertex.Z, Vertex.Y) / 100.0;
-			vertexCoords.push_back(CEVertex.X);
-			vertexCoords.push_back(CEVertex.Y);
-			vertexCoords.push_back(CEVertex.Z);
+	for (const FInitialShapeFace& Face : InitialShape.Faces)
+	{
+		faceCounts.push_back(Face.Indices.Num());
+		for (const int32& Index : Face.Indices)
+		{
+			indices.push_back(Index);
+		}
+
+		if (Face.Holes.Num() > 0)
+		{
+			holes.push_back(faceCounts.size() - 1);
+
+			for (const FInitialShapeHole Hole : Face.Holes)
+			{
+				faceCounts.push_back(Hole.Indices.Num());
+				for (const int32& Index : Hole.Indices)
+				{
+					indices.push_back(Index);
+				}
+				holes.push_back(faceCounts.size() - 1);
+			}
+
+			holes.push_back(std::numeric_limits<uint32_t>::max());
 		}
 	}
 
 	const prt::Status SetGeometryStatus = InitialShapeBuilder->setGeometry(vertexCoords.data(), vertexCoords.size(), indices.data(), indices.size(),
-																		   faceCounts.data(), faceCounts.size());
+																		   faceCounts.data(), faceCounts.size(), holes.data(), holes.size());
 
 	if (SetGeometryStatus != prt::STATUS_OK)
 	{
@@ -155,19 +175,16 @@ void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder,
 		std::vector<uint32_t> uvIndices;
 
 		uint32_t CurrentUVIndex = 0;
-		for (const FInitialShapeFace& Face : InitialShape)
+		if (UVSet >= InitialShape.TextureCoordinateSets.Num())
 		{
-			if (UVSet >= Face.TextureCoordinateSets.Num())
-			{
-				continue;
-			}
+			continue;
+		}
 
-			for (const auto& UV : Face.TextureCoordinateSets[UVSet].TextureCoordinates)
-			{
-				uvIndices.push_back(CurrentUVIndex++);
-				uvCoords.push_back(UV.X);
-				uvCoords.push_back(-UV.Y);
-			}
+		for (const auto& UV : InitialShape.TextureCoordinateSets[UVSet].TextureCoordinates)
+		{
+			uvIndices.push_back(CurrentUVIndex++);
+			uvCoords.push_back(UV.X);
+			uvCoords.push_back(-UV.Y);
 		}
 
 		if (uvCoords.empty())
@@ -181,7 +198,7 @@ void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder,
 }
 
 AttributeMapUPtr EvaluateRuleAttributes(const std::wstring& RuleFile, const std::wstring& StartRule, AttributeMapUPtr Attributes,
-										const ResolveMapSPtr& ResolveMapPtr, const TArray<FInitialShapeFace>& InitialShape, prt::Cache* Cache,
+										const ResolveMapSPtr& ResolveMapPtr, const FInitialShapePolygon& InitialShape, prt::Cache* Cache,
 										const int32 RandomSeed)
 {
 	AttributeMapBuilderUPtr UnrealCallbacksAttributeBuilder(prt::AttributeMapBuilder::create());
@@ -356,7 +373,7 @@ Vitruvio::FTextureData VitruvioModule::DecodeTexture(UObject* Outer, const FStri
 	return Vitruvio::DecodeTexture(Outer, Key, Path, TextureMetadata, std::move(Buffer), BufferSize);
 }
 
-FGenerateResult VitruvioModule::GenerateAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage, AttributeMapUPtr Attributes,
+FGenerateResult VitruvioModule::GenerateAsync(const FInitialShapePolygon& InitialShape, URulePackage* RulePackage, AttributeMapUPtr Attributes,
 											  const int32 RandomSeed) const
 {
 	check(RulePackage);
@@ -383,8 +400,8 @@ FGenerateResult VitruvioModule::GenerateAsync(const TArray<FInitialShapeFace>& I
 	return FGenerateResult{MoveTemp(ResultFuture), Token};
 }
 
-FGenerateResultDescription VitruvioModule::Generate(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage,
-													AttributeMapUPtr Attributes, const int32 RandomSeed) const
+FGenerateResultDescription VitruvioModule::Generate(const FInitialShapePolygon& InitialShape, URulePackage* RulePackage, AttributeMapUPtr Attributes,
+													const int32 RandomSeed) const
 {
 	check(RulePackage);
 
@@ -474,7 +491,7 @@ FGenerateResultDescription VitruvioModule::Generate(const TArray<FInitialShapeFa
 									  OutputHandler->GetNames()};
 }
 
-FAttributeMapResult VitruvioModule::EvaluateRuleAttributesAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage,
+FAttributeMapResult VitruvioModule::EvaluateRuleAttributesAsync(const FInitialShapePolygon& InitialShape, URulePackage* RulePackage,
 																AttributeMapUPtr Attributes, const int32 RandomSeed) const
 {
 	check(RulePackage);

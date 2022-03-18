@@ -15,15 +15,21 @@
 
 #pragma once
 
+#include "InitialShape.h"
+
 namespace Vitruvio
 {
+
 /**
- * Takes a set of polygons and returns a vertex array representing the outside winding.
- * This will work for convex or concave sets of polygons but not for concave polygons with holes.
+ * Takes a triangulated input mesh (vertices and indices) and returns a polygon consisting of faces and holes.
+ *
+ * This will work for convex or concave polygons and polygons with holes.
  *
  * Note: This function is adapted from FPoly#GetOutsideWindings.
  *
+ * @param InVertices	Input triangle vertices
  * @param InIndices		Input triangle indices
  */
-TArray<TArray<int32>> GetOutsideWindings(const TArray<int32>& InIndices);
+FInitialShapePolygon GetPolygon(const TArray<FVector>& InVertices, const TArray<int32>& InIndices);
+
 } // namespace Vitruvio

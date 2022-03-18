@@ -609,7 +609,7 @@ void UVitruvioComponent::Generate()
 	if (InitialShape)
 	{
 		FGenerateResult GenerateResult =
-			VitruvioModule::Get().GenerateAsync(InitialShape->GetFaces(), Rpk, Vitruvio::CreateAttributeMap(Attributes), RandomSeed);
+			VitruvioModule::Get().GenerateAsync(InitialShape->GetPolygon(), Rpk, Vitruvio::CreateAttributeMap(Attributes), RandomSeed);
 
 		GenerateToken = GenerateResult.Token;
 
@@ -729,10 +729,15 @@ void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& T
 
 	if (InitialShape)
 	{
-		const TArray<FInitialShapeFace> Faces = InitialShape->GetFaces();
+		if (InitialShape->GetClass() == Type)
+		{
+			return;
+		}
+
+		const FInitialShapePolygon InitialShapePolygon = InitialShape->GetPolygon();
 		InitialShape->Uninitialize();
 
-		NewInitialShape->Initialize(this, Faces);
+		NewInitialShape->Initialize(this, InitialShapePolygon);
 	}
 	else
 	{
@@ -765,7 +770,7 @@ void UVitruvioComponent::EvaluateRuleAttributes(bool ForceRegenerate)
 	bAttributesReady = false;
 
 	FAttributeMapResult AttributesResult =
-		VitruvioModule::Get().EvaluateRuleAttributesAsync(InitialShape->GetFaces(), Rpk, Vitruvio::CreateAttributeMap(Attributes), RandomSeed);
+		VitruvioModule::Get().EvaluateRuleAttributesAsync(InitialShape->GetPolygon(), Rpk, Vitruvio::CreateAttributeMap(Attributes), RandomSeed);
 
 	EvalAttributesInvalidationToken = AttributesResult.Token;
 

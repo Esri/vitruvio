@@ -36,7 +36,8 @@ T* AttachComponent(AActor* Owner, const FString& Name)
 	return Component;
 }
 
-FMeshDescription CreateMeshDescription(const TArray<FInitialShapeFace>& InFaces)
+// Create a mesh description from an initial shape polygon. Ignores holes for now.
+FMeshDescription CreateMeshDescription(const FInitialShapePolygon& InPolygon)
 {
 	FMeshDescription Description;
 	FStaticMeshAttributes Attributes(Description);
@@ -48,17 +49,22 @@ FMeshDescription CreateMeshDescription(const TArray<FInitialShapeFace>& InFaces)
 
 	const auto VertexPositions = Attributes.GetVertexPositions();
 	const FPolygonGroupID PolygonGroupId = Description.CreatePolygonGroup();
-	for (const FInitialShapeFace& Face : InFaces)
+
+	for (const FVector& Vertex : InPolygon.Vertices)
 	{
-		int32 VertexIndex = 0;
+		const FVertexID VertexID = Description.CreateVertex();
+		VertexPositions[VertexID] = Vertex;
+	}
+
+	for (const FInitialShapeFace& Face : InPolygon.Faces)
+	{
 		TArray<FVertexInstanceID> PolygonVertexInstances;
-		for (const FVector& Vertex : Face.Vertices)
+		for (const int32& VertexIndex : Face.Indices)
 		{
-			const FVertexID VertexID = Description.CreateVertex();
-			VertexPositions[VertexID] = Vertex;
-			FVertexInstanceID InstanceId = Description.CreateVertexInstance(FVertexID(VertexIndex++));
+			FVertexInstanceID InstanceId = Description.CreateVertexInstance(FVertexID(VertexIndex));
 			PolygonVertexInstances.Add(InstanceId);
 		}
+
 		if (PolygonVertexInstances.Num() >= 3)
 		{
 			Description.CreatePolygon(PolygonGroupId, PolygonVertexInstances);
@@ -68,11 +74,11 @@ FMeshDescription CreateMeshDescription(const TArray<FInitialShapeFace>& InFaces)
 	return Description;
 }
 
-// Returns false if all faces are degenerate and true otherwise
-bool HasValidGeometry(const TArray<FInitialShapeFace>& InFaces)
+// Returns false if all faces are degenerate or true otherwise
+bool HasValidGeometry(const FInitialShapePolygon& Polygon)
 {
-	// 1. Construct MeshDescription from Faces
-	FMeshDescription Description = CreateMeshDescription(InFaces);
+	// 1. Construct MeshDescription from Polygon
+	FMeshDescription Description = CreateMeshDescription(Polygon);
 
 	// 2. Triangulate as the input initial shape is in non triangulated form
 	Description.TriangulateMesh();
@@ -108,36 +114,7 @@ bool HasValidGeometry(const TArray<FInitialShapeFace>& InFaces)
 	return false;
 }
 
-TArray<FInitialShapeFace> CreateFacesFromWindings(const TArray<TArray<int32>>& WindingIndices, const TArray<FVector>& MeshVertices,
-												  const TArray<FTextureCoordinateSet>& MeshTextureCoordinateSets)
-{
-	TArray<FInitialShapeFace> InitialShapeFaces;
-	for (const TArray<int32>& Indices : WindingIndices)
-	{
-		TArray<FVector> WindingVertices;
-		TArray<FTextureCoordinateSet> WindingTextureCoordinateSets;
-		WindingTextureCoordinateSets.AddDefaulted(8);
-		for (const int32 Index : Indices)
-		{
-			WindingVertices.Add(MeshVertices[Index]);
-			for (int32 TextureCoordinateSet = 0; TextureCoordinateSet < WindingTextureCoordinateSets.Num(); TextureCoordinateSet++)
-			{
-				if (Index < MeshTextureCoordinateSets[TextureCoordinateSet].TextureCoordinates.Num())
-				{
-					WindingTextureCoordinateSets[TextureCoordinateSet].TextureCoordinates.Add(
-						MeshTextureCoordinateSets[TextureCoordinateSet].TextureCoordinates[Index]);
-				}
-			}
-		}
-
-		FInitialShapeFace Face = {WindingVertices, WindingTextureCoordinateSets};
-		Face.FixOrientation();
-		InitialShapeFaces.Push(Face);
-	}
-	return InitialShapeFaces;
-}
-
-TArray<FInitialShapeFace> CreateInitialFacesFromStaticMesh(const UStaticMesh* StaticMesh)
+FInitialShapePolygon CreateInitialPolygonFromStaticMesh(const UStaticMesh* StaticMesh)
 {
 	TArray<FVector> MeshVertices;
 	TArray<int32> MeshIndices;
@@ -191,20 +168,23 @@ TArray<FInitialShapeFace> CreateInitialFacesFromStaticMesh(const UStaticMesh* St
 		}
 	}
 
-	const TArray<TArray<int32>> WindingIndices = Vitruvio::GetOutsideWindings(MeshIndices);
+	FInitialShapePolygon InitialShapePolygon = Vitruvio::GetPolygon(MeshVertices, MeshIndices);
+	InitialShapePolygon.FixOrientation();
 
-	return CreateFacesFromWindings(WindingIndices, MeshVertices, MeshTextureCoordinateSets);
+	return InitialShapePolygon;
 }
 
-TArray<FInitialShapeFace> CreateInitialFacesFromSpline(const USplineComponent* SplineComponent, const uint32 SplineApproximationPoints)
+FInitialShapePolygon CreateInitialShapePolygonFromSpline(const USplineComponent* SplineComponent, const uint32 SplineApproximationPoints)
 {
 	TArray<FVector> Vertices;
+	TArray<int> Indices;
 	const int32 NumPoints = SplineComponent->GetNumberOfSplinePoints();
 	for (int32 SplinePointIndex = 0; SplinePointIndex < NumPoints; ++SplinePointIndex)
 	{
 		const ESplinePointType::Type SplineType = SplineComponent->GetSplinePointType(SplinePointIndex);
 		if (SplineType == ESplinePointType::Linear)
 		{
+			Indices.Add(Vertices.Num());
 			Vertices.Add(SplineComponent->GetLocationAtSplinePoint(SplinePointIndex, ESplineCoordinateSpace::Local));
 		}
 		else
@@ -216,60 +196,63 @@ TArray<FInitialShapeFace> CreateInitialFacesFromSpline(const USplineComponent* S
 			const float Distance = SplineComponent->GetSplineLength() / SplineApproximationPoints;
 			while (Position < EndDistance)
 			{
+				Indices.Add(Vertices.Num());
 				Vertices.Add(SplineComponent->GetLocationAtDistanceAlongSpline(Position, ESplineCoordinateSpace::Local));
 				Position += Distance;
 			}
 		}
 	}
 
-	FInitialShapeFace Face = {Vertices};
-	Face.FixOrientation();
-	return {Face};
+	FInitialShapeFace Face = {Indices};
+	return {{Face}, Vertices};
 }
 
-TArray<FInitialShapeFace> CreateDefaultInitialFaces()
+FInitialShapePolygon CreateDefaultInitialShapePolygon()
 {
-	TArray<FInitialShapeFace> InitialFaces;
+	FInitialShapePolygon Polygon;
+	Polygon.Vertices = {FVector(1000, -1000, 0), FVector(-1000, -1000, 0), FVector(-1000, 1000, 0), FVector(1000, 1000, 0)};
 	FInitialShapeFace InitialShapeFace;
-	InitialShapeFace.Vertices.Add(FVector(1000, -1000, 0));
-	InitialShapeFace.Vertices.Add(FVector(-1000, -1000, 0));
-	InitialShapeFace.Vertices.Add(FVector(-1000, 1000, 0));
-	InitialShapeFace.Vertices.Add(FVector(1000, 1000, 0));
-	InitialFaces.Add(InitialShapeFace);
+	InitialShapeFace.Indices = {0, 1, 2, 3};
+	Polygon.Faces.Add(InitialShapeFace);
 
-	return InitialFaces;
+	return Polygon;
 }
 
-bool IsCongruentToDefaultInitialShape(const TArray<FInitialShapeFace>& InitialFaces)
+bool IsDefaultInitialShape(const FInitialShapePolygon& InitialShapePolygon)
 {
-	const TArray<FInitialShapeFace> DefaultInitialFaces = CreateDefaultInitialFaces();
-	check(DefaultInitialFaces.Num() == 1);
-	const TArray<FVector> DefaultVertices = DefaultInitialFaces[0].Vertices;
+	const FInitialShapePolygon DefaultInitialShapePolygon = CreateDefaultInitialShapePolygon();
+	check(DefaultInitialShapePolygon.Faces.Num() == 1);
+	const TArray<FVector>& DefaultVertices = DefaultInitialShapePolygon.Vertices;
+	const TArray<int32>& DefaultIndices = DefaultInitialShapePolygon.Faces[0].Indices;
 	check(DefaultVertices.Num() == 4);
 
-	if (InitialFaces.Num() == DefaultInitialFaces.Num())
+	if (InitialShapePolygon.Faces.Num() != DefaultInitialShapePolygon.Faces.Num())
 	{
-		const TArray<FVector> Vertices = InitialFaces[0].Vertices;
+		return false;
+	}
+	const TArray<FVector>& Vertices = InitialShapePolygon.Vertices;
+	const TArray<int32>& Indices = InitialShapePolygon.Faces[0].Indices;
 
-		if (Vertices.Num() == DefaultVertices.Num())
+	if (Vertices.Num() != DefaultVertices.Num() || Indices.Num() != DefaultIndices.Num())
+	{
+		return false;
+	}
+
+	const FVector FirstVertex = DefaultVertices[Indices[0]];
+	int32 InitialIndexOffset;
+	if (Vertices.Find(FirstVertex, InitialIndexOffset))
+	{
+		for (int32 CurrentIndex = 0; CurrentIndex < DefaultVertices.Num(); CurrentIndex++)
 		{
-			const FVector FirstVertex = DefaultVertices[0];
-			int32 InitialIndexOffset;
-			if (Vertices.Find(FirstVertex, InitialIndexOffset))
+			const int32 VertexIndex = Indices[(InitialIndexOffset + CurrentIndex) % Vertices.Num()];
+			if (!Vertices[VertexIndex].Equals(DefaultVertices[DefaultIndices[CurrentIndex]]))
 			{
-				int32 IndexOffset = 0;
-				for (int32 CurrentIndex = 0; CurrentIndex < DefaultVertices.Num(); CurrentIndex++)
-				{
-					if (!Vertices[(InitialIndexOffset + CurrentIndex) % Vertices.Num()].Equals(DefaultVertices[CurrentIndex]))
-					{
-						return false;
-					}
-					IndexOffset++;
-				}
-				return true;
+				return false;
 			}
 		}
+		return true;
 	}
+
 	return false;
 }
 
@@ -294,8 +277,8 @@ UStaticMesh* CreateDefaultStaticMesh()
 	}
 #endif
 
-	const TArray<FInitialShapeFace> CurrInitialFaces = CreateDefaultInitialFaces();
-	FMeshDescription MeshDescription = CreateMeshDescription(CurrInitialFaces);
+	const FInitialShapePolygon InitialShapePolygon = CreateDefaultInitialShapePolygon();
+	FMeshDescription MeshDescription = CreateMeshDescription(InitialShapePolygon);
 	MeshDescription.TriangulateMesh();
 
 	TArray<const FMeshDescription*> MeshDescriptions;
@@ -320,19 +303,14 @@ UStaticMesh* CreateDefaultStaticMesh()
 	return StaticMesh;
 }
 
-UStaticMesh* CreateStaticMeshFromInitialFaces(const TArray<FInitialShapeFace>& InitialFaces)
+UStaticMesh* CreateStaticMeshFromInitialShapePolygon(const FInitialShapePolygon& InitialShapePolygon)
 {
-	if (IsCongruentToDefaultInitialShape(InitialFaces))
+	if (IsDefaultInitialShape(InitialShapePolygon) || InitialShapePolygon.Faces.Num() == 0)
 	{
 		return CreateDefaultStaticMesh();
 	}
-	TArray<FInitialShapeFace> CurrInitialFaces = InitialFaces;
-	if (InitialFaces.Num() == 0)
-	{
-		CurrInitialFaces = CreateDefaultInitialFaces();
-	}
 
-	FMeshDescription MeshDescription = CreateMeshDescription(CurrInitialFaces);
+	FMeshDescription MeshDescription = CreateMeshDescription(InitialShapePolygon);
 	MeshDescription.TriangulateMesh();
 
 	TArray<const FMeshDescription*> MeshDescriptions;
@@ -354,78 +332,73 @@ UStaticMesh* CreateStaticMeshFromInitialFaces(const TArray<FInitialShapeFace>& I
 	return StaticMesh;
 }
 
-TArray<TArray<FSplinePoint>> CreateSplinePointsFromInitialFaces(const TArray<FInitialShapeFace>& InitialFaces)
+TArray<FSplinePoint> CreateSplinePointsFromInitialShapePolygon(const FInitialShapePolygon& InitialShapePolygon)
 {
 	// create small default square footprint, if there is no startMesh
-	TArray<FInitialShapeFace> CurrInitialFaces = InitialFaces;
-	if (InitialFaces.Num() == 0)
+	FInitialShapePolygon CurrInitialShapePolygon = InitialShapePolygon;
+	if (CurrInitialShapePolygon.Faces.Num() == 0)
 	{
-		CurrInitialFaces = CreateDefaultInitialFaces();
+		CurrInitialShapePolygon = CreateDefaultInitialShapePolygon();
 	}
 
-	TArray<TArray<FSplinePoint>> Splines;
-
-	for (const FInitialShapeFace& Face : CurrInitialFaces)
+	TArray<FSplinePoint> SplinePoints;
+	int32 PointIndex = 0;
+	for (const int32& Index : CurrInitialShapePolygon.Faces[0].Indices)
 	{
-		TArray<FSplinePoint> SplinePoints;
-		int32 PointIndex = 0;
-		for (const FVector& Position : Face.Vertices)
-		{
-			FSplinePoint SplinePoint;
-			SplinePoint.Position = Position;
-			SplinePoint.Type = ESplinePointType::Linear;
-			SplinePoint.InputKey = PointIndex;
-			SplinePoints.Add(SplinePoint);
-			PointIndex++;
-		}
-		Splines.Add(SplinePoints);
+		FSplinePoint SplinePoint;
+		SplinePoint.Position = InitialShapePolygon.Vertices[Index];
+		SplinePoint.Type = ESplinePointType::Linear;
+		SplinePoint.InputKey = PointIndex;
+		SplinePoints.Add(SplinePoint);
+		PointIndex++;
 	}
-	return Splines;
+	return SplinePoints;
 }
+
 } // namespace
 
-void FInitialShapeFace::FixOrientation()
+void FInitialShapePolygon::FixOrientation()
 {
-	if (Vertices.Num() < 3)
+	for (FInitialShapeFace& Face : Faces)
 	{
-		return;
-	}
+		if (Face.Indices.Num() < 3)
+		{
+			continue;
+		}
 
-	// Reverse vertices if plane normal points down
-	TArray<FVector3f> VertexPositions;
-	VertexPositions.Reserve(Vertices.Num());
-	for (const auto& Vertex : Vertices)
-	{
-		VertexPositions.Add(FVector3f(Vertex.X, Vertex.Y, Vertex.Z));
-	}
-	FVector3f PlanePointOut;
-	FVector3f PlaneNormalOut;
-	PolygonTriangulation::ComputePolygonPlane(VertexPositions, PlaneNormalOut, PlanePointOut);
+		// Reverse all indices if plane normal points down
+		TArray<FVector3f> VertexPositions;
+		VertexPositions.Reserve(Vertices.Num());
+		for (const auto& Index : Face.Indices)
+		{
+			VertexPositions.Add(FVector3f(Vertices[Index].X, Vertices[Index].Y, Vertices[Index].Z));
+		}
+		FVector3f PlanePointOut;
+		FVector3f PlaneNormalOut;
+		PolygonTriangulation::ComputePolygonPlane(VertexPositions, PlaneNormalOut, PlanePointOut);
 
-	const FVector PlaneNormal(PlaneNormalOut.X, PlaneNormalOut.Y, PlaneNormalOut.Z);
-	float Dot = FVector::DotProduct(FVector::UpVector, PlaneNormal);
-
-	if (Dot < 0)
-	{
-		Algo::Reverse(Vertices);
-		Algo::Reverse(TextureCoordinateSets);
+		const FVector PlaneNormal(PlaneNormalOut.X, PlaneNormalOut.Y, PlaneNormalOut.Z);
+		const float Dot = FVector::DotProduct(FVector::UpVector, PlaneNormal);
+		if (Dot < 0)
+		{
+			Algo::Reverse(Face.Indices);
+			for (FInitialShapeHole& Hole : Face.Holes)
+			{
+				Algo::Reverse(Hole.Indices);
+			}
+		}
 	}
 }
 
-TArray<FVector> UInitialShape::GetVertices() const
+const TArray<FVector>& UInitialShape::GetVertices() const
 {
-	TArray<FVector> AllVertices;
-	for (const FInitialShapeFace& Face : Faces)
-	{
-		AllVertices.Append(Face.Vertices);
-	}
-	return AllVertices;
+	return Polygon.Vertices;
 }
 
-void UInitialShape::SetFaces(const TArray<FInitialShapeFace>& InFaces)
+void UInitialShape::SetPolygon(const FInitialShapePolygon& InPolygon)
 {
-	Faces = InFaces;
-	bIsValid = HasValidGeometry(InFaces);
+	Polygon = InPolygon;
+	bIsValid = HasValidGeometry(InPolygon);
 }
 
 bool UInitialShape::CanDestroy()
@@ -506,11 +479,11 @@ void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component)
 	}
 #endif
 
-	const TArray<FInitialShapeFace> InitialShapeFaces = CreateInitialFacesFromStaticMesh(StaticMesh);
-	SetFaces(InitialShapeFaces);
+	const FInitialShapePolygon InitialShapePolygon = CreateInitialPolygonFromStaticMesh(StaticMesh);
+	SetPolygon(InitialShapePolygon);
 }
 
-void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces)
+void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon)
 {
 	AActor* Owner = Component->GetOwner();
 	if (!Owner)
@@ -518,7 +491,7 @@ void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component, const TA
 		return;
 	}
 
-	UStaticMesh* StaticMesh = CreateStaticMeshFromInitialFaces(InitialFaces);
+	UStaticMesh* StaticMesh = CreateStaticMeshFromInitialShapePolygon(InitialShapePolygon);
 
 	UStaticMeshComponent* AttachedStaticMeshComponent = AttachComponent<UStaticMeshComponent>(Owner, TEXT("InitialShapeStaticMesh"));
 	AttachedStaticMeshComponent->SetStaticMesh(StaticMesh);
@@ -574,6 +547,21 @@ bool UStaticMeshInitialShape::IsRelevantProperty(UObject* Object, const FPropert
 	return false;
 }
 
+bool USplineInitialShape::ShouldConvert(const FInitialShapePolygon& InitialShapePolygon)
+{
+	if (InitialShapePolygon.Faces.Num() > 1 || InitialShapePolygon.Faces[0].Holes.Num() > 0)
+	{
+		auto Result = FMessageDialog::Open(EAppMsgType::OkCancel,
+										   FText::FromString(TEXT("The initial shape contains multiple faces or faces with holes which spline "
+																  "initial shapes do not support. Continuing will remove them.")));
+		if (Result == EAppReturnType::Cancel)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
 void UStaticMeshInitialShape::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 #if WITH_EDITORONLY_DATA
@@ -614,11 +602,11 @@ void USplineInitialShape::Initialize(UVitruvioComponent* Component)
 
 	InitialShapeSceneComponent = SplineComponent;
 
-	const TArray<FInitialShapeFace> InitialShapeFaces = CreateInitialFacesFromSpline(SplineComponent, SplineApproximationPoints);
-	SetFaces(InitialShapeFaces);
+	const FInitialShapePolygon InitialShapePolygon = CreateInitialShapePolygonFromSpline(SplineComponent, SplineApproximationPoints);
+	SetPolygon(InitialShapePolygon);
 }
 
-void USplineInitialShape::Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces)
+void USplineInitialShape::Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon)
 {
 	AActor* Owner = Component->GetOwner();
 	if (!Owner)
@@ -626,17 +614,13 @@ void USplineInitialShape::Initialize(UVitruvioComponent* Component, const TArray
 		return;
 	}
 
-	TArray<TArray<FSplinePoint>> Splines = CreateSplinePointsFromInitialFaces(InitialFaces);
-
-	for (const auto SplinePoints : Splines)
+	TArray<FSplinePoint> SplinePoints = CreateSplinePointsFromInitialShapePolygon(InitialShapePolygon);
+	const auto UniqueName = MakeUniqueObjectName(Owner, USplineComponent::StaticClass(), TEXT("InitialShapeSpline"));
+	USplineComponent* Spline = AttachComponent<USplineComponent>(Owner, UniqueName.ToString());
+	Spline->ClearSplinePoints(true);
+	for (const auto& Point : SplinePoints)
 	{
-		auto UniqueName = MakeUniqueObjectName(Owner, USplineComponent::StaticClass(), TEXT("InitialShapeSpline"));
-		USplineComponent* Spline = AttachComponent<USplineComponent>(Owner, UniqueName.ToString());
-		Spline->ClearSplinePoints(true);
-		for (const auto Point : SplinePoints)
-		{
-			Spline->AddPoint(Point, true);
-		}
+		Spline->AddPoint(Point, true);
 	}
 
 	Initialize(Component);

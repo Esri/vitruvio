@@ -35,9 +35,33 @@ struct VITRUVIO_API FTextureCoordinateSet
 };
 
 USTRUCT()
+struct VITRUVIO_API FInitialShapeHole
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<int32> Indices;
+};
+
+USTRUCT()
 struct VITRUVIO_API FInitialShapeFace
 {
 	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<int32> Indices;
+
+	UPROPERTY()
+	TArray<FInitialShapeHole> Holes;
+};
+
+USTRUCT()
+struct VITRUVIO_API FInitialShapePolygon
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<FInitialShapeFace> Faces;
 
 	UPROPERTY()
 	TArray<FVector> Vertices;
@@ -53,9 +77,8 @@ class VITRUVIO_API UInitialShape : public UObject
 {
 	GENERATED_BODY()
 
-	// Non triangulated vertices per face
 	UPROPERTY()
-	TArray<FInitialShapeFace> Faces;
+	FInitialShapePolygon Polygon;
 
 protected:
 	UPROPERTY()
@@ -68,12 +91,12 @@ protected:
 	UVitruvioComponent* VitruvioComponent;
 
 public:
-	const TArray<FInitialShapeFace>& GetFaces() const
+	const FInitialShapePolygon& GetPolygon() const
 	{
-		return Faces;
+		return Polygon;
 	}
 
-	TArray<FVector> GetVertices() const;
+	const TArray<FVector>& GetVertices() const;
 
 	bool IsValid() const
 	{
@@ -85,9 +108,9 @@ public:
 		return InitialShapeSceneComponent;
 	}
 
-	void SetFaces(const TArray<FInitialShapeFace>& InFaces);
-	
-	virtual void Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces)
+	void SetPolygon(const FInitialShapePolygon& InFaces);
+
+	virtual void Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon)
 	{
 		unimplemented();
 	}
@@ -115,6 +138,11 @@ public:
 		return false;
 	}
 
+	virtual bool ShouldConvert(const FInitialShapePolygon& InitialShapePolygon)
+	{
+		return true;
+	}
+
 #endif
 };
 
@@ -125,7 +153,7 @@ public:
 	GENERATED_BODY()
 
 	virtual void Initialize(UVitruvioComponent* Component) override;
-	virtual void Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces) override;
+	virtual void Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon) override;
 	virtual bool CanConstructFrom(AActor* Owner) const override;
 	virtual void SetHidden(bool bHidden) override;
 
@@ -150,10 +178,11 @@ public:
 	int32 SplineApproximationPoints = 15;
 
 	virtual void Initialize(UVitruvioComponent* Component) override;
-	virtual void Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces) override;
+	virtual void Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon) override;
 	virtual bool CanConstructFrom(AActor* Owner) const override;
 
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent) override;
+	virtual bool ShouldConvert(const FInitialShapePolygon& InitialShapePolygon) override;
 #endif
 };
