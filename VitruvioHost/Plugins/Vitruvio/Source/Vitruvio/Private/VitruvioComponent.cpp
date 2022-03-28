@@ -266,6 +266,37 @@ bool UVitruvioComponent::GetFloatAttribute(const FString& Name, float& OutValue)
 	return GetAttribute<UFloatAttribute, float>(this->Attributes, Name, OutValue);
 }
 
+void UVitruvioComponent::SetAttributes(const TMap<FString, FString>& NewAttributes)
+{
+	const bool bOldGenerateAutomatically = GenerateAutomatically;
+	GenerateAutomatically = false;
+
+	for (const auto& KeyValues : NewAttributes)
+	{
+		const FString& Value = KeyValues.Value;
+		const FString& Key = KeyValues.Key;
+
+		if (FCString::IsNumeric(*Value))
+		{
+			SetFloatAttribute(Key, FCString::Atof(*Value));
+		}
+		else if (Value == "true" || Value == "false")
+		{
+			SetBoolAttribute(Key, Value == "true");
+		}
+		else
+		{
+			SetStringAttribute(Key, Value);
+		}
+	}
+
+	GenerateAutomatically = bOldGenerateAutomatically;
+	if (GenerateAutomatically && IsReadyToGenerate())
+	{
+		EvaluateRuleAttributes(true);
+	}
+}
+
 const TMap<FString, URuleAttribute*>& UVitruvioComponent::GetAttributes() const
 {
 	return Attributes;
