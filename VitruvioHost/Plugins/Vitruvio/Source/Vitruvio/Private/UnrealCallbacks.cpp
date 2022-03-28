@@ -234,6 +234,25 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 
 	if (BaseVertexIndex > 0)
 	{
+		Description.TriangulateMesh();
+
+		bool bHasInvalidNormals;
+		bool bHasInvalidTangents;
+		FStaticMeshOperations::AreNormalsAndTangentsValid(Description, bHasInvalidNormals, bHasInvalidTangents);
+
+		// If normals are invalid, compute normals and tangents at polygon level then vertex level
+		if (bHasInvalidNormals)
+		{
+			FStaticMeshOperations::ComputeTriangleTangentsAndNormals(Description, THRESH_POINTS_ARE_SAME);
+
+			const EComputeNTBsFlags ComputeFlags = EComputeNTBsFlags::Normals | EComputeNTBsFlags::Tangents | EComputeNTBsFlags::UseMikkTSpace;
+			FStaticMeshOperations::ComputeTangentsAndNormals(Description, ComputeFlags);
+		}
+		else if (bHasInvalidTangents)
+		{
+			FStaticMeshOperations::ComputeMikktTangents(Description, true);
+		}
+
 		TSharedPtr<FVitruvioMesh> Mesh = MakeShared<FVitruvioMesh>(UriString, Description, MeshMaterials);
 
 		if (!UriString.IsEmpty())
