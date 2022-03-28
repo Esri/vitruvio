@@ -168,6 +168,19 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	bool GetFloatAttribute(const FString& Name, float& OutValue) const;
 
+	/**
+	 * Sets the given attributes. If a key does not exist in the current attribute map the key-value pair will be ignored.
+	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
+	 * The type of the attribute will be deduced from its string representation: <br>
+	 * "1.0" for the float 1.0 <br>
+	 * "hello" for the string "hello" and <br>
+	 * "true" for the bool true <br>
+	 *
+	 * @param NewAttributes the attributes to be set
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	void SetAttributes(const TMap<FString, FString>& NewAttributes);
+
 	/** Returns the attributes used for generation. */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	const TMap<FString, URuleAttribute*>& GetAttributes() const;
