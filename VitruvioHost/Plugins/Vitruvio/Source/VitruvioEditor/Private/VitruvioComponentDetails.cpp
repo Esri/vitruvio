@@ -20,6 +20,7 @@
 
 #include "Algo/Transform.h"
 #include "Brushes/SlateColorBrush.h"
+#include "HAL/PlatformApplicationMisc.h"
 #include "IDetailGroup.h"
 #include "IDetailTreeNode.h"
 #include "IPropertyRowGenerator.h"
@@ -372,6 +373,20 @@ TSharedPtr<SWidget> CreateStringAttributeWidget(A* Attribute, const TSharedPtr<I
 	}
 }
 
+void AddCopyNameToClipboardAction(FDetailWidgetRow& Row, URuleAttribute* Attribute)
+{
+	// clang-format off
+	Row.AddCustomContextMenuAction(FUIAction(FExecuteAction::CreateLambda([Attribute]() {
+		   if (Attribute)
+		   {
+			   FPlatformApplicationMisc::ClipboardCopy(*Attribute->Name);
+		   }
+	   })),
+	   FText::FromString(TEXT("Copy Fully Qualified Attribute Name")),
+	   FText::FromString(TEXT("Copies the fully qualified attribute name to the clipboard.")));
+	// clang-format on
+}
+
 void AddScalarWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, IDetailGroup& Group, URuleAttribute* Attribute,
 					 UVitruvioComponent* VitruvioActor)
 {
@@ -389,6 +404,8 @@ void AddScalarWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, 
 	IDetailPropertyRow& DetailPropertyRow = Group.AddPropertyRow(PropertyHandle.ToSharedRef());
 	DetailPropertyRow.OverrideResetToDefault(ResetToDefaultOverride(Attribute, VitruvioActor));
 	FDetailWidgetRow& ValueRow = DetailPropertyRow.CustomWidget();
+
+	AddCopyNameToClipboardAction(ValueRow, Attribute);
 
 	PropertyHandle->SetPropertyDisplayName(FText::FromString(Attribute->DisplayName));
 	TSharedPtr<SWidget> NameWidget;
@@ -437,6 +454,8 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 		FString ArrayGroupKey = Attribute->ImportPath + TEXT(".") + Attribute->Name;
 		IDetailGroup& ArrayHeader = Group.AddGroup(*ArrayGroupKey, FText::GetEmpty());
 		FDetailWidgetRow& Row = ArrayHeader.HeaderRow();
+
+		AddCopyNameToClipboardAction(Row, Attribute);
 		HeaderPropertyRow->OverrideResetToDefault(ResetToDefaultOverride(Attribute, VitruvioActor));
 
 		FDetailWidgetRow DefaultWidgetsRow;
