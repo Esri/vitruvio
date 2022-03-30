@@ -74,7 +74,7 @@ bool HasAnyVitruvioActor(TArray<AActor*> Actors)
 	});
 }
 
-TArray<AActor*> GetViableVitruvioActorsInHiararchy(AActor* Root)
+TArray<AActor*> GetViableVitruvioActorsInHierarchy(AActor* Root)
 {
 	TArray<AActor*> ViableActors;
 	if (CanConvertToVitruvioActor(Root))
@@ -90,7 +90,7 @@ TArray<AActor*> GetViableVitruvioActorsInHiararchy(AActor* Root)
 
 		for (AActor* Child : ChildActors)
 		{
-			ViableActors.Append(GetViableVitruvioActorsInHiararchy(Child));
+			ViableActors.Append(GetViableVitruvioActorsInHierarchy(Child));
 		}
 	}
 
@@ -145,7 +145,7 @@ void SelectAllViableVitruvioActors(TArray<AActor*> Actors)
 	GEditor->SelectNone(false, true, false);
 	for (AActor* SelectedActor : Actors)
 	{
-		TArray<AActor*> NewSelection = GetViableVitruvioActorsInHiararchy(SelectedActor);
+		TArray<AActor*> NewSelection = GetViableVitruvioActorsInHierarchy(SelectedActor);
 		for (AActor* ActorToSelect : NewSelection)
 		{
 			GEditor->SelectActor(ActorToSelect, true, false);
