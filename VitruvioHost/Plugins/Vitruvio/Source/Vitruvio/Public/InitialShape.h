@@ -154,6 +154,7 @@ public:
 
 	virtual void Initialize(UVitruvioComponent* Component) override;
 	virtual void Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon) override;
+	void Initialize(UVitruvioComponent* Component, UStaticMesh* StaticMesh);
 	virtual bool CanConstructFrom(AActor* Owner) const override;
 	virtual void SetHidden(bool bHidden) override;
 
@@ -179,6 +180,7 @@ public:
 
 	virtual void Initialize(UVitruvioComponent* Component) override;
 	virtual void Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon) override;
+	void Initialize(UVitruvioComponent* Component, const TArray<FSplinePoint>& SplinePoints);
 	virtual bool CanConstructFrom(AActor* Owner) const override;
 
 #if WITH_EDITOR

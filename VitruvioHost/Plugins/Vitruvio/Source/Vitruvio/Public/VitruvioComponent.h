@@ -181,6 +181,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	void SetAttributes(const TMap<FString, FString>& NewAttributes);
 
+	/**
+	 * Sets the given static mesh as initial shape. Regenerates the model if generate automatically is set to true.
+	 *
+	 * @param StaticMesh the new initial shape static mesh.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	void SetMeshInitialShape(UStaticMesh* StaticMesh);
+
+	/**
+	 * Sets the given spline points as initial shape. Regenerates the model if generate automatically is set to true.
+	 *
+	 * @param SplinePoints the new initial shape spline points.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	void SetSplineInitialShape(const TArray<FSplinePoint>& SplinePoints);
+
 	/** Returns the attributes used for generation. */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	const TMap<FString, URuleAttribute*>& GetAttributes() const;
