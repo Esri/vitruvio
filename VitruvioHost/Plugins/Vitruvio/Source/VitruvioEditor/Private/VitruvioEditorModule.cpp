@@ -104,7 +104,6 @@ void AssignRulePackage(TArray<AActor*> Actors)
 	{
 		URulePackage* Rpk = SelectedRpk.GetValue();
 
-		UVitruvioComponent* Component = nullptr;
 		for (AActor* Actor : Actors)
 		{
 			AActor* OldAttachParent = Actor->GetAttachParentActor();
