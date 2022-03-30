@@ -234,6 +234,11 @@ void UVitruvioComponent::SetRpk(URulePackage* RulePackage)
 	Attributes.Empty();
 	bAttributesReady = false;
 	bNotifyAttributeChange = true;
+
+	if (GenerateAutomatically)
+	{
+		EvaluateRuleAttributes(true);
+	}
 }
 
 bool UVitruvioComponent::SetStringAttribute(const FString& Name, const FString& Value)
