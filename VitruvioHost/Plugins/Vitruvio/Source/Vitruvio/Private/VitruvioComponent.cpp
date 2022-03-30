@@ -297,6 +297,46 @@ void UVitruvioComponent::SetAttributes(const TMap<FString, FString>& NewAttribut
 	}
 }
 
+void UVitruvioComponent::SetMeshInitialShape(UStaticMesh* StaticMesh)
+{
+	if (InitialShape)
+	{
+		InitialShape->Uninitialize();
+		InitialShape->Rename(nullptr, GetTransientPackage()); // Remove from Owner
+	}
+
+	UStaticMeshInitialShape* NewInitialShape =
+		NewObject<UStaticMeshInitialShape>(GetOwner(), UStaticMeshInitialShape::StaticClass(), NAME_None, RF_Transient | RF_TextExportTransient);
+	NewInitialShape->Initialize(this, StaticMesh);
+
+	InitialShape = NewInitialShape;
+
+	if (GenerateAutomatically)
+	{
+		EvaluateRuleAttributes(true);
+	}
+}
+
+void UVitruvioComponent::SetSplineInitialShape(const TArray<FSplinePoint>& SplinePoints)
+{
+	if (InitialShape)
+	{
+		InitialShape->Uninitialize();
+		InitialShape->Rename(nullptr, GetTransientPackage()); // Remove from Owner
+	}
+
+	USplineInitialShape* NewInitialShape =
+		NewObject<USplineInitialShape>(GetOwner(), USplineInitialShape::StaticClass(), NAME_None, RF_Transient | RF_TextExportTransient);
+	NewInitialShape->Initialize(this, SplinePoints);
+
+	InitialShape = NewInitialShape;
+
+	if (GenerateAutomatically)
+	{
+		EvaluateRuleAttributes(true);
+	}
+}
+
 const TMap<FString, URuleAttribute*>& UVitruvioComponent::GetAttributes() const
 {
 	return Attributes;

@@ -485,13 +485,16 @@ void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component)
 
 void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon)
 {
+	Initialize(Component, CreateStaticMeshFromInitialShapePolygon(InitialShapePolygon));
+}
+
+void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component, UStaticMesh* StaticMesh)
+{
 	AActor* Owner = Component->GetOwner();
 	if (!Owner)
 	{
 		return;
 	}
-
-	UStaticMesh* StaticMesh = CreateStaticMeshFromInitialShapePolygon(InitialShapePolygon);
 
 	UStaticMeshComponent* AttachedStaticMeshComponent = AttachComponent<UStaticMeshComponent>(Owner, TEXT("InitialShapeStaticMesh"));
 	AttachedStaticMeshComponent->SetStaticMesh(StaticMesh);
@@ -608,13 +611,17 @@ void USplineInitialShape::Initialize(UVitruvioComponent* Component)
 
 void USplineInitialShape::Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon)
 {
+	TArray<FSplinePoint> SplinePoints = CreateSplinePointsFromInitialShapePolygon(InitialShapePolygon);
+}
+
+void USplineInitialShape::Initialize(UVitruvioComponent* Component, const TArray<FSplinePoint>& SplinePoints)
+{
 	AActor* Owner = Component->GetOwner();
 	if (!Owner)
 	{
 		return;
 	}
 
-	TArray<FSplinePoint> SplinePoints = CreateSplinePointsFromInitialShapePolygon(InitialShapePolygon);
 	const auto UniqueName = MakeUniqueObjectName(Owner, USplineComponent::StaticClass(), TEXT("InitialShapeSpline"));
 	USplineComponent* Spline = AttachComponent<USplineComponent>(Owner, UniqueName.ToString());
 	Spline->ClearSplinePoints(true);
