@@ -126,6 +126,12 @@ public:
 		return false;
 	}
 
+	virtual USceneComponent* CopySceneComponent(AActor* OldActor, AActor* NewActor) const
+	{
+		unimplemented();
+		return nullptr;
+	}
+
 	virtual void SetHidden(bool bHidden) {}
 
 	virtual bool CanDestroy();
@@ -156,6 +162,7 @@ public:
 	virtual void Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon) override;
 	void Initialize(UVitruvioComponent* Component, UStaticMesh* StaticMesh);
 	virtual bool CanConstructFrom(AActor* Owner) const override;
+	virtual USceneComponent* CopySceneComponent(AActor* OldActor, AActor* NewActor) const override;
 	virtual void SetHidden(bool bHidden) override;
 
 #if WITH_EDITOR
@@ -182,6 +189,7 @@ public:
 	virtual void Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon) override;
 	void Initialize(UVitruvioComponent* Component, const TArray<FSplinePoint>& SplinePoints);
 	virtual bool CanConstructFrom(AActor* Owner) const override;
+	virtual USceneComponent* CopySceneComponent(AActor* OldActor, AActor* NewActor) const override;
 
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent) override;
