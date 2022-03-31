@@ -111,10 +111,11 @@ public:
 	 *
 	 * @param Name The name of the attribute to set.
 	 * @param Value The new value for the attribute.
+	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
 	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	bool SetStringAttribute(const FString& Name, const FString& Value);
+	void SetStringAttribute(const FString& Name, const FString& Value, bool bAddIfNonExisting = false);
 
 	/**
 	 * Access String attribute values used for generation.
@@ -132,10 +133,11 @@ public:
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Value The new value for the attribute.
+	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
 	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	bool SetBoolAttribute(const FString& Name, bool Value);
+	void SetBoolAttribute(const FString& Name, bool Value, bool bAddIfNonExisting = false);
 
 	/**
 	 * Access bool attribute values used for generation.
@@ -153,10 +155,11 @@ public:
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Value The new value for the attribute.
+	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
 	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	bool SetFloatAttribute(const FString& Name, float Value);
+	void SetFloatAttribute(const FString& Name, float Value, bool bAddIfNonExisting = false);
 
 	/**
 	 * Access float attribute values used for generation.
@@ -177,9 +180,10 @@ public:
 	 * "true" for the bool true <br>
 	 *
 	 * @param NewAttributes the attributes to be set
+	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	void SetAttributes(const TMap<FString, FString>& NewAttributes);
+	void SetAttributes(const TMap<FString, FString>& NewAttributes, bool bAddIfNonExisting = false);
 
 	/**
 	 * Sets the given static mesh as initial shape. Regenerates the model if generate automatically is set to true.
