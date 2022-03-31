@@ -28,6 +28,7 @@
 #include "Engine/CollisionProfile.h"
 #include "Engine/StaticMeshActor.h"
 #include "ObjectEditorUtils.h"
+#include "PRTUtils.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "PolygonWindings.h"
 #include "StaticMeshAttributes.h"
@@ -75,29 +76,42 @@ bool GetAttribute(const TMap<FString, URuleAttribute*>& Attributes, const FStrin
 }
 
 template <typename A, typename T>
-bool SetAttribute(UVitruvioComponent* VitruvioComponent, TMap<FString, URuleAttribute*>& Attributes, const FString& Name, const T& Value)
+void SetAttribute(UVitruvioComponent* VitruvioComponent, TMap<FString, URuleAttribute*>& Attributes, const FString& Name, const T& Value,
+				  bool bAddIfNonExisting)
 {
 	URuleAttribute** FoundAttribute = Attributes.Find(Name);
-	if (!FoundAttribute)
+	if (!FoundAttribute && !bAddIfNonExisting)
 	{
-		return false;
+		return;
 	}
 
-	URuleAttribute* Attribute = *FoundAttribute;
+	URuleAttribute* Attribute = FoundAttribute ? *FoundAttribute : nullptr;
 	A* TAttribute = Cast<A>(Attribute);
 	if (!TAttribute)
 	{
-		return false;
+		if (!bAddIfNonExisting)
+		{
+			return;
+		}
+
+		// Create new attribute if it does not exist and bAddIfNonExisting is true
+		A* RuleAttribute = NewObject<A>(VitruvioComponent->GetOuter());
+		RuleAttribute->Name = Name;
+		RuleAttribute->DisplayName = WCHAR_TO_TCHAR(prtu::removeImport(prtu::removeStyle(*Name)).c_str());
+		RuleAttribute->ImportPath = WCHAR_TO_TCHAR(prtu::getFullImportPath(*Name).c_str());
+		RuleAttribute->Value = Value;
+
+		Attributes.Add(Name, RuleAttribute);
+
+		TAttribute = RuleAttribute;
 	}
 
 	TAttribute->Value = Value;
 	TAttribute->bUserSet = true;
-	if (VitruvioComponent->GenerateAutomatically && VitruvioComponent->IsReadyToGenerate())
+	if (VitruvioComponent->GenerateAutomatically)
 	{
 		VitruvioComponent->EvaluateRuleAttributes(true);
 	}
-
-	return true;
 }
 
 bool IsOuterOf(UObject* Inner, UObject* Outer)
@@ -241,9 +255,9 @@ void UVitruvioComponent::SetRpk(URulePackage* RulePackage)
 	}
 }
 
-bool UVitruvioComponent::SetStringAttribute(const FString& Name, const FString& Value)
+void UVitruvioComponent::SetStringAttribute(const FString& Name, const FString& Value, bool bAddIfNonExisting)
 {
-	return SetAttribute<UStringAttribute, FString>(this, this->Attributes, Name, Value);
+	SetAttribute<UStringAttribute, FString>(this, this->Attributes, Name, Value, bAddIfNonExisting);
 }
 
 bool UVitruvioComponent::GetStringAttribute(const FString& Name, FString& OutValue) const
@@ -251,9 +265,9 @@ bool UVitruvioComponent::GetStringAttribute(const FString& Name, FString& OutVal
 	return GetAttribute<UStringAttribute, FString>(this->Attributes, Name, OutValue);
 }
 
-bool UVitruvioComponent::SetBoolAttribute(const FString& Name, bool Value)
+void UVitruvioComponent::SetBoolAttribute(const FString& Name, bool Value, bool bAddIfNonExisting)
 {
-	return SetAttribute<UBoolAttribute, bool>(this, this->Attributes, Name, Value);
+	SetAttribute<UBoolAttribute, bool>(this, this->Attributes, Name, Value, bAddIfNonExisting);
 }
 
 bool UVitruvioComponent::GetBoolAttribute(const FString& Name, bool& OutValue) const
@@ -261,9 +275,9 @@ bool UVitruvioComponent::GetBoolAttribute(const FString& Name, bool& OutValue) c
 	return GetAttribute<UBoolAttribute, bool>(this->Attributes, Name, OutValue);
 }
 
-bool UVitruvioComponent::SetFloatAttribute(const FString& Name, float Value)
+void UVitruvioComponent::SetFloatAttribute(const FString& Name, float Value, bool bAddIfNonExisting)
 {
-	return SetAttribute<UFloatAttribute, float>(this, this->Attributes, Name, Value);
+	SetAttribute<UFloatAttribute, float>(this, this->Attributes, Name, Value, bAddIfNonExisting);
 }
 
 bool UVitruvioComponent::GetFloatAttribute(const FString& Name, float& OutValue) const
@@ -271,7 +285,7 @@ bool UVitruvioComponent::GetFloatAttribute(const FString& Name, float& OutValue)
 	return GetAttribute<UFloatAttribute, float>(this->Attributes, Name, OutValue);
 }
 
-void UVitruvioComponent::SetAttributes(const TMap<FString, FString>& NewAttributes)
+void UVitruvioComponent::SetAttributes(const TMap<FString, FString>& NewAttributes, bool bAddIfNonExisting)
 {
 	const bool bOldGenerateAutomatically = GenerateAutomatically;
 	GenerateAutomatically = false;
@@ -283,20 +297,20 @@ void UVitruvioComponent::SetAttributes(const TMap<FString, FString>& NewAttribut
 
 		if (FCString::IsNumeric(*Value))
 		{
-			SetFloatAttribute(Key, FCString::Atof(*Value));
+			SetFloatAttribute(Key, FCString::Atof(*Value), bAddIfNonExisting);
 		}
 		else if (Value == "true" || Value == "false")
 		{
-			SetBoolAttribute(Key, Value == "true");
+			SetBoolAttribute(Key, Value == "true", bAddIfNonExisting);
 		}
 		else
 		{
-			SetStringAttribute(Key, Value);
+			SetStringAttribute(Key, Value, bAddIfNonExisting);
 		}
 	}
 
 	GenerateAutomatically = bOldGenerateAutomatically;
-	if (GenerateAutomatically && IsReadyToGenerate())
+	if (GenerateAutomatically && HasValidInputData())
 	{
 		EvaluateRuleAttributes(true);
 	}
