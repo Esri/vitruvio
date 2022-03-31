@@ -512,6 +512,14 @@ bool UStaticMeshInitialShape::CanConstructFrom(AActor* Owner) const
 	return false;
 }
 
+USceneComponent* UStaticMeshInitialShape::CopySceneComponent(AActor* OldActor, AActor* NewActor) const
+{
+	const UStaticMeshComponent* OldStaticMeshComponent = OldActor->FindComponentByClass<UStaticMeshComponent>();
+	UStaticMeshComponent* NewStaticMeshComponent = AttachComponent<UStaticMeshComponent>(NewActor, TEXT("InitialShapeSpline"));
+	NewStaticMeshComponent->SetStaticMesh(OldStaticMeshComponent->GetStaticMesh());
+	return NewStaticMeshComponent;
+}
+
 void UStaticMeshInitialShape::SetHidden(bool bHidden)
 {
 	InitialShapeSceneComponent->SetVisibility(!bHidden, false);
@@ -526,6 +534,15 @@ bool USplineInitialShape::CanConstructFrom(AActor* Owner) const
 		return SplineComponent != nullptr && SplineComponent->GetNumberOfSplinePoints() > 0;
 	}
 	return false;
+}
+
+USceneComponent* USplineInitialShape::CopySceneComponent(AActor* OldActor, AActor* NewActor) const
+{
+	const USplineComponent* OldSplineComponent = OldActor->FindComponentByClass<USplineComponent>();
+	USplineComponent* NewSplineComponent = AttachComponent<USplineComponent>(NewActor, TEXT("InitialShapeStaticMesh"));
+	NewSplineComponent->SetClosedLoop(true);
+	NewSplineComponent->SplineCurves = OldSplineComponent->SplineCurves;
+	return NewSplineComponent;
 }
 #if WITH_EDITOR
 
