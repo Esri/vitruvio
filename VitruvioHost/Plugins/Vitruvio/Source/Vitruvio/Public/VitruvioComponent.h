@@ -132,9 +132,9 @@ public:
 							UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
-	 * Access String attribute values used for generation.
+	 * Access string attribute values used for generation.
 	 *
-	 * @param Name The name of the float attribute.
+	 * @param Name The name of the string attribute.
 	 * @param OutValue Set to the attributes value if it exists or to an empty String otherwise.
 	 * @returns True if the String attribute with the given Name exists or false otherwise.
 	 */
