@@ -108,10 +108,7 @@ void SetAttribute(UVitruvioComponent* VitruvioComponent, TMap<FString, URuleAttr
 
 	TAttribute->Value = Value;
 	TAttribute->bUserSet = true;
-	if (VitruvioComponent->GenerateAutomatically)
-	{
-		VitruvioComponent->EvaluateRuleAttributes(true);
-	}
+	VitruvioComponent->EvaluateRuleAttributes(VitruvioComponent->GenerateAutomatically, CallbackProxy);
 }
 
 bool IsOuterOf(UObject* Inner, UObject* Outer)
@@ -249,10 +246,8 @@ void UVitruvioComponent::SetRpk(URulePackage* RulePackage, UGenerateCompletedCal
 	bAttributesReady = false;
 	bNotifyAttributeChange = true;
 
-	if (GenerateAutomatically)
-	{
-		EvaluateRuleAttributes(true);
-	}
+	RemoveGeneratedMeshes();
+	EvaluateRuleAttributes(GenerateAutomatically, CallbackProxy);
 }
 
 void UVitruvioComponent::SetStringAttribute(const FString& Name, const FString& Value, bool bAddIfNonExisting,
@@ -312,9 +307,9 @@ void UVitruvioComponent::SetAttributes(const TMap<FString, FString>& NewAttribut
 	}
 
 	GenerateAutomatically = bOldGenerateAutomatically;
-	if (GenerateAutomatically && HasValidInputData())
+	if (HasValidInputData())
 	{
-		EvaluateRuleAttributes(true);
+		EvaluateRuleAttributes(GenerateAutomatically);
 	}
 }
 
@@ -332,10 +327,7 @@ void UVitruvioComponent::SetMeshInitialShape(UStaticMesh* StaticMesh, UGenerateC
 
 	InitialShape = NewInitialShape;
 
-	if (GenerateAutomatically)
-	{
-		EvaluateRuleAttributes(true);
-	}
+	EvaluateRuleAttributes(GenerateAutomatically, CallbackProxy);
 }
 
 void UVitruvioComponent::SetSplineInitialShape(const TArray<FSplinePoint>& SplinePoints, UGenerateCompletedCallbackProxy* CallbackProxy)
@@ -352,10 +344,7 @@ void UVitruvioComponent::SetSplineInitialShape(const TArray<FSplinePoint>& Splin
 
 	InitialShape = NewInitialShape;
 
-	if (GenerateAutomatically)
-	{
-		EvaluateRuleAttributes(true);
-	}
+	EvaluateRuleAttributes(GenerateAutomatically, CallbackProxy);
 }
 
 const TMap<FString, URuleAttribute*>& UVitruvioComponent::GetAttributes() const
@@ -838,8 +827,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 
 	if (HasValidInputData() && (!bAttributesReady || bIsAttributeUndo))
 	{
-		// Force regeneration on attribute undo
-		EvaluateRuleAttributes(bIsAttributeUndo);
+		EvaluateRuleAttributes(true);
 	}
 }
 
