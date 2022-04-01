@@ -60,6 +60,7 @@ bool GetAttribute(const TMap<FString, URuleAttribute*>& Attributes, const FStrin
 	URuleAttribute const* const* FoundAttribute = Attributes.Find(Name);
 	if (!FoundAttribute)
 	{
+		OutValue = {};
 		return false;
 	}
 
@@ -67,10 +68,18 @@ bool GetAttribute(const TMap<FString, URuleAttribute*>& Attributes, const FStrin
 	A const* TAttribute = Cast<A>(Attribute);
 	if (!TAttribute)
 	{
+		OutValue = {};
 		return false;
 	}
 
-	OutValue = TAttribute->Value;
+	if constexpr (TIsTArray<T>::Value)
+	{
+		OutValue = TAttribute->Values;
+	}
+	else
+	{
+		OutValue = TAttribute->Value;
+	}
 
 	return true;
 }
@@ -99,14 +108,21 @@ void SetAttribute(UVitruvioComponent* VitruvioComponent, TMap<FString, URuleAttr
 		RuleAttribute->Name = Name;
 		RuleAttribute->DisplayName = WCHAR_TO_TCHAR(prtu::removeImport(prtu::removeStyle(*Name)).c_str());
 		RuleAttribute->ImportPath = WCHAR_TO_TCHAR(prtu::getFullImportPath(*Name).c_str());
-		RuleAttribute->Value = Value;
 
 		Attributes.Add(Name, RuleAttribute);
 
 		TAttribute = RuleAttribute;
 	}
 
-	TAttribute->Value = Value;
+	if constexpr (TIsTArray<T>::Value)
+	{
+		TAttribute->Values = Value;
+	}
+	else
+	{
+		TAttribute->Value = Value;
+	}
+
 	TAttribute->bUserSet = true;
 	VitruvioComponent->EvaluateRuleAttributes(VitruvioComponent->GenerateAutomatically, CallbackProxy);
 }
@@ -261,6 +277,17 @@ bool UVitruvioComponent::GetStringAttribute(const FString& Name, FString& OutVal
 	return GetAttribute<UStringAttribute, FString>(this->Attributes, Name, OutValue);
 }
 
+void UVitruvioComponent::SetStringArrayAttribute(const FString& Name, const TArray<FString>& Values, bool bAddIfNonExisting,
+												 UGenerateCompletedCallbackProxy* CallbackProxy)
+{
+	SetAttribute<UStringArrayAttribute, TArray<FString>>(this, this->Attributes, Name, Values, bAddIfNonExisting, CallbackProxy);
+}
+
+bool UVitruvioComponent::GetStringArrayAttribute(const FString& Name, TArray<FString>& OutValue) const
+{
+	return GetAttribute<UStringArrayAttribute, TArray<FString>>(this->Attributes, Name, OutValue);
+}
+
 void UVitruvioComponent::SetBoolAttribute(const FString& Name, bool Value, bool bAddIfNonExisting, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
 	SetAttribute<UBoolAttribute, bool>(this, this->Attributes, Name, Value, bAddIfNonExisting, CallbackProxy);
@@ -271,6 +298,17 @@ bool UVitruvioComponent::GetBoolAttribute(const FString& Name, bool& OutValue) c
 	return GetAttribute<UBoolAttribute, bool>(this->Attributes, Name, OutValue);
 }
 
+void UVitruvioComponent::SetBoolArrayAttribute(const FString& Name, const TArray<bool>& Values, bool bAddIfNonExisting,
+											   UGenerateCompletedCallbackProxy* CallbackProxy)
+{
+	SetAttribute<UBoolArrayAttribute, TArray<bool>>(this, this->Attributes, Name, Values, bAddIfNonExisting, CallbackProxy);
+}
+
+bool UVitruvioComponent::GetBoolArrayAttribute(const FString& Name, TArray<bool>& OutValue) const
+{
+	return GetAttribute<UBoolArrayAttribute, TArray<bool>>(this->Attributes, Name, OutValue);
+}
+
 void UVitruvioComponent::SetFloatAttribute(const FString& Name, double Value, bool bAddIfNonExisting, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
 	SetAttribute<UFloatAttribute, double>(this, this->Attributes, Name, Value, bAddIfNonExisting, CallbackProxy);
@@ -279,6 +317,17 @@ void UVitruvioComponent::SetFloatAttribute(const FString& Name, double Value, bo
 bool UVitruvioComponent::GetFloatAttribute(const FString& Name, double& OutValue) const
 {
 	return GetAttribute<UFloatAttribute, double>(this->Attributes, Name, OutValue);
+}
+
+void UVitruvioComponent::SetFloatArrayAttribute(const FString& Name, const TArray<double>& Values, bool bAddIfNonExisting,
+												UGenerateCompletedCallbackProxy* CallbackProxy)
+{
+	SetAttribute<UFloatArrayAttribute, TArray<double>>(this, this->Attributes, Name, Values, bAddIfNonExisting, CallbackProxy);
+}
+
+bool UVitruvioComponent::GetFloatArrayAttribute(const FString& Name, TArray<double>& OutValue) const
+{
+	return GetAttribute<UFloatArrayAttribute, TArray<double>>(this->Attributes, Name, OutValue);
 }
 
 void UVitruvioComponent::SetAttributes(const TMap<FString, FString>& NewAttributes, bool bAddIfNonExisting,

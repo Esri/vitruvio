@@ -72,6 +72,30 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetBoolAttribu
 	return Proxy;
 }
 
+UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetFloatArrayAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
+																						 const TArray<double>& Values, bool bAddIfNonExisting)
+{
+	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
+	VitruvioComponent->SetFloatArrayAttribute(Name, Values, bAddIfNonExisting, Proxy);
+	return Proxy;
+}
+
+UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetStringArrayAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
+																						  const TArray<FString>& Values, bool bAddIfNonExisting)
+{
+	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
+	VitruvioComponent->SetStringArrayAttribute(Name, Values, bAddIfNonExisting, Proxy);
+	return Proxy;
+}
+
+UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetBoolArrayAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
+																						const TArray<bool>& Values, bool bAddIfNonExisting)
+{
+	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
+	VitruvioComponent->SetBoolArrayAttribute(Name, Values, bAddIfNonExisting, Proxy);
+	return Proxy;
+}
+
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetAttributes(UVitruvioComponent* VitruvioComponent,
 																				const TMap<FString, FString>& NewAttributes, bool bAddIfNonExisting)
 {
