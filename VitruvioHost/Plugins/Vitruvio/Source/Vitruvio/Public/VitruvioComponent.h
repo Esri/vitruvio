@@ -245,6 +245,17 @@ public:
 	 */
 	void EvaluateRuleAttributes(bool ForceRegenerate = false, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGenerateCompletedDelegate);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttributesEvaluatedDelegate);
+
+	/** Called after attributes have been evaluated. */
+	UPROPERTY(BlueprintAssignable, Category = "Vitruvio")
+	FOnAttributesEvaluatedDelegate OnAttributesEvaluated;
+
+	/** Called after generate has completed. */
+	UPROPERTY(BlueprintAssignable, Category = "Vitruvio")
+	FGenerateCompletedDelegate OnGenerateCompleted;
+
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnHierarchyChanged, UVitruvioComponent*);
 	static FOnHierarchyChanged OnHierarchyChanged;
 
