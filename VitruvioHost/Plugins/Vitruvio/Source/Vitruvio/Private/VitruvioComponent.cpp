@@ -77,7 +77,7 @@ bool GetAttribute(const TMap<FString, URuleAttribute*>& Attributes, const FStrin
 
 template <typename A, typename T>
 void SetAttribute(UVitruvioComponent* VitruvioComponent, TMap<FString, URuleAttribute*>& Attributes, const FString& Name, const T& Value,
-				  bool bAddIfNonExisting)
+				  bool bAddIfNonExisting, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
 	URuleAttribute** FoundAttribute = Attributes.Find(Name);
 	if (!FoundAttribute && !bAddIfNonExisting)
@@ -236,7 +236,7 @@ bool UVitruvioComponent::IsReadyToGenerate() const
 	return HasValidInputData() && bAttributesReady;
 }
 
-void UVitruvioComponent::SetRpk(URulePackage* RulePackage)
+void UVitruvioComponent::SetRpk(URulePackage* RulePackage, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
 	if (this->Rpk == RulePackage)
 	{
@@ -255,9 +255,10 @@ void UVitruvioComponent::SetRpk(URulePackage* RulePackage)
 	}
 }
 
-void UVitruvioComponent::SetStringAttribute(const FString& Name, const FString& Value, bool bAddIfNonExisting)
+void UVitruvioComponent::SetStringAttribute(const FString& Name, const FString& Value, bool bAddIfNonExisting,
+											UGenerateCompletedCallbackProxy* CallbackProxy)
 {
-	SetAttribute<UStringAttribute, FString>(this, this->Attributes, Name, Value, bAddIfNonExisting);
+	SetAttribute<UStringAttribute, FString>(this, this->Attributes, Name, Value, bAddIfNonExisting, CallbackProxy);
 }
 
 bool UVitruvioComponent::GetStringAttribute(const FString& Name, FString& OutValue) const
@@ -265,9 +266,9 @@ bool UVitruvioComponent::GetStringAttribute(const FString& Name, FString& OutVal
 	return GetAttribute<UStringAttribute, FString>(this->Attributes, Name, OutValue);
 }
 
-void UVitruvioComponent::SetBoolAttribute(const FString& Name, bool Value, bool bAddIfNonExisting)
+void UVitruvioComponent::SetBoolAttribute(const FString& Name, bool Value, bool bAddIfNonExisting, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
-	SetAttribute<UBoolAttribute, bool>(this, this->Attributes, Name, Value, bAddIfNonExisting);
+	SetAttribute<UBoolAttribute, bool>(this, this->Attributes, Name, Value, bAddIfNonExisting, CallbackProxy);
 }
 
 bool UVitruvioComponent::GetBoolAttribute(const FString& Name, bool& OutValue) const
@@ -275,9 +276,9 @@ bool UVitruvioComponent::GetBoolAttribute(const FString& Name, bool& OutValue) c
 	return GetAttribute<UBoolAttribute, bool>(this->Attributes, Name, OutValue);
 }
 
-void UVitruvioComponent::SetFloatAttribute(const FString& Name, float Value, bool bAddIfNonExisting)
+void UVitruvioComponent::SetFloatAttribute(const FString& Name, float Value, bool bAddIfNonExisting, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
-	SetAttribute<UFloatAttribute, float>(this, this->Attributes, Name, Value, bAddIfNonExisting);
+	SetAttribute<UFloatAttribute, float>(this, this->Attributes, Name, Value, bAddIfNonExisting, CallbackProxy);
 }
 
 bool UVitruvioComponent::GetFloatAttribute(const FString& Name, float& OutValue) const
@@ -285,7 +286,8 @@ bool UVitruvioComponent::GetFloatAttribute(const FString& Name, float& OutValue)
 	return GetAttribute<UFloatAttribute, float>(this->Attributes, Name, OutValue);
 }
 
-void UVitruvioComponent::SetAttributes(const TMap<FString, FString>& NewAttributes, bool bAddIfNonExisting)
+void UVitruvioComponent::SetAttributes(const TMap<FString, FString>& NewAttributes, bool bAddIfNonExisting,
+									   UGenerateCompletedCallbackProxy* CallbackProxy)
 {
 	const bool bOldGenerateAutomatically = GenerateAutomatically;
 	GenerateAutomatically = false;
@@ -316,7 +318,7 @@ void UVitruvioComponent::SetAttributes(const TMap<FString, FString>& NewAttribut
 	}
 }
 
-void UVitruvioComponent::SetMeshInitialShape(UStaticMesh* StaticMesh)
+void UVitruvioComponent::SetMeshInitialShape(UStaticMesh* StaticMesh, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
 	if (InitialShape)
 	{
@@ -336,7 +338,7 @@ void UVitruvioComponent::SetMeshInitialShape(UStaticMesh* StaticMesh)
 	}
 }
 
-void UVitruvioComponent::SetSplineInitialShape(const TArray<FSplinePoint>& SplinePoints)
+void UVitruvioComponent::SetSplineInitialShape(const TArray<FSplinePoint>& SplinePoints, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
 	if (InitialShape)
 	{
@@ -459,11 +461,11 @@ void UVitruvioComponent::ProcessGenerateQueue()
 	if (!GenerateQueue.IsEmpty())
 	{
 		// Get from queue and build meshes
-		FGenerateResultDescription Result;
+		FGenerateQueueItem Result;
 		GenerateQueue.Dequeue(Result);
 
 		FConvertedGenerateResult ConvertedResult =
-			BuildResult(Result, VitruvioModule::Get().GetMaterialCache(), VitruvioModule::Get().GetTextureCache());
+			BuildResult(Result.GenerateResultDescription, VitruvioModule::Get().GetMaterialCache(), VitruvioModule::Get().GetTextureCache());
 
 		Reports = ConvertedResult.Reports;
 
@@ -553,6 +555,11 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		HasGeneratedMesh = true;
 
 		InitialShape->SetHidden(HideAfterGeneration);
+
+		if (Result.CallbackProxy)
+		{
+			Result.CallbackProxy->OnGenerateCompleted.Broadcast();
+		}
 	}
 }
 
@@ -560,7 +567,7 @@ void UVitruvioComponent::ProcessAttributesEvaluationQueue()
 {
 	if (!AttributesEvaluationQueue.IsEmpty())
 	{
-		FAttributesEvaluation AttributesEvaluation;
+		FAttributesEvaluationQueueItem AttributesEvaluation;
 		AttributesEvaluationQueue.Dequeue(AttributesEvaluation);
 
 		AttributesEvaluation.AttributeMap->UpdateUnrealAttributeMap(Attributes, this);
@@ -568,9 +575,14 @@ void UVitruvioComponent::ProcessAttributesEvaluationQueue()
 		bAttributesReady = true;
 		bNotifyAttributeChange = true;
 
+		if (AttributesEvaluation.CallbackProxy)
+		{
+			AttributesEvaluation.CallbackProxy->OnAttributesEvaluated.Broadcast();
+		}
+
 		if (GenerateAutomatically || AttributesEvaluation.bForceRegenerate)
 		{
-			Generate();
+			Generate(AttributesEvaluation.CallbackProxy);
 		}
 	}
 }
@@ -670,13 +682,13 @@ void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 #endif
 }
 
-void UVitruvioComponent::Generate()
+void UVitruvioComponent::Generate(UGenerateCompletedCallbackProxy* CallbackProxy)
 {
 	// If the initial shape and RPK are valid but we have not yet loaded the attributes we load the attributes
 	// and regenerate afterwards
 	if (HasValidInputData() && !bAttributesReady)
 	{
-		EvaluateRuleAttributes(true);
+		EvaluateRuleAttributes(true, CallbackProxy);
 		return;
 	}
 
@@ -704,7 +716,7 @@ void UVitruvioComponent::Generate()
 		GenerateToken = GenerateResult.Token;
 
 		// clang-format off
-		GenerateResult.Result.Next([this](const FGenerateResult::ResultType& Result)
+		GenerateResult.Result.Next([this, CallbackProxy](const FGenerateResult::ResultType& Result)
 		{
 			FScopeLock Lock(&Result.Token->Lock);
 
@@ -715,11 +727,11 @@ void UVitruvioComponent::Generate()
 			GenerateToken.Reset();
 			if (Result.Token->IsRegenerateRequested())
 			{
-				Generate();
+				Generate(CallbackProxy);
 			}
 			else
 			{
-				GenerateQueue.Enqueue(Result.Value);
+				GenerateQueue.Enqueue({Result.Value, CallbackProxy});
 			}
 		});
 		// clang-format on
@@ -842,7 +854,7 @@ void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& T
 
 #endif // WITH_EDITOR
 
-void UVitruvioComponent::EvaluateRuleAttributes(bool ForceRegenerate)
+void UVitruvioComponent::EvaluateRuleAttributes(bool ForceRegenerate, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
 	if (!HasValidInputData())
 	{
@@ -864,7 +876,7 @@ void UVitruvioComponent::EvaluateRuleAttributes(bool ForceRegenerate)
 
 	EvalAttributesInvalidationToken = AttributesResult.Token;
 
-	AttributesResult.Result.Next([this, ForceRegenerate](const FAttributeMapResult::ResultType& Result) {
+	AttributesResult.Result.Next([this, CallbackProxy, ForceRegenerate](const FAttributeMapResult::ResultType& Result) {
 		FScopeLock(&Result.Token->Lock);
 
 		if (Result.Token->IsInvalid())
@@ -875,11 +887,11 @@ void UVitruvioComponent::EvaluateRuleAttributes(bool ForceRegenerate)
 		EvalAttributesInvalidationToken.Reset();
 		if (Result.Token->IsReEvaluateRequested())
 		{
-			EvaluateRuleAttributes(ForceRegenerate);
+			EvaluateRuleAttributes(ForceRegenerate, CallbackProxy);
 		}
 		else
 		{
-			AttributesEvaluationQueue.Enqueue({Result.Value, ForceRegenerate});
+			AttributesEvaluationQueue.Enqueue({Result.Value, ForceRegenerate, CallbackProxy});
 		}
 	});
 }

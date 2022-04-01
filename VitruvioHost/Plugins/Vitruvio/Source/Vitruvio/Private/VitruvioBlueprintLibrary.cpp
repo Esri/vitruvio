@@ -18,22 +18,6 @@
 #include "Engine/StaticMeshActor.h"
 #include "VitruvioActor.h"
 
-namespace
-{
-USceneComponent* CopySceneComponent(AActor* OldActor, AActor* NewActor)
-{
-	for (const auto& InitialShapeClasses : UVitruvioComponent::GetInitialShapesClasses())
-	{
-		UInitialShape* DefaultInitialShape = Cast<UInitialShape>(InitialShapeClasses->GetDefaultObject());
-		if (DefaultInitialShape && DefaultInitialShape->CanConstructFrom(OldActor))
-		{
-			return DefaultInitialShape->CopySceneComponent(OldActor, NewActor);
-		}
-	}
-	return nullptr;
-}
-} // namespace
-
 TArray<AActor*> UVitruvioBlueprintLibrary::GetViableVitruvioActorsInHierarchy(AActor* Root)
 {
 	TArray<AActor*> ViableActors;
@@ -55,37 +39,6 @@ TArray<AActor*> UVitruvioBlueprintLibrary::GetViableVitruvioActorsInHierarchy(AA
 	}
 
 	return ViableActors;
-}
-
-TArray<AVitruvioActor*> UVitruvioBlueprintLibrary::ConvertToVitruvioActor(const TArray<AActor*>& Actors, URulePackage* Rpk)
-{
-	TArray<AVitruvioActor*> ConvertedActors;
-	for (AActor* Actor : Actors)
-	{
-		AActor* OldAttachParent = Actor->GetAttachParentActor();
-		if (CanConvertToVitruvioActor(Actor))
-		{
-			AVitruvioActor* VitruvioActor = Actor->GetWorld()->SpawnActor<AVitruvioActor>(Actor->GetActorLocation(), Actor->GetActorRotation());
-
-			USceneComponent* NewInitialShapeSceneComponent = CopySceneComponent(Actor, VitruvioActor);
-			NewInitialShapeSceneComponent->SetWorldTransform(VitruvioActor->GetTransform());
-
-			UVitruvioComponent* VitruvioComponent = VitruvioActor->VitruvioComponent;
-			VitruvioComponent->SetRpk(Rpk);
-
-			VitruvioActor->Initialize();
-
-			if (OldAttachParent)
-			{
-				VitruvioActor->AttachToActor(OldAttachParent, FAttachmentTransformRules::KeepWorldTransform);
-			}
-
-			Actor->Destroy();
-
-			ConvertedActors.Add(VitruvioActor);
-		}
-	}
-	return ConvertedActors;
 }
 
 bool UVitruvioBlueprintLibrary::CanConvertToVitruvioActor(AActor* Actor)

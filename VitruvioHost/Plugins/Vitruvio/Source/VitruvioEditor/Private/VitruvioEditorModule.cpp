@@ -56,7 +56,8 @@ void AssignRulePackage(TArray<AActor*> Actors)
 
 	if (SelectedRpk.IsSet())
 	{
-		UVitruvioBlueprintLibrary::ConvertToVitruvioActor(Actors, SelectedRpk.GetValue());
+		TArray<AVitruvioActor*> ConvertedActors;
+		UGenerateCompletedCallbackProxy::ConvertToVitruvioActor(Actors, ConvertedActors, SelectedRpk.GetValue());
 	}
 }
 
