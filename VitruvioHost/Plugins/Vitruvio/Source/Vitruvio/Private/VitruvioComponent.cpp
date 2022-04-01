@@ -271,14 +271,14 @@ bool UVitruvioComponent::GetBoolAttribute(const FString& Name, bool& OutValue) c
 	return GetAttribute<UBoolAttribute, bool>(this->Attributes, Name, OutValue);
 }
 
-void UVitruvioComponent::SetFloatAttribute(const FString& Name, float Value, bool bAddIfNonExisting, UGenerateCompletedCallbackProxy* CallbackProxy)
+void UVitruvioComponent::SetFloatAttribute(const FString& Name, double Value, bool bAddIfNonExisting, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
-	SetAttribute<UFloatAttribute, float>(this, this->Attributes, Name, Value, bAddIfNonExisting, CallbackProxy);
+	SetAttribute<UFloatAttribute, double>(this, this->Attributes, Name, Value, bAddIfNonExisting, CallbackProxy);
 }
 
-bool UVitruvioComponent::GetFloatAttribute(const FString& Name, float& OutValue) const
+bool UVitruvioComponent::GetFloatAttribute(const FString& Name, double& OutValue) const
 {
-	return GetAttribute<UFloatAttribute, float>(this->Attributes, Name, OutValue);
+	return GetAttribute<UFloatAttribute, double>(this->Attributes, Name, OutValue);
 }
 
 void UVitruvioComponent::SetAttributes(const TMap<FString, FString>& NewAttributes, bool bAddIfNonExisting,
