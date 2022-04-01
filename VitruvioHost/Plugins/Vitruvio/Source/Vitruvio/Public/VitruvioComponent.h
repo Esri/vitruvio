@@ -20,6 +20,7 @@
 #include "VitruvioModule.h"
 
 #include "CoreMinimal.h"
+#include "GenerateCompletedCallbackProxy.h"
 #include "InitialShape.h"
 #include "VitruvioTypes.h"
 
@@ -40,10 +41,17 @@ struct FConvertedGenerateResult
 	TMap<FString, FReport> Reports;
 };
 
-struct FAttributesEvaluation
+struct FAttributesEvaluationQueueItem
 {
 	FAttributeMapPtr AttributeMap;
 	bool bForceRegenerate;
+	UGenerateCompletedCallbackProxy* CallbackProxy;
+};
+
+struct FGenerateQueueItem
+{
+	FGenerateResultDescription GenerateResultDescription;
+	UGenerateCompletedCallbackProxy* CallbackProxy;
 };
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
@@ -90,8 +98,17 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Vitruvio", meta = (DisplayName = "Generate Collision Mesh"))
 	bool GenerateCollision = true;
 
-	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	void Generate();
+	/**
+	 * Generates a model using the current RPK and initial shapes. If attributes are not loaded yet they will first be evaluated. If no Initial Shape
+	 * or RPK is set this method will do nothing.
+	 */
+	void Generate(UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+
+	/**
+	 * Sets the given Rpk and possibly invalidates already loaded attributes. This will trigger a reevaluation of the attributes and if
+	 * GenerateAutomatically is set to true also regenerates the the model.
+	 */
+	void SetRpk(URulePackage* RulePackage, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/** Returns true if the component has valid input data (initial shape and RPK). */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
@@ -101,10 +118,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	bool IsReadyToGenerate() const;
 
-	/** Sets the given Rpk and possibly invalidates already loaded attributes. */
-	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	void SetRpk(URulePackage* RulePackage);
-
 	/**
 	 * Sets string attributes used for generation.
 	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
@@ -112,10 +125,11 @@ public:
 	 * @param Name The name of the attribute to set.
 	 * @param Value The new value for the attribute.
 	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
+	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	void SetStringAttribute(const FString& Name, const FString& Value, bool bAddIfNonExisting = false);
+	void SetStringAttribute(const FString& Name, const FString& Value, bool bAddIfNonExisting = false,
+							UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Access String attribute values used for generation.
@@ -134,10 +148,10 @@ public:
 	 * @param Name The name of the attribute.
 	 * @param Value The new value for the attribute.
 	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
+	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	void SetBoolAttribute(const FString& Name, bool Value, bool bAddIfNonExisting = false);
+	void SetBoolAttribute(const FString& Name, bool Value, bool bAddIfNonExisting = false, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Access bool attribute values used for generation.
@@ -156,10 +170,11 @@ public:
 	 * @param Name The name of the attribute.
 	 * @param Value The new value for the attribute.
 	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
+	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	void SetFloatAttribute(const FString& Name, float Value, bool bAddIfNonExisting = false);
+	void SetFloatAttribute(const FString& Name, float Value, bool bAddIfNonExisting = false,
+						   UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Access float attribute values used for generation.
@@ -181,25 +196,26 @@ public:
 	 *
 	 * @param NewAttributes the attributes to be set
 	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
+	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	void SetAttributes(const TMap<FString, FString>& NewAttributes, bool bAddIfNonExisting = false);
+	void SetAttributes(const TMap<FString, FString>& NewAttributes, bool bAddIfNonExisting = false,
+					   UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Sets the given static mesh as initial shape. Regenerates the model if generate automatically is set to true.
 	 *
 	 * @param StaticMesh the new initial shape static mesh.
+	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	void SetMeshInitialShape(UStaticMesh* StaticMesh);
+	void SetMeshInitialShape(UStaticMesh* StaticMesh, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Sets the given spline points as initial shape. Regenerates the model if generate automatically is set to true.
 	 *
 	 * @param SplinePoints the new initial shape spline points.
+	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	void SetSplineInitialShape(const TArray<FSplinePoint>& SplinePoints);
+	void SetSplineInitialShape(const TArray<FSplinePoint>& SplinePoints, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/** Returns the attributes used for generation. */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
@@ -231,7 +247,7 @@ public:
 	 *
 	 * @param ForceRegenerate Whether to force regenerate even if generate automatically is set to false
 	 */
-	void EvaluateRuleAttributes(bool ForceRegenerate = false);
+	void EvaluateRuleAttributes(bool ForceRegenerate = false, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnHierarchyChanged, UVitruvioComponent*);
 	static FOnHierarchyChanged OnHierarchyChanged;
@@ -276,8 +292,10 @@ private:
 	UPROPERTY(VisibleAnywhere, DisplayName = "Reports", Category = "Vitruvio")
 	TMap<FString, FReport> Reports;
 
-	TQueue<FGenerateResultDescription> GenerateQueue;
-	TQueue<FAttributesEvaluation> AttributesEvaluationQueue;
+	bool bInGenerateCallback = false;
+
+	TQueue<FGenerateQueueItem> GenerateQueue;
+	TQueue<FAttributesEvaluationQueueItem> AttributesEvaluationQueue;
 
 	FGenerateResult::FTokenPtr GenerateToken;
 	FAttributeMapResult::FTokenPtr EvalAttributesInvalidationToken;

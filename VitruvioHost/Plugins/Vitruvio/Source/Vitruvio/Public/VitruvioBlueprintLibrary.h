@@ -38,17 +38,6 @@ public:
 	static VITRUVIO_API TArray<AActor*> GetViableVitruvioActorsInHierarchy(AActor* Root);
 
 	/**
-	 * Converts the given Actors to VitruvioActors and optionally assigns the given RulePackage. If an Actor can not be converted (according to
-	 * CanConvertToVitruvioActor) it will be ignored.
-	 *
-	 * @param Actors the Actors to convert to VitruvioActors
-	 * @param Rpk the optional RulePackage
-	 * @return the converted VitruvioActors
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	static VITRUVIO_API TArray<AVitruvioActor*> ConvertToVitruvioActor(const TArray<AActor*>& Actors, URulePackage* Rpk = nullptr);
-
-	/**
 	 * Returns whether the given Actor can be converted to a VitruvioActor (see also ConvertToVitruvioActor). Converting an Actor to a VitruvioActor
 	 * is only possible if the Actor already has a valid initial shape component attached (eg. a StaticMeshComponent).
 	 *
