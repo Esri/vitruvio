@@ -142,6 +142,29 @@ public:
 	bool GetStringAttribute(const FString& Name, FString& OutValue) const;
 
 	/**
+	 * Sets the string array attribute with the given name.
+	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
+	 *
+	 * @param Name The name of the attribute.
+	 * @param Values The new values for the attribute.
+	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
+	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
+	 * @returns true if the attribute has been set to the new value or false otherwise.
+	 */
+	void SetStringArrayAttribute(const FString& Name, const TArray<FString>& Values, bool bAddIfNonExisting = false,
+								 UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+
+	/**
+	 * Access string array attribute values used for generation.
+	 *
+	 * @param Name The name of the string attribute.
+	 * @param OutValue Set to the array attribute value if it exists or an empty array otherwise.
+	 * @returns true if the string array attribute with the given Name exists or false otherwise.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	bool GetStringArrayAttribute(const FString& Name, TArray<FString>& OutValue) const;
+
+	/**
 	 * Sets bool attributes used for generation.
 	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
 	 *
@@ -162,6 +185,29 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	bool GetBoolAttribute(const FString& Name, bool& OutValue) const;
+
+	/**
+	 * Sets the bool array attribute with the given name.
+	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
+	 *
+	 * @param Name The name of the attribute.
+	 * @param Values The new values for the attribute.
+	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
+	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
+	 * @returns true if the attribute has been set to the new value or false otherwise.
+	 */
+	void SetBoolArrayAttribute(const FString& Name, const TArray<bool>& Values, bool bAddIfNonExisting = false,
+							   UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+
+	/**
+	 * Access bool array attribute values used for generation.
+	 *
+	 * @param Name The name of the bool attribute.
+	 * @param OutValue Set to the array attribute value if it exists or an empty array otherwise.
+	 * @returns true if the bool array attribute with the given Name exists or false otherwise.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	bool GetBoolArrayAttribute(const FString& Name, TArray<bool>& OutValue) const;
 
 	/**
 	 * Sets float attributes used for generation.
@@ -185,6 +231,29 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	bool GetFloatAttribute(const FString& Name, double& OutValue) const;
+
+	/**
+	 * Sets the float array attribute with the given name.
+	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
+	 *
+	 * @param Name The name of the attribute.
+	 * @param Values The new values for the attribute.
+	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
+	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
+	 * @returns true if the attribute has been set to the new value or false otherwise.
+	 */
+	void SetFloatArrayAttribute(const FString& Name, const TArray<double>& Values, bool bAddIfNonExisting = false,
+								UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+
+	/**
+	 * Access float array attribute values used for generation.
+	 *
+	 * @param Name The name of the float attribute.
+	 * @param OutValue Set to the array attribute value if it exists or an empty array otherwise.
+	 * @returns true if the float array attribute with the given Name exists or false otherwise.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	bool GetFloatArrayAttribute(const FString& Name, TArray<double>& OutValue) const;
 
 	/**
 	 * Sets the given attributes. If a key does not exist in the current attribute map the key-value pair will be ignored.

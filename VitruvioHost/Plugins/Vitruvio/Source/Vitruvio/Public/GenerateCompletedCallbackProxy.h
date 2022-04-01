@@ -99,6 +99,48 @@ public:
 															 bool bAddIfNonExisting = false);
 
 	/**
+	 * Sets the float array attribute with the given name.
+	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
+	 *
+	 * @param VitruvioComponent The VitruvioComponent where the attribute is set
+	 * @param Name The name of the attribute.
+	 * @param Values The new values for the attribute.
+	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
+	 * @returns true if the attribute has been set to the new value or false otherwise.
+	 */
+	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
+	static UGenerateCompletedCallbackProxy* SetFloatArrayAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
+																   const TArray<double>& Values, bool bAddIfNonExisting = false);
+
+	/**
+	 * Sets the string array attribute with the given name.
+	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
+	 *
+	 * @param VitruvioComponent The VitruvioComponent where the attribute is set
+	 * @param Name The name of the attribute.
+	 * @param Values The new values for the attribute.
+	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
+	 * @returns true if the attribute has been set to the new value or false otherwise.
+	 */
+	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
+	static UGenerateCompletedCallbackProxy* SetStringArrayAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
+																	const TArray<FString>& Values, bool bAddIfNonExisting = false);
+
+	/**
+	 * Sets the bool array attribute with the given name.
+	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
+	 *
+	 * @param VitruvioComponent The VitruvioComponent where the attribute is set
+	 * @param Name The name of the attribute.
+	 * @param Values The new values for the attribute.
+	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
+	 * @returns true if the attribute has been set to the new value or false otherwise.
+	 */
+	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
+	static UGenerateCompletedCallbackProxy* SetBoolArrayAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
+																  const TArray<bool>& Values, bool bAddIfNonExisting = false);
+
+	/**
 	 * Sets the given attributes. If a key does not exist in the current attribute map the key-value pair will be ignored.
 	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
 	 * The type of the attribute will be deduced from its string representation: <br>
