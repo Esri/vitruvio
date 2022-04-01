@@ -560,6 +560,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		{
 			Result.CallbackProxy->OnGenerateCompleted.Broadcast();
 		}
+		OnGenerateCompleted.Broadcast();
 	}
 }
 
@@ -579,6 +580,7 @@ void UVitruvioComponent::ProcessAttributesEvaluationQueue()
 		{
 			AttributesEvaluation.CallbackProxy->OnAttributesEvaluated.Broadcast();
 		}
+		OnAttributesEvaluated.Broadcast();
 
 		if (GenerateAutomatically || AttributesEvaluation.bForceRegenerate)
 		{
