@@ -173,7 +173,7 @@ public:
 	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
-	void SetFloatAttribute(const FString& Name, float Value, bool bAddIfNonExisting = false,
+	void SetFloatAttribute(const FString& Name, double Value, bool bAddIfNonExisting = false,
 						   UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
@@ -184,7 +184,7 @@ public:
 	 * @returns true if the float attribute with the given Name exists or false otherwise.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	bool GetFloatAttribute(const FString& Name, float& OutValue) const;
+	bool GetFloatAttribute(const FString& Name, double& OutValue) const;
 
 	/**
 	 * Sets the given attributes. If a key does not exist in the current attribute map the key-value pair will be ignored.
