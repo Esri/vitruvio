@@ -327,6 +327,7 @@ void UVitruvioComponent::SetMeshInitialShape(UStaticMesh* StaticMesh, UGenerateC
 
 	InitialShape = NewInitialShape;
 
+	RemoveGeneratedMeshes();
 	EvaluateRuleAttributes(GenerateAutomatically, CallbackProxy);
 }
 
@@ -344,6 +345,7 @@ void UVitruvioComponent::SetSplineInitialShape(const TArray<FSplinePoint>& Splin
 
 	InitialShape = NewInitialShape;
 
+	RemoveGeneratedMeshes();
 	EvaluateRuleAttributes(GenerateAutomatically, CallbackProxy);
 }
 
