@@ -294,15 +294,15 @@ void UVitruvioComponent::SetAttributes(const TMap<FString, FString>& NewAttribut
 
 		if (FCString::IsNumeric(*Value))
 		{
-			SetFloatAttribute(Key, FCString::Atof(*Value), bAddIfNonExisting);
+			SetFloatAttribute(Key, FCString::Atof(*Value), bAddIfNonExisting, CallbackProxy);
 		}
 		else if (Value == "true" || Value == "false")
 		{
-			SetBoolAttribute(Key, Value == "true", bAddIfNonExisting);
+			SetBoolAttribute(Key, Value == "true", bAddIfNonExisting, CallbackProxy);
 		}
 		else
 		{
-			SetStringAttribute(Key, Value, bAddIfNonExisting);
+			SetStringAttribute(Key, Value, bAddIfNonExisting, CallbackProxy);
 		}
 	}
 
