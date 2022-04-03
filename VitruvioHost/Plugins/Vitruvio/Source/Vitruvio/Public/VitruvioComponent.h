@@ -99,18 +99,17 @@ public:
 	bool GenerateCollision = true;
 
 	/**
-	 * Generates a model using the current RPK and initial shapes. If attributes are not loaded yet they will first be evaluated. If no Initial Shape
-	 * or RPK is set this method will do nothing.
+	 * Generates a model using the current Rule Package and initial shape. If the attributes are not yet available, they will first be evaluated. If
+	 * no Initial Shape or Rule Package is set, this method will do nothing.
 	 */
 	void Generate(UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
-	 * Sets the given Rpk and possibly invalidates already loaded attributes. This will trigger a reevaluation of the attributes and if
-	 * GenerateAutomatically is set to true also regenerates the the model.
+	 * Sets the given Rule Package. This will reevaluate the attributes and if GenerateAutomatically is set to true, also regenerates the model.
 	 */
 	void SetRpk(URulePackage* RulePackage, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
-	/** Returns true if the component has valid input data (initial shape and RPK). */
+	/** Returns true if the component has valid input data (initial shape and Rule Package). */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	bool HasValidInputData() const;
 
@@ -119,20 +118,18 @@ public:
 	bool IsReadyToGenerate() const;
 
 	/**
-	 * Sets string attributes used for generation.
-	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
+	 * Sets the string attribute with the given Name to the given value. Regenerates the model if GenerateAutomatically is set to true.
 	 *
 	 * @param Name The name of the attribute to set.
 	 * @param Value The new value for the attribute.
-	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
-	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
-	 * @returns true if the attribute has been set to the new value or false otherwise.
+	 * @param bAddIfNonExisting Adds a new attribute if the no attribute is found with the given Name.
+	 * @param CallbackProxy The callback proxy used to register for completion events.
 	 */
 	void SetStringAttribute(const FString& Name, const FString& Value, bool bAddIfNonExisting = false,
 							UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
-	 * Access string attribute values used for generation.
+	 * Access the string attribute with the given Name. The OutValue is default initialized if no attribute with the given Name is found.
 	 *
 	 * @param Name The name of the string attribute.
 	 * @param OutValue Set to the attributes value if it exists or to an empty String otherwise.
@@ -142,8 +139,7 @@ public:
 	bool GetStringAttribute(const FString& Name, FString& OutValue) const;
 
 	/**
-	 * Sets the string array attribute with the given name.
-	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
+	 * Sets the string array attribute with the given Name to the given value. Regenerates the model if GenerateAutomatically is set to true.
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Values The new values for the attribute.
@@ -155,7 +151,7 @@ public:
 								 UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
-	 * Access string array attribute values used for generation.
+	 * Access the string array attribute with the given Name. The OutValue is default initialized if no attribute with the given Name is found.
 	 *
 	 * @param Name The name of the string attribute.
 	 * @param OutValue Set to the array attribute value if it exists or an empty array otherwise.
@@ -165,8 +161,7 @@ public:
 	bool GetStringArrayAttribute(const FString& Name, TArray<FString>& OutValue) const;
 
 	/**
-	 * Sets bool attributes used for generation.
-	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
+	 * Sets the bool attribute with the given Name to the given value. Regenerates the model if GenerateAutomatically is set to true.
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Value The new value for the attribute.
@@ -177,18 +172,17 @@ public:
 	void SetBoolAttribute(const FString& Name, bool Value, bool bAddIfNonExisting = false, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
-	 * Access bool attribute values used for generation.
+	 * Access the bool attribute with the given Name. The OutValue is default initialized if no attribute with the given Name is found.
 	 *
 	 * @param Name The name of the bool attribute.
 	 * @param OutValue Set to the attributes value if it exists or to false otherwise.
-	 * @returns true if the float attribute with the given Name exists or false otherwise.
+	 * @returns true if the bool attribute with the given Name exists or false otherwise.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	bool GetBoolAttribute(const FString& Name, bool& OutValue) const;
 
 	/**
-	 * Sets the bool array attribute with the given name.
-	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
+	 * Sets the bool array attribute with the given Name to the given value. Regenerates the model if GenerateAutomatically is set to true.
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Values The new values for the attribute.
@@ -200,7 +194,7 @@ public:
 							   UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
-	 * Access bool array attribute values used for generation.
+	 * Access the bool array attribute with the given Name. The OutValue is default initialized if no attribute with the given Name is found.
 	 *
 	 * @param Name The name of the bool attribute.
 	 * @param OutValue Set to the array attribute value if it exists or an empty array otherwise.
@@ -210,8 +204,7 @@ public:
 	bool GetBoolArrayAttribute(const FString& Name, TArray<bool>& OutValue) const;
 
 	/**
-	 * Sets float attributes used for generation.
-	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
+	 * Sets the float attribute with the given Name to the given value. Regenerates the model if GenerateAutomatically is set to true.
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Value The new value for the attribute.
@@ -223,7 +216,7 @@ public:
 						   UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
-	 * Access float attribute values used for generation.
+	 * Access the float attribute with the given Name. The OutValue is default initialized if no attribute with the given Name is found.
 	 *
 	 * @param Name The name of the float attribute.
 	 * @param OutValue Set to the attributes value if it exists or to 0.0f otherwise.
@@ -233,8 +226,7 @@ public:
 	bool GetFloatAttribute(const FString& Name, double& OutValue) const;
 
 	/**
-	 * Sets the float array attribute with the given name.
-	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
+	 * Sets the float array attribute with the given Name to the given value. Regenerates the model if GenerateAutomatically is set to true.
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Values The new values for the attribute.
@@ -246,7 +238,7 @@ public:
 								UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
-	 * Access float array attribute values used for generation.
+	 * Access the float array attribute with the given Name. The OutValue is default initialized if no attribute with the given Name is found.
 	 *
 	 * @param Name The name of the float attribute.
 	 * @param OutValue Set to the array attribute value if it exists or an empty array otherwise.
@@ -256,14 +248,12 @@ public:
 	bool GetFloatArrayAttribute(const FString& Name, TArray<double>& OutValue) const;
 
 	/**
-	 * Sets the given attributes. If a key does not exist in the current attribute map the key-value pair will be ignored.
-	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
-	 * The type of the attribute will be deduced from its string representation: <br>
-	 * "1.0" for the float 1.0 <br>
-	 * "hello" for the string "hello" and <br>
-	 * "true" for the bool true <br>
+	 * Sets the given scalar attributes. If bAddIfNonExisting is set to false and a given key from the NewAttributes is not found in the current
+	 * attributes, the key-value pair will be ignored. If bAddIfNonExisting is set to true, new attributes will be added in case they are not found in
+	 * the current attributes. Regenerates the model if GenerateAutomatically is set to true. The type of the attribute will be deduced from its
+	 * string representation: <br> "1.0" for the float 1.0 <br> "hello" for the string "hello" and <br> "true" for the bool true <br>
 	 *
-	 * @param NewAttributes the attributes to be set
+	 * @param NewAttributes The attributes to be sets
 	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
 	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 */
@@ -321,7 +311,7 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Vitruvio")
 	FOnAttributesEvaluatedDelegate OnAttributesEvaluated;
 
-	/** Called after generate has completed. */
+	/** Called after a model generation has completed. */
 	UPROPERTY(BlueprintAssignable, Category = "Vitruvio")
 	FGenerateCompletedDelegate OnGenerateCompleted;
 
