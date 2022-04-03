@@ -735,14 +735,6 @@ void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 
 void UVitruvioComponent::Generate(UGenerateCompletedCallbackProxy* CallbackProxy)
 {
-	// If the initial shape and RPK are valid but we have not yet loaded the attributes we load the attributes
-	// and regenerate afterwards
-	if (HasValidInputData() && !bAttributesReady)
-	{
-		EvaluateRuleAttributes(true, CallbackProxy);
-		return;
-	}
-
 	// If either the RPK, initial shape or attributes are not ready we can not generate
 	if (!HasValidInputData())
 	{
