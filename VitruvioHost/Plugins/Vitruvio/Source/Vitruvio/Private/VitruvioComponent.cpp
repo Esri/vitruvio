@@ -737,9 +737,8 @@ void UVitruvioComponent::Generate(UGenerateCompletedCallbackProxy* CallbackProxy
 	// completed.
 	if (GenerateToken)
 	{
-		GenerateToken->RequestRegenerate();
-
-		return;
+		GenerateToken->Invalidate();
+		GenerateToken.Reset();
 	}
 
 	if (InitialShape)
@@ -759,14 +758,7 @@ void UVitruvioComponent::Generate(UGenerateCompletedCallbackProxy* CallbackProxy
 			}
 
 			GenerateToken.Reset();
-			if (Result.Token->IsRegenerateRequested())
-			{
-				Generate(CallbackProxy);
-			}
-			else
-			{
-				GenerateQueue.Enqueue({Result.Value, CallbackProxy});
-			}
+			GenerateQueue.Enqueue({Result.Value, CallbackProxy});
 		});
 		// clang-format on
 	}
@@ -899,8 +891,8 @@ void UVitruvioComponent::EvaluateRuleAttributes(bool ForceRegenerate, UGenerateC
 	// has completed.
 	if (EvalAttributesInvalidationToken)
 	{
-		EvalAttributesInvalidationToken->RequestReEvaluateAttributes();
-		return;
+		EvalAttributesInvalidationToken->Invalidate();
+		EvalAttributesInvalidationToken.Reset();
 	}
 
 	bAttributesReady = false;
@@ -919,14 +911,7 @@ void UVitruvioComponent::EvaluateRuleAttributes(bool ForceRegenerate, UGenerateC
 		}
 
 		EvalAttributesInvalidationToken.Reset();
-		if (Result.Token->IsReEvaluateRequested())
-		{
-			EvaluateRuleAttributes(ForceRegenerate, CallbackProxy);
-		}
-		else
-		{
-			AttributesEvaluationQueue.Enqueue({Result.Value, ForceRegenerate, CallbackProxy});
-		}
+		AttributesEvaluationQueue.Enqueue({Result.Value, ForceRegenerate, CallbackProxy});
 	});
 }
 

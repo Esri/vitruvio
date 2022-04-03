@@ -16,6 +16,7 @@
 #pragma once
 
 #include "AttributeMap.h"
+#include "GenerateCompletedCallbackProxy.h"
 #include "InitialShape.h"
 #include "MeshCache.h"
 #include "MeshDescription.h"
@@ -69,36 +70,10 @@ private:
 
 class FEvalAttributesToken : public FInvalidationToken
 {
-public:
-	void RequestReEvaluateAttributes()
-	{
-		bRequestReEvaluateAttributes = true;
-	}
-
-	bool IsReEvaluateRequested() const
-	{
-		return bRequestReEvaluateAttributes;
-	}
-
-private:
-	FThreadSafeBool bRequestReEvaluateAttributes = false;
 };
 
 class FGenerateToken : public FInvalidationToken
 {
-public:
-	void RequestRegenerate()
-	{
-		bRequestRegenerate = true;
-	}
-
-	bool IsRegenerateRequested() const
-	{
-		return bRequestRegenerate;
-	}
-
-private:
-	FThreadSafeBool bRequestRegenerate = false;
 };
 
 template <typename R, typename T>
@@ -156,8 +131,8 @@ public:
 	 * \param RandomSeed
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API FGenerateResultDescription Generate(const FInitialShapePolygon& InitialShape, URulePackage* RulePackage,
-													 AttributeMapUPtr Attributes, const int32 RandomSeed) const;
+	VITRUVIO_API FGenerateResultDescription Generate(const FInitialShapePolygon& InitialShape, URulePackage* RulePackage, AttributeMapUPtr Attributes,
+													 const int32 RandomSeed) const;
 
 	/**
 	 * \brief Asynchronously evaluates attributes for the given initial shape and rule package.
@@ -169,7 +144,7 @@ public:
 	 * \return
 	 */
 	VITRUVIO_API FAttributeMapResult EvaluateRuleAttributesAsync(const FInitialShapePolygon& InitialShape, URulePackage* RulePackage,
-															 AttributeMapUPtr Attributes, const int32 RandomSeed) const;
+																 AttributeMapUPtr Attributes, const int32 RandomSeed) const;
 
 	/**
 	 * \return whether PRT is initialized meaning installed and ready to use. Before initialization generation is not possible and will
