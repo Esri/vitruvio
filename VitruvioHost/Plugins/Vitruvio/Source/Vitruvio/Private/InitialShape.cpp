@@ -50,7 +50,7 @@ FMeshDescription CreateMeshDescription(const FInitialShapePolygon& InPolygon)
 	const auto VertexPositions = Attributes.GetVertexPositions();
 	const FPolygonGroupID PolygonGroupId = Description.CreatePolygonGroup();
 
-	for (const FVector& Vertex : InPolygon.Vertices)
+	for (const FVector3f& Vertex : InPolygon.Vertices)
 	{
 		const FVertexID VertexID = Description.CreateVertex();
 		VertexPositions[VertexID] = Vertex;
@@ -99,11 +99,11 @@ bool HasValidGeometry(const FInitialShapePolygon& Polygon)
 			const FVertexID VertexID1 = Description.GetVertexInstanceVertex(TriangleVertexInstances[1]);
 			const FVertexID VertexID2 = Description.GetVertexInstanceVertex(TriangleVertexInstances[2]);
 
-			const FVector Position0 = VertexPositions[VertexID0];
-			const FVector DPosition1 = VertexPositions[VertexID1] - Position0;
-			const FVector DPosition2 = VertexPositions[VertexID2] - Position0;
+			const FVector3f Position0 = VertexPositions[VertexID0];
+			const FVector3f DPosition1 = VertexPositions[VertexID1] - Position0;
+			const FVector3f DPosition2 = VertexPositions[VertexID2] - Position0;
 
-			FVector TmpNormal = FVector::CrossProduct(DPosition2, DPosition1).GetSafeNormal(AdjustedComparisonThreshold);
+			FVector3f TmpNormal = FVector3f::CrossProduct(DPosition2, DPosition1).GetSafeNormal(AdjustedComparisonThreshold);
 			if (!TmpNormal.IsNearlyZero(ComparisonThreshold))
 			{
 				return true;
@@ -116,7 +116,7 @@ bool HasValidGeometry(const FInitialShapePolygon& Polygon)
 
 FInitialShapePolygon CreateInitialPolygonFromStaticMesh(const UStaticMesh* StaticMesh)
 {
-	TArray<FVector> MeshVertices;
+	TArray<FVector3f> MeshVertices;
 	TArray<int32> MeshIndices;
 	TArray<FTextureCoordinateSet> MeshTextureCoordinateSets;
 	MeshTextureCoordinateSets.AddDefaulted(8);
@@ -130,9 +130,9 @@ FInitialShapePolygon CreateInitialPolygonFromStaticMesh(const UStaticMesh* Stati
 		{
 			for (uint32 VertexIndex = 0; VertexIndex < LOD.VertexBuffers.PositionVertexBuffer.GetNumVertices(); ++VertexIndex)
 			{
-				FVector Vertex = LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(VertexIndex);
+				FVector3f Vertex = LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(VertexIndex);
 
-				auto VertexFindPredicate = [Vertex](const FVector& In) {
+				auto VertexFindPredicate = [Vertex](const FVector3f& In) {
 					return Vertex.Equals(In);
 				};
 				int32 MappedVertexIndex = MeshVertices.IndexOfByPredicate(VertexFindPredicate);
@@ -176,7 +176,7 @@ FInitialShapePolygon CreateInitialPolygonFromStaticMesh(const UStaticMesh* Stati
 
 FInitialShapePolygon CreateInitialShapePolygonFromSpline(const USplineComponent* SplineComponent, const uint32 SplineApproximationPoints)
 {
-	TArray<FVector> Vertices;
+	TArray<FVector3f> Vertices;
 	TArray<int> Indices;
 	const int32 NumPoints = SplineComponent->GetNumberOfSplinePoints();
 	for (int32 SplinePointIndex = 0; SplinePointIndex < NumPoints; ++SplinePointIndex)
@@ -185,7 +185,7 @@ FInitialShapePolygon CreateInitialShapePolygonFromSpline(const USplineComponent*
 		if (SplineType == ESplinePointType::Linear)
 		{
 			Indices.Add(Vertices.Num());
-			Vertices.Add(SplineComponent->GetLocationAtSplinePoint(SplinePointIndex, ESplineCoordinateSpace::Local));
+			Vertices.Add(FVector3f(SplineComponent->GetLocationAtSplinePoint(SplinePointIndex, ESplineCoordinateSpace::Local)));
 		}
 		else
 		{
@@ -197,7 +197,7 @@ FInitialShapePolygon CreateInitialShapePolygonFromSpline(const USplineComponent*
 			while (Position < EndDistance)
 			{
 				Indices.Add(Vertices.Num());
-				Vertices.Add(SplineComponent->GetLocationAtDistanceAlongSpline(Position, ESplineCoordinateSpace::Local));
+				Vertices.Add(FVector3f(SplineComponent->GetLocationAtDistanceAlongSpline(Position, ESplineCoordinateSpace::Local)));
 				Position += Distance;
 			}
 		}
@@ -210,7 +210,7 @@ FInitialShapePolygon CreateInitialShapePolygonFromSpline(const USplineComponent*
 FInitialShapePolygon CreateDefaultInitialShapePolygon()
 {
 	FInitialShapePolygon Polygon;
-	Polygon.Vertices = {FVector(1000, -1000, 0), FVector(-1000, -1000, 0), FVector(-1000, 1000, 0), FVector(1000, 1000, 0)};
+	Polygon.Vertices = {FVector3f(1000, -1000, 0), FVector3f(-1000, -1000, 0), FVector3f(-1000, 1000, 0), FVector3f(1000, 1000, 0)};
 	FInitialShapeFace InitialShapeFace;
 	InitialShapeFace.Indices = {0, 1, 2, 3};
 	Polygon.Faces.Add(InitialShapeFace);
@@ -222,7 +222,7 @@ bool IsDefaultInitialShape(const FInitialShapePolygon& InitialShapePolygon)
 {
 	const FInitialShapePolygon DefaultInitialShapePolygon = CreateDefaultInitialShapePolygon();
 	check(DefaultInitialShapePolygon.Faces.Num() == 1);
-	const TArray<FVector>& DefaultVertices = DefaultInitialShapePolygon.Vertices;
+	const TArray<FVector3f>& DefaultVertices = DefaultInitialShapePolygon.Vertices;
 	const TArray<int32>& DefaultIndices = DefaultInitialShapePolygon.Faces[0].Indices;
 	check(DefaultVertices.Num() == 4);
 
@@ -230,7 +230,7 @@ bool IsDefaultInitialShape(const FInitialShapePolygon& InitialShapePolygon)
 	{
 		return false;
 	}
-	const TArray<FVector>& Vertices = InitialShapePolygon.Vertices;
+	const TArray<FVector3f>& Vertices = InitialShapePolygon.Vertices;
 	const TArray<int32>& Indices = InitialShapePolygon.Faces[0].Indices;
 
 	if (Vertices.Num() != DefaultVertices.Num() || Indices.Num() != DefaultIndices.Num())
@@ -238,7 +238,7 @@ bool IsDefaultInitialShape(const FInitialShapePolygon& InitialShapePolygon)
 		return false;
 	}
 
-	const FVector FirstVertex = DefaultVertices[Indices[0]];
+	const FVector3f FirstVertex = DefaultVertices[Indices[0]];
 	int32 InitialIndexOffset;
 	if (Vertices.Find(FirstVertex, InitialIndexOffset))
 	{
@@ -346,7 +346,7 @@ TArray<FSplinePoint> CreateSplinePointsFromInitialShapePolygon(const FInitialSha
 	for (const int32& Index : CurrInitialShapePolygon.Faces[0].Indices)
 	{
 		FSplinePoint SplinePoint;
-		SplinePoint.Position = InitialShapePolygon.Vertices[Index];
+		SplinePoint.Position = FVector(InitialShapePolygon.Vertices[Index]);
 		SplinePoint.Type = ESplinePointType::Linear;
 		SplinePoint.InputKey = PointIndex;
 		SplinePoints.Add(SplinePoint);
@@ -390,7 +390,7 @@ void FInitialShapePolygon::FixOrientation()
 	}
 }
 
-const TArray<FVector>& UInitialShape::GetVertices() const
+const TArray<FVector3f>& UInitialShape::GetVertices() const
 {
 	return Polygon.Vertices;
 }

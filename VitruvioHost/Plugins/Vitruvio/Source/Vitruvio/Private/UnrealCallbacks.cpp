@@ -140,7 +140,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 	for (size_t VertexIndex = 0; VertexIndex < vtxSize; VertexIndex += 3)
 	{
 		const FVertexID VertexID = Description.CreateVertex();
-		VertexPositions[VertexID] = FVector(vtx[VertexIndex], vtx[VertexIndex + 2], vtx[VertexIndex + 1]) * PRT_TO_UE_SCALE;
+		VertexPositions[VertexID] = FVector3f(vtx[VertexIndex], vtx[VertexIndex + 2], vtx[VertexIndex + 1]) * PRT_TO_UE_SCALE;
 	}
 
 	// Create Polygons
@@ -197,7 +197,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 					PolygonVertexInstances.Add(InstanceId);
 
 					check(NormalIndex + 2 < nrmSize);
-					Normals[InstanceId] = FVector(nrm[NormalIndex], nrm[NormalIndex + 2], nrm[NormalIndex + 1]);
+					Normals[InstanceId] = FVector3f(nrm[NormalIndex], nrm[NormalIndex + 2], nrm[NormalIndex + 1]);
 
 					for (size_t PrtUVSet = 0; PrtUVSet < uvSets; ++PrtUVSet)
 					{
