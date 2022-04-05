@@ -30,6 +30,6 @@ namespace Vitruvio
  * @param InVertices	Input triangle vertices
  * @param InIndices		Input triangle indices
  */
-FInitialShapePolygon GetPolygon(const TArray<FVector>& InVertices, const TArray<int32>& InIndices);
+FInitialShapePolygon GetPolygon(const TArray<FVector3f>& InVertices, const TArray<int32>& InIndices);
 
 } // namespace Vitruvio
