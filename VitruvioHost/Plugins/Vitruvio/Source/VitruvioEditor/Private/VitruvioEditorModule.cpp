@@ -52,12 +52,17 @@ bool HasAnyVitruvioActor(TArray<AActor*> Actors)
 
 void AssignRulePackage(TArray<AActor*> Actors)
 {
+	if (Actors.Num() == 0)
+	{
+		return;
+	}
+
 	TOptional<URulePackage*> SelectedRpk = FChooseRulePackageDialog::OpenDialog();
 
 	if (SelectedRpk.IsSet())
 	{
 		TArray<AVitruvioActor*> ConvertedActors;
-		UGenerateCompletedCallbackProxy::ConvertToVitruvioActor(Actors, ConvertedActors, SelectedRpk.GetValue());
+		UGenerateCompletedCallbackProxy::ConvertToVitruvioActor(Actors[0], Actors, ConvertedActors, SelectedRpk.GetValue());
 	}
 }
 
