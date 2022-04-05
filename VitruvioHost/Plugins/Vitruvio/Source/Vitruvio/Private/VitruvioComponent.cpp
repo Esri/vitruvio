@@ -608,6 +608,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		if (Result.CallbackProxy)
 		{
 			Result.CallbackProxy->OnGenerateCompleted.Broadcast();
+			Result.CallbackProxy->OnGenerateCompletedCpp.Broadcast();
 		}
 		OnGenerateCompleted.Broadcast();
 	}
@@ -628,10 +629,11 @@ void UVitruvioComponent::ProcessAttributesEvaluationQueue()
 		if (AttributesEvaluation.CallbackProxy)
 		{
 			AttributesEvaluation.CallbackProxy->OnAttributesEvaluated.Broadcast();
+			AttributesEvaluation.CallbackProxy->OnAttributesEvaluatedCpp.Broadcast();
 		}
 		OnAttributesEvaluated.Broadcast();
 
-		if (GenerateAutomatically || AttributesEvaluation.bForceRegenerate)
+		if (AttributesEvaluation.bForceRegenerate)
 		{
 			Generate(AttributesEvaluation.CallbackProxy);
 		}

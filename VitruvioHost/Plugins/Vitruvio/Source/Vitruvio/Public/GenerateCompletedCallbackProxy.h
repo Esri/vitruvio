@@ -32,15 +32,19 @@ class VITRUVIO_API UGenerateCompletedCallbackProxy final : public UBlueprintAsyn
 
 public:
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGenerateCompletedDelegate);
+	DECLARE_MULTICAST_DELEGATE(FGenerateCompletedDelegateCpp);
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttributesEvaluatedDelegate);
+	DECLARE_MULTICAST_DELEGATE(FOnAttributesEvaluatedDelegateCpp);
 
 	/** Called after the attributes have been evaluated. Note that it is not guaranteed that this callback is ever called. */
 	UPROPERTY(BlueprintAssignable, meta = (DisplayName = "Attributes Evaluated"), Category = "Vitruvio")
 	FOnAttributesEvaluatedDelegate OnAttributesEvaluated;
+	FOnAttributesEvaluatedDelegateCpp OnAttributesEvaluatedCpp;
 
 	/** Called after generate has completed. Note that it is not guaranteed that this callback is ever called. */
 	UPROPERTY(BlueprintAssignable, meta = (DisplayName = "Generate Completed"), Category = "Vitruvio")
 	FGenerateCompletedDelegate OnGenerateCompleted;
+	FGenerateCompletedDelegateCpp OnGenerateCompletedCpp;
 
 	/**
 	 * Sets the given Rule Package. This will reevaluate the attributes and if GenerateAutomatically is set to true, also regenerates the model.
@@ -172,13 +176,15 @@ public:
 	 * Converts the given Actors to VitruvioActors and optionally assigns the given RulePackage. If an Actor can not be converted (see
 	 * CanConvertToVitruvioActor) it will be ignored.
 	 *
+	 * @param WorldContextObject
 	 * @param Actors The Actors to convert to VitruvioActors.
 	 * @param OutVitruvioActors The converted VitruvioActors.
 	 * @param Rpk The optional RulePackage.
 	 * @param bGenerateModels Whether a model should be generated after the conversion. Only applicable if the RulePackage has been set.
 	 * @return The converted VitruvioActors.
 	 */
-	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
-	static UGenerateCompletedCallbackProxy* ConvertToVitruvioActor(const TArray<AActor*>& Actors, TArray<AVitruvioActor*>& OutVitruvioActors,
-																   URulePackage* Rpk = nullptr, bool bGenerateModels = true);
+	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true, WorldContext = "WorldContextObject"), Category = "Vitruvio")
+	static UGenerateCompletedCallbackProxy* ConvertToVitruvioActor(UObject* WorldContextObject, const TArray<AActor*>& Actors,
+																   TArray<AVitruvioActor*>& OutVitruvioActors, URulePackage* Rpk = nullptr,
+																   bool bGenerateModels = true);
 };
