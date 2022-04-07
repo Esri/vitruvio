@@ -176,6 +176,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	URulePackage* GetRpk() const;
 
+	/** Returns the reports created during generation. */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	const TMap<FString, FReport>& GetReports() const;
+		
 	/**
 	 * Sets the random seed used for generation.
 	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
