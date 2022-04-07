@@ -37,7 +37,7 @@ struct FConvertedGenerateResult
 {
 	TSharedPtr<FVitruvioMesh> ShapeMesh;
 	TArray<FInstance> Instances;
-	FReportArray Reports;
+	TMap<FString, FReport> Reports;
 };
 
 struct FAttributesEvaluation
@@ -235,8 +235,8 @@ private:
 	int32 RandomSeed;
 
 	/** CGA Reports from generation. */
-	FReportArray Reports;
-	
+	TMap<FString, FReport> Reports;
+
 	TQueue<FGenerateResultDescription> GenerateQueue;
 	TQueue<FAttributesEvaluation> AttributesEvaluationQueue;
 

@@ -35,7 +35,7 @@ class UnrealCallbacks final : public IUnrealCallbacks
 
 	Vitruvio::FInstanceMap Instances;
 	TMap<int32, TSharedPtr<FVitruvioMesh>> Meshes;
-	FReportArray Reports;
+	TMap<FString, FReport> Reports;
 	TMap<int32, FString> Names;
 
 public:
@@ -59,7 +59,7 @@ public:
 		return Meshes;
 	}
 
-	const FReportArray& GetReports() const
+	const TMap<FString, FReport>& GetReports() const
 	{
 		return Reports;
 	}

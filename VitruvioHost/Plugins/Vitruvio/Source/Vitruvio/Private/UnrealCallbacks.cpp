@@ -265,9 +265,9 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 	}
 }
 
-FReportArray ExtractReports(const prt::AttributeMap* reports)
+TMap<FString, FReport> ExtractReports(const prt::AttributeMap* reports)
 {
-	FReportArray ReportMap;
+	TMap<FString, FReport> ReportMap;
 	size_t KeyCount = 0;
 	auto Keys = reports->getKeys(&KeyCount);
 	ReportMap.Reserve(KeyCount);
@@ -299,7 +299,7 @@ FReportArray ExtractReports(const prt::AttributeMap* reports)
 			break;
 		}
 
-		ReportMap.Emplace(Report);
+		ReportMap.Add(Report.Key, Report);
 	}
 	return ReportMap;
 }
