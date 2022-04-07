@@ -277,29 +277,31 @@ TMap<FString, FReport> ExtractReports(const prt::AttributeMap* reports)
 		auto key = Keys[i];
 
 		FReport Report;
-		Report.Key = key;
-		Report.Type = reports->getType(key);
-
-		switch (Report.Type)
+		Report.Name = key;
+		switch (reports->getType(key))
 		{
 		case prt::AttributeMap::PrimitiveType::PT_BOOL:
-			Report.Value = FVariant(reports->getBool(key));
+			Report.Type = EReportPrimitiveType::Bool;
+			Report.Value = reports->getBool(key) ? TEXT("true") : TEXT("false");
 			break;
 		case prt::AttributeMap::PrimitiveType::PT_STRING:
-			Report.Value = FVariant(reports->getString(key));
+			Report.Type = EReportPrimitiveType::String;
+			Report.Value = reports->getString(key);
 			break;
 		case prt::AttributeMap::PrimitiveType::PT_FLOAT:
-			Report.Value = FVariant(reports->getFloat(key));
+			Report.Type = EReportPrimitiveType::Float;
+			Report.Value = FString::SanitizeFloat(reports->getFloat(key));
 			break;
 		case prt::AttributeMap::PrimitiveType::PT_INT:
-			Report.Value = FVariant(reports->getInt(key));
+			Report.Type = EReportPrimitiveType::Int;
+			Report.Value = FString::FromInt(reports->getInt(key));
 			break;
 		default:
 			UE_LOG(LogUnrealCallbacks, Error, TEXT("Type of report not supported."));
 			break;
 		}
 
-		ReportMap.Add(Report.Key, Report);
+		ReportMap.Add(Report.Name, Report);
 	}
 	return ReportMap;
 }

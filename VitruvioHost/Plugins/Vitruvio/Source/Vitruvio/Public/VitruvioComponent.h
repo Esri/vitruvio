@@ -235,6 +235,7 @@ private:
 	int32 RandomSeed;
 
 	/** CGA Reports from generation. */
+	UPROPERTY(EditAnywhere, DisplayName = "Reports", Category = "Vitruvio")
 	TMap<FString, FReport> Reports;
 
 	TQueue<FGenerateResultDescription> GenerateQueue;
