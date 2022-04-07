@@ -252,7 +252,6 @@ private:
 	void* PrtDllHandle = nullptr;
 	prt::Object const* PrtLibrary = nullptr;
 	CacheObjectUPtr PrtCache;
-	mutable FCriticalSection PrtCacheLock;
 
 	TUniquePtr<UnrealLogHandler> LogHandler;
 
