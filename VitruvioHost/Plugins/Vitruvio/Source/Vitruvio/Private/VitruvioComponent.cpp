@@ -600,6 +600,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		{
 			Result.CallbackProxy->OnGenerateCompleted.Broadcast();
 			Result.CallbackProxy->OnGenerateCompletedCpp.Broadcast();
+			Result.CallbackProxy->SetReadyToDestroy();
 		}
 		OnGenerateCompleted.Broadcast();
 	}
@@ -628,6 +629,10 @@ void UVitruvioComponent::ProcessAttributesEvaluationQueue()
 		{
 			Generate(AttributesEvaluation.CallbackProxy);
 		}
+		else if (AttributesEvaluation.CallbackProxy)
+		{
+			AttributesEvaluation.CallbackProxy->SetReadyToDestroy();
+		} 
 	}
 }
 
