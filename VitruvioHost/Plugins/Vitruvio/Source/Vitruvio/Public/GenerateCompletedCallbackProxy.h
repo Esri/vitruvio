@@ -31,6 +31,9 @@ class VITRUVIO_API UGenerateCompletedCallbackProxy final : public UBlueprintAsyn
 	GENERATED_BODY()
 
 public:
+	UPROPERTY()
+	UGenerateCompletedCallbackProxy* DestroyProxy;
+	
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGenerateCompletedDelegate);
 	DECLARE_MULTICAST_DELEGATE(FGenerateCompletedDelegateCpp);
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttributesEvaluatedDelegate);
@@ -45,6 +48,8 @@ public:
 	UPROPERTY(BlueprintAssignable, meta = (DisplayName = "Generate Completed"), Category = "Vitruvio")
 	FGenerateCompletedDelegate OnGenerateCompleted;
 	FGenerateCompletedDelegateCpp OnGenerateCompletedCpp;
+
+	virtual void SetReadyToDestroy() override;
 
 	/**
 	 * Sets the given Rule Package. This will reevaluate the attributes and if GenerateAutomatically is set to true, also regenerates the model.

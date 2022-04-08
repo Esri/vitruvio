@@ -56,6 +56,16 @@ struct FExecuteAfterCountdown
 };
 } // namespace
 
+void UGenerateCompletedCallbackProxy::SetReadyToDestroy()
+{
+	Super::SetReadyToDestroy();
+
+	if (DestroyProxy)
+	{
+		DestroyProxy->SetReadyToDestroy();
+	}
+}
+
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetRpk(UVitruvioComponent* VitruvioComponent, URulePackage* RulePackage)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
@@ -157,11 +167,13 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::ConvertToVitru
 																						 URulePackage* Rpk, bool bGenerateModels)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
+	UGenerateCompletedCallbackProxy* InternalProxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(WorldContextObject);
+	InternalProxy->RegisterWithGameInstance(WorldContextObject);
+	Proxy->DestroyProxy = InternalProxy;
+	
 	const int32 TotalActors = Algo::CountIf(Actors, [](AActor* Actor) { return UVitruvioBlueprintLibrary::CanConvertToVitruvioActor(Actor); });
 
-	UGenerateCompletedCallbackProxy* InternalProxy = NewObject<UGenerateCompletedCallbackProxy>();
-	InternalProxy->RegisterWithGameInstance(WorldContextObject);
 	InternalProxy->OnGenerateCompletedCpp.AddLambda(FExecuteAfterCountdown(TotalActors, [Proxy]() {
 		Proxy->OnGenerateCompleted.Broadcast();
 		Proxy->OnGenerateCompletedCpp.Broadcast();
