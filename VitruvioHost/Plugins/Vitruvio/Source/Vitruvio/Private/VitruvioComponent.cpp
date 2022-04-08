@@ -343,22 +343,22 @@ void UVitruvioComponent::SetAttributes(const TMap<FString, FString>& NewAttribut
 
 		if (FCString::IsNumeric(*Value))
 		{
-			SetFloatAttribute(Key, FCString::Atof(*Value), bAddIfNonExisting, CallbackProxy);
+			SetFloatAttribute(Key, FCString::Atof(*Value), bAddIfNonExisting, nullptr);
 		}
 		else if (Value == "true" || Value == "false")
 		{
-			SetBoolAttribute(Key, Value == "true", bAddIfNonExisting, CallbackProxy);
+			SetBoolAttribute(Key, Value == "true", bAddIfNonExisting, nullptr);
 		}
 		else
 		{
-			SetStringAttribute(Key, Value, bAddIfNonExisting, CallbackProxy);
+			SetStringAttribute(Key, Value, bAddIfNonExisting, nullptr);
 		}
 	}
 
 	GenerateAutomatically = bOldGenerateAutomatically;
 	if (HasValidInputData())
 	{
-		EvaluateRuleAttributes(GenerateAutomatically);
+		EvaluateRuleAttributes(GenerateAutomatically, CallbackProxy);
 	}
 }
 
