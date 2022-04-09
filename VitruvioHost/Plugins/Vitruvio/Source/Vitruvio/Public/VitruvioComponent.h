@@ -304,7 +304,7 @@ public:
 	 */
 	void EvaluateRuleAttributes(bool ForceRegenerate = false, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGenerateCompletedDelegate);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGenerateCompletedDelegate, UVitruvioComponent*, VitruvioComponent);
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttributesEvaluatedDelegate);
 
 	/** Called after attributes have been evaluated. */
@@ -313,7 +313,7 @@ public:
 
 	/** Called after a model generation has completed. */
 	UPROPERTY(BlueprintAssignable, Category = "Vitruvio")
-	FGenerateCompletedDelegate OnGenerateCompleted;
+	FOnGenerateCompletedDelegate OnGenerateCompleted;
 
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnHierarchyChanged, UVitruvioComponent*);
 	static FOnHierarchyChanged OnHierarchyChanged;
@@ -330,10 +330,6 @@ public:
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
 
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGenerateCompleted, UVitruvioComponent*, VitruvioComponent);
-	UPROPERTY(BlueprintAssignable)
-	FOnGenerateCompleted OnGenerateCompleted;
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
