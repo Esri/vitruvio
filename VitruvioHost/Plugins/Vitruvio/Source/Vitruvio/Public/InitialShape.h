@@ -64,7 +64,7 @@ struct VITRUVIO_API FInitialShapePolygon
 	TArray<FInitialShapeFace> Faces;
 
 	UPROPERTY()
-	TArray<FVector> Vertices;
+	TArray<FVector3f> Vertices;
 
 	UPROPERTY()
 	TArray<FTextureCoordinateSet> TextureCoordinateSets;
@@ -96,7 +96,7 @@ public:
 		return Polygon;
 	}
 
-	const TArray<FVector>& GetVertices() const;
+	const TArray<FVector3f>& GetVertices() const;
 
 	bool IsValid() const
 	{

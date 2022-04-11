@@ -127,7 +127,7 @@ void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder,
 	std::vector<uint32_t> faceCounts;
 	std::vector<uint32_t> holes;
 
-	for (const FVector& Vertex : InitialShape.Vertices)
+	for (const FVector3f& Vertex : InitialShape.Vertices)
 	{
 		const FVector CEVertex = FVector(Vertex.X, Vertex.Z, Vertex.Y) / 100.0;
 		vertexCoords.push_back(CEVertex.X);
