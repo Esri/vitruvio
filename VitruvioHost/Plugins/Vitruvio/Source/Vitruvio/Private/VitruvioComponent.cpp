@@ -140,7 +140,7 @@ void CreateCollision(UStaticMesh* Mesh, UStaticMeshComponent* StaticMeshComponen
 		return;
 	}
 
-	UBodySetup* BodySetup = NewObject<UBodySetup>(StaticMeshComponent, NAME_None, RF_Transient | RF_DuplicateTransient | RF_TextExportTransient);
+	UBodySetup* BodySetup = NewObject<UBodySetup>(StaticMeshComponent, NAME_None, RF_Transient | RF_DuplicateTransient | RF_TextExportTransient | RF_Transactional);
 	InitializeBodySetup(BodySetup, ComplexCollision);
 	Mesh->SetBodySetup(BodySetup);
 	StaticMeshComponent->RecreatePhysicsState();
@@ -302,13 +302,13 @@ void UVitruvioComponent::LoadInitialShape()
 		UInitialShape* DefaultInitialShape = Cast<UInitialShape>(InitialShapeClasses->GetDefaultObject());
 		if (DefaultInitialShape && DefaultInitialShape->CanConstructFrom(this->GetOwner()))
 		{
-			InitialShape = NewObject<UInitialShape>(GetOwner(), DefaultInitialShape->GetClass(), NAME_None, RF_Transient | RF_TextExportTransient);
+			InitialShape = NewObject<UInitialShape>(GetOwner(), DefaultInitialShape->GetClass(), NAME_None, RF_Transient | RF_TextExportTransient | RF_Transactional);
 		}
 	}
 
 	if (!InitialShape)
 	{
-		InitialShape = NewObject<UInitialShape>(GetOwner(), GetInitialShapesClasses()[0], NAME_None, RF_Transient | RF_TextExportTransient);
+		InitialShape = NewObject<UInitialShape>(GetOwner(), GetInitialShapesClasses()[0], NAME_None, RF_Transient | RF_TextExportTransient | RF_Transactional);
 	}
 
 	InitialShape->Initialize(this);
@@ -407,7 +407,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		if (!VitruvioModelComponent)
 		{
 			VitruvioModelComponent = NewObject<UGeneratedModelStaticMeshComponent>(InitialShapeComponent, FName(TEXT("GeneratedModel")),
-																				   RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
+																				   RF_Transient | RF_TextExportTransient | RF_DuplicateTransient | RF_Transactional);
 			InitialShapeComponent->GetOwner()->AddInstanceComponent(VitruvioModelComponent);
 			VitruvioModelComponent->AttachToComponent(InitialShapeComponent, FAttachmentTransformRules::KeepRelativeTransform);
 			VitruvioModelComponent->OnComponentCreated();
@@ -431,7 +431,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		{
 			FString UniqueName = UniqueComponentName(Instance.Name, NameMap);
 			auto InstancedComponent = NewObject<UGeneratedModelHISMComponent>(VitruvioModelComponent, FName(UniqueName),
-																			  RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
+																			  RF_Transient | RF_TextExportTransient | RF_DuplicateTransient | RF_Transactional);
 			const TArray<FTransform>& Transforms = Instance.Transforms;
 			InstancedComponent->SetStaticMesh(Instance.InstanceMesh->GetStaticMesh());
 			InstancedComponent->SetCollisionData(Instance.InstanceMesh->GetCollisionData());
@@ -725,7 +725,8 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 
 void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& Type)
 {
-	UInitialShape* NewInitialShape = NewObject<UInitialShape>(GetOwner(), Type, NAME_None, RF_Transient | RF_TextExportTransient);
+
+	UInitialShape* NewInitialShape = NewObject<UInitialShape>(GetOwner(), Type, NAME_None, RF_Transient | RF_TextExportTransient | RF_Transactional);
 
 	if (InitialShape)
 	{

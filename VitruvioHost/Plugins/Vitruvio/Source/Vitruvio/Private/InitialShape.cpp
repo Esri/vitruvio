@@ -286,7 +286,7 @@ UStaticMesh* CreateDefaultStaticMesh()
 
 #if WITH_EDITOR
 	Package = CreatePackage(*PackageName);
-	StaticMesh = NewObject<UStaticMesh>(Package, StaticMeshName, RF_Public | RF_Standalone);
+	StaticMesh = NewObject<UStaticMesh>(Package, StaticMeshName, RF_Public | RF_Standalone | RF_Transactional);
 #else
 	StaticMesh = NewObject<UStaticMesh>();
 #endif
@@ -323,7 +323,7 @@ UStaticMesh* CreateStaticMeshFromInitialShapePolygon(const FInitialShapePolygon&
 	UPackage* Package = CreatePackage(*PackageName);
 	const FName StaticMeshName = MakeUniqueObjectName(Package, UStaticMesh::StaticClass(), FName(InitialShapeName));
 
-	StaticMesh = NewObject<UStaticMesh>(Package, StaticMeshName, RF_Public | RF_Standalone);
+	StaticMesh = NewObject<UStaticMesh>(Package, StaticMeshName, RF_Public | RF_Standalone | RF_Transactional);
 #else
 	StaticMesh = NewObject<UStaticMesh>();
 #endif
