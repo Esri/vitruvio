@@ -364,6 +364,18 @@ void UVitruvioComponent::OnComponentCreated()
 	}
 }
 
+void UVitruvioComponent::PostEditUndo()
+{
+	Super::PostEditUndo();
+	
+#if WITH_EDITOR
+	if (!PropertyChangeDelegate.IsValid())
+	{
+		PropertyChangeDelegate = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &UVitruvioComponent::OnPropertyChanged);
+	}
+#endif
+}
+
 void UVitruvioComponent::ProcessGenerateQueue()
 {
 	if (!GenerateQueue.IsEmpty())

@@ -206,6 +206,7 @@ public:
 
 	virtual void OnComponentCreated() override;
 
+	virtual void PostEditUndo() override;
 	void LoadInitialShape();
 
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
