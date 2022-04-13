@@ -276,6 +276,11 @@ URulePackage* UVitruvioComponent::GetRpk() const
 	return Rpk;
 }
 
+const TMap<FString, FReport>& UVitruvioComponent::GetReports() const
+{
+	return Reports;
+}
+
 void UVitruvioComponent::SetRandomSeed(int32 NewRandomSeed)
 {
 	RandomSeed = NewRandomSeed;

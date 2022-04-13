@@ -21,12 +21,28 @@
 
 #include "Misc/Variant.h"
 
-struct FReport {
-	FString Key;
-	prt::AttributeMap::PrimitiveType Type = prt::AttributeMap::PT_UNDEFINED;
-	FVariant Value; //supports string int double bool and int
-	FReport() = default;
+#include "Report.generated.h"
+
+UENUM(BlueprintType, DisplayName = "Vitruvio Report Type")
+enum class EReportPrimitiveType : uint8
+{
+	String,
+	Float,
+	Bool,
+	Int,
+	None
 };
 
-using FReportArray = TArray<FReport>;
-
+USTRUCT(Blueprintable, DisplayName = "Vitruvio Report")
+struct VITRUVIO_API FReport {
+	GENERATED_USTRUCT_BODY();
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	EReportPrimitiveType Type = EReportPrimitiveType::None;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FString Name;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FString Value;
+};

@@ -37,7 +37,7 @@ struct FConvertedGenerateResult
 {
 	TSharedPtr<FVitruvioMesh> ShapeMesh;
 	TArray<FInstance> Instances;
-	FReportArray Reports;
+	TMap<FString, FReport> Reports;
 };
 
 struct FAttributesEvaluation
@@ -176,6 +176,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	URulePackage* GetRpk() const;
 
+	/** Returns the reports created during generation. */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	const TMap<FString, FReport>& GetReports() const;
+		
 	/**
 	 * Sets the random seed used for generation.
 	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
@@ -235,8 +239,9 @@ private:
 	int32 RandomSeed;
 
 	/** CGA Reports from generation. */
-	FReportArray Reports;
-	
+	UPROPERTY(VisibleAnywhere, DisplayName = "Reports", Category = "Vitruvio")
+	TMap<FString, FReport> Reports;
+
 	TQueue<FGenerateResultDescription> GenerateQueue;
 	TQueue<FAttributesEvaluation> AttributesEvaluationQueue;
 

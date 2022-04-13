@@ -43,7 +43,7 @@ struct FGenerateResultDescription
 {
 	Vitruvio::FInstanceMap Instances;
 	TMap<int32, TSharedPtr<FVitruvioMesh>> Meshes;
-	FReportArray Reports;
+	TMap<FString, FReport> Reports;
 	TMap<int32, FString> Names;
 };
 
