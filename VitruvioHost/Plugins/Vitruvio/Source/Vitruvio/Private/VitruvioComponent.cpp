@@ -698,9 +698,6 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 	// If a property has changed which is used for creating the initial shape we have to recreate it
 	if (bRecreateInitialShape)
 	{
-		UInitialShape* DuplicatedInitialShape = DuplicateObject(InitialShape, GetOwner());
-		InitialShape->Rename(nullptr, GetTransientPackage()); // Remove from Owner
-		InitialShape = DuplicatedInitialShape;
 		InitialShape->Initialize(this);
 
 		CalculateRandomSeed();
