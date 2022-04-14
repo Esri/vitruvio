@@ -37,12 +37,12 @@ USTRUCT(Blueprintable, DisplayName = "Vitruvio Report")
 struct VITRUVIO_API FReport {
 	GENERATED_USTRUCT_BODY();
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	EReportPrimitiveType Type = EReportPrimitiveType::None;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	FString Name;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	FString Value;
 };
