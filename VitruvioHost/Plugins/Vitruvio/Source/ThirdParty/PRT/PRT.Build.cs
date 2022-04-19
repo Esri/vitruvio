@@ -301,7 +301,7 @@ public class PRT : ModuleRules
 		
 		public override void DownloadFile(string Url, string Destination)
 		{
-			string DownloadFileCommand = "/c PowerShell -Command \"Invoke-WebRequest -Uri {0} -OutFile {1}\"";
+			string DownloadFileCommand = "/c PowerShell -Command \"Invoke-WebRequest -Uri {0} -OutFile '{1}'\"";
 			string ExpandedDownloadFileCommand = string.Format(DownloadFileCommand, Url, Destination);
 
 			ProcessStartInfo ProcStartInfo = new System.Diagnostics.ProcessStartInfo("cmd", ExpandedDownloadFileCommand)
