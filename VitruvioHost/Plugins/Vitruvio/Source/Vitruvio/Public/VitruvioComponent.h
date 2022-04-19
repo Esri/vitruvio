@@ -21,6 +21,7 @@
 
 #include "CoreMinimal.h"
 #include "GenerateCompletedCallbackProxy.h"
+#include "GeneratedModelInstanceComponent.h"
 #include "InitialShape.h"
 #include "VitruvioTypes.h"
 
@@ -79,6 +80,9 @@ public:
 	/** Automatically hide initial shape after generation. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Hide Initial Shape after Generation", Category = "Vitruvio")
 	bool HideAfterGeneration = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vitruvio")
+	bool bUseHierarchicalInstances = true;
 
 	/** Default parent material for opaque geometry. */
 	UPROPERTY(EditAnywhere, DisplayName = "Opaque Parent", Category = "Vitruvio Default Materials")
@@ -275,6 +279,9 @@ public:
 	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 */
 	void SetSplineInitialShape(const TArray<FSplinePoint>& SplinePoints, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	void RemoveInstanceComponent(UGeneratedModelInstanceComponent* GeneratedModelInstanceComponent);
 
 	/** Returns the attributes used for generation. */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")

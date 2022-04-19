@@ -399,7 +399,7 @@ SerializedGeometry serializeGeometry(const prtx::GeometryPtrVector& geometries, 
 	uint32_t numIndices = 0;
 	uint32_t maxNumUVSets = 0;
 	auto matsIt = materials.cbegin();
-	//prt supports up to 10 uv sets (see: https://doc.arcgis.com/en/cityengine/latest/cga/cga-texturing-essential-knowledge.htm)
+	// prt supports up to 10 uv sets (see: https://doc.arcgis.com/en/cityengine/latest/cga/cga-texturing-essential-knowledge.htm)
 	std::vector<bool> isUVSetEmptyVector(10, true);
 	for (const auto& geo : geometries)
 	{
@@ -416,7 +416,8 @@ SerializedGeometry serializeGeometry(const prtx::GeometryPtrVector& geometries, 
 			const uint32_t requiredUVSetsByMaterial = scanValidTextures(mat);
 			maxNumUVSets = std::max(maxNumUVSets, std::max(mesh->getUVSetsCount(), requiredUVSetsByMaterial));
 
-			for (uint32_t uvSet = 0; uvSet < mesh->getUVSetsCount(); uvSet++) {
+			for (uint32_t uvSet = 0; uvSet < mesh->getUVSetsCount(); uvSet++)
+			{
 				if (!mesh->getUVCoords(uvSet).empty())
 				{
 					isUVSetEmptyVector[uvSet] = false;
@@ -551,7 +552,8 @@ void encodeMesh(IUnrealCallbacks* cb, const SerializedGeometry& sg, wchar_t cons
 				faceRanges.data(), faceRanges.size(), matAttrMaps.v.empty() ? nullptr : matAttrMaps.v.data());
 }
 
-const prtx::PRTUtils::AttributeMapPtr convertReportToAttributeMap(const prtx::ReportsPtr& r) {
+const prtx::PRTUtils::AttributeMapPtr convertReportToAttributeMap(const prtx::ReportsPtr& r)
+{
 	prtx::PRTUtils::AttributeMapBuilderPtr amb(prt::AttributeMapBuilder::create());
 
 	for (const auto& b : r->mBools)
@@ -615,9 +617,11 @@ void UnrealGeometryEncoder::encode(prtx::GenerateContext& context, size_t initia
 	encPrep->fetchFinalizedInstances(instances, PREP_FLAGS);
 	convertGeometry(initialShape, instances, cb);
 
-	if (emitAttrs) {
+	if (emitAttrs)
+	{
 		const prtx::ReportsPtr& reports = reportsCollector->getReports();
-		if (reports) {
+		if (reports)
+		{
 			prtx::PRTUtils::AttributeMapPtr reportMap = convertReportToAttributeMap(reports);
 			cb->addReport(reportMap.get());
 		}
@@ -641,11 +645,11 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialSha
 
 			AttributeMapNOPtrVectorOwner instMaterialsAttributeMap;
 
+			const std::wstring instName = createInstanceName(inst);
 			if (serializedPrototypes.find(inst.getPrototypeIndex()) == serializedPrototypes.end())
 			{
 				const std::wstring uri = instGeom->getURI()->wstring();
 				const SerializedGeometry sg = serializeGeometry({instGeom}, {instMaterials});
-				const std::wstring instName = createInstanceName(inst);
 
 				encodeMesh(cb, sg, instName.c_str(), inst.getPrototypeIndex(), uri, {instGeom}, {instMaterials});
 
@@ -661,7 +665,7 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialSha
 				instMaterialsAttributeMap.v.push_back(instanceMatAmb->createAttributeMapAndReset());
 			}
 
-			cb->addInstance(inst.getPrototypeIndex(), inst.getTransformation().data(), instMaterialsAttributeMap.v.data(),
+			cb->addInstance(instName.c_str(), inst.getPrototypeIndex(), inst.getTransformation().data(), instMaterialsAttributeMap.v.data(),
 							instMaterialsAttributeMap.v.size());
 		}
 		else

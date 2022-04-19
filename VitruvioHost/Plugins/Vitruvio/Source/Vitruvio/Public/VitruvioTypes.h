@@ -28,7 +28,7 @@ namespace Vitruvio
 enum class EUnrealUvSetType : int32
 {
 	None = -1,
-	ColorMap = 0, //skip 1 because unreal engine saves lightmaps per default in uv set 1
+	ColorMap = 0, // skip 1 because unreal engine saves lightmaps per default in uv set 1
 	DirtMap = 2,
 	OpacityMap = 3,
 	NormalMap = 4,
@@ -85,14 +85,15 @@ struct FMaterialAttributeContainer
 
 struct FInstanceCacheKey
 {
-	int32 PrototypeId;
-	TArray<Vitruvio::FMaterialAttributeContainer> MaterialOverrides;
+	int32 PrototypeIndex;
+	FString Name;
+	TArray<FMaterialAttributeContainer> MaterialOverrides;
 
 	friend uint32 GetTypeHash(const FInstanceCacheKey& Object);
 
 	friend bool operator==(const FInstanceCacheKey& Lhs, const FInstanceCacheKey& RHS)
 	{
-		return Lhs.PrototypeId == RHS.PrototypeId && Lhs.MaterialOverrides == RHS.MaterialOverrides;
+		return Lhs.PrototypeIndex == RHS.PrototypeIndex && Lhs.Name == RHS.Name && Lhs.MaterialOverrides == RHS.MaterialOverrides;
 	}
 
 	friend bool operator!=(const FInstanceCacheKey& Lhs, const FInstanceCacheKey& RHS)

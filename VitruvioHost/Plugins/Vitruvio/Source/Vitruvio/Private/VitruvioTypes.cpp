@@ -202,7 +202,7 @@ uint32 GetTypeHash(const FMaterialAttributeContainer& Object)
 
 uint32 GetTypeHash(const FInstanceCacheKey& Object)
 {
-	return HashCombine(Object.PrototypeId, GetArrayHash(Object.MaterialOverrides));
+	return HashCombine(GetTypeHash(Object.Name), HashCombine(Object.PrototypeIndex, GetArrayHash(Object.MaterialOverrides)));
 }
 
 } // namespace Vitruvio

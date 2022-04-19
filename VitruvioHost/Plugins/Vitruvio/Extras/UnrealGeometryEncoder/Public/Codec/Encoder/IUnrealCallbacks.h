@@ -51,15 +51,16 @@ public:
 	/**
 	 * Add a new instance with the given id, transform and an optional set of overriding attributes for this instance
 	 *
-	 * @param prototypeId the id of the prorotype. An @ref addMesh call with the specified prorotypeId will be called before
+	 * @param name instance name
+	 * @param prototypeId the id of the prototype. An @ref addMesh call with the specified prototypeId will be called before
 	 *                    the call to addInstance and addReport
 	 * @param transform the transformation matrix of this instance
 	 * @param instanceMaterial override materials for this instance
 	 * @param numInstanceMaterials number of instance material overrides. Is either 0 or is equal to the number
 	 *                             of materials of the original mesh (by prototypeId)
 	 */
-	virtual void addInstance(int32_t prototypeId, const double* transform, const prt::AttributeMap** instanceMaterial,
+	virtual void addInstance(const wchar_t* name, int32_t prototypeId, const double* transform, const prt::AttributeMap** instanceMaterial,
 							 size_t numInstanceMaterials) = 0;
-	
+
 	virtual void addReport(const prt::AttributeMap* reports) = 0;
 };

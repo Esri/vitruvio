@@ -18,13 +18,11 @@
 #include "PRTTypes.h"
 
 #include "Codec/Encoder/IUnrealCallbacks.h"
-#include "VitruvioTypes.h"
 #include "Report.h"
+#include "VitruvioTypes.h"
 
 #include "Core.h"
-#include "Engine/StaticMesh.h"
 #include "MeshDescription.h"
-#include "Modules/ModuleManager.h"
 #include "VitruvioMesh.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogUnrealCallbacks, Log, All);
@@ -116,7 +114,7 @@ public:
 	 * @param numInstanceMaterials number of instance material overrides. Is either 0 or is equal to the number
 	 *                             of materials of the original mesh (by prototypeId)
 	 */
-	virtual void addInstance(int32_t prototypeId, const double* transform, const prt::AttributeMap** instanceMaterial,
+	virtual void addInstance(const wchar_t* name, int32_t prototypeId, const double* transform, const prt::AttributeMap** instanceMaterial,
 							 size_t numInstanceMaterials) override;
 
 	/**

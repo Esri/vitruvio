@@ -117,7 +117,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 	const FString UriString(uri);
 	const FString NameString(name);
 
-	if (!UriString.IsEmpty())
+	if (prototypeId != NO_PROTOTYPE_INDEX)
 	{
 		TSharedPtr<FVitruvioMesh> Mesh = VitruvioModule::Get().GetMeshCache().Get(UriString);
 		if (Mesh)
@@ -315,7 +315,7 @@ void UnrealCallbacks::addReport(const prt::AttributeMap* reports)
 	Reports = ExtractReports(reports);
 }
 
-void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform, const prt::AttributeMap** instanceMaterials,
+void UnrealCallbacks::addInstance(const wchar_t* name, int32_t prototypeId, const double* transform, const prt::AttributeMap** instanceMaterials,
 								  size_t numInstanceMaterials)
 {
 	const FMatrix TransformationMat(GetColumn(transform, 0), GetColumn(transform, 1), GetColumn(transform, 2), GetColumn(transform, 3));
@@ -355,7 +355,7 @@ void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform, 
 		}
 	}
 
-	Instances.FindOrAdd({prototypeId, MaterialOverrides}).Add(Transform);
+	Instances.FindOrAdd({prototypeId, name ? FString(name) : FString{}, MaterialOverrides}).Add(Transform);
 }
 
 prt::Status UnrealCallbacks::attrBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value)
