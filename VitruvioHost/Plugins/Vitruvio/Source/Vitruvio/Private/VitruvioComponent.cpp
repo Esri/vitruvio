@@ -289,11 +289,13 @@ void UVitruvioComponent::SetRandomSeed(int32 NewRandomSeed)
 
 void UVitruvioComponent::LoadInitialShape()
 {
-	// Do nothing if an initial shape has already been loaded
+	// If the initial shape has already been set just make sure it is valid
 	if (InitialShape)
 	{
 		if(!IsValid(InitialShape->GetComponent()))
+		{
 			InitialShape->Initialize(this);
+		}
 		return;
 	}
 
