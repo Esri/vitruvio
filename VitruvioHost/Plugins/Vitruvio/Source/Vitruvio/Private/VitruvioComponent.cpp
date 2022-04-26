@@ -643,13 +643,15 @@ void UVitruvioComponent::Generate()
 #if WITH_EDITOR
 void UVitruvioComponent::PostEditUndo()
 {
+	// Make sure the initial shape is valid before continuing with the undo
+	LoadInitialShape();
+	
 	Super::PostEditUndo();
 	
 	if (!PropertyChangeDelegate.IsValid())
 	{
 		PropertyChangeDelegate = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &UVitruvioComponent::OnPropertyChanged);
 	}
-	LoadInitialShape();
 }
 
 void UVitruvioComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
