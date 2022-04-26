@@ -292,6 +292,8 @@ void UVitruvioComponent::LoadInitialShape()
 	// Do nothing if an initial shape has already been loaded
 	if (InitialShape)
 	{
+		if(!IsValid(InitialShape->GetComponent()))
+			InitialShape->Initialize(this);
 		return;
 	}
 
@@ -645,6 +647,7 @@ void UVitruvioComponent::PostEditUndo()
 	{
 		PropertyChangeDelegate = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &UVitruvioComponent::OnPropertyChanged);
 	}
+	LoadInitialShape();
 }
 
 void UVitruvioComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
