@@ -362,6 +362,9 @@ private:
 	UPROPERTY(VisibleAnywhere, DisplayName = "Reports", Category = "Vitruvio")
 	TMap<FString, FReport> Reports;
 
+	UPROPERTY(Transient)
+	bool bInitialized = false;
+	
 	bool bInGenerateCallback = false;
 
 	TQueue<FGenerateQueueItem> GenerateQueue;

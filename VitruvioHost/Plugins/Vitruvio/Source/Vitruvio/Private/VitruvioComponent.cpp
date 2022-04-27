@@ -88,6 +88,9 @@ template <typename A, typename T>
 void SetAttribute(UVitruvioComponent* VitruvioComponent, TMap<FString, URuleAttribute*>& Attributes, const FString& Name, const T& Value,
 				  bool bAddIfNonExisting, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
+	// Initialize component if necessary
+	VitruvioComponent->Initialize();
+	
 	URuleAttribute** FoundAttribute = Attributes.Find(Name);
 	if (!FoundAttribute && !bAddIfNonExisting)
 	{
@@ -333,6 +336,9 @@ bool UVitruvioComponent::GetFloatArrayAttribute(const FString& Name, TArray<doub
 void UVitruvioComponent::SetAttributes(const TMap<FString, FString>& NewAttributes, bool bAddIfNonExisting,
 									   UGenerateCompletedCallbackProxy* CallbackProxy)
 {
+	// Initialize component if necessary
+	Initialize();
+	
 	const bool bOldGenerateAutomatically = GenerateAutomatically;
 	GenerateAutomatically = false;
 
@@ -356,10 +362,7 @@ void UVitruvioComponent::SetAttributes(const TMap<FString, FString>& NewAttribut
 	}
 
 	GenerateAutomatically = bOldGenerateAutomatically;
-	if (HasValidInputData())
-	{
-		EvaluateRuleAttributes(GenerateAutomatically, CallbackProxy);
-	}
+	EvaluateRuleAttributes(GenerateAutomatically, CallbackProxy);
 }
 
 void UVitruvioComponent::SetMeshInitialShape(UStaticMesh* StaticMesh, UGenerateCompletedCallbackProxy* CallbackProxy)
@@ -457,6 +460,13 @@ void UVitruvioComponent::LoadInitialShape()
 
 void UVitruvioComponent::Initialize()
 {
+	if (bInitialized)
+	{
+		return;
+	}
+	
+	bInitialized = true;
+	
 	// During cooking we don't need to do initialize anything as we don't wont to generate during the cooking process
 	if (GIsCookerLoadingPackage)
 	{
@@ -476,11 +486,8 @@ void UVitruvioComponent::Initialize()
 
 	CalculateRandomSeed();
 
-	// Check if we can load the attributes and then generate (eg during play)
-	if (GenerateAutomatically && HasValidInputData())
-	{
-		EvaluateRuleAttributes(true);
-	}
+	// Evaluate rule attributes and possibly generate the model
+	EvaluateRuleAttributes(GenerateAutomatically);
 }
 
 void UVitruvioComponent::PostLoad()
@@ -742,6 +749,9 @@ void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 
 void UVitruvioComponent::Generate(UGenerateCompletedCallbackProxy* CallbackProxy)
 {
+	// Initialize component if necessary
+	Initialize();
+	
 	// If either the RPK, initial shape or attributes are not ready we can not generate
 	if (!HasValidInputData())
 	{
@@ -907,6 +917,10 @@ void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& T
 
 void UVitruvioComponent::EvaluateRuleAttributes(bool ForceRegenerate, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
+	// Initialize component if necessary
+	Initialize();
+
+	// If we don't have valid input data (initial shape and rpk) we can not evaluate the rule attribtues
 	if (!HasValidInputData())
 	{
 		return;
