@@ -568,6 +568,13 @@ void UVitruvioComponent::ProcessGenerateQueue()
 			}
 		}
 
+		TArray<AActor*> AttachedActors;
+		InitialShapeComponent->GetOwner()->GetAttachedActors(AttachedActors, false, true);
+		for (AActor* Actor : AttachedActors)
+		{
+			Actor->Destroy();
+		}
+
 		if (!VitruvioModelComponent)
 		{
 			VitruvioModelComponent = NewObject<UGeneratedModelStaticMeshComponent>(InitialShapeComponent, FName(TEXT("GeneratedModel")),
@@ -590,70 +597,175 @@ void UVitruvioComponent::ProcessGenerateQueue()
 			VitruvioModelComponent->SetCollisionData({});
 		}
 
-		if (bUseHierarchicalInstances)
+		TMap<FString, int32> NameMap;
+		for (const FInstance& Instance : ConvertedResult.Instances)
 		{
-			TMap<FString, int32> NameMap;
-			for (const FInstance& Instance : ConvertedResult.Instances)
+			bool bHasBeenReplaced = false;
+			if (Replacements)
 			{
-				FString UniqueName = UniqueComponentName(Instance.Name, NameMap);
-				auto InstancedComponent = NewObject<UGeneratedModelHISMComponent>(VitruvioModelComponent, FName(UniqueName),
-																				  RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
-				const TArray<FTransform>& Transforms = Instance.Transforms;
-				InstancedComponent->SetStaticMesh(Instance.InstanceMesh->GetStaticMesh());
-				InstancedComponent->SetCollisionData(Instance.InstanceMesh->GetCollisionData());
-
-				// Add all instance transforms
-				for (const FTransform& Transform : Transforms)
+				for (const auto& Replacement : Replacements->Replacements)
 				{
-					InstancedComponent->AddInstance(Transform);
+					if (!Replacement.IsValid())
+					{
+						continue;
+					}
+
+					if (Replacement.ReplacementType == ReplacementType::HierarchicalInstances)
+					{
+						if (Replacement.Matches(Instance.Name) && Replacement.ReplacementOptions.Num() > 0)
+						{
+							TArray<float> CumulativeProbabilities;
+							TArray<UHierarchicalInstancedStaticMeshComponent*> InstanceComponents;
+							float CumulativeProbability = 0.0f;
+							for (const FReplacementOption& ReplacementOption : Replacement.ReplacementOptions)
+							{
+								CumulativeProbability += ReplacementOption.Probability;
+								CumulativeProbabilities.Add(CumulativeProbability);
+
+								FString UniqueName = UniqueComponentName(
+									!ReplacementOption.ReplacementName.IsEmpty() ? ReplacementOption.ReplacementName : Instance.Name, NameMap);
+								const UClass* ClassType = ReplacementOption.ReplacementInstances.Get();
+								auto InstancedComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(
+									VitruvioModelComponent, ClassType, FName(UniqueName),
+									RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
+
+								if (InstancedComponent->Implements<UReplacementInterface>())
+								{
+									IReplacementInterface::Execute_OnConstructed(InstancedComponent);
+								}
+
+								InstanceComponents.Add(InstancedComponent);
+							}
+
+							for (const auto& InstanceComponent : InstanceComponents)
+							{
+								// Attach and register instance component
+								InstanceComponent->AttachToComponent(VitruvioModelComponent, FAttachmentTransformRules::KeepRelativeTransform);
+								InitialShapeComponent->GetOwner()->AddInstanceComponent(InstanceComponent);
+								InstanceComponent->OnComponentCreated();
+								InstanceComponent->RegisterComponent();
+							}
+
+							for (const FTransform& Transform : Instance.Transforms)
+							{
+								const float RandomProbability = FMath::RandRange(0.0f, CumulativeProbability);
+								int ComponentIndex = Algo::LowerBound(CumulativeProbabilities, RandomProbability);
+								InstanceComponents[ComponentIndex]->AddInstance(Transform);
+							}
+
+							for (const auto& InstanceComponent : InstanceComponents)
+							{
+								if (InstanceComponent->Implements<UReplacementInterface>())
+								{
+									IReplacementInterface::Execute_OnInstancesAdded(InstanceComponent);
+								}
+							}
+
+							bHasBeenReplaced = true;
+						}
+					}
+					else
+					{
+						if (Replacement.Matches(Instance.Name) && Replacement.ReplacementOptions.Num() > 0)
+						{
+							TArray<float> CumulativeProbabilities;
+							float CumulativeProbability = 0.0f;
+							for (const FReplacementOption& ReplacementOption : Replacement.ReplacementOptions)
+							{
+								CumulativeProbability += ReplacementOption.Probability;
+								CumulativeProbabilities.Add(CumulativeProbability);
+							}
+
+							for (const FTransform& Transform : Instance.Transforms)
+							{
+								const float RandomProbability = FMath::RandRange(0.0f, CumulativeProbability);
+								int ReplacementIndex = Algo::LowerBound(CumulativeProbabilities, RandomProbability);
+								const FReplacementOption& Option = Replacement.ReplacementOptions[ReplacementIndex];
+								FString UniqueName =
+									UniqueComponentName(!Option.ReplacementName.IsEmpty() ? Option.ReplacementName : Instance.Name, NameMap);
+								UClass* ClassType = Option.ReplacementActor.Get();
+								FActorSpawnParameters Parameters;
+								Parameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+								Parameters.ObjectFlags = RF_Transient | RF_TextExportTransient | RF_DuplicateTransient;
+
+								auto Actor = GetOwner()->GetWorld()->SpawnActor<AActor>(ClassType, Transform, Parameters);
+								Actor->SetActorScale3D(Transform.GetScale3D());
+
+								if (Actor->Implements<UReplacementInterface>())
+								{
+									IReplacementInterface::Execute_OnConstructed(Actor);
+								}
+
+								Actor->AttachToActor(GetOwner(), FAttachmentTransformRules::KeepRelativeTransform);
+							}
+
+							bHasBeenReplaced = true;
+						}
+					}
 				}
-
-				// Apply override materials
-				for (int32 MaterialIndex = 0; MaterialIndex < Instance.OverrideMaterials.Num(); ++MaterialIndex)
-				{
-					InstancedComponent->SetMaterial(MaterialIndex, Instance.OverrideMaterials[MaterialIndex]);
-				}
-
-				// Instanced component collision
-				CreateCollision(Instance.InstanceMesh->GetStaticMesh(), InstancedComponent, GenerateCollision);
-
-				// Attach and register instance component
-				InstancedComponent->AttachToComponent(VitruvioModelComponent, FAttachmentTransformRules::KeepRelativeTransform);
-				InitialShapeComponent->GetOwner()->AddInstanceComponent(InstancedComponent);
-				InstancedComponent->OnComponentCreated();
-				InstancedComponent->RegisterComponent();
 			}
-		}
-		else
-		{
-			TMap<FString, int32> NameMap;
-			for (const FInstance& Instance : ConvertedResult.Instances)
+
+			if (!bHasBeenReplaced)
 			{
-				const TArray<FTransform>& Transforms = Instance.Transforms;
-				for (const FTransform& Transform : Transforms)
+
+				if (bUseHierarchicalInstances)
 				{
 					FString UniqueName = UniqueComponentName(Instance.Name, NameMap);
-					UE_LOG(LogTemp, Warning, TEXT("%s"), *UniqueName);
-					auto InstanceComponent = NewObject<UGeneratedModelInstanceComponent>(
-						VitruvioModelComponent, FName(UniqueName), RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
-					InstanceComponent->SetRelativeTransform(Transform);
-					InstanceComponent->SetStaticMesh(Instance.InstanceMesh->GetStaticMesh());
-					InstanceComponent->SetCollisionData(Instance.InstanceMesh->GetCollisionData());
+					auto InstancedComponent = NewObject<UGeneratedModelHISMComponent>(VitruvioModelComponent, FName(UniqueName),
+																					  RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
+					const TArray<FTransform>& Transforms = Instance.Transforms;
+					InstancedComponent->SetStaticMesh(Instance.InstanceMesh->GetStaticMesh());
+					InstancedComponent->SetCollisionData(Instance.InstanceMesh->GetCollisionData());
+
+					// Add all instance transforms
+					for (const FTransform& Transform : Transforms)
+					{
+						InstancedComponent->AddInstance(Transform);
+					}
 
 					// Apply override materials
 					for (int32 MaterialIndex = 0; MaterialIndex < Instance.OverrideMaterials.Num(); ++MaterialIndex)
 					{
-						InstanceComponent->SetMaterial(MaterialIndex, Instance.OverrideMaterials[MaterialIndex]);
+						InstancedComponent->SetMaterial(MaterialIndex, Instance.OverrideMaterials[MaterialIndex]);
 					}
 
 					// Instanced component collision
-					CreateCollision(Instance.InstanceMesh->GetStaticMesh(), InstanceComponent, GenerateCollision);
+					CreateCollision(Instance.InstanceMesh->GetStaticMesh(), InstancedComponent, GenerateCollision);
 
 					// Attach and register instance component
-					InstanceComponent->AttachToComponent(VitruvioModelComponent, FAttachmentTransformRules::KeepRelativeTransform);
-					InitialShapeComponent->GetOwner()->AddInstanceComponent(InstanceComponent);
-					InstanceComponent->OnComponentCreated();
-					InstanceComponent->RegisterComponent();
+					InstancedComponent->AttachToComponent(VitruvioModelComponent, FAttachmentTransformRules::KeepRelativeTransform);
+					InitialShapeComponent->GetOwner()->AddInstanceComponent(InstancedComponent);
+					InstancedComponent->OnComponentCreated();
+					InstancedComponent->RegisterComponent();
+				}
+				else
+				{
+					const TArray<FTransform>& Transforms = Instance.Transforms;
+					for (const FTransform& Transform : Transforms)
+					{
+						FString UniqueName = UniqueComponentName(Instance.Name, NameMap);
+						UE_LOG(LogTemp, Warning, TEXT("%s"), *UniqueName);
+						auto InstanceComponent = NewObject<UGeneratedModelInstanceComponent>(
+							VitruvioModelComponent, FName(UniqueName), RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
+						InstanceComponent->SetRelativeTransform(Transform);
+						InstanceComponent->SetStaticMesh(Instance.InstanceMesh->GetStaticMesh());
+						InstanceComponent->SetCollisionData(Instance.InstanceMesh->GetCollisionData());
+
+						// Apply override materials
+						for (int32 MaterialIndex = 0; MaterialIndex < Instance.OverrideMaterials.Num(); ++MaterialIndex)
+						{
+							InstanceComponent->SetMaterial(MaterialIndex, Instance.OverrideMaterials[MaterialIndex]);
+						}
+
+						// Instanced component collision
+						CreateCollision(Instance.InstanceMesh->GetStaticMesh(), InstanceComponent, GenerateCollision);
+
+						// Attach and register instance component
+						InstanceComponent->AttachToComponent(VitruvioModelComponent, FAttachmentTransformRules::KeepRelativeTransform);
+						InitialShapeComponent->GetOwner()->AddInstanceComponent(InstanceComponent);
+						InstanceComponent->OnComponentCreated();
+						InstanceComponent->RegisterComponent();
+					}
 				}
 			}
 		}

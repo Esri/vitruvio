@@ -23,6 +23,7 @@
 #include "GenerateCompletedCallbackProxy.h"
 #include "GeneratedModelInstanceComponent.h"
 #include "InitialShape.h"
+#include "VitruvioReplacements.h"
 #include "VitruvioTypes.h"
 
 #include "VitruvioComponent.generated.h"
@@ -83,6 +84,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vitruvio")
 	bool bUseHierarchicalInstances = true;
+
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
+	UVitruvioReplacements* Replacements;
 
 	/** Default parent material for opaque geometry. */
 	UPROPERTY(EditAnywhere, DisplayName = "Opaque Parent", Category = "Vitruvio Default Materials")

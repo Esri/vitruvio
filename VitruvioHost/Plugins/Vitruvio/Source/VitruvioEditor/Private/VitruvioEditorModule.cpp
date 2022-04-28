@@ -29,8 +29,12 @@
 #include "Framework/Notifications/NotificationManager.h"
 #include "IAssetTools.h"
 #include "Modules/ModuleManager.h"
+#include "ReplacementDetails.h"
+#include "ReplacementFiltersDetails.h"
 #include "VitruvioBlueprintLibrary.h"
 #include "Widgets/Notifications/SNotificationList.h"
+#include "ZoneGraphDelegates.h"
+#include "ZoneGraphSettingsAccessor.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioEditorModule"
 
@@ -131,6 +135,10 @@ void VitruvioEditorModule::StartupModule()
 	FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyModule.RegisterCustomClassLayout(UVitruvioComponent::StaticClass()->GetFName(),
 											 FOnGetDetailCustomizationInstance::CreateStatic(&FVitruvioComponentDetails::MakeInstance));
+	PropertyModule.RegisterCustomPropertyTypeLayout(TEXT("ReplacementFilters"),
+													FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FReplacementFiltersDetails::MakeInstance));
+	PropertyModule.RegisterCustomPropertyTypeLayout(TEXT("Replacement"),
+													FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FReplacementDetails::MakeInstance));
 
 	LevelViewportContextMenuVitruvioExtender =
 		FLevelEditorModule::FLevelViewportMenuExtender_SelectedActors::CreateStatic(&ExtendLevelViewportContextMenuForVitruvioComponents);
@@ -151,6 +159,8 @@ void VitruvioEditorModule::ShutdownModule()
 {
 	FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyModule.UnregisterCustomClassLayout(UVitruvioComponent::StaticClass()->GetFName());
+	PropertyModule.UnregisterCustomClassLayout(TEXT("ReplacementFilters"));
+	PropertyModule.UnregisterCustomClassLayout(TEXT("Replacement"));
 
 	FLevelEditorModule& LevelEditorModule = FModuleManager::LoadModuleChecked<FLevelEditorModule>("LevelEditor");
 	LevelEditorModule.GetAllLevelViewportContextMenuExtenders().RemoveAll(
