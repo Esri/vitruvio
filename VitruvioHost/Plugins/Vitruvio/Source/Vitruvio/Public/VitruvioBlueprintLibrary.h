@@ -18,6 +18,7 @@
 #include "CoreMinimal.h"
 #include "RulePackage.h"
 #include "VitruvioActor.h"
+#include "Kismet/BlueprintFunctionLibrary.h"
 
 #include "VitruvioBlueprintLibrary.generated.h"
 
