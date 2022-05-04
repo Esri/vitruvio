@@ -29,6 +29,7 @@
 #include "Framework/Notifications/NotificationManager.h"
 #include "IAssetTools.h"
 #include "Modules/ModuleManager.h"
+#include "VitruvioStyle.h"
 #include "Widgets/Notifications/SNotificationList.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioEditorModule"
@@ -198,6 +199,8 @@ FLevelEditorModule::FLevelViewportMenuExtender_SelectedActors LevelViewportConte
 
 void VitruvioEditorModule::StartupModule()
 {
+	FVitruvioStyle::Initialize();
+	
 	IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
 	AssetTools.RegisterAssetTypeActions(MakeShareable(new FRulePackageAssetTypeActions()));
 
@@ -222,6 +225,8 @@ void VitruvioEditorModule::StartupModule()
 
 void VitruvioEditorModule::ShutdownModule()
 {
+	FVitruvioStyle::Shutdown();
+	
 	FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyModule.UnregisterCustomClassLayout(UVitruvioComponent::StaticClass()->GetFName());
 
