@@ -387,7 +387,8 @@ void UVitruvioComponent::SetMeshInitialShape(UStaticMesh* StaticMesh, UGenerateC
 	SetInitialShape(this, CallbackProxy, [this, StaticMesh]()
 	{
 		UStaticMeshInitialShape* NewInitialShape =
-		NewObject<UStaticMeshInitialShape>(GetOwner(), UStaticMeshInitialShape::StaticClass(), NAME_None, RF_Transient | RF_TextExportTransient);
+		NewObject<UStaticMeshInitialShape>(GetOwner(), UStaticMeshInitialShape::StaticClass(),
+			NAME_None, RF_Transient | RF_TextExportTransient | RF_Transactional);
 		NewInitialShape->Initialize(this, StaticMesh);
 		return NewInitialShape;
 	});
@@ -398,7 +399,8 @@ void UVitruvioComponent::SetSplineInitialShape(const TArray<FSplinePoint>& Splin
 	SetInitialShape(this, CallbackProxy, [this, &SplinePoints]()
 	{
 		USplineInitialShape* NewInitialShape =
-		NewObject<USplineInitialShape>(GetOwner(), USplineInitialShape::StaticClass(), NAME_None, RF_Transient | RF_TextExportTransient);
+		NewObject<USplineInitialShape>(GetOwner(), USplineInitialShape::StaticClass(),
+			NAME_None, RF_Transient | RF_TextExportTransient | RF_Transactional);
 		NewInitialShape->Initialize(this, SplinePoints);
 		return NewInitialShape;
 	});
