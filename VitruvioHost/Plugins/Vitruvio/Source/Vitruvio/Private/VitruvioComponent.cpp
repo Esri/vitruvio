@@ -42,6 +42,23 @@
 namespace
 {
 
+template <typename T>
+void SetInitialShape(UVitruvioComponent* Component, UGenerateCompletedCallbackProxy* CallbackProxy, T&& InitialShapeInitializer)
+{
+	if (Component->InitialShape)
+	{
+		Component->InitialShape->Uninitialize();
+		Component->InitialShape->Rename(nullptr, GetTransientPackage()); // Remove from Owner
+	}
+
+	UInitialShape* NewInitialShape = InitialShapeInitializer();
+
+	Component->InitialShape = NewInitialShape;
+
+	Component->RemoveGeneratedMeshes();
+	Component->EvaluateRuleAttributes(Component->GenerateAutomatically, CallbackProxy);
+}
+
 FVector3f GetCentroid(const TArray<FVector3f>& Vertices)
 {
 	FVector3f Centroid = FVector3f::ZeroVector;
@@ -367,38 +384,24 @@ void UVitruvioComponent::SetAttributes(const TMap<FString, FString>& NewAttribut
 
 void UVitruvioComponent::SetMeshInitialShape(UStaticMesh* StaticMesh, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
-	if (InitialShape)
+	SetInitialShape(this, CallbackProxy, [this, StaticMesh]()
 	{
-		InitialShape->Uninitialize();
-		InitialShape->Rename(nullptr, GetTransientPackage()); // Remove from Owner
-	}
-
-	UStaticMeshInitialShape* NewInitialShape =
+		UStaticMeshInitialShape* NewInitialShape =
 		NewObject<UStaticMeshInitialShape>(GetOwner(), UStaticMeshInitialShape::StaticClass(), NAME_None, RF_Transient | RF_TextExportTransient);
-	NewInitialShape->Initialize(this, StaticMesh);
-
-	InitialShape = NewInitialShape;
-
-	RemoveGeneratedMeshes();
-	EvaluateRuleAttributes(GenerateAutomatically, CallbackProxy);
+		NewInitialShape->Initialize(this, StaticMesh);
+		return NewInitialShape;
+	});
 }
 
 void UVitruvioComponent::SetSplineInitialShape(const TArray<FSplinePoint>& SplinePoints, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
-	if (InitialShape)
+	SetInitialShape(this, CallbackProxy, [this, &SplinePoints]()
 	{
-		InitialShape->Uninitialize();
-		InitialShape->Rename(nullptr, GetTransientPackage()); // Remove from Owner
-	}
-
-	USplineInitialShape* NewInitialShape =
+		USplineInitialShape* NewInitialShape =
 		NewObject<USplineInitialShape>(GetOwner(), USplineInitialShape::StaticClass(), NAME_None, RF_Transient | RF_TextExportTransient);
-	NewInitialShape->Initialize(this, SplinePoints);
-
-	InitialShape = NewInitialShape;
-
-	RemoveGeneratedMeshes();
-	EvaluateRuleAttributes(GenerateAutomatically, CallbackProxy);
+		NewInitialShape->Initialize(this, SplinePoints);
+		return NewInitialShape;
+	});
 }
 
 const TMap<FString, URuleAttribute*>& UVitruvioComponent::GetAttributes() const
