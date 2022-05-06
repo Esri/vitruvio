@@ -765,8 +765,6 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			AddSwitchInitialShapeCombobox(RootCategory, CurrentInitialShapeType, VitruvioComponent);
 		}
 
-		AddSeparator(RootCategory);
-
 		BuildAttributeEditor(DetailBuilder, RootCategory, VitruvioComponent);
 	}
 }
