@@ -31,20 +31,20 @@ class VITRUVIO_API UGenerateCompletedCallbackProxy final : public UBlueprintAsyn
 	GENERATED_BODY()
 
 public:
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGenerateCompletedDelegate);
-	DECLARE_MULTICAST_DELEGATE(FGenerateCompletedDelegateCpp);
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttributesEvaluatedDelegate);
-	DECLARE_MULTICAST_DELEGATE(FOnAttributesEvaluatedDelegateCpp);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGenerateCompletedDynDelegate);
+	DECLARE_MULTICAST_DELEGATE(FGenerateCompletedDelegate);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttributesEvaluatedDynDelegate);
+	DECLARE_MULTICAST_DELEGATE(FOnAttributesEvaluatedDelegate);
 
 	/** Called after the attributes have been evaluated. Note that it is not guaranteed that this callback is ever called. */
 	UPROPERTY(BlueprintAssignable, meta = (DisplayName = "Attributes Evaluated"), Category = "Vitruvio")
+	FOnAttributesEvaluatedDynDelegate OnAttributesEvaluatedBlueprint;
 	FOnAttributesEvaluatedDelegate OnAttributesEvaluated;
-	FOnAttributesEvaluatedDelegateCpp OnAttributesEvaluatedCpp;
 
 	/** Called after generate has completed. Note that it is not guaranteed that this callback is ever called. */
 	UPROPERTY(BlueprintAssignable, meta = (DisplayName = "Generate Completed"), Category = "Vitruvio")
+	FGenerateCompletedDynDelegate OnGenerateCompletedBlueprint;
 	FGenerateCompletedDelegate OnGenerateCompleted;
-	FGenerateCompletedDelegateCpp OnGenerateCompletedCpp;
 
 	/**
 	 * Sets the given Rule Package. This will reevaluate the attributes and if GenerateAutomatically is set to true, also regenerates the model.

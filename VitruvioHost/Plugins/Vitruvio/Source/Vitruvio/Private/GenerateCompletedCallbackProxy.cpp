@@ -162,13 +162,13 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::ConvertToVitru
 
 	UGenerateCompletedCallbackProxy* InternalProxy = NewObject<UGenerateCompletedCallbackProxy>();
 	InternalProxy->RegisterWithGameInstance(WorldContextObject);
-	InternalProxy->OnGenerateCompletedCpp.AddLambda(FExecuteAfterCountdown(TotalActors, [Proxy]() {
+	InternalProxy->OnGenerateCompleted.AddLambda(FExecuteAfterCountdown(TotalActors, [Proxy]() {
+		Proxy->OnGenerateCompletedBlueprint.Broadcast();
 		Proxy->OnGenerateCompleted.Broadcast();
-		Proxy->OnGenerateCompletedCpp.Broadcast();
 	}));
-	InternalProxy->OnAttributesEvaluatedCpp.AddLambda(FExecuteAfterCountdown(TotalActors, [Proxy]() {
+	InternalProxy->OnAttributesEvaluated.AddLambda(FExecuteAfterCountdown(TotalActors, [Proxy]() {
+		Proxy->OnAttributesEvaluatedBlueprint.Broadcast();
 		Proxy->OnAttributesEvaluated.Broadcast();
-		Proxy->OnAttributesEvaluatedCpp.Broadcast();
 	}));
 
 	for (AActor* Actor : Actors)

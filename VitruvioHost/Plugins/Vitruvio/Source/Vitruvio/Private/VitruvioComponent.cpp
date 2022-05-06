@@ -432,7 +432,7 @@ void UVitruvioComponent::LoadInitialShape()
 	// If the initial shape has already been set just make sure it is valid
 	if (InitialShape)
 	{
-		if(!IsValid(InitialShape->GetComponent()))
+		if (!IsValid(InitialShape->GetComponent()))
 		{
 			InitialShape->Initialize(this);
 		}
@@ -614,8 +614,8 @@ void UVitruvioComponent::ProcessGenerateQueue()
 
 		if (Result.CallbackProxy)
 		{
+			Result.CallbackProxy->OnGenerateCompletedBlueprint.Broadcast();
 			Result.CallbackProxy->OnGenerateCompleted.Broadcast();
-			Result.CallbackProxy->OnGenerateCompletedCpp.Broadcast();
 			Result.CallbackProxy->SetReadyToDestroy();
 		}
 		OnGenerateCompleted.Broadcast();
@@ -636,8 +636,8 @@ void UVitruvioComponent::ProcessAttributesEvaluationQueue()
 
 		if (AttributesEvaluation.CallbackProxy)
 		{
+			AttributesEvaluation.CallbackProxy->OnAttributesEvaluatedBlueprint.Broadcast();
 			AttributesEvaluation.CallbackProxy->OnAttributesEvaluated.Broadcast();
-			AttributesEvaluation.CallbackProxy->OnAttributesEvaluatedCpp.Broadcast();
 		}
 		OnAttributesEvaluated.Broadcast();
 
@@ -648,7 +648,7 @@ void UVitruvioComponent::ProcessAttributesEvaluationQueue()
 		else if (AttributesEvaluation.CallbackProxy)
 		{
 			AttributesEvaluation.CallbackProxy->SetReadyToDestroy();
-		} 
+		}
 	}
 }
 
