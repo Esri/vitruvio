@@ -516,7 +516,10 @@ USceneComponent* UStaticMeshInitialShape::CopySceneComponent(AActor* OldActor, A
 {
 	const UStaticMeshComponent* OldStaticMeshComponent = OldActor->FindComponentByClass<UStaticMeshComponent>();
 	UStaticMeshComponent* NewStaticMeshComponent = AttachComponent<UStaticMeshComponent>(NewActor, TEXT("InitialShapeSpline"));
-	NewStaticMeshComponent->SetStaticMesh(OldStaticMeshComponent->GetStaticMesh());
+	if (OldStaticMeshComponent)
+	{
+		NewStaticMeshComponent->SetStaticMesh(OldStaticMeshComponent->GetStaticMesh());
+	}
 	return NewStaticMeshComponent;
 }
 
@@ -541,7 +544,10 @@ USceneComponent* USplineInitialShape::CopySceneComponent(AActor* OldActor, AActo
 	const USplineComponent* OldSplineComponent = OldActor->FindComponentByClass<USplineComponent>();
 	USplineComponent* NewSplineComponent = AttachComponent<USplineComponent>(NewActor, TEXT("InitialShapeStaticMesh"));
 	NewSplineComponent->SetClosedLoop(true);
-	NewSplineComponent->SplineCurves = OldSplineComponent->SplineCurves;
+	if (OldSplineComponent)
+	{
+		NewSplineComponent->SplineCurves = OldSplineComponent->SplineCurves;
+	}
 	return NewSplineComponent;
 }
 #if WITH_EDITOR
