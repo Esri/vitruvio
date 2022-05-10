@@ -122,11 +122,9 @@ public:
 	 *
 	 * @param Name The name of the attribute to set.
 	 * @param Value The new value for the attribute.
-	 * @param bAddIfNonExisting Adds a new attribute if the no attribute is found with the given Name.
 	 * @param CallbackProxy The callback proxy used to register for completion events.
 	 */
-	void SetStringAttribute(const FString& Name, const FString& Value, bool bAddIfNonExisting = false,
-							UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetStringAttribute(const FString& Name, const FString& Value, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Access the string attribute with the given Name. The OutValue is default initialized if no attribute with the given Name is found.
@@ -143,12 +141,10 @@ public:
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Values The new values for the attribute.
-	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
 	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
-	void SetStringArrayAttribute(const FString& Name, const TArray<FString>& Values, bool bAddIfNonExisting = false,
-								 UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetStringArrayAttribute(const FString& Name, const TArray<FString>& Values, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Access the string array attribute with the given Name. The OutValue is default initialized if no attribute with the given Name is found.
@@ -165,11 +161,10 @@ public:
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Value The new value for the attribute.
-	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
 	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
-	void SetBoolAttribute(const FString& Name, bool Value, bool bAddIfNonExisting = false, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetBoolAttribute(const FString& Name, bool Value, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Access the bool attribute with the given Name. The OutValue is default initialized if no attribute with the given Name is found.
@@ -186,12 +181,10 @@ public:
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Values The new values for the attribute.
-	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
 	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
-	void SetBoolArrayAttribute(const FString& Name, const TArray<bool>& Values, bool bAddIfNonExisting = false,
-							   UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetBoolArrayAttribute(const FString& Name, const TArray<bool>& Values, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Access the bool array attribute with the given Name. The OutValue is default initialized if no attribute with the given Name is found.
@@ -208,12 +201,10 @@ public:
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Value The new value for the attribute.
-	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
 	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
-	void SetFloatAttribute(const FString& Name, double Value, bool bAddIfNonExisting = false,
-						   UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetFloatAttribute(const FString& Name, double Value, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Access the float attribute with the given Name. The OutValue is default initialized if no attribute with the given Name is found.
@@ -230,12 +221,10 @@ public:
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Values The new values for the attribute.
-	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
 	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
-	void SetFloatArrayAttribute(const FString& Name, const TArray<double>& Values, bool bAddIfNonExisting = false,
-								UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetFloatArrayAttribute(const FString& Name, const TArray<double>& Values, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Access the float array attribute with the given Name. The OutValue is default initialized if no attribute with the given Name is found.
@@ -254,11 +243,9 @@ public:
 	 * string representation: <br> "1.0" for the float 1.0 <br> "hello" for the string "hello" and <br> "true" for the bool true <br>
 	 *
 	 * @param NewAttributes The attributes to be sets
-	 * @param bAddIfNonExisting Adds a new Attribute if the no Attribute is found with the given Name.
 	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 */
-	void SetAttributes(const TMap<FString, FString>& NewAttributes, bool bAddIfNonExisting = false,
-					   UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetAttributes(const TMap<FString, FString>& NewAttributes, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Sets the given static mesh as initial shape. Regenerates the model if generate automatically is set to true.

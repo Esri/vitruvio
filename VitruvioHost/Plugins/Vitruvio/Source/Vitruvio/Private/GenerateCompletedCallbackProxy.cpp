@@ -73,65 +73,65 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::Generate(UVitr
 }
 
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetFloatAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
-																					float Value, bool bAddIfNonExisting)
+																					float Value)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(VitruvioComponent);
-	VitruvioComponent->SetFloatAttribute(Name, Value, bAddIfNonExisting, Proxy);
+	VitruvioComponent->SetFloatAttribute(Name, Value, Proxy);
 	return Proxy;
 }
 
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetStringAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
-																					 const FString& Value, bool bAddIfNonExisting)
+																					 const FString& Value)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(VitruvioComponent);
-	VitruvioComponent->SetStringAttribute(Name, Value, bAddIfNonExisting, Proxy);
+	VitruvioComponent->SetStringAttribute(Name, Value, Proxy);
 	return Proxy;
 }
 
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetBoolAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
-																				   bool Value, bool bAddIfNonExisting)
+																				   bool Value)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(VitruvioComponent);
-	VitruvioComponent->SetBoolAttribute(Name, Value, bAddIfNonExisting, Proxy);
+	VitruvioComponent->SetBoolAttribute(Name, Value, Proxy);
 	return Proxy;
 }
 
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetFloatArrayAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
-																						 const TArray<double>& Values, bool bAddIfNonExisting)
+																						 const TArray<double>& Values)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(VitruvioComponent);
-	VitruvioComponent->SetFloatArrayAttribute(Name, Values, bAddIfNonExisting, Proxy);
+	VitruvioComponent->SetFloatArrayAttribute(Name, Values, Proxy);
 	return Proxy;
 }
 
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetStringArrayAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
-																						  const TArray<FString>& Values, bool bAddIfNonExisting)
+																						  const TArray<FString>& Values)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(VitruvioComponent);
-	VitruvioComponent->SetStringArrayAttribute(Name, Values, bAddIfNonExisting, Proxy);
+	VitruvioComponent->SetStringArrayAttribute(Name, Values, Proxy);
 	return Proxy;
 }
 
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetBoolArrayAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
-																						const TArray<bool>& Values, bool bAddIfNonExisting)
+																						const TArray<bool>& Values)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(VitruvioComponent);
-	VitruvioComponent->SetBoolArrayAttribute(Name, Values, bAddIfNonExisting, Proxy);
+	VitruvioComponent->SetBoolArrayAttribute(Name, Values, Proxy);
 	return Proxy;
 }
 
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetAttributes(UVitruvioComponent* VitruvioComponent,
-																				const TMap<FString, FString>& NewAttributes, bool bAddIfNonExisting)
+																				const TMap<FString, FString>& NewAttributes)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(VitruvioComponent);
-	VitruvioComponent->SetAttributes(NewAttributes, bAddIfNonExisting, Proxy);
+	VitruvioComponent->SetAttributes(NewAttributes, Proxy);
 	return Proxy;
 }
 
