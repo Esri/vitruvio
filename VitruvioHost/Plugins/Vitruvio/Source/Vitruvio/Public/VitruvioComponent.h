@@ -107,7 +107,7 @@ public:
 	/**
 	 * Sets the given Rule Package. This will reevaluate the attributes and if GenerateAutomatically is set to true, also regenerates the model.
 	 */
-	void SetRpk(URulePackage* RulePackage, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetRpk(URulePackage* RulePackage, bool bGenerateModel = true, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/** Returns true if the component has valid input data (initial shape and Rule Package). */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
@@ -122,9 +122,11 @@ public:
 	 *
 	 * @param Name The name of the attribute to set.
 	 * @param Value The new value for the attribute.
+	 * @param bGenerateModel Whether a model should be generated after the attribute has been set.
 	 * @param CallbackProxy The callback proxy used to register for completion events.
 	 */
-	void SetStringAttribute(const FString& Name, const FString& Value, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetStringAttribute(const FString& Name, const FString& Value, bool bGenerateModel = true,
+							UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Access the string attribute with the given Name. The OutValue is default initialized if no attribute with the given Name is found.
@@ -141,10 +143,12 @@ public:
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Values The new values for the attribute.
+	 * @param bGenerateModel Whether a model should be generated after the attribute has been set.
 	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
-	void SetStringArrayAttribute(const FString& Name, const TArray<FString>& Values, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetStringArrayAttribute(const FString& Name, const TArray<FString>& Values, bool bGenerateModel = true,
+								 UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Access the string array attribute with the given Name. The OutValue is default initialized if no attribute with the given Name is found.
@@ -161,10 +165,11 @@ public:
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Value The new value for the attribute.
+	 * @param bGenerateModel Whether a model should be generated after the attribute has been set.
 	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
-	void SetBoolAttribute(const FString& Name, bool Value, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetBoolAttribute(const FString& Name, bool Value, bool bGenerateModel = true, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Access the bool attribute with the given Name. The OutValue is default initialized if no attribute with the given Name is found.
@@ -181,10 +186,12 @@ public:
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Values The new values for the attribute.
+	 * @param bGenerateModel Whether a model should be generated after the attribute has been set.
 	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
-	void SetBoolArrayAttribute(const FString& Name, const TArray<bool>& Values, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetBoolArrayAttribute(const FString& Name, const TArray<bool>& Values, bool bGenerateModel = true,
+							   UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Access the bool array attribute with the given Name. The OutValue is default initialized if no attribute with the given Name is found.
@@ -201,10 +208,11 @@ public:
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Value The new value for the attribute.
+	 * @param bGenerateModel Whether a model should be generated after the attribute has been set.
 	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
-	void SetFloatAttribute(const FString& Name, double Value, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetFloatAttribute(const FString& Name, double Value, bool bGenerateModel = true, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Access the float attribute with the given Name. The OutValue is default initialized if no attribute with the given Name is found.
@@ -221,10 +229,12 @@ public:
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Values The new values for the attribute.
+	 * @param bGenerateModel Whether a model should be generated after the attribute has been set.
 	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 * @returns true if the attribute has been set to the new value or false otherwise.
 	 */
-	void SetFloatArrayAttribute(const FString& Name, const TArray<double>& Values, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetFloatArrayAttribute(const FString& Name, const TArray<double>& Values, bool bGenerateModel = true,
+								UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Access the float array attribute with the given Name. The OutValue is default initialized if no attribute with the given Name is found.
@@ -243,25 +253,30 @@ public:
 	 * string representation: <br> "1.0" for the float 1.0 <br> "hello" for the string "hello" and <br> "true" for the bool true <br>
 	 *
 	 * @param NewAttributes The attributes to be sets
+	 * @param bGenerateModel Whether a model should be generated after the attribute has been set.
 	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 */
-	void SetAttributes(const TMap<FString, FString>& NewAttributes, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetAttributes(const TMap<FString, FString>& NewAttributes, bool bGenerateModel = true,
+					   UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Sets the given static mesh as initial shape. Regenerates the model if generate automatically is set to true.
 	 *
 	 * @param StaticMesh the new initial shape static mesh.
+	 * @param bGenerateModel Whether a model should be generated after the attribute has been set.
 	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 */
-	void SetMeshInitialShape(UStaticMesh* StaticMesh, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetMeshInitialShape(UStaticMesh* StaticMesh, bool bGenerateModel = true, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
 	 * Sets the given spline points as initial shape. Regenerates the model if generate automatically is set to true.
 	 *
 	 * @param SplinePoints the new initial shape spline points.
+	 * @param bGenerateModel Whether a model should be generated after the attribute has been set.
 	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 */
-	void SetSplineInitialShape(const TArray<FSplinePoint>& SplinePoints, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetSplineInitialShape(const TArray<FSplinePoint>& SplinePoints, bool bGenerateModel = true,
+							   UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/** Returns the attributes used for generation. */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
@@ -274,13 +289,11 @@ public:
 	/** Returns the reports created during generation. */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	const TMap<FString, FReport>& GetReports() const;
-		
+
 	/**
 	 * Sets the random seed used for generation.
-	 * If GenerateAutomatically is set to true this will automatically trigger a regeneration.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	void SetRandomSeed(int32 NewRandomSeed);
+	void SetRandomSeed(int32 NewRandomSeed, bool bGenerateModel = true, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/* Initialize the VitruvioComponent. Only needs to be called if the Component is natively attached. */
 	void Initialize();
@@ -351,7 +364,7 @@ private:
 
 	UPROPERTY(Transient)
 	bool bInitialized = false;
-	
+
 	bool bInGenerateCallback = false;
 
 	TQueue<FGenerateQueueItem> GenerateQueue;

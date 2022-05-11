@@ -56,11 +56,21 @@ struct FExecuteAfterCountdown
 };
 } // namespace
 
-UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetRpk(UVitruvioComponent* VitruvioComponent, URulePackage* RulePackage)
+UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetRpk(UVitruvioComponent* VitruvioComponent, URulePackage* RulePackage,
+																		 bool bGenerateModel)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(VitruvioComponent);
-	VitruvioComponent->SetRpk(RulePackage, Proxy);
+	VitruvioComponent->SetRpk(RulePackage, bGenerateModel, Proxy);
+	return Proxy;
+}
+
+UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetRandomSeed(UVitruvioComponent* VitruvioComponent, int32 NewRandomSeed,
+																				bool bGenerateModel)
+{
+	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
+	Proxy->RegisterWithGameInstance(VitruvioComponent);
+	VitruvioComponent->SetRandomSeed(NewRandomSeed, bGenerateModel, Proxy);
 	return Proxy;
 }
 
@@ -73,82 +83,83 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::Generate(UVitr
 }
 
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetFloatAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
-																					float Value)
+																					float Value, bool bGenerateModel)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(VitruvioComponent);
-	VitruvioComponent->SetFloatAttribute(Name, Value, Proxy);
+	VitruvioComponent->SetFloatAttribute(Name, Value, bGenerateModel, Proxy);
 	return Proxy;
 }
 
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetStringAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
-																					 const FString& Value)
+																					 const FString& Value, bool bGenerateModel)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(VitruvioComponent);
-	VitruvioComponent->SetStringAttribute(Name, Value, Proxy);
+	VitruvioComponent->SetStringAttribute(Name, Value, bGenerateModel, Proxy);
 	return Proxy;
 }
 
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetBoolAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
-																				   bool Value)
+																				   bool Value, bool bGenerateModel)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(VitruvioComponent);
-	VitruvioComponent->SetBoolAttribute(Name, Value, Proxy);
+	VitruvioComponent->SetBoolAttribute(Name, Value, bGenerateModel, Proxy);
 	return Proxy;
 }
 
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetFloatArrayAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
-																						 const TArray<double>& Values)
+																						 const TArray<double>& Values, bool bGenerateModel)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(VitruvioComponent);
-	VitruvioComponent->SetFloatArrayAttribute(Name, Values, Proxy);
+	VitruvioComponent->SetFloatArrayAttribute(Name, Values, bGenerateModel, Proxy);
 	return Proxy;
 }
 
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetStringArrayAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
-																						  const TArray<FString>& Values)
+																						  const TArray<FString>& Values, bool bGenerateModel)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(VitruvioComponent);
-	VitruvioComponent->SetStringArrayAttribute(Name, Values, Proxy);
+	VitruvioComponent->SetStringArrayAttribute(Name, Values, bGenerateModel, Proxy);
 	return Proxy;
 }
 
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetBoolArrayAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
-																						const TArray<bool>& Values)
+																						const TArray<bool>& Values, bool bGenerateModel)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(VitruvioComponent);
-	VitruvioComponent->SetBoolArrayAttribute(Name, Values, Proxy);
+	VitruvioComponent->SetBoolArrayAttribute(Name, Values, bGenerateModel, Proxy);
 	return Proxy;
 }
 
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetAttributes(UVitruvioComponent* VitruvioComponent,
-																				const TMap<FString, FString>& NewAttributes)
+																				const TMap<FString, FString>& NewAttributes, bool bGenerateModel)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(VitruvioComponent);
-	VitruvioComponent->SetAttributes(NewAttributes, Proxy);
+	VitruvioComponent->SetAttributes(NewAttributes, bGenerateModel, Proxy);
 	return Proxy;
 }
 
-UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetMeshInitialShape(UVitruvioComponent* VitruvioComponent, UStaticMesh* StaticMesh)
+UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetMeshInitialShape(UVitruvioComponent* VitruvioComponent, UStaticMesh* StaticMesh,
+																					  bool bGenerateModel)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(VitruvioComponent);
-	VitruvioComponent->SetMeshInitialShape(StaticMesh, Proxy);
+	VitruvioComponent->SetMeshInitialShape(StaticMesh, bGenerateModel, Proxy);
 	return Proxy;
 }
 
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetSplineInitialShape(UVitruvioComponent* VitruvioComponent,
-																						const TArray<FSplinePoint>& SplinePoints)
+																						const TArray<FSplinePoint>& SplinePoints, bool bGenerateModel)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(VitruvioComponent);
-	VitruvioComponent->SetSplineInitialShape(SplinePoints, Proxy);
+	VitruvioComponent->SetSplineInitialShape(SplinePoints, bGenerateModel, Proxy);
 	return Proxy;
 }
 
@@ -184,9 +195,7 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::ConvertToVitru
 			UVitruvioComponent* VitruvioComponent = VitruvioActor->VitruvioComponent;
 
 			VitruvioActor->Initialize();
-
-			VitruvioComponent->GenerateAutomatically = bGenerateModels;
-			VitruvioComponent->SetRpk(Rpk, InternalProxy);
+			VitruvioComponent->SetRpk(Rpk, bGenerateModels, InternalProxy);
 
 			if (OldAttachParent)
 			{
@@ -194,9 +203,6 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::ConvertToVitru
 			}
 
 			Actor->Destroy();
-
-			// After constructing the VitruvioActor we always want to generate models automatically by default
-			VitruvioComponent->GenerateAutomatically = true;
 
 			OutVitruvioActors.Add(VitruvioActor);
 		}

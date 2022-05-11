@@ -47,10 +47,16 @@ public:
 	FGenerateCompletedDelegate OnGenerateCompleted;
 
 	/**
-	 * Sets the given Rule Package. This will reevaluate the attributes and if GenerateAutomatically is set to true, also regenerates the model.
+	 * Sets the given Rule Package. This will reevaluate the attributes and if bGenerateModel is set to true, also generates the model.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
-	static UGenerateCompletedCallbackProxy* SetRpk(UVitruvioComponent* VitruvioComponent, URulePackage* RulePackage);
+	static UGenerateCompletedCallbackProxy* SetRpk(UVitruvioComponent* VitruvioComponent, URulePackage* RulePackage, bool bGenerateModel = true);
+
+	/**
+	 * Sets the random seed used for generation. This will reevaluate the attributes and if bGenerateModel is set to true, also generates the model.
+	 */
+	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
+	static UGenerateCompletedCallbackProxy* SetRandomSeed(UVitruvioComponent* VitruvioComponent, int32 NewRandomSeed, bool bGenerateModel = true);
 
 	/**
 	 * Generates a model using the current Rule Package and initial shape. If the attributes are not yet available, they will first be evaluated. If
@@ -60,73 +66,82 @@ public:
 	static UGenerateCompletedCallbackProxy* Generate(UVitruvioComponent* VitruvioComponent);
 
 	/**
-	 * Sets the float attribute with the given Name to the given value. Regenerates the model if GenerateAutomatically is set to true.
+	 * Sets the float attribute with the given Name to the given value.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the attribute is set
 	 * @param Name The name of the attribute.
 	 * @param Value The new value for the attribute.
+	 * @param bGenerateModel Whether a model should be generated after the attribute has been set.
 	 * @returns a callback proxy used to register for completion events.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
-	static UGenerateCompletedCallbackProxy* SetFloatAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name, float Value);
+	static UGenerateCompletedCallbackProxy* SetFloatAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name, float Value,
+															  bool bGenerateModel = true);
 
 	/**
-	 * Sets the string attribute with the given Name to the given value. Regenerates the model if GenerateAutomatically is set to true.
+	 * Sets the string attribute with the given Name to the given value.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the attribute is set
 	 * @param Name The name of the attribute to set.
 	 * @param Value The new value for the attribute.
+	 * @param bGenerateModel Whether a model should be generated after the attribute has been set.
 	 * @returns a callback proxy used to register for completion events.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
-	static UGenerateCompletedCallbackProxy* SetStringAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name, const FString& Value);
+	static UGenerateCompletedCallbackProxy* SetStringAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name, const FString& Value,
+															   bool bGenerateModel = true);
 
 	/**
-	 * Sets the bool attribute with the given Name to the given value. Regenerates the model if GenerateAutomatically is set to true.
+	 * Sets the bool attribute with the given Name to the given value.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the attribute is set
 	 * @param Name The name of the attribute.
 	 * @param Value The new value for the attribute.
+	 * @param bGenerateModel Whether a model should be generated after the attribute has been set.
 	 * @returns a callback proxy used to register for completion events.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
-	static UGenerateCompletedCallbackProxy* SetBoolAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name, bool Value);
+	static UGenerateCompletedCallbackProxy* SetBoolAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name, bool Value,
+															 bool bGenerateModel = true);
 
 	/**
-	 * Sets the float array attribute with the given Name to the given value. Regenerates the model if GenerateAutomatically is set to true.
+	 * Sets the float array attribute with the given Name to the given value.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the attribute is set
 	 * @param Name The name of the attribute.
 	 * @param Values The new values for the attribute.
+	 * @param bGenerateModel Whether a model should be generated after the attribute has been set.
 	 * @returns a callback proxy used to register for completion events.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
 	static UGenerateCompletedCallbackProxy* SetFloatArrayAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
-																   const TArray<double>& Values);
+																   const TArray<double>& Values, bool bGenerateModel = true);
 
 	/**
-	 * Sets a string array attribute with the given Name to the given value. Regenerates the model if GenerateAutomatically is set to true.
+	 * Sets a string array attribute with the given Name to the given value.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the attribute is set
 	 * @param Name The name of the attribute.
 	 * @param Values The new values for the attribute.
+	 * @param bGenerateModel Whether a model should be generated after the attribute has been set.
 	 * @returns a callback proxy used to register for completion events.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
 	static UGenerateCompletedCallbackProxy* SetStringArrayAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
-																	const TArray<FString>& Values);
+																	const TArray<FString>& Values, bool bGenerateModel = true);
 
 	/**
-	 * Sets a bool array attribute with the given Name to the given value. Regenerates the model if GenerateAutomatically is set to true.
+	 * Sets a bool array attribute with the given Name to the given value.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the attribute is set.
 	 * @param Name The name of the attribute.
 	 * @param Values The new values for the attribute.
+	 * @param bGenerateModel Whether a model should be generated after the attribute has been set.
 	 * @returns a callback proxy used to register for completion events.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
 	static UGenerateCompletedCallbackProxy* SetBoolArrayAttribute(UVitruvioComponent* VitruvioComponent, const FString& Name,
-																  const TArray<bool>& Values);
+																  const TArray<bool>& Values, bool bGenerateModel = true);
 
 	/**
 	 * Sets the given scalar attributes. If bAddIfNonExisting is set to false and a given key from the NewAttributes is not found in the current
@@ -136,30 +151,36 @@ public:
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the attribute is set.
 	 * @param NewAttributes The attributes to be set.
+	 * @param bGenerateModel Whether a model should be generated after the attributes have been set.
 	 * @returns a callback proxy used to register for completion events.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
-	static UGenerateCompletedCallbackProxy* SetAttributes(UVitruvioComponent* VitruvioComponent, const TMap<FString, FString>& NewAttributes);
+	static UGenerateCompletedCallbackProxy* SetAttributes(UVitruvioComponent* VitruvioComponent, const TMap<FString, FString>& NewAttributes,
+														  bool bGenerateModel = true);
 
 	/**
 	 * Sets the given static mesh as initial shape. Regenerates the model if GenerateAutomatically is set to true.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the initial shape is set.
 	 * @param StaticMesh The new initial shape static mesh.
+	 * @param bGenerateModel Whether a model should be generated after the initial shape has set.
 	 * @returns a callback proxy used to register for completion events.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
-	static UGenerateCompletedCallbackProxy* SetMeshInitialShape(UVitruvioComponent* VitruvioComponent, UStaticMesh* StaticMesh);
+	static UGenerateCompletedCallbackProxy* SetMeshInitialShape(UVitruvioComponent* VitruvioComponent, UStaticMesh* StaticMesh,
+																bool bGenerateModel = true);
 
 	/**
 	 * Sets the given spline points as initial shape. Regenerates the model if GenerateAutomatically is set to true.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the initial shape is set.
 	 * @param SplinePoints The new initial shape spline points.
+	 * @param bGenerateModel Whether a model should be generated after the initial shape has set.
 	 * @returns a callback proxy used to register for completion events.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
-	static UGenerateCompletedCallbackProxy* SetSplineInitialShape(UVitruvioComponent* VitruvioComponent, const TArray<FSplinePoint>& SplinePoints);
+	static UGenerateCompletedCallbackProxy* SetSplineInitialShape(UVitruvioComponent* VitruvioComponent, const TArray<FSplinePoint>& SplinePoints,
+																  bool bGenerateModel = true);
 
 	/**
 	 * Converts the given Actors to VitruvioActors and optionally assigns the given RulePackage. If an Actor can not be converted (see
