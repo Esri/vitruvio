@@ -105,7 +105,6 @@ template <typename A, typename T>
 void SetAttribute(UVitruvioComponent* VitruvioComponent, TMap<FString, URuleAttribute*>& Attributes, const FString& Name, const T& Value,
 				  bool bEvaluateAttributes, bool bGenerateModel, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
-	// Initialize component if necessary
 	VitruvioComponent->Initialize();
 
 	URuleAttribute** FoundAttribute = Attributes.Find(Name);
@@ -345,7 +344,6 @@ bool UVitruvioComponent::GetFloatArrayAttribute(const FString& Name, TArray<doub
 void UVitruvioComponent::SetAttributes(const TMap<FString, FString>& NewAttributes, bool bGenerateModel,
 									   UGenerateCompletedCallbackProxy* CallbackProxy)
 {
-	// Initialize component if necessary
 	Initialize();
 
 	for (const auto& KeyValues : NewAttributes)
@@ -474,9 +472,6 @@ void UVitruvioComponent::Initialize()
 	OnHierarchyChanged.Broadcast(this);
 
 	CalculateRandomSeed();
-
-	// Evaluate rule attributes and possibly generate the model
-	EvaluateRuleAttributes(GenerateAutomatically);
 }
 
 void UVitruvioComponent::PostLoad()
@@ -487,6 +482,7 @@ void UVitruvioComponent::PostLoad()
 	if (CreationMethod == EComponentCreationMethod::Instance)
 	{
 		Initialize();
+		EvaluateRuleAttributes(GenerateAutomatically);
 	}
 }
 
@@ -498,6 +494,7 @@ void UVitruvioComponent::OnComponentCreated()
 	if (CreationMethod == EComponentCreationMethod::Instance)
 	{
 		Initialize();
+		EvaluateRuleAttributes(GenerateAutomatically);
 	}
 }
 
@@ -739,7 +736,6 @@ void UVitruvioComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 
 void UVitruvioComponent::Generate(UGenerateCompletedCallbackProxy* CallbackProxy)
 {
-	// Initialize component if necessary
 	Initialize();
 
 	// If either the RPK, initial shape or attributes are not ready we can not generate
@@ -907,7 +903,6 @@ void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& T
 
 void UVitruvioComponent::EvaluateRuleAttributes(bool ForceRegenerate, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
-	// Initialize component if necessary
 	Initialize();
 
 	// If we don't have valid input data (initial shape and rpk) we can not evaluate the rule attribtues

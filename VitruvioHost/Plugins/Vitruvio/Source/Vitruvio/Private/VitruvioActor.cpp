@@ -42,6 +42,7 @@ void AVitruvioActor::Initialize()
 	if (!bInitialized)
 	{
 		VitruvioComponent->Initialize();
+		VitruvioComponent->EvaluateRuleAttributes(VitruvioComponent->GenerateAutomatically);
 		bInitialized = true;
 	}
 }
