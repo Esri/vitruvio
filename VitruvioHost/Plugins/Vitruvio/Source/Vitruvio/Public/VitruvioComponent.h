@@ -301,6 +301,9 @@ public:
 	/* Removes the generated meshes from this VitruvioComponent. */
 	void RemoveGeneratedMeshes();
 
+	/* Returns whether the attributes are ready. */
+	bool GetAttributesReady();
+
 	/**
 	 * Evaluate rule attributes.
 	 *
