@@ -105,7 +105,7 @@ public:
 	void Generate(UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
-	 * Sets the given Rule Package. This will reevaluate the attributes and if GenerateAutomatically is set to true, also regenerates the model.
+	 * Sets the given Rule Package. This will reevaluate the attributes and if bGenerateModel is set to true, also generates the model.
 	 */
 	void SetRpk(URulePackage* RulePackage, bool bGenerateModel = true, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
@@ -139,7 +139,7 @@ public:
 	bool GetStringAttribute(const FString& Name, FString& OutValue) const;
 
 	/**
-	 * Sets the string array attribute with the given Name to the given value. Regenerates the model if GenerateAutomatically is set to true.
+	 * Sets the string array attribute with the given Name to the given value. Regenerates the model if bGenerateModel is set to true.
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Values The new values for the attribute.
@@ -161,7 +161,7 @@ public:
 	bool GetStringArrayAttribute(const FString& Name, TArray<FString>& OutValue) const;
 
 	/**
-	 * Sets the bool attribute with the given Name to the given value. Regenerates the model if GenerateAutomatically is set to true.
+	 * Sets the bool attribute with the given Name to the given value. Regenerates the model if bGenerateModel is set to true.
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Value The new value for the attribute.
@@ -182,7 +182,7 @@ public:
 	bool GetBoolAttribute(const FString& Name, bool& OutValue) const;
 
 	/**
-	 * Sets the bool array attribute with the given Name to the given value. Regenerates the model if GenerateAutomatically is set to true.
+	 * Sets the bool array attribute with the given Name to the given value. Regenerates the model if bGenerateModel is set to true.
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Values The new values for the attribute.
@@ -204,7 +204,7 @@ public:
 	bool GetBoolArrayAttribute(const FString& Name, TArray<bool>& OutValue) const;
 
 	/**
-	 * Sets the float attribute with the given Name to the given value. Regenerates the model if GenerateAutomatically is set to true.
+	 * Sets the float attribute with the given Name to the given value. Regenerates the model if bGenerateModel is set to true.
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Value The new value for the attribute.
@@ -225,7 +225,7 @@ public:
 	bool GetFloatAttribute(const FString& Name, double& OutValue) const;
 
 	/**
-	 * Sets the float array attribute with the given Name to the given value. Regenerates the model if GenerateAutomatically is set to true.
+	 * Sets the float array attribute with the given Name to the given value. Regenerates the model if bGenerateModel is set to true.
 	 *
 	 * @param Name The name of the attribute.
 	 * @param Values The new values for the attribute.
@@ -247,12 +247,12 @@ public:
 	bool GetFloatArrayAttribute(const FString& Name, TArray<double>& OutValue) const;
 
 	/**
-	 * Sets the given scalar attributes. If bAddIfNonExisting is set to false and a given key from the NewAttributes is not found in the current
-	 * attributes, the key-value pair will be ignored. If bAddIfNonExisting is set to true, new attributes will be added in case they are not found in
-	 * the current attributes. Regenerates the model if GenerateAutomatically is set to true. The type of the attribute will be deduced from its
+	 * Sets the given attributes. If a key from the NewAttributes is not found in the current attributes, the key-value pair will be ignored.
+	 * Regenerates the model if bGenerateModel is set to true. The type of the attribute will be deduced from its
 	 * string representation: <br> "1.0" for the float 1.0 <br> "hello" for the string "hello" and <br> "true" for the bool true <br>
+	 * array values are separated via a comma eg: "1.3,4.5,0" for a float array with the values 1.3, 4.5 and 0.
 	 *
-	 * @param NewAttributes The attributes to be sets
+	 * @param NewAttributes The attributes to be set.
 	 * @param bGenerateModel Whether a model should be generated after the attribute has been set.
 	 * @param CallbackProxy The optional callback proxy used for generate completed notifications.
 	 */
@@ -260,7 +260,7 @@ public:
 					   UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
-	 * Sets the given static mesh as initial shape. Regenerates the model if generate automatically is set to true.
+	 * Sets the given static mesh as initial shape. Regenerates the model if bGenerateModel is set to true.
 	 *
 	 * @param StaticMesh the new initial shape static mesh.
 	 * @param bGenerateModel Whether a model should be generated after the attribute has been set.
@@ -269,7 +269,7 @@ public:
 	void SetMeshInitialShape(UStaticMesh* StaticMesh, bool bGenerateModel = true, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/**
-	 * Sets the given spline points as initial shape. Regenerates the model if generate automatically is set to true.
+	 * Sets the given spline points as initial shape. Regenerates the model if bGenerateModel is set to true.
 	 *
 	 * @param SplinePoints the new initial shape spline points.
 	 * @param bGenerateModel Whether a model should be generated after the attribute has been set.
@@ -291,7 +291,7 @@ public:
 	const TMap<FString, FReport>& GetReports() const;
 
 	/**
-	 * Sets the random seed used for generation.
+	 * Sets the random seed used for generation. This will reevaluate the attributes and if bGenerateModel is set to true, also generates the model.
 	 */
 	void SetRandomSeed(int32 NewRandomSeed, bool bGenerateModel = true, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 

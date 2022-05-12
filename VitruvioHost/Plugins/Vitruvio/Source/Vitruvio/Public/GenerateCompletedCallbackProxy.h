@@ -66,7 +66,7 @@ public:
 	static UGenerateCompletedCallbackProxy* Generate(UVitruvioComponent* VitruvioComponent);
 
 	/**
-	 * Sets the float attribute with the given Name to the given value.
+	 * Sets the float attribute with the given Name to the given value. Regenerates the model if bGenerateModel is set to true.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the attribute is set
 	 * @param Name The name of the attribute.
@@ -79,7 +79,7 @@ public:
 															  bool bGenerateModel = true);
 
 	/**
-	 * Sets the string attribute with the given Name to the given value.
+	 * Sets the string attribute with the given Name to the given value. Regenerates the model if bGenerateModel is set to true.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the attribute is set
 	 * @param Name The name of the attribute to set.
@@ -92,7 +92,7 @@ public:
 															   bool bGenerateModel = true);
 
 	/**
-	 * Sets the bool attribute with the given Name to the given value.
+	 * Sets the bool attribute with the given Name to the given value. Regenerates the model if bGenerateModel is set to true.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the attribute is set
 	 * @param Name The name of the attribute.
@@ -105,7 +105,7 @@ public:
 															 bool bGenerateModel = true);
 
 	/**
-	 * Sets the float array attribute with the given Name to the given value.
+	 * Sets the float array attribute with the given Name to the given value. Regenerates the model if bGenerateModel is set to true.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the attribute is set
 	 * @param Name The name of the attribute.
@@ -118,7 +118,7 @@ public:
 																   const TArray<double>& Values, bool bGenerateModel = true);
 
 	/**
-	 * Sets a string array attribute with the given Name to the given value.
+	 * Sets a string array attribute with the given Name to the given value. Regenerates the model if bGenerateModel is set to true.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the attribute is set
 	 * @param Name The name of the attribute.
@@ -131,7 +131,7 @@ public:
 																	const TArray<FString>& Values, bool bGenerateModel = true);
 
 	/**
-	 * Sets a bool array attribute with the given Name to the given value.
+	 * Sets a bool array attribute with the given Name to the given value. Regenerates the model if bGenerateModel is set to true.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the attribute is set.
 	 * @param Name The name of the attribute.
@@ -144,10 +144,10 @@ public:
 																  const TArray<bool>& Values, bool bGenerateModel = true);
 
 	/**
-	 * Sets the given scalar attributes. If bAddIfNonExisting is set to false and a given key from the NewAttributes is not found in the current
-	 * attributes, the key-value pair will be ignored. If bAddIfNonExisting is set to true, new attributes will be added in case they are not found in
-	 * the current attributes. Regenerates the model if GenerateAutomatically is set to true. The type of the attribute will be deduced from its
+	 * Sets the given attributes. If a key from the NewAttributes is not found in the current attributes, the key-value pair will be ignored.
+	 * Regenerates the model if bGenerateModel is set to true. The type of the attribute will be deduced from its
 	 * string representation: <br> "1.0" for the float 1.0 <br> "hello" for the string "hello" and <br> "true" for the bool true <br>
+	 * array values are separated via a comma eg: "1.3,4.5,0" for a float array with the values 1.3, 4.5 and 0.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the attribute is set.
 	 * @param NewAttributes The attributes to be set.
@@ -159,7 +159,7 @@ public:
 														  bool bGenerateModel = true);
 
 	/**
-	 * Sets the given static mesh as initial shape. Regenerates the model if GenerateAutomatically is set to true.
+	 * Sets the given static mesh as initial shape. Regenerates the model if bGenerateModel is set to true.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the initial shape is set.
 	 * @param StaticMesh The new initial shape static mesh.
@@ -171,7 +171,7 @@ public:
 																bool bGenerateModel = true);
 
 	/**
-	 * Sets the given spline points as initial shape. Regenerates the model if GenerateAutomatically is set to true.
+	 * Sets the given spline points as initial shape. Regenerates the model if bGenerateModel is set to true.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the initial shape is set.
 	 * @param SplinePoints The new initial shape spline points.

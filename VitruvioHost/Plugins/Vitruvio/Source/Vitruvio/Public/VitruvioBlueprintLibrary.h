@@ -16,9 +16,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Kismet/BlueprintFunctionLibrary.h"
 #include "RulePackage.h"
 #include "VitruvioActor.h"
-#include "Kismet/BlueprintFunctionLibrary.h"
 
 #include "VitruvioBlueprintLibrary.generated.h"
 
@@ -40,7 +40,8 @@ public:
 
 	/**
 	 * Returns whether the given Actor can be converted to a VitruvioActor (see also ConvertToVitruvioActor). Converting an Actor to a VitruvioActor
-	 * is only possible if the Actor already has a valid initial shape component attached (eg. a StaticMeshComponent).
+	 * is only possible if the Actor has a valid initial shape component attached (eg. a StaticMeshComponent) and does not already
+	 * have a VitruvioComponent attached.
 	 *
 	 * @param Actor the Actor to test
 	 * @return whether the given Actor can be converted to a VitruvioActor
