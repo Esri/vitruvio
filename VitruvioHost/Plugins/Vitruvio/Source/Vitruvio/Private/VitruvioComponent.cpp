@@ -187,17 +187,47 @@ void EvaluateAndSetAttributes(UVitruvioComponent* VitruvioComponent, const TMap<
 			if (Cast<UFloatAttribute>(Attribute))
 			{
 				SetAttribute<UFloatAttribute, double>(VitruvioComponent, VitruvioComponent->GetAttributes(), Key, FCString::Atof(*Value), false,
-													  false, CallbackProxy);
+													  false, nullptr);
 			}
 			else if (Cast<UBoolAttribute>(Attribute))
 			{
-				SetAttribute<UBoolAttribute, bool>(VitruvioComponent, VitruvioComponent->GetAttributes(), Key, Value == "true" || Value == "1", false,
-												   false, CallbackProxy);
+				SetAttribute<UBoolAttribute, bool>(VitruvioComponent, VitruvioComponent->GetAttributes(), Key,
+												   Value.ToLower() == "true" || Value == "1", false, false, nullptr);
 			}
 			else if (Cast<UStringAttribute>(Attribute))
 			{
-				SetAttribute<UStringAttribute, FString>(VitruvioComponent, VitruvioComponent->GetAttributes(), Key, Value, false, false,
-														CallbackProxy);
+				SetAttribute<UStringAttribute, FString>(VitruvioComponent, VitruvioComponent->GetAttributes(), Key, Value, false, false, nullptr);
+			}
+			else if (Cast<UArrayAttribute>(Attribute))
+			{
+				FString ArrayValue = Value;
+				if (Value.StartsWith(TEXT("[")) && Value.EndsWith(TEXT("]")))
+				{
+					ArrayValue = Value.LeftChop(1).RightChop(1);
+				}
+
+				TArray<FString> StringValues;
+				ArrayValue.ParseIntoArray(StringValues, TEXT(","));
+
+				if (Cast<UFloatArrayAttribute>(Attribute))
+				{
+					TArray<double> DoubleValues;
+					Algo::Transform(StringValues, DoubleValues, [](const auto& In) { return FCString::Atof(*In); });
+					SetAttribute<UFloatArrayAttribute, TArray<double>>(VitruvioComponent, VitruvioComponent->GetAttributes(), Key, DoubleValues,
+																	   false, false, nullptr);
+				}
+				else if (Cast<UBoolArrayAttribute>(Attribute))
+				{
+					TArray<bool> BoolValues;
+					Algo::Transform(StringValues, BoolValues, [](const auto& In) { return In.ToLower() == "true" || In == "1"; });
+					SetAttribute<UBoolArrayAttribute, TArray<bool>>(VitruvioComponent, VitruvioComponent->GetAttributes(), Key, BoolValues, false,
+																	false, nullptr);
+				}
+				else
+				{
+					SetAttribute<UStringArrayAttribute, TArray<FString>>(VitruvioComponent, VitruvioComponent->GetAttributes(), Key, StringValues,
+																		 false, false, nullptr);
+				}
 			}
 		}
 
