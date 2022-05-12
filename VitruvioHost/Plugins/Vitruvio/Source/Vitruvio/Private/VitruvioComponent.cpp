@@ -372,7 +372,7 @@ void UVitruvioComponent::SetRpk(URulePackage* RulePackage, bool bGenerateModel, 
 	bNotifyAttributeChange = true;
 
 	RemoveGeneratedMeshes();
-	EvaluateRuleAttributes(GenerateAutomatically, CallbackProxy);
+	EvaluateRuleAttributes(bGenerateModel, CallbackProxy);
 }
 
 void UVitruvioComponent::SetStringAttribute(const FString& Name, const FString& Value, bool bGenerateModel,
