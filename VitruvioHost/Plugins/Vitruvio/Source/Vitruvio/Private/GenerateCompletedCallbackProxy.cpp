@@ -21,17 +21,16 @@
 
 namespace
 {
-USceneComponent* CopyInitialShapeSceneComponent(AActor* OldActor, AActor* NewActor)
+void CopyInitialShapeSceneComponent(AActor* OldActor, AActor* NewActor)
 {
 	for (const auto& InitialShapeClasses : UVitruvioComponent::GetInitialShapesClasses())
 	{
 		UInitialShape* DefaultInitialShape = Cast<UInitialShape>(InitialShapeClasses->GetDefaultObject());
 		if (DefaultInitialShape && DefaultInitialShape->CanConstructFrom(OldActor))
 		{
-			return DefaultInitialShape->CopySceneComponent(OldActor, NewActor);
+			DefaultInitialShape->CopySceneComponent(OldActor, NewActor);
 		}
 	}
-	return nullptr;
 }
 
 struct FExecuteAfterCountdown
@@ -189,8 +188,7 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::ConvertToVitru
 		{
 			AVitruvioActor* VitruvioActor = Actor->GetWorld()->SpawnActor<AVitruvioActor>(Actor->GetActorLocation(), Actor->GetActorRotation());
 
-			USceneComponent* NewInitialShapeSceneComponent = CopyInitialShapeSceneComponent(Actor, VitruvioActor);
-			NewInitialShapeSceneComponent->SetWorldTransform(VitruvioActor->GetTransform());
+			CopyInitialShapeSceneComponent(Actor, VitruvioActor);
 
 			UVitruvioComponent* VitruvioComponent = VitruvioActor->VitruvioComponent;
 

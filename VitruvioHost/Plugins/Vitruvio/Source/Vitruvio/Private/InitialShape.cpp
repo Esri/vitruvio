@@ -519,6 +519,8 @@ USceneComponent* UStaticMeshInitialShape::CopySceneComponent(AActor* OldActor, A
 	if (OldStaticMeshComponent)
 	{
 		NewStaticMeshComponent->SetStaticMesh(OldStaticMeshComponent->GetStaticMesh());
+		NewStaticMeshComponent->SetWorldTransform(OldStaticMeshComponent->GetComponentTransform());
+		NewActor->SetRootComponent(NewStaticMeshComponent);
 	}
 	return NewStaticMeshComponent;
 }
@@ -547,6 +549,8 @@ USceneComponent* USplineInitialShape::CopySceneComponent(AActor* OldActor, AActo
 	if (OldSplineComponent)
 	{
 		NewSplineComponent->SplineCurves = OldSplineComponent->SplineCurves;
+		NewSplineComponent->SetWorldTransform(OldSplineComponent->GetComponentTransform());
+		NewActor->SetRootComponent(NewSplineComponent);
 	}
 	return NewSplineComponent;
 }
