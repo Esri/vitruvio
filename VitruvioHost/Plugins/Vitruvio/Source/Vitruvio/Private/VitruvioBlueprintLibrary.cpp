@@ -43,7 +43,7 @@ TArray<AActor*> UVitruvioBlueprintLibrary::GetViableVitruvioActorsInHierarchy(AA
 
 bool UVitruvioBlueprintLibrary::CanConvertToVitruvioActor(AActor* Actor)
 {
-	if (Cast<AVitruvioActor>(Actor))
+	if (!Actor || Cast<AVitruvioActor>(Actor))
 	{
 		return false;
 	}
