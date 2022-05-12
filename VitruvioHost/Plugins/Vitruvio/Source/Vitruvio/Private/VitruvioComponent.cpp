@@ -176,17 +176,25 @@ void EvaluateAndSetAttributes(UVitruvioComponent* VitruvioComponent, const TMap<
 			const FString& Value = KeyValues.Value;
 			const FString& Key = KeyValues.Key;
 
-			if (FCString::IsNumeric(*Value))
+			URuleAttribute* const* AttributeResult = VitruvioComponent->GetAttributes().Find(Key);
+			if (!AttributeResult)
+			{
+				continue;
+			}
+
+			URuleAttribute const* Attribute = *AttributeResult;
+
+			if (Cast<UFloatAttribute>(Attribute))
 			{
 				SetAttribute<UFloatAttribute, double>(VitruvioComponent, VitruvioComponent->GetAttributes(), Key, FCString::Atof(*Value), false,
 													  false, CallbackProxy);
 			}
-			else if (Value == "true" || Value == "false")
+			else if (Cast<UBoolAttribute>(Attribute))
 			{
-				SetAttribute<UBoolAttribute, bool>(VitruvioComponent, VitruvioComponent->GetAttributes(), Key, Value == "true", false, false,
-												   CallbackProxy);
+				SetAttribute<UBoolAttribute, bool>(VitruvioComponent, VitruvioComponent->GetAttributes(), Key, Value == "true" || Value == "1", false,
+												   false, CallbackProxy);
 			}
-			else
+			else if (Cast<UStringAttribute>(Attribute))
 			{
 				SetAttribute<UStringAttribute, FString>(VitruvioComponent, VitruvioComponent->GetAttributes(), Key, Value, false, false,
 														CallbackProxy);
