@@ -25,12 +25,15 @@
 namespace
 {
 template <typename T>
-T* AttachComponent(AActor* Owner, const FString& Name)
+T* AttachComponent(AActor* Owner, const FString& Name, bool bAttachToRoot = true)
 {
 	T* Component = NewObject<T>(Owner, *Name, RF_Transactional);
 	Component->Mobility = EComponentMobility::Movable;
 	Owner->AddInstanceComponent(Component);
-	Component->AttachToComponent(Owner->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+	if (bAttachToRoot)
+	{
+		Component->AttachToComponent(Owner->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+	}
 	Component->OnComponentCreated();
 	Component->RegisterComponent();
 	return Component;
@@ -515,13 +518,13 @@ bool UStaticMeshInitialShape::CanConstructFrom(AActor* Owner) const
 USceneComponent* UStaticMeshInitialShape::CopySceneComponent(AActor* OldActor, AActor* NewActor) const
 {
 	const UStaticMeshComponent* OldStaticMeshComponent = OldActor->FindComponentByClass<UStaticMeshComponent>();
-	UStaticMeshComponent* NewStaticMeshComponent = AttachComponent<UStaticMeshComponent>(NewActor, TEXT("InitialShapeSpline"));
+	UStaticMeshComponent* NewStaticMeshComponent = AttachComponent<UStaticMeshComponent>(NewActor, TEXT("InitialShapeStaticMesh"), false);
 	if (OldStaticMeshComponent)
 	{
 		NewStaticMeshComponent->SetStaticMesh(OldStaticMeshComponent->GetStaticMesh());
 		NewStaticMeshComponent->SetWorldTransform(OldStaticMeshComponent->GetComponentTransform());
-		NewActor->SetRootComponent(NewStaticMeshComponent);
 	}
+	NewActor->SetRootComponent(NewStaticMeshComponent);
 	return NewStaticMeshComponent;
 }
 
@@ -544,14 +547,14 @@ bool USplineInitialShape::CanConstructFrom(AActor* Owner) const
 USceneComponent* USplineInitialShape::CopySceneComponent(AActor* OldActor, AActor* NewActor) const
 {
 	const USplineComponent* OldSplineComponent = OldActor->FindComponentByClass<USplineComponent>();
-	USplineComponent* NewSplineComponent = AttachComponent<USplineComponent>(NewActor, TEXT("InitialShapeStaticMesh"));
+	USplineComponent* NewSplineComponent = AttachComponent<USplineComponent>(NewActor, TEXT("InitialShapeSpline"), false);
 	NewSplineComponent->SetClosedLoop(true);
 	if (OldSplineComponent)
 	{
 		NewSplineComponent->SplineCurves = OldSplineComponent->SplineCurves;
 		NewSplineComponent->SetWorldTransform(OldSplineComponent->GetComponentTransform());
-		NewActor->SetRootComponent(NewSplineComponent);
 	}
+	NewActor->SetRootComponent(NewSplineComponent);
 	return NewSplineComponent;
 }
 #if WITH_EDITOR
