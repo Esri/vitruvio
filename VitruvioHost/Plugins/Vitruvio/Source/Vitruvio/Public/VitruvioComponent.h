@@ -328,10 +328,6 @@ public:
 	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnAttributesChanged, UObject*, struct FPropertyChangedEvent&);
 	static FOnAttributesChanged OnAttributesChanged;
 
-	virtual void PostLoad() override;
-
-	virtual void OnComponentCreated() override;
-
 	void LoadInitialShape();
 
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;

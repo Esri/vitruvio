@@ -105,8 +105,6 @@ template <typename A, typename T>
 void SetAttribute(UVitruvioComponent* VitruvioComponent, const TMap<FString, URuleAttribute*>& Attributes, const FString& Name, const T& Value,
 				  bool bEvaluateAttributes, bool bGenerateModel, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
-	VitruvioComponent->Initialize();
-
 	URuleAttribute* const* FoundAttribute = Attributes.Find(Name);
 	if (!FoundAttribute)
 	{
@@ -551,30 +549,6 @@ void UVitruvioComponent::Initialize()
 	CalculateRandomSeed();
 }
 
-void UVitruvioComponent::PostLoad()
-{
-	Super::PostLoad();
-
-	// Only initialize if the Component is instance (eg via details panel to any Actor)
-	if (CreationMethod == EComponentCreationMethod::Instance)
-	{
-		Initialize();
-		EvaluateRuleAttributes(GenerateAutomatically);
-	}
-}
-
-void UVitruvioComponent::OnComponentCreated()
-{
-	Super::OnComponentCreated();
-
-	// Only initialize if the Component is instance (eg via details panel to any Actor)
-	if (CreationMethod == EComponentCreationMethod::Instance)
-	{
-		Initialize();
-		EvaluateRuleAttributes(GenerateAutomatically);
-	}
-}
-
 void UVitruvioComponent::ProcessGenerateQueue()
 {
 	if (!GenerateQueue.IsEmpty())
@@ -718,6 +692,15 @@ void UVitruvioComponent::ProcessAttributesEvaluationQueue()
 
 void UVitruvioComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
+	if (!bInitialized)
+	{
+		Initialize();
+		if (!EvalAttributesInvalidationToken.IsValid())
+		{
+			EvaluateRuleAttributes(GenerateAutomatically);
+		}
+	}
+
 	ProcessGenerateQueue();
 	ProcessAttributesEvaluationQueue();
 

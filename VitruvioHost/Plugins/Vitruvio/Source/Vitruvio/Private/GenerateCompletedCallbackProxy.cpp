@@ -191,8 +191,6 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::ConvertToVitru
 			CopyInitialShapeSceneComponent(Actor, VitruvioActor);
 
 			UVitruvioComponent* VitruvioComponent = VitruvioActor->VitruvioComponent;
-
-			VitruvioActor->Initialize();
 			VitruvioComponent->SetRpk(Rpk, bGenerateModels, InternalProxy);
 
 			if (OldAttachParent)
