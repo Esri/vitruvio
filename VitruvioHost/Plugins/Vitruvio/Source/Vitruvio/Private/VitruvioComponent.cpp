@@ -27,6 +27,7 @@
 #include "Components/SplineComponent.h"
 #include "Engine/CollisionProfile.h"
 #include "Engine/StaticMeshActor.h"
+#include "Algo/Transform.h"
 #include "ObjectEditorUtils.h"
 #include "PRTUtils.h"
 #include "PhysicsEngine/BodySetup.h"
