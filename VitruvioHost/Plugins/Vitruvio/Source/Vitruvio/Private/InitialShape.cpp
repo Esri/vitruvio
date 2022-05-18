@@ -25,12 +25,15 @@
 namespace
 {
 template <typename T>
-T* AttachComponent(AActor* Owner, const FString& Name)
+T* AttachComponent(AActor* Owner, const FString& Name, bool bAttachToRoot = true)
 {
 	T* Component = NewObject<T>(Owner, *Name, RF_Transactional);
 	Component->Mobility = EComponentMobility::Movable;
 	Owner->AddInstanceComponent(Component);
-	Component->AttachToComponent(Owner->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+	if (bAttachToRoot)
+	{
+		Component->AttachToComponent(Owner->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+	}
 	Component->OnComponentCreated();
 	Component->RegisterComponent();
 	return Component;
@@ -485,13 +488,16 @@ void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component)
 
 void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon)
 {
+	Initialize(Component, CreateStaticMeshFromInitialShapePolygon(InitialShapePolygon));
+}
+
+void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component, UStaticMesh* StaticMesh)
+{
 	AActor* Owner = Component->GetOwner();
 	if (!Owner)
 	{
 		return;
 	}
-
-	UStaticMesh* StaticMesh = CreateStaticMeshFromInitialShapePolygon(InitialShapePolygon);
 
 	UStaticMeshComponent* AttachedStaticMeshComponent = AttachComponent<UStaticMeshComponent>(Owner, TEXT("InitialShapeStaticMesh"));
 	AttachedStaticMeshComponent->SetStaticMesh(StaticMesh);
@@ -509,6 +515,19 @@ bool UStaticMeshInitialShape::CanConstructFrom(AActor* Owner) const
 	return false;
 }
 
+USceneComponent* UStaticMeshInitialShape::CopySceneComponent(AActor* OldActor, AActor* NewActor) const
+{
+	const UStaticMeshComponent* OldStaticMeshComponent = OldActor->FindComponentByClass<UStaticMeshComponent>();
+	UStaticMeshComponent* NewStaticMeshComponent = AttachComponent<UStaticMeshComponent>(NewActor, TEXT("InitialShapeStaticMesh"), false);
+	if (OldStaticMeshComponent)
+	{
+		NewStaticMeshComponent->SetStaticMesh(OldStaticMeshComponent->GetStaticMesh());
+		NewStaticMeshComponent->SetWorldTransform(OldStaticMeshComponent->GetComponentTransform());
+	}
+	NewActor->SetRootComponent(NewStaticMeshComponent);
+	return NewStaticMeshComponent;
+}
+
 void UStaticMeshInitialShape::SetHidden(bool bHidden)
 {
 	InitialShapeSceneComponent->SetVisibility(!bHidden, false);
@@ -523,6 +542,20 @@ bool USplineInitialShape::CanConstructFrom(AActor* Owner) const
 		return SplineComponent != nullptr && SplineComponent->GetNumberOfSplinePoints() > 0;
 	}
 	return false;
+}
+
+USceneComponent* USplineInitialShape::CopySceneComponent(AActor* OldActor, AActor* NewActor) const
+{
+	const USplineComponent* OldSplineComponent = OldActor->FindComponentByClass<USplineComponent>();
+	USplineComponent* NewSplineComponent = AttachComponent<USplineComponent>(NewActor, TEXT("InitialShapeSpline"), false);
+	NewSplineComponent->SetClosedLoop(true);
+	if (OldSplineComponent)
+	{
+		NewSplineComponent->SplineCurves = OldSplineComponent->SplineCurves;
+		NewSplineComponent->SetWorldTransform(OldSplineComponent->GetComponentTransform());
+	}
+	NewActor->SetRootComponent(NewSplineComponent);
+	return NewSplineComponent;
 }
 #if WITH_EDITOR
 
@@ -608,13 +641,17 @@ void USplineInitialShape::Initialize(UVitruvioComponent* Component)
 
 void USplineInitialShape::Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon)
 {
+	Initialize(Component, CreateSplinePointsFromInitialShapePolygon(InitialShapePolygon));
+}
+
+void USplineInitialShape::Initialize(UVitruvioComponent* Component, const TArray<FSplinePoint>& SplinePoints)
+{
 	AActor* Owner = Component->GetOwner();
 	if (!Owner)
 	{
 		return;
 	}
 
-	TArray<FSplinePoint> SplinePoints = CreateSplinePointsFromInitialShapePolygon(InitialShapePolygon);
 	const auto UniqueName = MakeUniqueObjectName(Owner, USplineComponent::StaticClass(), TEXT("InitialShapeSpline"));
 	USplineComponent* Spline = AttachComponent<USplineComponent>(Owner, UniqueName.ToString());
 	Spline->ClearSplinePoints(true);

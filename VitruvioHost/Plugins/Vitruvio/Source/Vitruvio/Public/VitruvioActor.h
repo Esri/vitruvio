@@ -30,11 +30,4 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Vitruvio")
 	UVitruvioComponent* VitruvioComponent;
-
-	virtual void Tick(float DeltaSeconds) override;
-	virtual bool ShouldTickIfViewportsOnly() const override;
-	void Initialize();
-
-private:
-	bool bInitialized = false;
 };

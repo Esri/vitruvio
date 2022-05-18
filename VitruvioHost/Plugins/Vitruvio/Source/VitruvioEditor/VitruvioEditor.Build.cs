@@ -26,6 +26,7 @@ public class VitruvioEditor : ModuleRules
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
+			    "ApplicationCore",
 				"Core",
 				"CoreUObject",
 				"Engine",
