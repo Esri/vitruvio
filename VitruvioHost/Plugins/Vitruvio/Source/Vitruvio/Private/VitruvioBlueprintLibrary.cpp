@@ -20,6 +20,11 @@
 
 TArray<AActor*> UVitruvioBlueprintLibrary::GetViableVitruvioActorsInHierarchy(AActor* Root)
 {
+	if (!Root)
+	{
+		return {};
+	}
+
 	TArray<AActor*> ViableActors;
 	if (CanConvertToVitruvioActor(Root))
 	{
