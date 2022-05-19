@@ -23,11 +23,11 @@
 #include "VitruvioModule.h"
 #include "VitruvioTypes.h"
 
+#include "Algo/Transform.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/SplineComponent.h"
 #include "Engine/CollisionProfile.h"
 #include "Engine/StaticMeshActor.h"
-#include "Algo/Transform.h"
 #include "ObjectEditorUtils.h"
 #include "PRTUtils.h"
 #include "PhysicsEngine/BodySetup.h"
@@ -42,6 +42,20 @@
 
 namespace
 {
+
+bool ToBool(const FString& Value)
+{
+	if (Value.ToLower() == "true")
+	{
+		return true;
+	}
+	if (Value.IsNumeric())
+	{
+		const int32 NumericValue = StaticCast<int32>(FCString::Atof(*Value));
+		return NumericValue != 0;
+	}
+	return false;
+}
 
 template <typename T>
 void SetInitialShape(UVitruvioComponent* Component, bool bGenerateModel, UGenerateCompletedCallbackProxy* CallbackProxy, T&& InitialShapeInitializer)
@@ -190,8 +204,7 @@ void EvaluateAndSetAttributes(UVitruvioComponent* VitruvioComponent, const TMap<
 			}
 			else if (Cast<UBoolAttribute>(Attribute))
 			{
-				SetAttribute<UBoolAttribute, bool>(VitruvioComponent, VitruvioComponent->GetAttributes(), Key,
-												   Value.ToLower() == "true" || Value == "1", false, false, nullptr);
+				SetAttribute<UBoolAttribute, bool>(VitruvioComponent, VitruvioComponent->GetAttributes(), Key, ToBool(Value), false, false, nullptr);
 			}
 			else if (Cast<UStringAttribute>(Attribute))
 			{
@@ -218,7 +231,7 @@ void EvaluateAndSetAttributes(UVitruvioComponent* VitruvioComponent, const TMap<
 				else if (Cast<UBoolArrayAttribute>(Attribute))
 				{
 					TArray<bool> BoolValues;
-					Algo::Transform(StringValues, BoolValues, [](const auto& In) { return In.ToLower() == "true" || In == "1"; });
+					Algo::Transform(StringValues, BoolValues, [](const auto& In) { return ToBool(In); });
 					SetAttribute<UBoolArrayAttribute, TArray<bool>>(VitruvioComponent, VitruvioComponent->GetAttributes(), Key, BoolValues, false,
 																	false, nullptr);
 				}
