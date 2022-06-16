@@ -400,19 +400,15 @@ void AddScalarWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, 
 
 	const auto& ValueNode = Root[0];
 
-	TSharedPtr<IPropertyHandle> PropertyHandle = ValueNode->GetRow()->GetPropertyHandle();
-	IDetailPropertyRow& DetailPropertyRow = Group.AddPropertyRow(PropertyHandle.ToSharedRef());
-	DetailPropertyRow.OverrideResetToDefault(ResetToDefaultOverride(Attribute, VitruvioActor));
-	FDetailWidgetRow& ValueRow = DetailPropertyRow.CustomWidget();
+	const TSharedPtr<IPropertyHandle> PropertyHandle = ValueNode->GetRow()->GetPropertyHandle();
+	PropertyHandle->SetPropertyDisplayName(FText::FromString(Attribute->DisplayName));
+	FDetailWidgetRow& ValueRow = Group.AddWidgetRow();
+	ValueRow.OverrideResetToDefault(ResetToDefaultOverride(Attribute, VitruvioActor));
+	ValueRow.FilterTextString = FText::FromString(Attribute->DisplayName);
 
 	AddCopyNameToClipboardAction(ValueRow, Attribute);
 
-	PropertyHandle->SetPropertyDisplayName(FText::FromString(Attribute->DisplayName));
-	TSharedPtr<SWidget> NameWidget;
 	TSharedPtr<SWidget> ValueWidget;
-
-	DetailPropertyRow.GetDefaultWidgets(NameWidget, ValueWidget, true);
-
 	ValueRow.NameContent()[CreateNameWidget(Attribute).ToSharedRef()];
 
 	if (UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
@@ -428,7 +424,10 @@ void AddScalarWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, 
 		ValueWidget = CreateBoolInputWidget(PropertyHandle);
 	}
 
-	ValueRow.ValueContent()[ValueWidget.ToSharedRef()];
+	if (ValueWidget)
+	{
+		ValueRow.ValueContent()[ValueWidget.ToSharedRef()];
+	}
 }
 
 void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, IDetailGroup& Group, URuleAttribute* Attribute,
@@ -454,6 +453,7 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 		FString ArrayGroupKey = Attribute->ImportPath + TEXT(".") + Attribute->Name;
 		IDetailGroup& ArrayHeader = Group.AddGroup(*ArrayGroupKey, FText::GetEmpty());
 		FDetailWidgetRow& Row = ArrayHeader.HeaderRow();
+		Row.FilterTextString = FText::FromString(Attribute->DisplayName);
 
 		AddCopyNameToClipboardAction(Row, Attribute);
 		HeaderPropertyRow->OverrideResetToDefault(ResetToDefaultOverride(Attribute, VitruvioActor));
