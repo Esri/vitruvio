@@ -403,6 +403,7 @@ void AddScalarWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, 
 	const TSharedPtr<IPropertyHandle> PropertyHandle = ValueNode->GetRow()->GetPropertyHandle();
 	PropertyHandle->SetPropertyDisplayName(FText::FromString(Attribute->DisplayName));
 	FDetailWidgetRow& ValueRow = Group.AddWidgetRow();
+	ValueRow.PropertyHandles.Add(PropertyHandle);
 	ValueRow.OverrideResetToDefault(ResetToDefaultOverride(Attribute, VitruvioActor));
 	ValueRow.FilterTextString = FText::FromString(Attribute->DisplayName);
 
@@ -454,9 +455,9 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 		IDetailGroup& ArrayHeader = Group.AddGroup(*ArrayGroupKey, FText::GetEmpty());
 		FDetailWidgetRow& Row = ArrayHeader.HeaderRow();
 		Row.FilterTextString = FText::FromString(Attribute->DisplayName);
-
+		Row.PropertyHandles.Add(HeaderPropertyRow->GetPropertyHandle());
+		Row.OverrideResetToDefault(ResetToDefaultOverride(Attribute, VitruvioActor));
 		AddCopyNameToClipboardAction(Row, Attribute);
-		HeaderPropertyRow->OverrideResetToDefault(ResetToDefaultOverride(Attribute, VitruvioActor));
 
 		FDetailWidgetRow DefaultWidgetsRow;
 		TSharedPtr<SWidget> NameWidget;
