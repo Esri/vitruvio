@@ -103,7 +103,7 @@ First import the datasmith file from CityEngine using the **Datasmith** importer
 Now convert all imported initial shapes to Vitruvio Actors:
 
 1. Select the *DatasmithSceneActor* (this is the root Actor of the Datasmith scene)
-2. Right click and choose **Select** &rarr; **Select All Viable Initial Shapes in Hierarchy**. This will select all child Actors which are viable initial shapes (meaning all Actors which either have a valid *StaticMeshComponent* or *SplineComponent* attached).
+2. Right click and choose **Select All Viable Initial Shapes in Hierarchy**. This will select all child Actors which are viable initial shapes (meaning all Actors which either have a valid *StaticMeshComponent* or *SplineComponent* attached).
 
 <img src="img/select_vitruvio_actors.jpg" width="400">
 
