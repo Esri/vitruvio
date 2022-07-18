@@ -4,21 +4,19 @@ Vitruvio leverages CityEngine's Procedural Runtime (PRT) to generate buildings. 
 
 This section describes how to use the Vitruvio Actor in Unreal Engine 4 (UE4), export rule packages from CityEngine and how to import or create initial shapes.
 
-**Note** that the Plugin contains a demo folder with a simple level to try out Vitruvio. First, enable *Show Engine Content* and *Show Plugin Content* in the View Options (bottom right) of the Content Browser. The demo content can now be found in the *Vitruvio Content/Demo/* folder.
+**Note** that the plugin contains a demo folder with a simple level to try out Vitruvio. First, enable *Show Engine Content* and *Show Plugin Content* in the View Options (bottom right) of the Content Browser. The demo content can now be found in the *Vitruvio Content/Demo/* folder.
 
 ## Vitruvio Actor and Component
 
 The *Vitruvio Component* allows the user to access the procedural generation. It can be attached to any Unreal Actor. If the Actor already has a valid initial shape component attached it will automatically be used as the initial shape for the building generation. Refer to [Initial Shapes](#Initial-Shapes) for more information.
 
-For ease of use the Vitruvio  plugin also provides the *Vitruvio Actor* which can be found in the *Place Actors* Panel and placed anywhere in the scene.
+For ease of use the Vitruvio plugin also provides the *Vitruvio Actor* which can be found in the *Place Actors* Panel and placed anywhere in the scene.
 
 <img src="img/select_vitruvio_actor.jpg" width="400">
 
 After placing the Vitruvio Actor in the scene the *Details* panel shows all relevant properties.
 
 <img src="img/vitruvio_component.jpg" width="400">
-
-
 
 **Initial Shape Type:** The type of input initial shape used. For more information on how to import or create initial shapes see [Initial Shapes](#Initial-Shapes).
 
@@ -66,8 +64,6 @@ To use a Spline as an initial shape, change the **Initial Shape Type** drop down
 
 To copy a spline point, select an existing point, press alt and drag the point. Spline points can either be linear or curved. The type of an individual point can be changed by selecting the *Spline Component* of the *InitialShapeSpline* and in the *Selected Points* header of the details panel. For more information on how to edit splines please refer to [UE4 Spline Documentation](https://docs.unrealengine.com/en-US/Engine/BlueprintSplines/HowTo/EditSplineComponentInEditor/index.html).
 
-
-
 ## Attributes
 
 Attributes control the procedural generation of a model. The set of available attributes depends on the underlying rule of the assigned *Rule Package*. 
@@ -78,9 +74,7 @@ Selecting a *Vitruvio Actor* will display all its attributes in the details pane
 
 **Note:** if *generate automatically* is enabled, every attribute change will regenerate the model.  
 
-
-
-# Advanced
+## Advanced
 
 ### Initial Shapes from CityEngine to Unreal Engine
 
@@ -91,8 +85,6 @@ This section explains how to export a set of building footprints from CityEngine
 To export initial shape building footprints from CityEngine the [Datasmith Exporter](https://doc.arcgis.com/en/cityengine/latest/help/help-export-unreal.htm) can be used. Select the building footprints in the viewport and then choose **File** &rarr; **Export models…** to export them. Select the *Unreal Engine* exporter and make sure to set *Export Geometry* to **Shapes** and *Mesh Merging* to **Per Initial Shape**. This will make sure that each footprint (without generated models) is exported individually.
 
 <img src="img/export_initial_shapes.jpg" width="400">
-
-
 
 #### Unreal Engine
 
