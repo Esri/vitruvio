@@ -100,3 +100,37 @@ Now convert all imported initial shapes to Vitruvio Actors:
 <img src="img/select_vitruvio_actors.jpg" width="400">
 
 3. Right click again on any selected Actor and choose **Convert to Vitruvio Actor**. In the opened dialog, choose any RPK you want to assign. This will convert all selected Actors to Vitruvio Actors and assign the chosen RPK.
+
+### Blueprint Support
+
+This section explains how to use Blueprints with Vitruvio Actors. Unreal Engines' [Blueprint System](https://docs.unrealengine.com/5.0/en-US/blueprints-visual-scripting-in-unreal-engine) is a powerful visual scripting language. The VitruvioComponent provides several Blueprint functions to control its behavior, by for example setting new attribute values or accessing reports after the generation of a model.
+
+**Note:** the *generate automatically* flag of the VitruvioComponent is ignored for Blueprint API calls. Re-generation is controlled for each function call individually via a parameter. 
+
+#### Setup
+
+We first need to retrieve the VitruvioComponent to get access to all neccessary functions. In the **ReportingDemo** scene (in the "VitruvioContent/Demo" folder) open the [Level Blueprint](https://docs.unrealengine.com/4.27/en-US/ProgrammingAndScripting/Blueprints/UserGuide/Types/LevelBlueprint/) and drag the *Candler Building* Actor from the Outliner into the Blueprint to access the VitruvioComponent as follows:
+
+<img title="" src="img/access_vitruvio_actor.jpg" alt="" width="800">
+
+#### Modifying Attributes
+
+Next, we modify the **nFloor** attribute of the *Report Building* Vitruvio Actor as follows:
+
+<img title="" src="img/set_float_attribute.jpg" alt="" width="800">
+
+This call is executed asynchrounsly. The default execution path is executed immediately after the call has completed, *Attributes Evaluated* is executed once the attributes have been evaluated and *Generate Completed* is executed once the new model has been generated. If *Generate Model* is set to false, *Generate Completed* is never executed. 
+
+All other Vitruvio Blueprint calls follow a similar structure.
+
+**Note:** that when multiple asynchronous Vitruvio Blueprint calls are executed simultaneously, only one *Generate Completed* is executed.
+
+**Note:** that the fully qualified attribute name needs to be passed. The fully qualified name includes the CGA style prefix (which is *Default\$* for all attributes for now). You can access the name from Details panel by right clicking on an attribute and selecting **Copy Fully Qualified Attribute Name**.
+
+#### Accessing Reports
+
+We can now access the reports and print them as follows:
+
+<img title="" src="img/print_reports.jpg" alt="" width="800">
+
+The *Attributes Evaluated* execution path is used since we need to wait until the new attributes have been evaluated before we can access the new report values.
