@@ -4,7 +4,7 @@ This page describes how to install the Vitruvio Plugin for Unreal 5.0.
 
 ## Download
 
-* Download the [latest Vitruvio]([Release Vitruvio 1.1.1 · Esri/vitruvio · GitHub](https://github.com/Esri/vitruvio/releases/latest)) version. **Note** that the zip file contains libraries which are used by Vitruvio and your browser might warn you not to download them. This warning can be ignored.
+* Download the [latest Vitruvio](https://github.com/Esri/vitruvio/releases/latest) version. **Note** that the zip file contains libraries which are used by Vitruvio and your browser might warn you not to download them. This warning can be ignored.
 
 * Unzip the downloaded file and copy the extracted Vitruvio folder to `<Path to Unreal Engine 5.0>\Engine\Plugins\Marketplace`  (for example `C:\dev\Epic Games\UE_5.0\Engine\Plugins\Marketplace`). The Marketplace folder should now contain the Vitruvio Plugin folder.
 
