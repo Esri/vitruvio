@@ -18,8 +18,6 @@ After placing the Vitruvio Actor in the scene the *Details* panel shows all rele
 
 <img src="img/vitruvio_component.jpg" width="400">
 
-**Initial Shape Type:** The type of input initial shape used. For more information on how to import or create initial shapes see [Initial Shapes](#Initial-Shapes).
-
 **Generate Automatically:** Whether to generate automatically after changes to properties such as the initial shape, rule package or attributes.
 
 **Hide Initial Shape after Generation:** Whether to hide the initial shape geometry after a model has been generated.
@@ -29,6 +27,10 @@ After placing the Vitruvio Actor in the scene the *Details* panel shows all rele
 **Rule Package:** The rule package to be used. For more information on how to export rule packages from CityEngine and importing them into UE5 see [Rule Packages](#Rule-Packages).
 
 **Random Seed:** The random seed to be used for generation. See also [CityEngine Help](https://doc.arcgis.com/en/cityengine/2019.1/help/help-working-with-rules.htm#GUID-FD7F11D4-778E-4485-901B-E11DDD2099F2).
+
+**Reports:** The generated [CGA report](https://doc.arcgis.com/en/cityengine/latest/cga/cga-report.htm) values. These values can be accessed with the [Blueprint API](#Blueprint-Support).
+
+**Initial Shape Type:** The type of input initial shape used. For more information on how to import or create initial shapes see [Initial Shapes](#Initial-Shapes).
 
 **Attributes:** The attributes of the selected rule package which control the generation. See also [Attributes](#Attributes).
 
