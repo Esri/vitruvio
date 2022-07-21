@@ -1,4 +1,4 @@
-/* Copyright 2021 Esri
+/* Copyright 2022 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -112,6 +112,7 @@ protected:
 		Super::Serialize(Ar);
 		SetFlags(RF_Transactional);
 	}
+
 public:
 	UPROPERTY()
 	FString Name;
@@ -119,7 +120,7 @@ public:
 	FString DisplayName;
 	UPROPERTY()
 	FString ImportPath;
-	
+
 	UPROPERTY()
 	FString Description;
 	UPROPERTY()
@@ -142,16 +143,16 @@ public:
 		Annotation = InAnnotation;
 	}
 
-	virtual void CopyValue(const URuleAttribute* FromAttribute){}
+	virtual void CopyValue(const URuleAttribute* FromAttribute) {}
 };
 
 UCLASS()
-class VITRUVIO_API UArrayAttribute : public URuleAttribute {
+class VITRUVIO_API UArrayAttribute : public URuleAttribute
+{
 	GENERATED_BODY()
 
 public:
 	virtual void InitializeDefaultArrayValue(int32 Index) {}
-	
 };
 
 UCLASS()
@@ -160,7 +161,7 @@ class VITRUVIO_API UStringAttribute final : public URuleAttribute
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, Category="Vitruvio")
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	FString Value;
 
 	UStringEnumAnnotation* GetEnumAnnotation() const
@@ -189,7 +190,7 @@ class VITRUVIO_API UStringArrayAttribute final : public UArrayAttribute
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, Category="Vitruvio")
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	TArray<FString> Values;
 
 	UStringEnumAnnotation* GetEnumAnnotation() const
@@ -210,14 +211,14 @@ public:
 			Values = FromStringAttribute->Values;
 		}
 	}
-	
+
 	virtual void InitializeDefaultArrayValue(int32 Index) override
 	{
 		if (Index == INDEX_NONE || Index >= Values.Num())
 		{
 			return;
 		}
-		
+
 		if (UStringEnumAnnotation* EnumAnnotation = GetEnumAnnotation())
 		{
 			if (EnumAnnotation->Values.Num() > 0)
@@ -238,7 +239,7 @@ class VITRUVIO_API UFloatAttribute final : public URuleAttribute
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, Category="Vitruvio")
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	double Value;
 
 	UFloatEnumAnnotation* GetEnumAnnotation() const
@@ -267,7 +268,7 @@ class VITRUVIO_API UFloatArrayAttribute final : public UArrayAttribute
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, Category="Vitruvio")
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	TArray<double> Values;
 
 	UFloatEnumAnnotation* GetEnumAnnotation() const
@@ -295,7 +296,7 @@ public:
 		{
 			return;
 		}
-		
+
 		if (UFloatEnumAnnotation* FloatEnumAnnotation = GetEnumAnnotation())
 		{
 			if (FloatEnumAnnotation->Values.Num() > 0)
@@ -319,7 +320,7 @@ class VITRUVIO_API UBoolAttribute final : public URuleAttribute
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, Category="Vitruvio")
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	bool Value;
 
 	void CopyValue(const URuleAttribute* FromAttribute) override
@@ -338,7 +339,7 @@ class VITRUVIO_API UBoolArrayAttribute final : public UArrayAttribute
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, Category="Vitruvio")
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	TArray<bool> Values;
 
 	void CopyValue(const URuleAttribute* FromAttribute) override

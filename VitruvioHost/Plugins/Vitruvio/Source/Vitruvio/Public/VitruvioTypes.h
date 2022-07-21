@@ -1,4 +1,4 @@
-/* Copyright 2021 Esri
+/* Copyright 2022 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ namespace Vitruvio
 enum class EUnrealUvSetType : int32
 {
 	None = -1,
-	ColorMap = 0, //skip 1 because unreal engine saves lightmaps per default in uv set 1
+	ColorMap = 0, // skip 1 because unreal engine saves lightmaps per default in uv set 1
 	DirtMap = 2,
 	OpacityMap = 3,
 	NormalMap = 4,

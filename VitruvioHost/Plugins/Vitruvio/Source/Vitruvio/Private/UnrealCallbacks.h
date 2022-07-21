@@ -1,4 +1,4 @@
-/* Copyright 2021 Esri
+/* Copyright 2022 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@
 #include "PRTTypes.h"
 
 #include "Codec/Encoder/IUnrealCallbacks.h"
-#include "VitruvioTypes.h"
 #include "Report.h"
+#include "VitruvioTypes.h"
 
 #include "Core.h"
 #include "Engine/StaticMesh.h"

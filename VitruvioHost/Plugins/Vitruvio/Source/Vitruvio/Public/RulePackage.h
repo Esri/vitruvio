@@ -1,4 +1,4 @@
-/* Copyright 2021 Esri
+/* Copyright 2022 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ public:
 	UPROPERTY()
 	FString SourcePath;
 
-
 	virtual void PreSave(FObjectPreSaveContext SaveContext) override
 	{
 		Super::PreSave(SaveContext);
@@ -42,7 +41,7 @@ public:
 		// but it will mark the object as dirty and require a save.
 		FUniqueObjectGuid::GetOrCreateIDForObject(this);
 	}
-	
+
 	virtual void Serialize(FArchive& Ar) override
 	{
 		Super::Serialize(Ar);
