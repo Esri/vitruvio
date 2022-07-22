@@ -1,4 +1,4 @@
-﻿/* Copyright 2021 Esri
+﻿/* Copyright 2022 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,8 @@
 
 namespace Vitruvio
 {
-TMap<FString, URuleAttribute*> ConvertAttributeMap(const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo, UObject* Outer);
+void UpdateAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo,
+						UObject* const Outer);
 
 AttributeMapUPtr CreateAttributeMap(const TMap<FString, URuleAttribute*>& Attributes);
 } // namespace Vitruvio

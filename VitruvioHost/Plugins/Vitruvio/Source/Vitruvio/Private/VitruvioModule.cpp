@@ -1,4 +1,4 @@
-/* Copyright 2021 Esri
+/* Copyright 2022 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -120,38 +120,86 @@ public:
 	}
 };
 
-void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder, const TArray<FInitialShapeFace>& InitialShape)
+void SetInitialShapeGeometry(const InitialShapeBuilderUPtr& InitialShapeBuilder, const FInitialShapePolygon& InitialShape)
 {
 	std::vector<double> vertexCoords;
 	std::vector<uint32_t> indices;
 	std::vector<uint32_t> faceCounts;
+	std::vector<uint32_t> holes;
 
-	uint32_t CurrentIndex = 0;
-	for (const FInitialShapeFace& Face : InitialShape)
+	for (const FVector3f& Vertex : InitialShape.Vertices)
 	{
-		faceCounts.push_back(Face.Vertices.Num());
-		for (const FVector& Vertex : Face.Vertices)
-		{
-			indices.push_back(CurrentIndex++);
+		const FVector CEVertex = FVector(Vertex.X, Vertex.Z, Vertex.Y) / 100.0;
+		vertexCoords.push_back(CEVertex.X);
+		vertexCoords.push_back(CEVertex.Y);
+		vertexCoords.push_back(CEVertex.Z);
+	}
 
-			const FVector CEVertex = FVector(Vertex.X, Vertex.Z, Vertex.Y) / 100.0;
-			vertexCoords.push_back(CEVertex.X);
-			vertexCoords.push_back(CEVertex.Y);
-			vertexCoords.push_back(CEVertex.Z);
+	for (const FInitialShapeFace& Face : InitialShape.Faces)
+	{
+		faceCounts.push_back(Face.Indices.Num());
+		for (const int32& Index : Face.Indices)
+		{
+			indices.push_back(Index);
+		}
+
+		if (Face.Holes.Num() > 0)
+		{
+			holes.push_back(faceCounts.size() - 1);
+
+			for (const FInitialShapeHole Hole : Face.Holes)
+			{
+				faceCounts.push_back(Hole.Indices.Num());
+				for (const int32& Index : Hole.Indices)
+				{
+					indices.push_back(Index);
+				}
+				holes.push_back(faceCounts.size() - 1);
+			}
+
+			holes.push_back(std::numeric_limits<uint32_t>::max());
 		}
 	}
 
 	const prt::Status SetGeometryStatus = InitialShapeBuilder->setGeometry(vertexCoords.data(), vertexCoords.size(), indices.data(), indices.size(),
-																		   faceCounts.data(), faceCounts.size());
+																		   faceCounts.data(), faceCounts.size(), holes.data(), holes.size());
 
 	if (SetGeometryStatus != prt::STATUS_OK)
 	{
 		UE_LOG(LogUnrealPrt, Error, TEXT("InitialShapeBuilder setGeometry failed status = %hs"), prt::getStatusDescription(SetGeometryStatus))
 	}
+
+	for (int32 UVSet = 0; UVSet < 8; ++UVSet)
+	{
+		std::vector<double> uvCoords;
+		std::vector<uint32_t> uvIndices;
+
+		uint32_t CurrentUVIndex = 0;
+		if (UVSet >= InitialShape.TextureCoordinateSets.Num())
+		{
+			continue;
+		}
+
+		for (const auto& UV : InitialShape.TextureCoordinateSets[UVSet].TextureCoordinates)
+		{
+			uvIndices.push_back(CurrentUVIndex++);
+			uvCoords.push_back(UV.X);
+			uvCoords.push_back(-UV.Y);
+		}
+
+		if (uvCoords.empty())
+		{
+			continue;
+		}
+
+		InitialShapeBuilder->setUVs(uvCoords.data(), uvCoords.size(), uvIndices.data(), uvIndices.size(), faceCounts.data(), faceCounts.size(),
+									UVSet);
+	}
 }
 
-AttributeMapUPtr EvaluateRuleAttribtues(const std::wstring& RuleFile, const std::wstring& StartRule, AttributeMapUPtr Attributes, const ResolveMapSPtr& ResolveMapPtr,
-										   const TArray<FInitialShapeFace>& InitialShape, prt::Cache* Cache, const int32 RandomSeed)
+AttributeMapUPtr EvaluateRuleAttributes(const std::wstring& RuleFile, const std::wstring& StartRule, AttributeMapUPtr Attributes,
+										const ResolveMapSPtr& ResolveMapPtr, const FInitialShapePolygon& InitialShape, prt::Cache* Cache,
+										const int32 RandomSeed)
 {
 	AttributeMapBuilderUPtr UnrealCallbacksAttributeBuilder(prt::AttributeMapBuilder::create());
 	UnrealCallbacks UnrealCallbacks(UnrealCallbacksAttributeBuilder);
@@ -254,7 +302,7 @@ void VitruvioModule::InitializePrt()
 	PrtLibrary = prt::init(PRTPluginsPaths.GetData(), PRTPluginsPaths.Num(), prt::LogLevel::LOG_TRACE, &Status);
 	Initialized = Status == prt::STATUS_OK;
 
-	PrtCache.reset(prt::CacheObject::create(prt::CacheObject::CACHE_TYPE_NONREDUNDANT));
+	PrtCache.reset(prt::CacheObject::create(prt::CacheObject::CACHE_TYPE_DEFAULT));
 
 	const FString TempDir(WCHAR_TO_TCHAR(prtu::temp_directory_path().c_str()));
 	RpkFolder = FPaths::CreateTempFilename(*TempDir, TEXT("Vitruvio_"), TEXT(""));
@@ -319,7 +367,7 @@ Vitruvio::FTextureData VitruvioModule::DecodeTexture(UObject* Outer, const FStri
 	return Vitruvio::DecodeTexture(Outer, Key, Path, TextureMetadata, std::move(Buffer), BufferSize);
 }
 
-FGenerateResult VitruvioModule::GenerateAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage, AttributeMapUPtr Attributes,
+FGenerateResult VitruvioModule::GenerateAsync(const FInitialShapePolygon& InitialShape, URulePackage* RulePackage, AttributeMapUPtr Attributes,
 											  const int32 RandomSeed) const
 {
 	check(RulePackage);
@@ -346,8 +394,8 @@ FGenerateResult VitruvioModule::GenerateAsync(const TArray<FInitialShapeFace>& I
 	return FGenerateResult{MoveTemp(ResultFuture), Token};
 }
 
-FGenerateResultDescription VitruvioModule::Generate(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage,
-													AttributeMapUPtr Attributes, const int32 RandomSeed) const
+FGenerateResultDescription VitruvioModule::Generate(const FInitialShapePolygon& InitialShape, URulePackage* RulePackage, AttributeMapUPtr Attributes,
+													const int32 RandomSeed) const
 {
 	check(RulePackage);
 
@@ -400,12 +448,17 @@ FGenerateResultDescription VitruvioModule::Generate(const TArray<FInitialShapeFa
 
 	// Notify generate complete callback on game thread
 	AsyncTask(ENamedThreads::GameThread, [this, GenerateCalls]() {
+		if (!Initialized)
+		{
+			return;
+		}
+
 		OnGenerateCompleted.Broadcast(GenerateCalls);
 
 		if (GenerateCalls == 0)
 		{
 			TArray<FLogMessage> Messages = LogHandler->PopMessages();
-		
+
 			int Warnings = 0;
 			int Errors = 0;
 
@@ -425,11 +478,12 @@ FGenerateResultDescription VitruvioModule::Generate(const TArray<FInitialShapeFa
 		}
 	});
 
-	return FGenerateResultDescription {OutputHandler->GetInstances(), OutputHandler->GetMeshes(), OutputHandler->GetNames() };
+	return FGenerateResultDescription{OutputHandler->GetInstances(), OutputHandler->GetMeshes(), OutputHandler->GetReports(),
+									  OutputHandler->GetNames()};
 }
 
-FAttributeMapResult VitruvioModule::EvaluateRuleAttributesAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage,
-															AttributeMapUPtr Attributes, const int32 RandomSeed) const
+FAttributeMapResult VitruvioModule::EvaluateRuleAttributesAsync(const FInitialShapePolygon& InitialShape, URulePackage* RulePackage,
+																AttributeMapUPtr Attributes, const int32 RandomSeed) const
 {
 	check(RulePackage);
 
@@ -466,7 +520,7 @@ FAttributeMapResult VitruvioModule::EvaluateRuleAttributesAsync(const TArray<FIn
 		}
 
 		AttributeMapUPtr DefaultAttributeMap(
-			EvaluateRuleAttribtues(RuleFile.c_str(), StartRule.c_str(), std::move(Attributes), ResolveMap, InitialShape, PrtCache.get(), RandomSeed));
+			EvaluateRuleAttributes(RuleFile.c_str(), StartRule.c_str(), std::move(Attributes), ResolveMap, InitialShape, PrtCache.get(), RandomSeed));
 
 		LoadAttributesCounter.Decrement();
 

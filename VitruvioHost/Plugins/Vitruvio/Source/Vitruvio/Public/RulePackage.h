@@ -1,4 +1,4 @@
-/* Copyright 2021 Esri
+/* Copyright 2022 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 
 #include "Containers/Array.h"
 #include "UObject/Object.h"
+#include "UObject/ObjectSaveContext.h"
 
 #include "RulePackage.generated.h"
 
@@ -31,9 +32,9 @@ public:
 	UPROPERTY()
 	FString SourcePath;
 
-	void PreSave(const ITargetPlatform* TargetPlatform) override
+	virtual void PreSave(FObjectPreSaveContext SaveContext) override
 	{
-		Super::PreSave(TargetPlatform);
+		Super::PreSave(SaveContext);
 
 		// Create a unique ID for this object which can be used by FLazyObjectPtr to reference loaded/unloaded objects
 		// The ID would be automatically generated the first time a FLazyObjectPtr of this object is created,

@@ -2,15 +2,15 @@
 
 Vitruvio leverages CityEngine's Procedural Runtime (PRT) to generate buildings. As input it takes a *rule package (RPK)*, an *initial shape* and a *set of attributes*. The generation process starts with the initial shape as start shape, from which shape grammar rules are expanded. The attributes are parameters that control shape generation.
 
-This section describes how to use the Vitruvio Actor in Unreal Engine 4 (UE4), export rule packages from CityEngine and how to import or create initial shapes.
+This section describes how to use the Vitruvio Actor in Unreal Engine 5 (UE5), export rule packages from CityEngine and how to import or create initial shapes.
 
-**Note** that the Plugin contains a demo folder with a simple level to try out Vitruvio. First, enable *Show Engine Content* and *Show Plugin Content* in the View Options (bottom right) of the Content Browser. The demo content can now be found in the *Vitruvio Content/Demo/* folder.
+**Note** that the plugin contains a demo folder with a simple level to try out Vitruvio. First, enable *Show Engine Content* and *Show Plugin Content* in the View Options (bottom right) of the Content Browser. The demo content can now be found in the *Vitruvio Content/Demo/* folder.
 
 ## Vitruvio Actor and Component
 
 The *Vitruvio Component* allows the user to access the procedural generation. It can be attached to any Unreal Actor. If the Actor already has a valid initial shape component attached it will automatically be used as the initial shape for the building generation. Refer to [Initial Shapes](#Initial-Shapes) for more information.
 
-For ease of use the Vitruvio  plugin also provides the *Vitruvio Actor* which can be found in the *Place Actors* Panel and placed anywhere in the scene.
+For ease of use the Vitruvio plugin also provides the *Vitruvio Actor* which can be found in the *Place Actors* Panel and placed anywhere in the scene.
 
 <img src="img/select_vitruvio_actor.jpg" width="400">
 
@@ -18,19 +18,19 @@ After placing the Vitruvio Actor in the scene the *Details* panel shows all rele
 
 <img src="img/vitruvio_component.jpg" width="400">
 
-
-
-**Initial Shape Type:** The type of input initial shape used. For more information on how to import or create initial shapes see [Initial Shapes](#Initial-Shapes).
-
 **Generate Automatically:** Whether to generate automatically after changes to properties such as the initial shape, rule package or attributes.
 
 **Hide Initial Shape after Generation:** Whether to hide the initial shape geometry after a model has been generated.
 
 **Generate Collision Mesh:** Whether to generate a collision mesh (complex collision) after the generation.
 
-**Rule Package:** The rule package to be used. For more information on how to export rule packages from CityEngine and importing them into UE4 see [Rule Packages](#Rule-Packages).
+**Rule Package:** The rule package to be used. For more information on how to export rule packages from CityEngine and importing them into UE5 see [Rule Packages](#Rule-Packages).
 
 **Random Seed:** The random seed to be used for generation. See also [CityEngine Help](https://doc.arcgis.com/en/cityengine/2019.1/help/help-working-with-rules.htm#GUID-FD7F11D4-778E-4485-901B-E11DDD2099F2).
+
+**Reports:** The generated [CGA report](https://doc.arcgis.com/en/cityengine/latest/cga/cga-report.htm) values. These values can be accessed with the [Blueprint API](#Blueprint-Support).
+
+**Initial Shape Type:** The type of input initial shape used. For more information on how to import or create initial shapes see [Initial Shapes](#Initial-Shapes).
 
 **Attributes:** The attributes of the selected rule package which control the generation. See also [Attributes](#Attributes).
 
@@ -64,9 +64,7 @@ To use a Spline as an initial shape, change the **Initial Shape Type** drop down
 
 <img src="img/spline_edit.gif" width="800">
 
-To copy a spline point, select an existing point, press alt and drag the point. Spline points can either be linear or curved. The type of an individual point can be changed by selecting the *Spline Component* of the *InitialShapeSpline* and in the *Selected Points* header of the details panel. For more information on how to edit splines please refer to [UE4 Spline Documentation](https://docs.unrealengine.com/en-US/Engine/BlueprintSplines/HowTo/EditSplineComponentInEditor/index.html).
-
-
+To copy a spline point, select an existing point, press alt and drag the point. Spline points can either be linear or curved. The type of an individual point can be changed by selecting the *Spline Component* of the *InitialShapeSpline* and in the *Selected Points* header of the details panel.
 
 ## Attributes
 
@@ -78,9 +76,7 @@ Selecting a *Vitruvio Actor* will display all its attributes in the details pane
 
 **Note:** if *generate automatically* is enabled, every attribute change will regenerate the model.  
 
-
-
-# Advanced
+## Advanced
 
 ### Initial Shapes from CityEngine to Unreal Engine
 
@@ -92,8 +88,6 @@ To export initial shape building footprints from CityEngine the [Datasmith Expor
 
 <img src="img/export_initial_shapes.jpg" width="400">
 
-
-
 #### Unreal Engine
 
 **Note:**  To import datasmith files, the **Datasmith Importer** plugin needs to be enabled in your project. Go to **Edit** &rarr; **Plugins** and verify that the **Datasmith Importer** plugin is enabled.
@@ -103,8 +97,42 @@ First import the datasmith file from CityEngine using the **Datasmith** importer
 Now convert all imported initial shapes to Vitruvio Actors:
 
 1. Select the *DatasmithSceneActor* (this is the root Actor of the Datasmith scene)
-2. Right click and choose **Select** &rarr; **Select All Viable Initial Shapes in Hierarchy**. This will select all child Actors which are viable initial shapes (meaning all Actors which either have a valid *StaticMeshComponent* or *SplineComponent* attached).
+2. Right click and choose **Select All Viable Initial Shapes in Hierarchy**. This will select all child Actors which are viable initial shapes (meaning all Actors which either have a valid *StaticMeshComponent* or *SplineComponent* attached).
 
 <img src="img/select_vitruvio_actors.jpg" width="400">
 
 3. Right click again on any selected Actor and choose **Convert to Vitruvio Actor**. In the opened dialog, choose any RPK you want to assign. This will convert all selected Actors to Vitruvio Actors and assign the chosen RPK.
+
+### Blueprint Support
+
+This section explains how to use Blueprints with Vitruvio Actors. Unreal Engines' [Blueprint System](https://docs.unrealengine.com/5.0/en-US/blueprints-visual-scripting-in-unreal-engine) is a powerful visual scripting language. The VitruvioComponent provides several Blueprint functions to control its behavior, by for example setting new attribute values or accessing reports after the generation of a model.
+
+**Note:** the *generate automatically* flag of the VitruvioComponent is ignored for Blueprint API calls. Re-generation is controlled for each function call individually via a parameter. 
+
+#### Setup
+
+We first need to retrieve the VitruvioComponent to get access to all neccessary functions. In the **ReportingDemo** scene (in the "VitruvioContent/Demo" folder) open the [Level Blueprint](https://docs.unrealengine.com/4.27/en-US/ProgrammingAndScripting/Blueprints/UserGuide/Types/LevelBlueprint/) and drag the *Candler Building* Actor from the Outliner into the Blueprint to access the VitruvioComponent as follows:
+
+<img title="" src="img/access_vitruvio_actor.jpg" alt="" width="800">
+
+#### Modifying Attributes
+
+Next, we modify the **nFloor** attribute of the *Report Building* Vitruvio Actor as follows:
+
+<img title="" src="img/set_float_attribute.jpg" alt="" width="800">
+
+This call is executed asynchrounsly. The default execution path is executed immediately after the call has completed, *Attributes Evaluated* is executed once the attributes have been evaluated and *Generate Completed* is executed once the new model has been generated. If *Generate Model* is set to false, *Generate Completed* is never executed. 
+
+All other Vitruvio Blueprint calls follow a similar structure.
+
+**Note:** that when multiple asynchronous Vitruvio Blueprint calls are executed simultaneously, only one *Generate Completed* is executed.
+
+**Note:** that the fully qualified attribute name needs to be passed. The fully qualified name includes the CGA style prefix (which is *Default\$* for all attributes for now). You can access the name from Details panel by right clicking on an attribute and selecting **Copy Fully Qualified Attribute Name**.
+
+#### Accessing Reports
+
+We can now access the reports and print them as follows:
+
+<img title="" src="img/print_reports.jpg" alt="" width="800">
+
+The *Attributes Evaluated* execution path is used since we need to wait until the new attributes have been evaluated before we can access the new report values.

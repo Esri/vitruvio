@@ -1,4 +1,4 @@
-/* Copyright 2021 Esri
+/* Copyright 2022 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,9 @@ class VITRUVIO_API UGeneratedModelHISMComponent : public UHierarchicalInstancedS
 		}
 
 		TriCollisionData->Indices = CollisionData.Indices;
+		TArray<uint16> MaterialIndices;
+		MaterialIndices.SetNumZeroed(CollisionData.Indices.Num());
+		TriCollisionData->MaterialIndices = MaterialIndices;
 		TriCollisionData->Vertices = CollisionData.Vertices;
 		TriCollisionData->bFlipNormals = true;
 		return true;
@@ -51,6 +54,5 @@ public:
 	}
 
 private:
-	
 	FCollisionData CollisionData;
 };

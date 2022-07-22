@@ -1,4 +1,4 @@
-/* Copyright 2021 Esri
+/* Copyright 2022 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,8 @@
 #include "Framework/Notifications/NotificationManager.h"
 #include "IAssetTools.h"
 #include "Modules/ModuleManager.h"
+#include "VitruvioBlueprintLibrary.h"
+#include "VitruvioStyle.h"
 #include "Widgets/Notifications/SNotificationList.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioEditorModule"
@@ -36,33 +38,9 @@
 namespace
 {
 
-bool CanConvertToVitruvioActor(AActor* Actor)
-{
-
-	if (Cast<AVitruvioActor>(Actor))
-	{
-		return false;
-	}
-
-	if (Actor->GetComponentByClass(UVitruvioComponent::StaticClass()))
-	{
-		return false;
-	}
-
-	for (const auto& InitialShapeClasses : UVitruvioComponent::GetInitialShapesClasses())
-	{
-		UInitialShape* DefaultInitialShape = Cast<UInitialShape>(InitialShapeClasses->GetDefaultObject());
-		if (DefaultInitialShape && DefaultInitialShape->CanConstructFrom(Actor))
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
 bool HasAnyViableVitruvioActor(TArray<AActor*> Actors)
 {
-	return Algo::AllOf(Actors, [](AActor* In) { return CanConvertToVitruvioActor(In); });
+	return Algo::AllOf(Actors, [](AActor* In) { return UVitruvioBlueprintLibrary::CanConvertToVitruvioActor(In); });
 }
 
 bool HasAnyVitruvioActor(TArray<AActor*> Actors)
@@ -73,69 +51,19 @@ bool HasAnyVitruvioActor(TArray<AActor*> Actors)
 	});
 }
 
-TArray<AActor*> GetViableVitruvioActorsInHiararchy(AActor* Root)
-{
-	TArray<AActor*> ViableActors;
-	if (CanConvertToVitruvioActor(Root))
-	{
-		ViableActors.Add(Root);
-	}
-
-	// If the actor has a VitruvioComponent attached we do not further check its children.
-	if (Root->FindComponentByClass<UVitruvioComponent>() == nullptr)
-	{
-		TArray<AActor*> ChildActors;
-		Root->GetAttachedActors(ChildActors);
-
-		for (AActor* Child : ChildActors)
-		{
-			ViableActors.Append(GetViableVitruvioActorsInHiararchy(Child));
-		}
-	}
-
-	return ViableActors;
-}
-
 void AssignRulePackage(TArray<AActor*> Actors)
 {
+	if (Actors.Num() == 0)
+	{
+		return;
+	}
+
 	TOptional<URulePackage*> SelectedRpk = FChooseRulePackageDialog::OpenDialog();
 
 	if (SelectedRpk.IsSet())
 	{
-		URulePackage* Rpk = SelectedRpk.GetValue();
-
-		UVitruvioComponent* Component = nullptr;
-		for (AActor* Actor : Actors)
-		{
-			AActor* OldAttachParent = Actor->GetAttachParentActor();
-			if (Actor->IsA<AStaticMeshActor>())
-			{
-				AVitruvioActor* VitruvioActor = Actor->GetWorld()->SpawnActor<AVitruvioActor>(Actor->GetActorLocation(), Actor->GetActorRotation());
-
-				UStaticMeshComponent* OldStaticMeshComponent = Actor->FindComponentByClass<UStaticMeshComponent>();
-
-				UStaticMeshComponent* NewStaticMeshComponent = NewObject<UStaticMeshComponent>(VitruvioActor, TEXT("InitialShapeStaticMesh"));
-				NewStaticMeshComponent->Mobility = EComponentMobility::Movable;
-				NewStaticMeshComponent->SetStaticMesh(OldStaticMeshComponent->GetStaticMesh());
-				NewStaticMeshComponent->SetWorldTransform(VitruvioActor->GetTransform());
-				VitruvioActor->AddInstanceComponent(NewStaticMeshComponent);
-				NewStaticMeshComponent->AttachToComponent(VitruvioActor->GetRootComponent(), FAttachmentTransformRules::KeepWorldTransform);
-				NewStaticMeshComponent->OnComponentCreated();
-				NewStaticMeshComponent->RegisterComponent();
-
-				UVitruvioComponent* VitruvioComponent = VitruvioActor->VitruvioComponent;
-				VitruvioComponent->SetRpk(Rpk);
-
-				VitruvioActor->Initialize();
-
-				if (OldAttachParent)
-				{
-					VitruvioActor->AttachToActor(OldAttachParent, FAttachmentTransformRules::KeepWorldTransform);
-				}
-
-				Actor->Destroy();
-			}
-		}
+		TArray<AVitruvioActor*> ConvertedActors;
+		UGenerateCompletedCallbackProxy::ConvertToVitruvioActor(Actors[0], Actors, ConvertedActors, SelectedRpk.GetValue());
 	}
 }
 
@@ -144,7 +72,7 @@ void SelectAllViableVitruvioActors(TArray<AActor*> Actors)
 	GEditor->SelectNone(false, true, false);
 	for (AActor* SelectedActor : Actors)
 	{
-		TArray<AActor*> NewSelection = GetViableVitruvioActorsInHiararchy(SelectedActor);
+		TArray<AActor*> NewSelection = UVitruvioBlueprintLibrary::GetViableVitruvioActorsInHierarchy(SelectedActor);
 		for (AActor* ActorToSelect : NewSelection)
 		{
 			GEditor->SelectActor(ActorToSelect, true, false);
@@ -181,13 +109,6 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 										 CookVitruvioActorsAction);
 			}
 
-			MenuBuilder.EndSection();
-		}));
-
-	Extender->AddMenuExtension(
-		"SelectMatinee", EExtensionHook::After, CommandList, FMenuExtensionDelegate::CreateLambda([SelectedActors](FMenuBuilder& MenuBuilder) {
-			MenuBuilder.BeginSection("SelectPossibleVitruvio", FText::FromString("Vitruvio"));
-
 			const FUIAction SelectAllViableVitruvioActorsAction(FExecuteAction::CreateStatic(SelectAllViableVitruvioActors, SelectedActors));
 			MenuBuilder.AddMenuEntry(FText::FromString("Select All Viable Initial Shapes In Hierarchy"),
 									 FText::FromString("Selects all Actors which are viable initial shapes in hierarchy."), FSlateIcon(),
@@ -205,6 +126,8 @@ FLevelEditorModule::FLevelViewportMenuExtender_SelectedActors LevelViewportConte
 
 void VitruvioEditorModule::StartupModule()
 {
+	FVitruvioStyle::Initialize();
+
 	IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
 	AssetTools.RegisterAssetTypeActions(MakeShareable(new FRulePackageAssetTypeActions()));
 
@@ -229,6 +152,8 @@ void VitruvioEditorModule::StartupModule()
 
 void VitruvioEditorModule::ShutdownModule()
 {
+	FVitruvioStyle::Shutdown();
+
 	FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyModule.UnregisterCustomClassLayout(UVitruvioComponent::StaticClass()->GetFName());
 

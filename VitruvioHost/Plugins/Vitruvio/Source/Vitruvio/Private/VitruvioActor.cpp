@@ -1,4 +1,4 @@
-/* Copyright 2021 Esri
+/* Copyright 2022 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,27 +21,4 @@ AVitruvioActor::AVitruvioActor()
 {
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	VitruvioComponent = CreateDefaultSubobject<UVitruvioComponent>(TEXT("VitruvioComponent"));
-	PrimaryActorTick.bCanEverTick = true;
-}
-
-void AVitruvioActor::Tick(float DeltaSeconds)
-{
-	// We do the initialization late here because we need all Components loaded and copy/pasted
-	// In PostCreated we can not differentiate between an Actor which has been copy pasted
-	// (in which case we would not need to load the initial shape) or spawned normally
-	Initialize();
-}
-
-bool AVitruvioActor::ShouldTickIfViewportsOnly() const
-{
-	return true;
-}
-
-void AVitruvioActor::Initialize()
-{
-	if (!bInitialized)
-	{
-		VitruvioComponent->Initialize();
-		bInitialized = true;
-	}
 }

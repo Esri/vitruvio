@@ -1,4 +1,4 @@
-/* Copyright 2021 Esri
+/* Copyright 2022 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,12 +26,50 @@
 class UVitruvioComponent;
 
 USTRUCT()
+struct VITRUVIO_API FTextureCoordinateSet
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<FVector2f> TextureCoordinates;
+};
+
+USTRUCT()
+struct VITRUVIO_API FInitialShapeHole
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<int32> Indices;
+};
+
+USTRUCT()
 struct VITRUVIO_API FInitialShapeFace
 {
 	GENERATED_BODY()
 
 	UPROPERTY()
-	TArray<FVector> Vertices;
+	TArray<int32> Indices;
+
+	UPROPERTY()
+	TArray<FInitialShapeHole> Holes;
+};
+
+USTRUCT()
+struct VITRUVIO_API FInitialShapePolygon
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<FInitialShapeFace> Faces;
+
+	UPROPERTY()
+	TArray<FVector3f> Vertices;
+
+	UPROPERTY()
+	TArray<FTextureCoordinateSet> TextureCoordinateSets;
+
+	void FixOrientation();
 };
 
 UCLASS(Abstract)
@@ -39,9 +77,8 @@ class VITRUVIO_API UInitialShape : public UObject
 {
 	GENERATED_BODY()
 
-	// Non triangulated vertices per face
 	UPROPERTY()
-	TArray<FInitialShapeFace> Faces;
+	FInitialShapePolygon Polygon;
 
 protected:
 	UPROPERTY()
@@ -54,12 +91,12 @@ protected:
 	UVitruvioComponent* VitruvioComponent;
 
 public:
-	const TArray<FInitialShapeFace>& GetFaces() const
+	const FInitialShapePolygon& GetPolygon() const
 	{
-		return Faces;
+		return Polygon;
 	}
 
-	TArray<FVector> GetVertices() const;
+	const TArray<FVector3f>& GetVertices() const;
 
 	bool IsValid() const
 	{
@@ -71,9 +108,9 @@ public:
 		return InitialShapeSceneComponent;
 	}
 
-	void SetFaces(const TArray<FInitialShapeFace>& InFaces);
+	void SetPolygon(const FInitialShapePolygon& InFaces);
 
-	virtual void Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces)
+	virtual void Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon)
 	{
 		unimplemented();
 	}
@@ -89,6 +126,12 @@ public:
 		return false;
 	}
 
+	virtual USceneComponent* CopySceneComponent(AActor* OldActor, AActor* NewActor) const
+	{
+		unimplemented();
+		return nullptr;
+	}
+
 	virtual void SetHidden(bool bHidden) {}
 
 	virtual bool CanDestroy();
@@ -101,6 +144,11 @@ public:
 		return false;
 	}
 
+	virtual bool ShouldConvert(const FInitialShapePolygon& InitialShapePolygon)
+	{
+		return true;
+	}
+
 #endif
 };
 
@@ -111,8 +159,10 @@ public:
 	GENERATED_BODY()
 
 	virtual void Initialize(UVitruvioComponent* Component) override;
-	virtual void Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces) override;
+	virtual void Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon) override;
+	void Initialize(UVitruvioComponent* Component, UStaticMesh* StaticMesh);
 	virtual bool CanConstructFrom(AActor* Owner) const override;
+	virtual USceneComponent* CopySceneComponent(AActor* OldActor, AActor* NewActor) const override;
 	virtual void SetHidden(bool bHidden) override;
 
 #if WITH_EDITOR
@@ -136,10 +186,13 @@ public:
 	int32 SplineApproximationPoints = 15;
 
 	virtual void Initialize(UVitruvioComponent* Component) override;
-	virtual void Initialize(UVitruvioComponent* Component, const TArray<FInitialShapeFace>& InitialFaces) override;
+	virtual void Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon) override;
+	void Initialize(UVitruvioComponent* Component, const TArray<FSplinePoint>& SplinePoints);
 	virtual bool CanConstructFrom(AActor* Owner) const override;
+	virtual USceneComponent* CopySceneComponent(AActor* OldActor, AActor* NewActor) const override;
 
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent) override;
+	virtual bool ShouldConvert(const FInitialShapePolygon& InitialShapePolygon) override;
 #endif
 };

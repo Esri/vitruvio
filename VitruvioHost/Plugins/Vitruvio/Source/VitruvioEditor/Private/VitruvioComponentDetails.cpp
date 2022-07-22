@@ -1,4 +1,4 @@
-/* Copyright 2021 Esri
+/* Copyright 2022 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 
 #include "Algo/Transform.h"
 #include "Brushes/SlateColorBrush.h"
+#include "HAL/PlatformApplicationMisc.h"
 #include "IDetailGroup.h"
 #include "IDetailTreeNode.h"
 #include "IPropertyRowGenerator.h"
@@ -89,22 +90,22 @@ bool IsVitruvioComponentSelected(const TArray<TWeakObjectPtr<UObject>>& ObjectsB
 }
 
 template <typename V, typename A>
-TSharedPtr<SPropertyComboBox<V>>  CreateEnumWidget(A* Annotation, TSharedPtr<IPropertyHandle> PropertyHandle)
+TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Annotation, TSharedPtr<IPropertyHandle> PropertyHandle)
 {
-	check(Annotation->Values.Num() > 0)
+	check(Annotation->Values.Num() > 0);
 
 	auto OnSelectionChanged = [PropertyHandle](TSharedPtr<V> Val, ESelectInfo::Type Type) {
 		PropertyHandle->SetValue(*Val);
 	};
-	
+
 	TArray<TSharedPtr<V>> SharedPtrValues;
 	Algo::Transform(Annotation->Values, SharedPtrValues, [](const V& Value) { return MakeShared<V>(Value); });
 
 	V CurrentValue;
 	PropertyHandle->GetValue(CurrentValue);
 	auto InitialSelectedIndex = Annotation->Values.IndexOfByPredicate([&CurrentValue](const V& Value) { return Value == CurrentValue; });
-	
-	if (InitialSelectedIndex == INDEX_NONE) 
+
+	if (InitialSelectedIndex == INDEX_NONE)
 	{
 		// If the value is not present in the enum values we insert it at the beginning (similar behavior to CE inspector)
 		if (!IsDefault(CurrentValue))
@@ -115,10 +116,12 @@ TSharedPtr<SPropertyComboBox<V>>  CreateEnumWidget(A* Annotation, TSharedPtr<IPr
 	}
 	auto InitialSelectedValue = SharedPtrValues[InitialSelectedIndex];
 
+	// clang-format off
 	auto ValueWidget = SNew(SPropertyComboBox<V>)
-						   .ComboItemList(SharedPtrValues)
-						   .OnSelectionChanged_Lambda(OnSelectionChanged)
-						   .InitialValue(InitialSelectedValue);
+		.ComboItemList(SharedPtrValues)
+		.OnSelectionChanged_Lambda(OnSelectionChanged)
+		.InitialValue(InitialSelectedValue);
+	// clang-format on
 
 	return ValueWidget;
 }
@@ -144,14 +147,13 @@ TSharedPtr<SHorizontalBox> CreateColorInputWidget(TSharedPtr<IPropertyHandle> Co
 	auto ColorCommitted = [ColorStringProperty](FLinearColor NewColor) {
 		ColorStringProperty->SetValue(TEXT("#") + NewColor.ToFColor(true).ToHex());
 	};
-	
-	auto ColorLambda = [ColorStringProperty]()
-	{
+
+	auto ColorLambda = [ColorStringProperty]() {
 		FString Value;
 		ColorStringProperty->GetValue(Value);
 		return Value.IsEmpty() ? FLinearColor::White : FLinearColor(FColor::FromHex(Value));
 	};
-	
+
 	// clang-format off
 	return SNew(SHorizontalBox)
 		+ SHorizontalBox::Slot()
@@ -173,7 +175,7 @@ TSharedPtr<SHorizontalBox> CreateColorInputWidget(TSharedPtr<IPropertyHandle> Co
 				return FReply::Handled();
 			})
 			.UseSRGB(true)
-			.IgnoreAlpha(true)
+			.AlphaDisplayMode(EColorBlockAlphaDisplayMode::Ignore)
 			.Size(FVector2D(35.0f, 12.0f))
 		];
 	// clang-format on
@@ -232,7 +234,7 @@ TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(Attr* Attribute, TSharedPt
 	auto OnValueCommit = [FloatProperty](double Value, ETextCommit::Type Type) {
 		FloatProperty->SetValue(Value);
 	};
-	
+
 	// clang-format off
 	auto ValueWidget = SNew(SSpinBox<double>)
 		.Font(IDetailLayoutBuilder::GetDetailFont())
@@ -271,43 +273,56 @@ TSharedPtr<SBox> CreateNameWidget(URuleAttribute* Attribute)
 FResetToDefaultOverride ResetToDefaultOverride(URuleAttribute* Attribute, UVitruvioComponent* VitruvioActor)
 {
 	FResetToDefaultOverride ResetToDefaultOverride = FResetToDefaultOverride::Create(
-	FIsResetToDefaultVisible::CreateLambda([Attribute](TSharedPtr<IPropertyHandle> Property)
-	{
-		return Attribute->bUserSet;
-	}),
-	FResetToDefaultHandler::CreateLambda([Attribute, VitruvioActor](TSharedPtr<IPropertyHandle> Property)
-	{
-		Attribute->bUserSet = false;
-		VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
-	})
-	);
+		FIsResetToDefaultVisible::CreateLambda([Attribute](TSharedPtr<IPropertyHandle> Property) { return Attribute->bUserSet; }),
+		FResetToDefaultHandler::CreateLambda([Attribute, VitruvioActor](TSharedPtr<IPropertyHandle> Property) {
+			Attribute->bUserSet = false;
+			VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
+		}));
 	return ResetToDefaultOverride;
 }
 
-IDetailGroup* GetOrCreateGroups(IDetailGroup& Root, const TArray<FString>& Groups, TMap<FString, IDetailGroup*>& GroupCache)
+IDetailGroup* GetOrCreateGroups(IDetailGroup& Root, const URuleAttribute* Attribute, TMap<FString, IDetailGroup*>& GroupCache)
 {
-	if (Groups.Num() == 0)
-	{
-		return &Root;
-	}
+	const FString Delimiter = TEXT(".");
+	const TArray<FString>& Groups = Attribute->Groups;
 
-	auto GetOrCreateGroup = [&GroupCache](IDetailGroup& Parent, FString Name) -> IDetailGroup* {
-		const auto CacheResult = GroupCache.Find(Name);
+	TArray<FString> Imports;
+	Attribute->ImportPath.ParseIntoArray(Imports, *Delimiter);
+
+	IDetailGroup* AttributeGroupRoot = &Root;
+	FString AttributeGroupImportPath;
+
+	auto GetOrCreateGroup = [&GroupCache, Delimiter](IDetailGroup& Parent, FString ImportPath, FString Name) -> IDetailGroup* {
+		const FString CacheGroupKey = ImportPath + Delimiter + Name;
+		const auto CacheResult = GroupCache.Find(CacheGroupKey);
 		if (CacheResult)
 		{
 			return *CacheResult;
 		}
-		IDetailGroup& Group = Parent.AddGroup(*Name, FText::FromString(Name), true);
-		GroupCache.Add(Name, &Group);
+		IDetailGroup& Group = Parent.AddGroup(*CacheGroupKey, FText::FromString(Name));
+		GroupCache.Add(CacheGroupKey, &Group);
+
 		return &Group;
 	};
 
+	for (const FString& CurrImport : Imports)
+	{
+		AttributeGroupRoot = GetOrCreateGroup(*AttributeGroupRoot, AttributeGroupImportPath, CurrImport);
+
+		AttributeGroupImportPath += CurrImport + Delimiter;
+	}
+
+	if (Groups.Num() == 0)
+	{
+		return AttributeGroupRoot;
+	}
+
 	FString QualifiedIdentifier = Groups[0];
-	IDetailGroup* CurrentGroup = GetOrCreateGroup(Root, QualifiedIdentifier);
+	IDetailGroup* CurrentGroup = GetOrCreateGroup(*AttributeGroupRoot, AttributeGroupImportPath + Delimiter, QualifiedIdentifier);
 	for (auto GroupIndex = 1; GroupIndex < Groups.Num(); ++GroupIndex)
 	{
 		QualifiedIdentifier += Groups[GroupIndex];
-		CurrentGroup = GetOrCreateGroup(*CurrentGroup, Groups[GroupIndex]);
+		CurrentGroup = GetOrCreateGroup(*CurrentGroup, AttributeGroupImportPath + Delimiter, Groups[GroupIndex]);
 	}
 
 	return CurrentGroup;
@@ -338,7 +353,7 @@ TSharedPtr<SWidget> CreateFloatAttributeWidget(A* Attribute, const TSharedPtr<IP
 	else
 	{
 		return CreateNumericInputWidget(Attribute, PropertyHandle).ToSharedRef();
-	} 
+	}
 }
 
 template <typename A>
@@ -358,7 +373,22 @@ TSharedPtr<SWidget> CreateStringAttributeWidget(A* Attribute, const TSharedPtr<I
 	}
 }
 
-void AddScalarWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, IDetailGroup& Group, URuleAttribute* Attribute, UVitruvioComponent* VitruvioActor)
+void AddCopyNameToClipboardAction(FDetailWidgetRow& Row, URuleAttribute* Attribute)
+{
+	// clang-format off
+	Row.AddCustomContextMenuAction(FUIAction(FExecuteAction::CreateLambda([Attribute]() {
+		   if (Attribute)
+		   {
+			   FPlatformApplicationMisc::ClipboardCopy(*Attribute->Name);
+		   }
+	   })),
+	   FText::FromString(TEXT("Copy Fully Qualified Attribute Name")),
+	   FText::FromString(TEXT("Copies the fully qualified attribute name to the clipboard.")));
+	// clang-format on
+}
+
+void AddScalarWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, IDetailGroup& Group, URuleAttribute* Attribute,
+					 UVitruvioComponent* VitruvioActor)
 {
 	if (DetailTreeNodes.Num() == 0 || DetailTreeNodes[0]->GetNodeType() != EDetailNodeType::Category)
 	{
@@ -370,16 +400,16 @@ void AddScalarWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, 
 
 	const auto& ValueNode = Root[0];
 
-	TSharedPtr<IPropertyHandle> PropertyHandle = ValueNode->GetRow()->GetPropertyHandle();
-	IDetailPropertyRow& DetailPropertyRow = Group.AddPropertyRow(PropertyHandle.ToSharedRef());
-	DetailPropertyRow.OverrideResetToDefault(ResetToDefaultOverride(Attribute, VitruvioActor));
-	FDetailWidgetRow& ValueRow = DetailPropertyRow.CustomWidget();
+	const TSharedPtr<IPropertyHandle> PropertyHandle = ValueNode->GetRow()->GetPropertyHandle();
+	PropertyHandle->SetPropertyDisplayName(FText::FromString(Attribute->DisplayName));
+	FDetailWidgetRow& ValueRow = Group.AddWidgetRow();
+	ValueRow.PropertyHandles.Add(PropertyHandle);
+	ValueRow.OverrideResetToDefault(ResetToDefaultOverride(Attribute, VitruvioActor));
+	ValueRow.FilterTextString = FText::FromString(Attribute->DisplayName);
 
-	TSharedPtr<SWidget> NameWidget;
+	AddCopyNameToClipboardAction(ValueRow, Attribute);
+
 	TSharedPtr<SWidget> ValueWidget;
-
-	DetailPropertyRow.GetDefaultWidgets(NameWidget, ValueWidget, true);
-	
 	ValueRow.NameContent()[CreateNameWidget(Attribute).ToSharedRef()];
 
 	if (UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
@@ -395,10 +425,14 @@ void AddScalarWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, 
 		ValueWidget = CreateBoolInputWidget(PropertyHandle);
 	}
 
-	ValueRow.ValueContent()[ValueWidget.ToSharedRef()];
+	if (ValueWidget)
+	{
+		ValueRow.ValueContent()[ValueWidget.ToSharedRef()];
+	}
 }
 
-void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, IDetailGroup& Group, URuleAttribute* Attribute, UVitruvioComponent* VitruvioActor)
+void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, IDetailGroup& Group, URuleAttribute* Attribute,
+					UVitruvioComponent* VitruvioActor)
 {
 	if (DetailTreeNodes.Num() == 0 || DetailTreeNodes[0]->GetNodeType() != EDetailNodeType::Category)
 	{
@@ -407,19 +441,23 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 
 	TArray<TSharedRef<IDetailTreeNode>> ArrayRoots;
 	DetailTreeNodes[0]->GetChildren(ArrayRoots);
-	
+
 	for (const auto& ArrayRoot : ArrayRoots)
 	{
 		if (ArrayRoot->GetNodeType() != EDetailNodeType::Item)
 		{
 			continue;
 		}
-		
+
 		// Header Row
 		const TSharedPtr<IDetailPropertyRow> HeaderPropertyRow = ArrayRoot->GetRow();
-		IDetailGroup& ArrayHeader = Group.AddGroup(TEXT(""), FText::GetEmpty(), true);
+		FString ArrayGroupKey = Attribute->ImportPath + TEXT(".") + Attribute->Name;
+		IDetailGroup& ArrayHeader = Group.AddGroup(*ArrayGroupKey, FText::GetEmpty());
 		FDetailWidgetRow& Row = ArrayHeader.HeaderRow();
-		HeaderPropertyRow->OverrideResetToDefault(ResetToDefaultOverride(Attribute, VitruvioActor));
+		Row.FilterTextString = FText::FromString(Attribute->DisplayName);
+		Row.PropertyHandles.Add(HeaderPropertyRow->GetPropertyHandle());
+		Row.OverrideResetToDefault(ResetToDefaultOverride(Attribute, VitruvioActor));
+		AddCopyNameToClipboardAction(Row, Attribute);
 
 		FDetailWidgetRow DefaultWidgetsRow;
 		TSharedPtr<SWidget> NameWidget;
@@ -431,12 +469,12 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 		// Value Rows
 		TArray<TSharedRef<IDetailTreeNode>> ArrayTreeNodes;
 		ArrayRoot->GetChildren(ArrayTreeNodes);
-		
+
 		for (const auto& ChildNode : ArrayTreeNodes)
 		{
 			const TSharedPtr<IDetailPropertyRow> DetailPropertyRow = ChildNode->GetRow();
 			TSharedPtr<IPropertyHandle> PropertyHandle = DetailPropertyRow->GetPropertyHandle();
-			
+
 			FDetailWidgetRow& ValueRow = ArrayHeader.AddWidgetRow();
 
 			FDetailWidgetRow ArrayDefaultWidgetsRow;
@@ -531,8 +569,9 @@ FVitruvioComponentDetails::FVitruvioComponentDetails()
 		auto InitialShapeOption = MakeShared<FString>(DisplayName);
 		InitialShapeTypes.Add(InitialShapeOption);
 		InitialShapeTypeMap.Add(InitialShapeOption, *InitialShapeType);
+		InitialShapeClassMap.Add(*InitialShapeType, InitialShapeOption);
 	}
-	
+
 	UVitruvioComponent::OnAttributesChanged.AddRaw(this, &FVitruvioComponentDetails::OnAttributesChanged);
 	UVitruvioComponent::OnHierarchyChanged.AddRaw(this, &FVitruvioComponentDetails::OnVitruvioComponentHierarchyChanged);
 }
@@ -548,7 +587,8 @@ TSharedRef<IDetailCustomization> FVitruvioComponentDetails::MakeInstance()
 	return MakeShareable(new FVitruvioComponentDetails);
 }
 
-void FVitruvioComponentDetails::BuildAttributeEditor(IDetailLayoutBuilder& DetailBuilder, IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioActor)
+void FVitruvioComponentDetails::BuildAttributeEditor(IDetailLayoutBuilder& DetailBuilder, IDetailCategoryBuilder& RootCategory,
+													 UVitruvioComponent* VitruvioActor)
 {
 	if (!VitruvioActor || !VitruvioActor->GetRpk())
 	{
@@ -557,24 +597,22 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailLayoutBuilder& Detai
 
 	Generators.Empty();
 
-	IDetailGroup& RootGroup = RootCategory.AddGroup("Attributes", FText::FromString("Attributes"), true, true);
+	IDetailGroup& RootGroup = RootCategory.AddGroup("Attributes", FText::FromString("Attributes"), true);
 	TSharedPtr<IPropertyHandle> AttributesHandle = DetailBuilder.GetProperty(FName(TEXT("Attributes")));
-	
+
 	// Create Attributes header widget
 	IDetailPropertyRow& HeaderProperty = RootGroup.HeaderProperty(AttributesHandle.ToSharedRef());
 	HeaderProperty.ShowPropertyButtons(false);
-	
-	FResetToDefaultOverride ResetAllToDefaultOverride = FResetToDefaultOverride::Create(
-	FResetToDefaultHandler::CreateLambda([VitruvioActor](TSharedPtr<IPropertyHandle> Property)
-	{
-		for (const auto& AttributeEntry : VitruvioActor->GetAttributes())
-		{
-			AttributeEntry.Value->bUserSet = false;
-		}
-			
-		VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
-	})
-	);
+
+	FResetToDefaultOverride ResetAllToDefaultOverride =
+		FResetToDefaultOverride::Create(FResetToDefaultHandler::CreateLambda([VitruvioActor](TSharedPtr<IPropertyHandle> Property) {
+			for (const auto& AttributeEntry : VitruvioActor->GetAttributes())
+			{
+				AttributeEntry.Value->bUserSet = false;
+			}
+
+			VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
+		}));
 
 	HeaderProperty.OverrideResetToDefault(ResetAllToDefaultOverride);
 	FDetailWidgetRow& HeaderWidget = HeaderProperty.CustomWidget();
@@ -592,14 +630,13 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailLayoutBuilder& Detai
 	];
 	// clang-format on
 
-	
 	TMap<FString, IDetailGroup*> GroupCache;
 	FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	for (const auto& AttributeEntry : VitruvioActor->GetAttributes())
 	{
 		URuleAttribute* Attribute = AttributeEntry.Value;
 
-		IDetailGroup* Group = GetOrCreateGroups(RootGroup, Attribute->Groups, GroupCache);
+		IDetailGroup* Group = GetOrCreateGroups(RootGroup, Attribute, GroupCache);
 
 		FPropertyRowGeneratorArgs Args;
 		const auto Generator = PropertyEditorModule.CreatePropertyRowGenerator(Args);
@@ -616,14 +653,13 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailLayoutBuilder& Detai
 					ArrayAttribute->InitializeDefaultArrayValue(ArrayIndex);
 				}
 			}
-			
-			VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
 			Attribute->bUserSet = true;
+			VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
 		});
 		const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes = Generator->GetRootTreeNodes();
 
 		Generators.Add(Generator);
-		
+
 		if (Cast<UStringArrayAttribute>(Attribute) || Cast<UFloatArrayAttribute>(Attribute) || Cast<UBoolArrayAttribute>(Attribute))
 		{
 			AddArrayWidget(DetailTreeNodes, *Group, Attribute, VitruvioActor);
@@ -652,28 +688,38 @@ void FVitruvioComponentDetails::AddSwitchInitialShapeCombobox(IDetailCategoryBui
 			.Font(IDetailLayoutBuilder::GetDetailFont())
 		]
 	];
-
+	
 	Row.ValueContent()
-	.VAlign(VAlign_Center)
-	.HAlign(HAlign_Left)
+	   .VAlign(VAlign_Center)
+	   .HAlign(HAlign_Left)
 	[
 		SNew(SHorizontalBox)
 		+ SHorizontalBox::Slot()
 		[
-			SNew(STextComboBox)
+			SAssignNew(ChangeInitialShapeCombo, STextComboBox)
 			.Font(IDetailLayoutBuilder::GetDetailFont())
 			.InitiallySelectedItem(CurrentInitialShapeType)
 			.OnSelectionChanged_Lambda([this, VitruvioComponent](TSharedPtr<FString> Selection, ESelectInfo::Type SelectInfo)
 			{
 				if (Selection.IsValid())
 				{
-					VitruvioComponent->SetInitialShapeType(InitialShapeTypeMap[Selection]);
-					VitruvioComponent->Generate();
+					UInitialShape* TempInitialShape = NewObject<UInitialShape>(GetTransientPackage(), InitialShapeTypeMap[Selection], NAME_None, RF_Transient | RF_TextExportTransient);
 
-					// Hack to refresh the property editor
-					GEditor->SelectActor(VitruvioComponent->GetOwner(), false, true, true, true);
-					GEditor->SelectActor(VitruvioComponent->GetOwner(), true, true, true, true);
-					GEditor->SelectComponent(VitruvioComponent, true, true, true);
+					if (TempInitialShape->ShouldConvert(VitruvioComponent->InitialShape->GetPolygon()))
+					{
+						VitruvioComponent->SetInitialShapeType(InitialShapeTypeMap[Selection]);
+						VitruvioComponent->Generate();
+
+						// Hack to refresh the property editor
+						GEditor->SelectActor(VitruvioComponent->GetOwner(), false, true, true, true);
+						GEditor->SelectActor(VitruvioComponent->GetOwner(), true, true, true, true);
+						GEditor->SelectComponent(VitruvioComponent, true, true, true);
+					}
+					else
+					{
+						const TSharedPtr<FString>& CurrentSelection = InitialShapeClassMap[VitruvioComponent->InitialShape->GetClass()];
+						ChangeInitialShapeCombo->SetSelectedItem(CurrentSelection);
+					}
 				}
 			})
 			.OptionsSource(&InitialShapeTypes)
@@ -738,8 +784,6 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 
 			AddSwitchInitialShapeCombobox(RootCategory, CurrentInitialShapeType, VitruvioComponent);
 		}
-
-		AddSeparator(RootCategory);
 
 		BuildAttributeEditor(DetailBuilder, RootCategory, VitruvioComponent);
 	}

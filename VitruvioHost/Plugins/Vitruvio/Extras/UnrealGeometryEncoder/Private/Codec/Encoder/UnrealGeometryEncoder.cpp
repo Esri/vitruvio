@@ -220,7 +220,6 @@ std::wstring uriToPath(const prtx::TexturePtr& t)
 		L"dirtmap",
 		L"normalmap",
 		L"opacitymap",
-		L"opacitymap.mode",
 		L"specularmap",
 		L"emissive.b",
 		L"emissive.g",
@@ -400,6 +399,8 @@ SerializedGeometry serializeGeometry(const prtx::GeometryPtrVector& geometries, 
 	uint32_t numIndices = 0;
 	uint32_t maxNumUVSets = 0;
 	auto matsIt = materials.cbegin();
+	//prt supports up to 10 uv sets (see: https://doc.arcgis.com/en/cityengine/latest/cga/cga-texturing-essential-knowledge.htm)
+	std::vector<bool> isUVSetEmptyVector(10, true);
 	for (const auto& geo : geometries)
 	{
 		const prtx::MeshPtrVector& meshes = geo->getMeshes();
@@ -414,6 +415,13 @@ SerializedGeometry serializeGeometry(const prtx::GeometryPtrVector& geometries, 
 			const prtx::MaterialPtr& mat = *matIt;
 			const uint32_t requiredUVSetsByMaterial = scanValidTextures(mat);
 			maxNumUVSets = std::max(maxNumUVSets, std::max(mesh->getUVSetsCount(), requiredUVSetsByMaterial));
+
+			for (uint32_t uvSet = 0; uvSet < mesh->getUVSetsCount(); uvSet++) {
+				if (!mesh->getUVCoords(uvSet).empty())
+				{
+					isUVSetEmptyVector[uvSet] = false;
+				}
+			}
 			++matIt;
 		}
 		++matsIt;
@@ -439,7 +447,9 @@ SerializedGeometry serializeGeometry(const prtx::GeometryPtrVector& geometries, 
 
 			// append uv sets (uv coords, counts, indices) with special cases:
 			// - if mesh has no uv sets but maxNumUVSets is > 0, insert "0" uv face counts to keep in sync
-			// - if mesh has less uv sets than maxNumUVSets, copy uv set 0 to the missing higher sets
+			// - if a uv set is empty for all meshes, leave it empty
+			//   (fall back to uv set 0 in the material shader instead of copying them here)
+			// - if mesh is missing uv sets that another mesh has, copy uv set 0 to the missing sets
 			const uint32_t numUVSets = mesh->getUVSetsCount();
 			const prtx::DoubleVector& uvs0 = (numUVSets > 0) ? mesh->getUVCoords(0) : EMPTY_UVS;
 			const prtx::IndexVector faceUVCounts0 = (numUVSets > 0) ? mesh->getFaceUVCounts(0) : prtx::IndexVector(mesh->getFaceCount(), 0);
@@ -448,6 +458,9 @@ SerializedGeometry serializeGeometry(const prtx::GeometryPtrVector& geometries, 
 
 			for (uint32_t uvSet = 0; uvSet < sg.uvs.size(); uvSet++)
 			{
+				if (isUVSetEmptyVector[uvSet])
+					continue;
+
 				// append texture coordinates
 				const prtx::DoubleVector& uvs = (uvSet < numUVSets) ? mesh->getUVCoords(uvSet) : EMPTY_UVS;
 				const auto& src = uvs.empty() ? uvs0 : uvs;
@@ -537,6 +550,19 @@ void encodeMesh(IUnrealCallbacks* cb, const SerializedGeometry& sg, wchar_t cons
 
 				faceRanges.data(), faceRanges.size(), matAttrMaps.v.empty() ? nullptr : matAttrMaps.v.data());
 }
+
+const prtx::PRTUtils::AttributeMapPtr convertReportToAttributeMap(const prtx::ReportsPtr& r) {
+	prtx::PRTUtils::AttributeMapBuilderPtr amb(prt::AttributeMapBuilder::create());
+
+	for (const auto& b : r->mBools)
+		amb->setBool(b.first->c_str(), b.second);
+	for (const auto& f : r->mFloats)
+		amb->setFloat(f.first->c_str(), f.second);
+	for (const auto& s : r->mStrings)
+		amb->setString(s.first->c_str(), s.second->c_str());
+
+	return prtx::PRTUtils::AttributeMapPtr{amb->createAttributeMap()};
+}
 } // namespace
 
 UnrealGeometryEncoder::UnrealGeometryEncoder(const std::wstring& id, const prt::AttributeMap* options, prt::Callbacks* callbacks)
@@ -565,17 +591,12 @@ void UnrealGeometryEncoder::encode(prtx::GenerateContext& context, size_t initia
 	prtx::EncodePreparatorPtr encPrep = prtx::EncodePreparator::create(true, namePrep, nsMesh, nsMaterial);
 
 	// generate geometry
-	prtx::ReportsAccumulatorPtr reportsAccumulator{prtx::WriteFirstReportsAccumulator::create()};
-	prtx::ReportingStrategyPtr reportsCollector{prtx::LeafShapeReportingStrategy::create(context, initialShapeIndex, reportsAccumulator)};
+	prtx::ReportsAccumulatorPtr reportsAccumulator{prtx::SummarizingReportsAccumulator::create()};
+	prtx::ReportingStrategyPtr reportsCollector{prtx::AllShapesReportingStrategy::create(context, initialShapeIndex, reportsAccumulator)};
 	prtx::LeafIteratorPtr li = prtx::LeafIterator::create(context, initialShapeIndex);
 	for (prtx::ShapePtr shape = li->getNext(); shape; shape = li->getNext())
 	{
-		prtx::ReportsPtr r = reportsCollector->getReports(shape->getID());
-		encPrep->add(context.getCache(), shape, initialShape.getAttributeMap(), r);
-
-		// get final values of generic attributes
-		if (emitAttrs)
-			forwardGenericAttributes(cb, initialShapeIndex, initialShape, shape);
+		encPrep->add(context.getCache(), shape, initialShape.getAttributeMap());
 	}
 
 	const prtx::EncodePreparator::PreparationFlags PREP_FLAGS =
@@ -593,6 +614,14 @@ void UnrealGeometryEncoder::encode(prtx::GenerateContext& context, size_t initia
 	prtx::EncodePreparator::InstanceVector instances;
 	encPrep->fetchFinalizedInstances(instances, PREP_FLAGS);
 	convertGeometry(initialShape, instances, cb);
+
+	if (emitAttrs) {
+		const prtx::ReportsPtr& reports = reportsCollector->getReports();
+		if (reports) {
+			prtx::PRTUtils::AttributeMapPtr reportMap = convertReportToAttributeMap(reports);
+			cb->addReport(reportMap.get());
+		}
+	}
 }
 
 void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialShape, const prtx::EncodePreparator::InstanceVector& instances,

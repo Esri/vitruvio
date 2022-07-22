@@ -1,0 +1,45 @@
+name: build-vitruvio
+
+on: 
+  push:
+    branches:
+      - main
+      - develop
+      - 'arisona/workflows'
+
+jobs:
+  package-host-main:
+    runs-on: self-hosted
+    name: Package host project (shipping) on main branch
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package_shipping
+
+  build-plugin-main:
+    runs-on: self-hosted
+    name: Build plugin on main branch
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_plugin_build
+
+  package-host-develop:
+    runs-on: self-hosted
+    name: Package host project (debug) on develop branch
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/arisona/workflows'
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package_debug
+
+  build-plugin-develop:
+    runs-on: self-hosted
+    name: Build plugin on develop branch
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/arisona/workflows'
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_plugin_build

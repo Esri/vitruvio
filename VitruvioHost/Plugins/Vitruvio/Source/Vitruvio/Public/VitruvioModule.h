@@ -1,4 +1,4 @@
-/* Copyright 2021 Esri
+/* Copyright 2022 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,20 @@
 #pragma once
 
 #include "AttributeMap.h"
+#include "GenerateCompletedCallbackProxy.h"
 #include "InitialShape.h"
 #include "MeshCache.h"
 #include "MeshDescription.h"
 #include "PRTTypes.h"
+#include "Report.h"
 #include "RuleAttributes.h"
 #include "RulePackage.h"
 
 #include "prt/Object.h"
 
+#include "Engine/StaticMesh.h"
 #include "HAL/ThreadSafeCounter.h"
 #include "Modules/ModuleManager.h"
-#include "Engine/StaticMesh.h"
 
 #include "UnrealLogHandler.h"
 #include "VitruvioTypes.h"
@@ -42,6 +44,7 @@ struct FGenerateResultDescription
 {
 	Vitruvio::FInstanceMap Instances;
 	TMap<int32, TSharedPtr<FVitruvioMesh>> Meshes;
+	TMap<FString, FReport> Reports;
 	TMap<int32, FString> Names;
 };
 
@@ -67,36 +70,10 @@ private:
 
 class FEvalAttributesToken : public FInvalidationToken
 {
-public:
-	void RequestReEvaluateAttributes()
-	{
-		bRequestReEvaluateAttributes = true;
-	}
-
-	bool IsReEvaluateRequested() const
-	{
-		return bRequestReEvaluateAttributes;
-	}
-
-private:
-	FThreadSafeBool bRequestReEvaluateAttributes = false;
 };
 
 class FGenerateToken : public FInvalidationToken
 {
-public:
-	void RequestRegenerate()
-	{
-		bRequestRegenerate = true;
-	}
-
-	bool IsRegenerateRequested() const
-	{
-		return bRequestRegenerate;
-	}
-
-private:
-	FThreadSafeBool bRequestRegenerate = false;
 };
 
 template <typename R, typename T>
@@ -142,7 +119,7 @@ public:
 	 * \param RandomSeed
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API FGenerateResult GenerateAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage, AttributeMapUPtr Attributes,
+	VITRUVIO_API FGenerateResult GenerateAsync(const FInitialShapePolygon& InitialShape, URulePackage* RulePackage, AttributeMapUPtr Attributes,
 											   const int32 RandomSeed) const;
 
 	/**
@@ -154,8 +131,8 @@ public:
 	 * \param RandomSeed
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API FGenerateResultDescription Generate(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage,
-													 AttributeMapUPtr Attributes, const int32 RandomSeed) const;
+	VITRUVIO_API FGenerateResultDescription Generate(const FInitialShapePolygon& InitialShape, URulePackage* RulePackage, AttributeMapUPtr Attributes,
+													 const int32 RandomSeed) const;
 
 	/**
 	 * \brief Asynchronously evaluates attributes for the given initial shape and rule package.
@@ -166,8 +143,8 @@ public:
 	 * \param RandomSeed
 	 * \return
 	 */
-	VITRUVIO_API FAttributeMapResult EvaluateRuleAttributesAsync(const TArray<FInitialShapeFace>& InitialShape, URulePackage* RulePackage,
-															 AttributeMapUPtr Attributes, const int32 RandomSeed) const;
+	VITRUVIO_API FAttributeMapResult EvaluateRuleAttributesAsync(const FInitialShapePolygon& InitialShape, URulePackage* RulePackage,
+																 AttributeMapUPtr Attributes, const int32 RandomSeed) const;
 
 	/**
 	 * \return whether PRT is initialized meaning installed and ready to use. Before initialization generation is not possible and will
@@ -246,15 +223,20 @@ public:
 	FOnGenerateCompleted OnGenerateCompleted;
 
 	/**
-	* Delegate which is called after all generate calls have completed.
-	*/
+	 * Delegate which is called after all generate calls have completed.
+	 */
 	FOnAllGenerateCompleted OnAllGenerateCompleted;
 
 	void AddReferencedObjects(FReferenceCollector& Collector) override
 	{
 		Collector.AddReferencedObjects(MaterialCache);
 		Collector.AddReferencedObjects(RegisteredMeshes);
-	};
+	}
+
+	FString GetReferencerName() const override
+	{
+		return TEXT("Vitruvio");
+	}
 
 	static VitruvioModule& Get()
 	{

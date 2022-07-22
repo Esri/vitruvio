@@ -17,7 +17,8 @@ using System;
 using UnrealBuildTool;
 using System.Collections.Generic;
 using System.IO;
-using Tools.DotNETCommon;
+using EpicGames.Core;
+using UnrealBuildBase;
 
 public class UnrealGeometryEncoderTarget : TargetRules
 {
@@ -57,7 +58,7 @@ public class UnrealGeometryEncoderTarget : TargetRules
 		string VitruvioPath = string.Empty;
 
 		// Check if Vitruvio Plugin is installed
-		foreach (FileReference Plugin in UnrealBuildTool.Plugins.EnumeratePlugins(Target.ProjectFile))
+		foreach (FileReference Plugin in PluginsBase.EnumeratePlugins(Target.ProjectFile))
 		{
 			if (Plugin.FullName.Contains("Vitruvio"))
 			{

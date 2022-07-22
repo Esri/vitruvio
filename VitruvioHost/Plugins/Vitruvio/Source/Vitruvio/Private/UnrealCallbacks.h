@@ -1,4 +1,4 @@
-/* Copyright 2021 Esri
+/* Copyright 2022 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 #include "PRTTypes.h"
 
 #include "Codec/Encoder/IUnrealCallbacks.h"
+#include "Report.h"
 #include "VitruvioTypes.h"
 
 #include "Core.h"
@@ -34,6 +35,7 @@ class UnrealCallbacks final : public IUnrealCallbacks
 
 	Vitruvio::FInstanceMap Instances;
 	TMap<int32, TSharedPtr<FVitruvioMesh>> Meshes;
+	TMap<FString, FReport> Reports;
 	TMap<int32, FString> Names;
 
 public:
@@ -55,6 +57,11 @@ public:
 	const TMap<int32, TSharedPtr<FVitruvioMesh>>& GetMeshes() const
 	{
 		return Meshes;
+	}
+
+	const TMap<FString, FReport>& GetReports() const
+	{
+		return Reports;
 	}
 
 	const TMap<int32, FString>& GetNames() const
@@ -111,6 +118,13 @@ public:
 	 */
 	virtual void addInstance(int32_t prototypeId, const double* transform, const prt::AttributeMap** instanceMaterial,
 							 size_t numInstanceMaterials) override;
+
+	/**
+	 * Add a new report
+	 *
+	 * @param reports an attribute map that stores all report attributes
+	 */
+	virtual void addReport(const prt::AttributeMap* reports) override;
 
 	prt::Status generateError(size_t /*isIndex*/, prt::Status /*status*/, const wchar_t* message) override
 	{

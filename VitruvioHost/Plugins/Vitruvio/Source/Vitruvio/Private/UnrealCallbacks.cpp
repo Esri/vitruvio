@@ -1,4 +1,4 @@
-/* Copyright 2021 Esri
+/* Copyright 2022 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,8 +54,56 @@ constexpr float PRT_TO_UE_SCALE = 100.0f;
 // Note that we use the same tolerance (1e-25f) as in PRT to avoid numerical issues when converting planar geometry
 constexpr float PRT_DIVISOR_LIMIT = 1e-25f;
 
-} // namespace
+// clang-format off
+const TMap<Vitruvio::EPrtUvSetType, Vitruvio::EUnrealUvSetType> PRTToUnrealUVSetMap = {
+	{Vitruvio::EPrtUvSetType::ColorMap,     Vitruvio::EUnrealUvSetType::ColorMap},
+	{Vitruvio::EPrtUvSetType::OpacityMap,   Vitruvio::EUnrealUvSetType::OpacityMap},
+	{Vitruvio::EPrtUvSetType::NormalMap,    Vitruvio::EUnrealUvSetType::NormalMap},
+	{Vitruvio::EPrtUvSetType::EmissiveMap,  Vitruvio::EUnrealUvSetType::EmissiveMap},
+	{Vitruvio::EPrtUvSetType::RoughnessMap, Vitruvio::EUnrealUvSetType::RoughnessMap},
+	{Vitruvio::EPrtUvSetType::MetallicMap,  Vitruvio::EUnrealUvSetType::MetallicMap},
+	{Vitruvio::EPrtUvSetType::DirtMap,      Vitruvio::EUnrealUvSetType::DirtMap}};
 
+const TMap<Vitruvio::EUnrealUvSetType, FString> UnrealUVSetToMaterialParamStringMap = {
+	{Vitruvio::EUnrealUvSetType::DirtMap,      TEXT("HasDirtMapUV")},
+	{Vitruvio::EUnrealUvSetType::OpacityMap,   TEXT("HasOpacityMapUV")},
+	{Vitruvio::EUnrealUvSetType::NormalMap,    TEXT("HasNormalMapUV")},  
+	{Vitruvio::EUnrealUvSetType::EmissiveMap,  TEXT("HasEmissiveMapUV")},
+	{Vitruvio::EUnrealUvSetType::RoughnessMap, TEXT("HasRoughnessMapUV")}, 
+	{Vitruvio::EUnrealUvSetType::MetallicMap,  TEXT("HasMetallicMapUV")}
+};
+// clang-format on
+
+TMap<FString, double> CreateAvailableUVSetMaterialParameterMap(uint32_t const* const* UVCounts, size_t UVSets)
+{
+	TMap<FString, double> AvailableUvSetAttributeMap;
+
+	// Check which uv sets are available and set the corresponding information in the MaterialContainer
+	for (size_t PrtUvSet = 0; PrtUvSet < UVSets; ++PrtUvSet)
+	{
+		const Vitruvio::EUnrealUvSetType* UnrealUVSetPtr = PRTToUnrealUVSetMap.Find(static_cast<Vitruvio::EPrtUvSetType>(PrtUvSet));
+		bool bIsValidUnrealUVSet = (UnrealUVSetPtr != nullptr);
+
+		if (bIsValidUnrealUVSet)
+		{
+			bool bHasUVSet = UVCounts[PrtUvSet] != nullptr;
+
+			const Vitruvio::EUnrealUvSetType UnrealUVSet = *UnrealUVSetPtr;
+			if (UnrealUVSet != Vitruvio::EUnrealUvSetType::ColorMap && UnrealUVSet != Vitruvio::EUnrealUvSetType::None)
+			{
+				const FString UVSetMaterialParamString(UnrealUVSetToMaterialParamStringMap.FindRef(UnrealUVSet));
+
+				if (bHasUVSet)
+				{
+					AvailableUvSetAttributeMap.Add(UVSetMaterialParamString, 1.0);
+				}
+			}
+		}
+	}
+	return AvailableUvSetAttributeMap;
+}
+
+} // namespace
 void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wchar_t* uri, const double* vtx, size_t vtxSize, const double* nrm,
 							  size_t nrmSize, const uint32_t* faceVertexCounts, size_t faceVertexCountsSize, const uint32_t* vertexIndices,
 							  size_t vertexIndicesSize, const uint32_t* normalIndices, size_t normalIndicesSize,
@@ -68,7 +116,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 
 	const FString UriString(uri);
 	const FString NameString(name);
-	
+
 	if (!UriString.IsEmpty())
 	{
 		TSharedPtr<FVitruvioMesh> Mesh = VitruvioModule::Get().GetMeshCache().Get(UriString);
@@ -84,22 +132,15 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 	FStaticMeshAttributes Attributes(Description);
 	Attributes.Register();
 
-	if (uvSets > 8)
-	{
-		UE_LOG(LogUnrealCallbacks, Error, TEXT("Mesh %s uses %llu UV sets but only 8 are allowed. Clamping UV sets to 8."), name, uvSets);
-		uvSets = 8;
-	}
-
-	// Need at least 1 uv set (can be empty) otherwise will crash when building the mesh
 	const auto VertexUVs = Attributes.GetVertexInstanceUVs();
-	VertexUVs.SetNumIndices(FMath::Max(static_cast<size_t>(1), uvSets));
+	VertexUVs.SetNumChannels(8);
 
 	// Convert vertices and vertex instances
 	const auto VertexPositions = Attributes.GetVertexPositions();
 	for (size_t VertexIndex = 0; VertexIndex < vtxSize; VertexIndex += 3)
 	{
 		const FVertexID VertexID = Description.CreateVertex();
-		VertexPositions[VertexID] = FVector(vtx[VertexIndex], vtx[VertexIndex + 2], vtx[VertexIndex + 1]) * PRT_TO_UE_SCALE;
+		VertexPositions[VertexID] = FVector3f(vtx[VertexIndex], vtx[VertexIndex + 2], vtx[VertexIndex + 1]) * PRT_TO_UE_SCALE;
 	}
 
 	// Create Polygons
@@ -109,16 +150,29 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 
 	size_t PolygonGroupStartIndex = 0;
 	TArray<Vitruvio::FMaterialAttributeContainer> MeshMaterials;
+	TMap<Vitruvio::FMaterialAttributeContainer, FPolygonGroupID> MeshMaterialMap;
 	for (size_t PolygonGroupIndex = 0; PolygonGroupIndex < faceRangesSize; ++PolygonGroupIndex)
 	{
 		const size_t PolygonFaceCount = faceRanges[PolygonGroupIndex];
 
-		const FPolygonGroupID PolygonGroupId = Description.CreatePolygonGroup();
-
 		Vitruvio::FMaterialAttributeContainer MaterialContainer(materials[PolygonGroupIndex]);
-		const FName MaterialSlot = FName(MaterialContainer.Name);
-		Attributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = MaterialSlot;
-		MeshMaterials.Add(MaterialContainer);
+		TMap<FString, double> AvailableUvSetAttributeMap = CreateAvailableUVSetMaterialParameterMap(uvCounts, uvSets);
+		for (auto& AvailableUvSetAttribute : AvailableUvSetAttributeMap)
+		{
+			MaterialContainer.ScalarProperties.Add(AvailableUvSetAttribute);
+		}
+
+		FPolygonGroupID PolygonGroupId;
+		if (MeshMaterialMap.Contains(MaterialContainer))
+		{
+			PolygonGroupId = MeshMaterialMap[MaterialContainer];
+		}
+		else
+		{
+			MeshMaterials.Add(MaterialContainer);
+			PolygonGroupId = Description.CreatePolygonGroup();
+			MeshMaterialMap.Add(MaterialContainer, PolygonGroupId);
+		}
 
 		// Create Geometry
 		const auto Normals = Attributes.GetVertexInstanceNormals();
@@ -143,15 +197,21 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 					PolygonVertexInstances.Add(InstanceId);
 
 					check(NormalIndex + 2 < nrmSize);
-					Normals[InstanceId] = FVector(nrm[NormalIndex], nrm[NormalIndex + 2], nrm[NormalIndex + 1]);
+					Normals[InstanceId] = FVector3f(nrm[NormalIndex], nrm[NormalIndex + 2], nrm[NormalIndex + 1]);
 
-					for (size_t UVSet = 0; UVSet < uvSets; ++UVSet)
+					for (size_t PrtUVSet = 0; PrtUVSet < uvSets; ++PrtUVSet)
 					{
-						if (uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex] > 0)
+						const Vitruvio::EUnrealUvSetType* UnrealUVSetPtr = PRTToUnrealUVSetMap.Find(static_cast<Vitruvio::EPrtUvSetType>(PrtUVSet));
+
+						bool bIsValidUnrealUvSet = (UnrealUVSetPtr != nullptr);
+						bool bFaceHasUvs = uvCounts[PrtUVSet] != nullptr && uvCounts[PrtUVSet][PolygonGroupStartIndex + FaceIndex] > 0;
+
+						if (bIsValidUnrealUvSet && bFaceHasUvs)
 						{
-							check(uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex] == FaceVertexCount);
-							const uint32_t UVIndex = uvIndices[UVSet][BaseUVIndex[UVSet] + FaceVertexIndex] * 2;
-							VertexUVs.Set(InstanceId, UVSet, FVector2D(uvs[UVSet][UVIndex], -uvs[UVSet][UVIndex + 1]));
+							check(uvCounts[PrtUVSet][PolygonGroupStartIndex + FaceIndex] == FaceVertexCount);
+							const uint32_t UVIndex = uvIndices[PrtUVSet][BaseUVIndex[PrtUVSet] + FaceVertexIndex] * 2;
+							FVector2f UVCoords = FVector2f(uvs[PrtUVSet][UVIndex], -uvs[PrtUVSet][UVIndex + 1]);
+							VertexUVs.Set(InstanceId, static_cast<int32>(*UnrealUVSetPtr), UVCoords);
 						}
 					}
 				}
@@ -159,9 +219,12 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 				Description.CreatePolygon(PolygonGroupId, PolygonVertexInstances);
 				PolygonFaces++;
 				BaseVertexIndex += FaceVertexCount;
-				for (size_t UVSet = 0; UVSet < uvSets; ++UVSet)
+				for (size_t PrtUVSet = 0; PrtUVSet < uvSets; ++PrtUVSet)
 				{
-					BaseUVIndex[UVSet] += uvCounts[UVSet][PolygonGroupStartIndex + FaceIndex];
+					if (uvCounts[PrtUVSet] != nullptr)
+					{
+						BaseUVIndex[PrtUVSet] += uvCounts[PrtUVSet][PolygonGroupStartIndex + FaceIndex];
+					}
 				}
 			}
 		}
@@ -171,16 +234,87 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 
 	if (BaseVertexIndex > 0)
 	{
+		Description.TriangulateMesh();
+
+		bool bHasInvalidNormals;
+		bool bHasInvalidTangents;
+		FStaticMeshOperations::AreNormalsAndTangentsValid(Description, bHasInvalidNormals, bHasInvalidTangents);
+
+		// If normals are invalid, compute normals and tangents at polygon level then vertex level
+		if (bHasInvalidNormals)
+		{
+			FStaticMeshOperations::ComputeTriangleTangentsAndNormals(Description, THRESH_POINTS_ARE_SAME);
+
+			const EComputeNTBsFlags ComputeFlags = EComputeNTBsFlags::Normals | EComputeNTBsFlags::Tangents | EComputeNTBsFlags::UseMikkTSpace;
+			FStaticMeshOperations::ComputeTangentsAndNormals(Description, ComputeFlags);
+		}
+		else if (bHasInvalidTangents)
+		{
+			FStaticMeshOperations::ComputeMikktTangents(Description, true);
+		}
+
 		TSharedPtr<FVitruvioMesh> Mesh = MakeShared<FVitruvioMesh>(UriString, Description, MeshMaterials);
 
 		if (!UriString.IsEmpty())
 		{
 			Mesh = VitruvioModule::Get().GetMeshCache().InsertOrGet(UriString, Mesh);
 		}
-		
+
 		Meshes.Add(prototypeId, Mesh);
 		Names.Add(prototypeId, NameString);
 	}
+}
+
+TMap<FString, FReport> ExtractReports(const prt::AttributeMap* reports)
+{
+	TMap<FString, FReport> ReportMap;
+	size_t KeyCount = 0;
+	auto Keys = reports->getKeys(&KeyCount);
+	ReportMap.Reserve(KeyCount);
+
+	for (size_t i = 0; i < KeyCount; ++i)
+	{
+		auto key = Keys[i];
+
+		FReport Report;
+		Report.Name = key;
+		switch (reports->getType(key))
+		{
+		case prt::AttributeMap::PrimitiveType::PT_BOOL:
+			Report.Type = EReportPrimitiveType::Bool;
+			Report.Value = reports->getBool(key) ? TEXT("true") : TEXT("false");
+			break;
+		case prt::AttributeMap::PrimitiveType::PT_STRING:
+			Report.Type = EReportPrimitiveType::String;
+			Report.Value = reports->getString(key);
+			break;
+		case prt::AttributeMap::PrimitiveType::PT_FLOAT:
+			Report.Type = EReportPrimitiveType::Float;
+			Report.Value = FString::SanitizeFloat(reports->getFloat(key));
+			break;
+		case prt::AttributeMap::PrimitiveType::PT_INT:
+			Report.Type = EReportPrimitiveType::Int;
+			Report.Value = FString::FromInt(reports->getInt(key));
+			break;
+		default:
+			UE_LOG(LogUnrealCallbacks, Error, TEXT("Type of report not supported."));
+			break;
+		}
+
+		ReportMap.Add(Report.Name, Report);
+	}
+	return ReportMap;
+}
+
+void UnrealCallbacks::addReport(const prt::AttributeMap* reports)
+{
+	if (!reports)
+	{
+		UE_LOG(LogUnrealCallbacks, Warning, TEXT("Trying to add empty report, ignoring."));
+		return;
+	}
+
+	Reports = ExtractReports(reports);
 }
 
 void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform, const prt::AttributeMap** instanceMaterials,

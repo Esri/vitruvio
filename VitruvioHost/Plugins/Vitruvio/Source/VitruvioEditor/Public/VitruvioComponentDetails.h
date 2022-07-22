@@ -1,4 +1,4 @@
-/* Copyright 2021 Esri
+/* Copyright 2022 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,9 +47,11 @@ private:
 	TArray<TWeakObjectPtr<UObject>> ObjectsBeingCustomized;
 	TWeakPtr<IDetailLayoutBuilder> CachedDetailBuilder;
 	TSharedPtr<SWidget> ColorPickerParentWidget;
+	TSharedPtr<STextComboBox> ChangeInitialShapeCombo;
 
 	TArray<TSharedPtr<FString>> InitialShapeTypes;
 	TMap<TSharedPtr<FString>, UClass*> InitialShapeTypeMap;
+	TMap<UClass*, TSharedPtr<FString>> InitialShapeClassMap;
 
 	TArray<TSharedPtr<IPropertyRowGenerator>> Generators;
 };

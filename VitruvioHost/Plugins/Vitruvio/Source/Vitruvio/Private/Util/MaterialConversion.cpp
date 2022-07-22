@@ -1,4 +1,4 @@
-/* Copyright 2021 Esri
+/* Copyright 2022 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,30 +85,24 @@ EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMa
 {
 	const UTexture2D* OpacityMap = OpacityMapData.Texture;
 	const EPixelFormat PixelFormat = OpacityMap->GetPixelFormat();
-	check(PixelFormat == PF_B8G8R8A8 || PixelFormat == PF_G8 || PixelFormat == PF_G16);
+	check(PixelFormat == PF_B8G8R8A8 || PixelFormat == PF_A16B16G16R16 || PixelFormat == PF_FloatRGBA);
 
 	uint32 BlackPixels = 0;
 	uint32 WhitePixels = 0;
 
+	// Now count the black and white pixels of the appropriate opacity map channel to determine the opacity mode
+	const FTexturePlatformData* PlatformData = OpacityMap->GetPlatformData();
 	switch (PixelFormat)
 	{
 	case PF_B8G8R8A8:
 	{
-		const FColor* ImageData = reinterpret_cast<const FColor*>(OpacityMap->PlatformData->Mips[0].BulkData.LockReadOnly());
-
-		// Now count the black and white pixels of the appropriate opacity map channel to determine the opacity mode
+		const FColor* ImageData = reinterpret_cast<const FColor*>(PlatformData->Mips[0].BulkData.LockReadOnly());
 		CountOpacityMapPixels(ImageData, UseAlphaAsOpacity, OpacityMap->GetSizeX(), OpacityMap->GetSizeY(), BlackPixels, WhitePixels);
 		break;
 	}
-	case PF_G8:
+	case PF_A16B16G16R16:
 	{
-		const uint8* ImageData = reinterpret_cast<const uint8*>(OpacityMap->PlatformData->Mips[0].BulkData.LockReadOnly());
-		CountOpacityMapPixels(ImageData, OpacityMap->GetSizeX(), OpacityMap->GetSizeY(), BlackPixels, WhitePixels);
-		break;
-	}
-	case PF_G16:
-	{
-		const uint16* ImageData = reinterpret_cast<const uint16*>(OpacityMap->PlatformData->Mips[0].BulkData.LockReadOnly());
+		const uint16* ImageData = reinterpret_cast<const uint16*>(PlatformData->Mips[0].BulkData.LockReadOnly());
 		CountOpacityMapPixels(ImageData, OpacityMap->GetSizeX(), OpacityMap->GetSizeY(), BlackPixels, WhitePixels);
 		break;
 	}
@@ -116,7 +110,7 @@ EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMa
 		check(0)
 	}
 
-	OpacityMap->PlatformData->Mips[0].BulkData.Unlock();
+	OpacityMap->GetPlatformData()->Mips[0].BulkData.Unlock();
 
 	const uint32 TotalPixels = OpacityMap->GetSizeX() * OpacityMap->GetSizeY();
 	if (WhitePixels >= TotalPixels * OPACITY_THRESHOLD)
@@ -140,7 +134,8 @@ EBlendMode ChooseBlendMode(const Vitruvio::FTextureData& OpacityMapData, double 
 	{
 		return BLEND_Masked;
 	}
-	else if (BlendMode == BLEND_Translucent && OpacityMapData.Texture)
+	else if (BlendMode == BLEND_Translucent && OpacityMapData.Texture && OpacityMapData.Texture->GetPixelFormat() != PF_FloatRGBA)
+	// explicitly don't check FloatRGBA textures as they were converted from grayscale float16/32 textures which will never have alpha channels
 	{
 		// OpacityMap exists and opacitymap.mode is blend (which is the default value) so we need to check the content of the OpacityMap
 		// to really decide which material we need for Unreal
@@ -218,6 +213,7 @@ public:
 	void DoTask(ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
 	{
 		QUICK_SCOPE_CYCLE_COUNTER(STAT_MaterialConversion_LoadTexture);
+		FTaskTagScope Scope(ETaskTag::EParallelRenderingThread);
 		Vitruvio::FTextureData TextureData = VitruvioModule::Get().DecodeTexture(Outer, ImagePath, TextureKey);
 		{
 			FScopeLock CacheLock(&CacheCriticalSection);

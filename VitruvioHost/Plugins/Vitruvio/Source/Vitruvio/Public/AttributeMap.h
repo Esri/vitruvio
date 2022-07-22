@@ -1,4 +1,4 @@
-﻿/* Copyright 2021 Esri
+﻿/* Copyright 2022 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ public:
 
 	FAttributeMap(AttributeMapUPtr AttributeMap, RuleFileInfoUPtr RuleInfo) : AttributeMap(std::move(AttributeMap)), RuleInfo(std::move(RuleInfo)) {}
 
-	TMap<FString, URuleAttribute*> ConvertToUnrealAttributeMap(UObject* const Outer);
+	void UpdateUnrealAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, UObject* const Outer);
 
 private:
 	const AttributeMapUPtr AttributeMap;

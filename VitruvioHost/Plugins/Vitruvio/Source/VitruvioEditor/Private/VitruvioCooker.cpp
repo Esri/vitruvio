@@ -1,3 +1,18 @@
+/* Copyright 2022 Esri
+ *
+ * Licensed under the Apache License Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "VitruvioCooker.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -69,6 +84,27 @@ void BlockUntilGenerated()
 	}
 }
 
+ETextureSourceFormat GetTextureFormatFromPixelFormat(const EPixelFormat PixelFormat)
+{
+	switch (PixelFormat)
+	{
+	case PF_B8G8R8A8:
+	{
+		return ETextureSourceFormat::TSF_BGRA8;
+	}
+	case PF_A16B16G16R16:
+	{
+		return ETextureSourceFormat::TSF_RGBA16;
+	}
+	case PF_FloatRGBA:
+	{
+		return ETextureSourceFormat::TSF_RGBA16F;
+	}
+	default:;
+		return ETextureSourceFormat::TSF_Invalid;
+	}
+}
+
 UTexture2D* SaveTexture(UTexture2D* Original, const FString& Path, FTextureCache& TextureCache)
 {
 	if (TextureCache.Contains(Original))
@@ -76,24 +112,27 @@ UTexture2D* SaveTexture(UTexture2D* Original, const FString& Path, FTextureCache
 		return TextureCache[Original];
 	}
 	FString AssetName;
-	UPackage* TexturePackage = CreateUniquePackage(FPaths::Combine(Path, TEXT("Textures")), AssetName);
+	UPackage* TexturePackage = CreateUniquePackage(FPaths::Combine(Path, TEXT("Textures"), Original->GetName()), AssetName);
 	UTexture2D* NewTexture = NewObject<UTexture2D>(TexturePackage, *AssetName, RF_Public | RF_Standalone);
-
-	NewTexture->PlatformData = new FTexturePlatformData();
-	NewTexture->PlatformData->SizeX = Original->PlatformData->SizeX;
-	NewTexture->PlatformData->SizeY = Original->PlatformData->SizeY;
-	NewTexture->PlatformData->PixelFormat = Original->PlatformData->PixelFormat;
 	NewTexture->CompressionSettings = Original->CompressionSettings;
 	NewTexture->SRGB = Original->SRGB;
 
+	FTexturePlatformData* PlatformData = new FTexturePlatformData();
+	const FTexturePlatformData* OriginalPlatformData = Original->GetPlatformData();
+	PlatformData->SizeX = OriginalPlatformData->SizeX;
+	PlatformData->SizeY = OriginalPlatformData->SizeY;
+	PlatformData->PixelFormat = OriginalPlatformData->PixelFormat;
+
 	// Allocate first mipmap and upload the pixel data
 	FTexture2DMipMap* Mip = new FTexture2DMipMap();
-	FTexture2DMipMap& OriginalMip = Original->PlatformData->Mips[0];
+	const FTexture2DMipMap& OriginalMip = OriginalPlatformData->Mips[0];
 
-	NewTexture->PlatformData->Mips.Add(Mip);
+	PlatformData->Mips.Add(Mip);
 
 	Mip->SizeX = OriginalMip.SizeX;
 	Mip->SizeY = OriginalMip.SizeY;
+
+	NewTexture->SetPlatformData(PlatformData);
 
 	const uint8* SourcePixels = static_cast<const uint8*>(OriginalMip.BulkData.LockReadOnly());
 	Mip->BulkData.Lock(LOCK_READ_WRITE);
@@ -102,7 +141,8 @@ UTexture2D* SaveTexture(UTexture2D* Original, const FString& Path, FTextureCache
 	FMemory::Memcpy(TextureData, SourcePixels, OriginalMip.BulkData.GetBulkDataSize());
 	Mip->BulkData.Unlock();
 
-	NewTexture->Source.Init(Original->PlatformData->SizeX, Original->PlatformData->SizeY, 1, 1, ETextureSourceFormat::TSF_BGRA8, SourcePixels);
+	const ETextureSourceFormat SourceFormat = GetTextureFormatFromPixelFormat(OriginalPlatformData->PixelFormat);
+	NewTexture->Source.Init(OriginalPlatformData->SizeX, OriginalPlatformData->SizeY, 1, 1, SourceFormat, SourcePixels);
 	OriginalMip.BulkData.Unlock();
 
 	NewTexture->PostEditChange();
@@ -150,8 +190,15 @@ UMaterialInstanceConstant* SaveMaterial(UMaterialInstanceDynamic* Material, cons
 		Material->GetTextureParameterValue(Info, Value);
 		if (Value)
 		{
-			UTexture2D* PersistedTexture = SaveTexture(Cast<UTexture2D>(Value), Path, TextureCache);
-			NewMaterial->SetTextureParameterValueEditorOnly(Info, PersistedTexture);
+			if (Value->HasAnyFlags(RF_Transient))
+			{
+				UTexture2D* PersistedTexture = SaveTexture(Cast<UTexture2D>(Value), Path, TextureCache);
+				NewMaterial->SetTextureParameterValueEditorOnly(Info, PersistedTexture);
+			}
+			else
+			{
+				NewMaterial->SetTextureParameterValueEditorOnly(Info, Value);
+			}
 		}
 	}
 
@@ -231,7 +278,7 @@ UStaticMesh* SaveStaticMesh(UStaticMesh* Mesh, const FString& Path, FStaticMeshC
 	SrcModel.BuildSettings.bRecomputeTangents = false;
 	SrcModel.BuildSettings.bRemoveDegenerates = true;
 	PersistedMesh->GetBodySetup()->CollisionTraceFlag = ECollisionTraceFlag::CTF_UseComplexAsSimple;
-	
+
 	PersistedMesh->PostEditChange();
 	PersistedMesh->MarkPackageDirty();
 
@@ -272,7 +319,7 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 		// Cook actors after all models have been generated and their meshes constructed
 		FScopedSlowTask CookTask(Actors.Num(), FText::FromString("Cooking models..."));
 		CookTask.MakeDialog();
-		
+
 		FMaterialCache MaterialCache;
 		FTextureCache TextureCache;
 		FStaticMeshCache MeshCache;
@@ -280,7 +327,7 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 		for (AActor* Actor : Actors)
 		{
 			CookTask.EnterProgressFrame(1);
-			
+
 			UVitruvioComponent* VitruvioComponent = Actor->FindComponentByClass<UVitruvioComponent>();
 			if (!VitruvioComponent)
 			{
@@ -308,15 +355,12 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 
 			// Persist Mesh
 			UGeneratedModelStaticMeshComponent* StaticMeshComponent = Actor->FindComponentByClass<UGeneratedModelStaticMeshComponent>();
-			if (StaticMeshComponent)
+			if (StaticMeshComponent && StaticMeshComponent->GetStaticMesh())
 			{
-				check(StaticMeshComponent->GetStaticMesh());
-
 				UStaticMesh* GeneratedMesh = StaticMeshComponent->GetStaticMesh();
 
 				UStaticMesh* PersistedMesh = SaveStaticMesh(GeneratedMesh, CookPath, MeshCache, MaterialCache, TextureCache);
-				AttachMeshComponent<UStaticMeshComponent>(CookedActor, PersistedMesh, TEXT("Model"),
-														  StaticMeshComponent->GetComponentTransform());
+				AttachMeshComponent<UStaticMeshComponent>(CookedActor, PersistedMesh, TEXT("Model"), StaticMeshComponent->GetComponentTransform());
 			}
 
 			// Persist instanced Component
@@ -337,13 +381,14 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 
 					for (int32 MaterialIndex = 0; MaterialIndex < GeneratedModelHismComponent->GetNumOverrideMaterials(); ++MaterialIndex)
 					{
-						UMaterialInstanceDynamic* DynamicMaterial = Cast<UMaterialInstanceDynamic>(GeneratedModelHismComponent->OverrideMaterials[MaterialIndex]);
+						UMaterialInstanceDynamic* DynamicMaterial =
+							Cast<UMaterialInstanceDynamic>(GeneratedModelHismComponent->OverrideMaterials[MaterialIndex]);
 						check(DynamicMaterial);
 						UMaterialInstanceConstant* NewMaterial = SaveMaterial(DynamicMaterial, CookPath, MaterialCache, TextureCache);
-						
+
 						InstancedStaticMeshComponent->SetMaterial(MaterialIndex, NewMaterial);
 					}
-					
+
 					for (int32 InstanceIndex = 0; InstanceIndex < GeneratedModelHismComponent->GetInstanceCount(); ++InstanceIndex)
 					{
 						FTransform Transform;
