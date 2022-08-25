@@ -30,7 +30,7 @@ public:
 	 * types)
 	 */
 	// clang-format off
-	virtual void addMesh(const wchar_t* name,
+	virtual void addMesh(size_t isIndex, const wchar_t* name,
 	                     int32_t prototypeId, const wchar_t* uri,
 	                     const double* vtx, size_t vtxSize,
 	                     const double* nrm, size_t nrmSize,
@@ -58,8 +58,8 @@ public:
 	 * @param numInstanceMaterials number of instance material overrides. Is either 0 or is equal to the number
 	 *                             of materials of the original mesh (by prototypeId)
 	 */
-	virtual void addInstance(int32_t prototypeId, const double* transform, const prt::AttributeMap** instanceMaterial,
+	virtual void addInstance(size_t isIndex, int32_t prototypeId, const double* transform, const prt::AttributeMap** instanceMaterial,
 							 size_t numInstanceMaterials) = 0;
-	
-	virtual void addReport(const prt::AttributeMap* reports) = 0;
+
+	virtual void addReport(size_t isIndex, const prt::AttributeMap* reports) = 0;
 };

@@ -48,6 +48,12 @@ struct FGenerateResultDescription
 	TMap<int32, FString> Names;
 };
 
+struct FBatchGenerateResultDescription
+{
+	TArray<FGenerateResultDescription> ResultDescriptions;
+	TArray<FAttributeMapPtr> AttributeMaps;
+};
+
 class FInvalidationToken
 {
 public:
@@ -94,7 +100,15 @@ public:
 	FTokenPtr Token;
 };
 
+struct FInitialShape
+{
+	FInitialShapePolygon Polygon;
+	AttributeMapUPtr Attributes;
+	int32 RandomSeed;
+};
+
 using FGenerateResult = TResult<FGenerateResultDescription, FGenerateToken>;
+using FBatchGenerateResult = TResult<FBatchGenerateResultDescription, FGenerateToken>;
 using FAttributeMapResult = TResult<FAttributeMapPtr, FEvalAttributesToken>;
 
 class VitruvioModule final : public IModuleInterface, public FGCObject
@@ -109,6 +123,27 @@ public:
 	 * \brief Decodes the given texture.
 	 */
 	VITRUVIO_API Vitruvio::FTextureData DecodeTexture(UObject* Outer, const FString& Path, const FString& Key) const;
+
+	/**
+	 * \brief Asynchronously evaluates the attributes and generates the models for all given InitialShapes using the given RulePackage.
+	 *
+	 * \param InitialShapes
+	 * \param RulePackage
+	 * \return the generated UStaticMesh.
+	 */
+	VITRUVIO_API FBatchGenerateResult BatchEvaluateAndGenerateAsync(const TArray<FInitialShape>& InitialShapes, URulePackage* RulePackage) const;
+
+	/**
+	 * \brief Generate the models with the given InitialShape, RulePackage and Attributes.
+	 *
+	 * \param InitialShape
+	 * \param RulePackage
+	 * \param Attributes
+	 * \param RandomSeed
+	 * \return the generated UStaticMesh.
+	 */
+	VITRUVIO_API FBatchGenerateResultDescription BatchEvaluateAndGenerate(const TArray<FInitialShape>& InitialShapes,
+																		  URulePackage* RulePackage) const;
 
 	/**
 	 * \brief Asynchronously generate the models with the given InitialShape, RulePackage and Attributes.

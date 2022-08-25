@@ -33,6 +33,7 @@
 #include "PhysicsEngine/BodySetup.h"
 #include "PolygonWindings.h"
 #include "StaticMeshAttributes.h"
+#include "VitruvioSubsystem.h"
 
 #if WITH_EDITOR
 #include "DetailLayoutBuilder.h"
@@ -709,10 +710,9 @@ void UVitruvioComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 	if (!bInitialized)
 	{
 		Initialize();
-		if (!EvalAttributesInvalidationToken.IsValid())
-		{
-			EvaluateRuleAttributes(GenerateAutomatically);
-		}
+
+		// TODO what if EvalAttributesInvalidationToken IsValid? (Blueprint API)
+		GetWorld()->GetSubsystem<UVitruvioSubsystem>()->BatchGenerate(this);
 	}
 
 	ProcessGenerateQueue();

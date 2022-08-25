@@ -38,6 +38,25 @@
 
 #define LOCTEXT_NAMESPACE "VitruvioModule"
 
+#define CHECK_PRT_INITIALIZED                                                                                                                        \
+	if (!Initialized)                                                                                                                                \
+	{                                                                                                                                                \
+		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))                                                                                   \
+		return {};                                                                                                                                   \
+	}
+
+#define CHECK_PRT_INITIALIZED_ASYNC(RESULT_CLASS, TOKEN_VAR)                                                                                         \
+	if (!Initialized)                                                                                                                                \
+	{                                                                                                                                                \
+		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))                                                                                   \
+		TPromise<RESULT_CLASS::ResultType> Result;                                                                                                   \
+		Result.SetValue({TOKEN_VAR, {}});                                                                                                            \
+		return {                                                                                                                                     \
+			Result.GetFuture(),                                                                                                                      \
+			TOKEN_VAR,                                                                                                                               \
+		};                                                                                                                                           \
+	}
+
 DEFINE_LOG_CATEGORY(LogUnrealPrt);
 
 namespace
@@ -209,8 +228,8 @@ AttributeMapUPtr EvaluateRuleAttributes(const std::wstring& RuleFile, const std:
 	SetInitialShapeGeometry(InitialShapeBuilder, InitialShape);
 
 	InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", Attributes.get(), ResolveMapPtr.get());
-
 	const InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShapeAndReset());
+
 	const InitialShapeNOPtrVector InitialShapes = {Shape.get()};
 
 	const std::vector<const wchar_t*> EncoderIds = {ATTRIBUTE_EVAL_ENCODER_ID};
@@ -329,7 +348,7 @@ void VitruvioModule::ShutdownModule()
 	Initialized = false;
 
 	UE_LOG(LogUnrealPrt, Display,
-		   TEXT("Shutting down Vitruvio. Waiting for ongoing generate calls (%d), RPK loading tasks (%d) and attribute loading tasks (%d)"),
+		   TEXT("Shutting down Vitruvio. Waiting for ongoing generate calls (%d), RPK loading tasks (%d) and attribute evaluation tasks (%d)"),
 		   GenerateCallsCounter.GetValue(), RpkLoadingTasksCounter.GetValue(), LoadAttributesCounter.GetValue())
 
 	// Wait until no more PRT calls are ongoing
@@ -367,6 +386,68 @@ Vitruvio::FTextureData VitruvioModule::DecodeTexture(UObject* Outer, const FStri
 	return Vitruvio::DecodeTexture(Outer, Key, Path, TextureMetadata, std::move(Buffer), BufferSize);
 }
 
+FBatchGenerateResult VitruvioModule::BatchEvaluateAndGenerateAsync(const TArray<FInitialShape>& InitialShapes, URulePackage* RulePackage) {}
+
+FBatchGenerateResultDescription VitruvioModule::BatchEvaluateAndGenerate(const TArray<FInitialShape>& InitialShapes, URulePackage* RulePackage) const
+{
+	check(RulePackage);
+
+	CHECK_PRT_INITIALIZED
+
+	const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(RulePackage).Get();
+
+	const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
+	const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
+
+	const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
+	const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
+
+	prt::Status InfoStatus;
+	RuleFileInfoUPtr RuleInfo(prt::createRuleFileInfo(RuleFileUri, PrtCache.get(), &InfoStatus));
+	if (!RuleInfo || InfoStatus != prt::STATUS_OK)
+	{
+		UE_LOG(LogUnrealPrt, Error, TEXT("Could not get rule file info from rule file %s"), RuleFileUri)
+		return {};
+	}
+
+	// Construct initial shapes
+	const InitialShapeBuilderUPtr InitialShapeBuilder(prt::InitialShapeBuilder::create());
+	InitialShapeUPtrVector InitialShapeUPtrs;
+	InitialShapeNOPtrVector InitialShapePtrs;
+	for (const FInitialShape& InitialShape : InitialShapes)
+	{
+		SetInitialShapeGeometry(InitialShapeBuilder, InitialShape.Polygon);
+		InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), InitialShape.RandomSeed, L"", InitialShape.Attributes.get(),
+										   ResolveMap.get());
+		const InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShapeAndReset());
+		InitialShapePtrs.push_back(Shape.get());
+		InitialShapeUPtrs.push_back(std::move(Shape));
+	}
+
+	// Evaluate attributes
+	AttributeMapBuilderUPtr UnrealCallbacksAttributeBuilder(prt::AttributeMapBuilder::create());
+	UnrealCallbacks AttributeEvaluationCallbacks(UnrealCallbacksAttributeBuilder);
+	const std::vector<const wchar_t*> EncoderIds = {ATTRIBUTE_EVAL_ENCODER_ID};
+	const AttributeMapUPtr AttributeEncodeOptions = prtu::createValidatedOptions(ATTRIBUTE_EVAL_ENCODER_ID);
+	const AttributeMapNOPtrVector EncoderOptions = {AttributeEncodeOptions.get()};
+
+	generate(InitialShapePtrs.data(), InitialShapePtrs.size(), nullptr, EncoderIds.data(), EncoderIds.size(), EncoderOptions.data(),
+			 &AttributeEvaluationCallbacks, PrtCache.get(), nullptr);
+
+	const TSharedPtr<UnrealCallbacks> OutputHandler(new UnrealCallbacks(AttributeMapBuilder));
+	UnrealCallbacks GenerateCallbacks(UnrealCallbacksAttributeBuilder);
+	const InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShapeAndReset());
+
+	const std::vector<const wchar_t*> EncoderIds = {UNREAL_GEOMETRY_ENCODER_ID};
+	const AttributeMapUPtr UnrealEncoderOptions(prtu::createValidatedOptions(UNREAL_GEOMETRY_ENCODER_ID));
+	const AttributeMapNOPtrVector EncoderOptions = {UnrealEncoderOptions.get()};
+
+	InitialShapeNOPtrVector Shapes = {Shape.get()};
+
+	const prt::Status GenerateStatus = prt::generate(Shapes.data(), Shapes.size(), nullptr, EncoderIds.data(), EncoderIds.size(),
+													 EncoderOptions.data(), OutputHandler.Get(), PrtCache.get(), nullptr);
+}
+
 FGenerateResult VitruvioModule::GenerateAsync(const FInitialShapePolygon& InitialShape, URulePackage* RulePackage, AttributeMapUPtr Attributes,
 											  const int32 RandomSeed) const
 {
@@ -374,17 +455,7 @@ FGenerateResult VitruvioModule::GenerateAsync(const FInitialShapePolygon& Initia
 
 	const FGenerateResult::FTokenPtr Token = MakeShared<FGenerateToken>();
 
-	if (!Initialized)
-	{
-		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
-
-		TPromise<FGenerateResult::ResultType> Result;
-		Result.SetValue({Token, {}});
-		return {
-			Result.GetFuture(),
-			Token,
-		};
-	}
+	CHECK_PRT_INITIALIZED_ASYNC(FGenerateResult, Token)
 
 	FGenerateResult::FFutureType ResultFuture = Async(EAsyncExecution::Thread, [=, AttributeMap = std::move(Attributes)]() mutable {
 		FGenerateResultDescription Result = Generate(InitialShape, RulePackage, std::move(AttributeMap), RandomSeed);
@@ -399,11 +470,7 @@ FGenerateResultDescription VitruvioModule::Generate(const FInitialShapePolygon& 
 {
 	check(RulePackage);
 
-	if (!Initialized)
-	{
-		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
-		return {};
-	}
+	CHECK_PRT_INITIALIZED
 
 	GenerateCallsCounter.Increment();
 
@@ -441,10 +508,7 @@ FGenerateResultDescription VitruvioModule::Generate(const FInitialShapePolygon& 
 
 	const int GenerateCalls = GenerateCallsCounter.Decrement();
 
-	if (!Initialized)
-	{
-		return {};
-	}
+	CHECK_PRT_INITIALIZED
 
 	// Notify generate complete callback on game thread
 	AsyncTask(ENamedThreads::GameThread, [this, GenerateCalls]() {
@@ -489,13 +553,7 @@ FAttributeMapResult VitruvioModule::EvaluateRuleAttributesAsync(const FInitialSh
 
 	FAttributeMapResult::FTokenPtr InvalidationToken = MakeShared<FEvalAttributesToken>();
 
-	if (!Initialized)
-	{
-		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
-		TPromise<FAttributeMapResult::ResultType> Result;
-		Result.SetValue({InvalidationToken, nullptr});
-		return {Result.GetFuture(), InvalidationToken};
-	}
+	CHECK_PRT_INITIALIZED_ASYNC(FAttributeMapResult, InvalidationToken)
 
 	LoadAttributesCounter.Increment();
 

@@ -31,8 +31,6 @@ DECLARE_LOG_CATEGORY_EXTERN(LogUnrealCallbacks, Log, All);
 
 class UnrealCallbacks final : public IUnrealCallbacks
 {
-	AttributeMapBuilderUPtr& AttributeMapBuilder;
-
 	Vitruvio::FInstanceMap Instances;
 	TMap<int32, TSharedPtr<FVitruvioMesh>> Meshes;
 	TMap<FString, FReport> Reports;
@@ -40,9 +38,9 @@ class UnrealCallbacks final : public IUnrealCallbacks
 
 public:
 	virtual ~UnrealCallbacks() override = default;
-	UnrealCallbacks(AttributeMapBuilderUPtr& AttributeMapBuilder) : AttributeMapBuilder(AttributeMapBuilder) {}
+	UnrealCallbacks() = default;
 
-	static const int32 NO_PROTOTYPE_INDEX = -1;
+	static constexpr int32 NO_PROTOTYPE_INDEX = -1;
 
 	const Vitruvio::FInstanceMap& GetInstances() const
 	{

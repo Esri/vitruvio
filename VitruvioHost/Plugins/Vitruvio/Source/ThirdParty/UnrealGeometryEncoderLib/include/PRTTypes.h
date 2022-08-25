@@ -34,6 +34,7 @@ using AttributeMapBuilderUPtr = std::unique_ptr<prt::AttributeMapBuilder, PRTDes
 using AttributeMapBuilderVector = std::vector<AttributeMapBuilderUPtr>;
 using InitialShapePtr = std::shared_ptr<const prt::InitialShape>;
 using InitialShapeUPtr = std::unique_ptr<const prt::InitialShape, PRTDestroyer>;
+using InitialShapeUPtrVector = std::vector<InitialShapeUPtr>;
 using InitialShapeBuilderPtr = std::shared_ptr<const prt::InitialShapeBuilder>;
 using InitialShapeBuilderUPtr = std::unique_ptr<prt::InitialShapeBuilder, PRTDestroyer>;
 using InitialShapeBuilderVector = std::vector<InitialShapeBuilderUPtr>;
