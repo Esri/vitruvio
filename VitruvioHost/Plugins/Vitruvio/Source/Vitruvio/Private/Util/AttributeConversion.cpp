@@ -207,17 +207,6 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 		return true;
 	};
 
-	auto GetFirstDifferentGroupInA = [](const URuleAttribute& A, const URuleAttribute& B) {
-		check(A.Groups.Num() == B.Groups.Num());
-		size_t i = 0;
-
-		while ((i < A.Groups.Num()) && (A.Groups[i] == B.Groups[i]))
-		{
-			i++;
-		}
-		return A.Groups[i];
-	};
-
 	auto GetGlobalGroupOrder = [&GlobalGroupOrderMap](const URuleAttribute& RuleAttribute) {
 		const int* GroupOrderPtr = GlobalGroupOrderMap.Find(FGroupOrderKey(RuleAttribute));
 		return (GroupOrderPtr == nullptr) ? AttributeGroupOrderNone : (*GroupOrderPtr);
