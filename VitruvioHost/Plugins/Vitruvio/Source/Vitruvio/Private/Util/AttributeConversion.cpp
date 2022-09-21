@@ -166,7 +166,7 @@ TMap<FGroupOrderKey, int> GetGlobalGroupOrderMap(const TMap<FString, URuleAttrib
 bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribute& OtherAttribute,
                             const TMap<FGroupOrderKey, int> GlobalGroupOrderMap)
 {
-	auto AreImportPathsInOrder = [&](const URuleAttribute& A, const URuleAttribute& B)
+	auto AreImportPathsInOrder = [](const URuleAttribute& A, const URuleAttribute& B)
 	{
 		// sort main rule attributes before the rest
 		if (A.ImportPath.Len() == 0 && B.ImportPath.Len() > 0)
@@ -215,7 +215,7 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 		return (GroupOrderPtr == nullptr) ? AttributeGroupOrderNone : (*GroupOrderPtr);
 	};
 
-	auto AreAttributeGroupsInOrder = [&](const URuleAttribute& A, const URuleAttribute& B)
+	auto AreAttributeGroupsInOrder = [](const URuleAttribute& A, const URuleAttribute& B)
 	{
 		const size_t GroupSizeA = A.Groups.Num();
 		const size_t GroupSizeB = B.Groups.Num();
