@@ -237,14 +237,14 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 		return false;
 	};
 
-	auto AreAttributesWithAndWithoutGroupInOrder = [&](const URuleAttribute& RuleAttributeWithGroupOrder,
-	                                                   const URuleAttribute& RuleAttributeWithoutGroupOrder)
+	auto AreAttributesWithAndWithoutGroupInOrder = [&](const URuleAttribute& RuleAttributeWithGroups,
+	                                                   const URuleAttribute& RuleAttributeWithoutGroup)
 	{
-		if (!RuleAttributeWithGroupOrder.Groups.IsEmpty() &&
-		    (RuleAttributeWithGroupOrder.GroupOrder == RuleAttributeWithoutGroupOrder.Order))
-			return RuleAttributeWithGroupOrder.Groups[0].Compare(RuleAttributeWithoutGroupOrder.Name, ESearchCase::CaseSensitive) <= 0;
+		if (!RuleAttributeWithGroups.Groups.IsEmpty() &&
+		    (RuleAttributeWithGroups.GroupOrder == RuleAttributeWithoutGroup.Order))
+			return RuleAttributeWithGroups.Groups[0].Compare(RuleAttributeWithoutGroup.Name, ESearchCase::CaseSensitive) <= 0;
 
-		return GetGlobalGroupOrder(RuleAttributeWithGroupOrder) < RuleAttributeWithoutGroupOrder.Order;
+		return GetGlobalGroupOrder(RuleAttributeWithGroups) < RuleAttributeWithoutGroup.Order;
 	};
 
 	auto AreAttributeGroupOrdersInOrder = [&](const URuleAttribute& A, const URuleAttribute& B)
