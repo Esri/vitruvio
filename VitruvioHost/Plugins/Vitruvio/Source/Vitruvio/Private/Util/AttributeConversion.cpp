@@ -166,10 +166,6 @@ TMap<FGroupOrderKey, int> GetGlobalGroupOrderMap(const TMap<FString, URuleAttrib
 bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribute& OtherAttribute,
 							const TMap<FGroupOrderKey, int> GlobalGroupOrderMap)
 {
-	auto AreStringsInAlphabeticalOrder = [](const FString A, const FString B) {
-		return A.ToLower() < B.ToLower();
-	};
-
 	auto AreImportPathsInOrder = [&](const URuleAttribute& A, const URuleAttribute& B) {
 		// sort main rule attributes before the rest
 		if (A.ImportPath.Len() == 0 && B.ImportPath.Len() > 0)
@@ -187,7 +183,7 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 			return A.ImportOrder < B.ImportOrder;
 		}
 
-		return AreStringsInAlphabeticalOrder(A.ImportPath, B.ImportPath);
+		return A.ImportPath.Compare(B.ImportPath, ESearchCase::CaseSensitive) < 0;
 	};
 
 	auto IsChildOf = [](const URuleAttribute& Child, const URuleAttribute& Parent) {
@@ -250,7 +246,7 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 		{
 			return (A.Groups.Num() < B.Groups.Num());
 		}
-		return AreStringsInAlphabeticalOrder(GetFirstDifferentGroupInA(A, B), GetFirstDifferentGroupInA(B, A));
+		return GetFirstDifferentGroupInA(A, B).Compare(GetFirstDifferentGroupInA(B, A), ESearchCase::CaseSensitive) < 0;
 	};
 
 	auto AreAttributesInOrder = [&](const URuleAttribute& A, const URuleAttribute& B) {
@@ -266,7 +262,7 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 
 		if (A.Order == B.Order)
 		{
-			return AreStringsInAlphabeticalOrder(A.Name, B.Name);
+			return A.Name.Compare(B.Name, ESearchCase::CaseSensitive) < 0;
 		}
 		return A.Order < B.Order;
 	};
