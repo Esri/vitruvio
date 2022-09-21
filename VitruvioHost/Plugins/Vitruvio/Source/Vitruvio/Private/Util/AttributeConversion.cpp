@@ -223,7 +223,25 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 		return (GroupOrderPtr == nullptr) ? AttributeGroupOrderNone : (*GroupOrderPtr);
 	};
 
+	auto AreAttributesWithAndWithoutGroupInOrder = [&](const URuleAttribute& RuleAttributeWithGroupOrder,
+									const URuleAttribute& RuleAttributeWithoutGroupOrder) {
+		if (!RuleAttributeWithGroupOrder.Groups.IsEmpty() &&
+			(RuleAttributeWithGroupOrder.GroupOrder == RuleAttributeWithoutGroupOrder.Order))
+				return RuleAttributeWithGroupOrder.Groups[0].Compare(RuleAttributeWithoutGroupOrder.Name, ESearchCase::CaseSensitive) <= 0;
+
+		return GetGlobalGroupOrder(RuleAttributeWithGroupOrder) < RuleAttributeWithoutGroupOrder.Order;
+	};
+	
 	auto AreAttributeGroupsInOrder = [&](const URuleAttribute& A, const URuleAttribute& B) {
+		const bool bHasGroupsA = !A.Groups.IsEmpty();
+		const bool bHasGroupsB = !B.Groups.IsEmpty();
+
+		if (!bHasGroupsB)
+			return AreAttributesWithAndWithoutGroupInOrder(A, B);
+
+		if (!bHasGroupsA)
+			return !AreAttributesWithAndWithoutGroupInOrder(B, A);
+		
 		if (IsChildOf(A, B))
 		{
 			return false; // child A should be sorted after parent B
