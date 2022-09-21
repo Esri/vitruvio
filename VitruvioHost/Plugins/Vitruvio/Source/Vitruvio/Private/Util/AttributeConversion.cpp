@@ -223,6 +223,26 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 		return (GroupOrderPtr == nullptr) ? AttributeGroupOrderNone : (*GroupOrderPtr);
 	};
 
+	auto AreAttributeGroupsInOrder = [&](const URuleAttribute& A, const URuleAttribute& B){
+		const size_t GroupSizeA = A.Groups.Num();
+		const size_t GroupSizeB = B.Groups.Num();
+
+		for (size_t i = 0; i < std::max(GroupSizeA, GroupSizeB); ++i) {
+			// a descendant of b
+			if (i >= GroupSizeA)
+				return false;
+
+			// b descendant of a
+			if (i >= GroupSizeB)
+				return true;
+
+			// difference in groups
+			if (A.Groups[i].Equals(B.Groups[i], ESearchCase::CaseSensitive))
+				return A.Groups[i].Compare(B.Groups[i], ESearchCase::CaseSensitive) < 0;
+		}
+		return false;
+	};
+	
 	auto AreAttributesWithAndWithoutGroupInOrder = [&](const URuleAttribute& RuleAttributeWithGroupOrder,
 									const URuleAttribute& RuleAttributeWithoutGroupOrder) {
 		if (!RuleAttributeWithGroupOrder.Groups.IsEmpty() &&
@@ -232,7 +252,7 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 		return GetGlobalGroupOrder(RuleAttributeWithGroupOrder) < RuleAttributeWithoutGroupOrder.Order;
 	};
 	
-	auto AreAttributeGroupsInOrder = [&](const URuleAttribute& A, const URuleAttribute& B) {
+	auto AreAttributeGroupOrdersInOrder = [&](const URuleAttribute& A, const URuleAttribute& B) {
 		const bool bHasGroupsA = !A.Groups.IsEmpty();
 		const bool bHasGroupsB = !B.Groups.IsEmpty();
 
@@ -259,12 +279,7 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 			return (GlobalOrderA < GlobalOrderB);
 		}
 
-		// sort higher level before lower level
-		if (A.Groups.Num() != B.Groups.Num())
-		{
-			return (A.Groups.Num() < B.Groups.Num());
-		}
-		return GetFirstDifferentGroupInA(A, B).Compare(GetFirstDifferentGroupInA(B, A), ESearchCase::CaseSensitive) < 0;
+		return AreAttributeGroupsInOrder(A,B);
 	};
 
 	auto AreAttributesInOrder = [&](const URuleAttribute& A, const URuleAttribute& B) {
@@ -275,7 +290,7 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 
 		if (A.Groups != B.Groups)
 		{
-			return AreAttributeGroupsInOrder(A, B);
+			return AreAttributeGroupOrdersInOrder(A, B);
 		}
 
 		if (A.Order == B.Order)
