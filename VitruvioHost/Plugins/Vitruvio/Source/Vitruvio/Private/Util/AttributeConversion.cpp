@@ -220,19 +220,19 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 		const size_t GroupSizeA = A.Groups.Num();
 		const size_t GroupSizeB = B.Groups.Num();
 
-		for (size_t i = 0; i < FMath::Max(GroupSizeA, GroupSizeB); ++i)
+		for (size_t GroupIndex = 0; GroupIndex < FMath::Max(GroupSizeA, GroupSizeB); ++GroupIndex)
 		{
 			// a descendant of b
-			if (i >= GroupSizeA)
+			if (GroupIndex >= GroupSizeA)
 				return false;
 
 			// b descendant of a
-			if (i >= GroupSizeB)
+			if (GroupIndex >= GroupSizeB)
 				return true;
 
 			// difference in groups
-			if (A.Groups[i].Equals(B.Groups[i], ESearchCase::CaseSensitive))
-				return A.Groups[i].Compare(B.Groups[i], ESearchCase::CaseSensitive) < 0;
+			if (A.Groups[GroupIndex].Equals(B.Groups[GroupIndex], ESearchCase::CaseSensitive))
+				return A.Groups[GroupIndex].Compare(B.Groups[GroupIndex], ESearchCase::CaseSensitive) < 0;
 		}
 		return false;
 	};
