@@ -220,7 +220,7 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 		const size_t GroupSizeA = A.Groups.Num();
 		const size_t GroupSizeB = B.Groups.Num();
 
-		for (size_t i = 0; i < std::max(GroupSizeA, GroupSizeB); ++i)
+		for (size_t i = 0; i < FMath::Max(GroupSizeA, GroupSizeB); ++i)
 		{
 			// a descendant of b
 			if (i >= GroupSizeA)
