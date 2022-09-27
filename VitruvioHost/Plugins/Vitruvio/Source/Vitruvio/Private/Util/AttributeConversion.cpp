@@ -249,13 +249,10 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 
 	auto AreAttributeGroupOrdersInOrder = [&](const URuleAttribute& A, const URuleAttribute& B)
 	{
-		const bool bHasGroupsA = !A.Groups.IsEmpty();
-		const bool bHasGroupsB = !B.Groups.IsEmpty();
-
-		if (!bHasGroupsB)
+		if (B.Groups.IsEmpty())
 			return AreAttributesWithAndWithoutGroupInOrder(A, B);
 
-		if (!bHasGroupsA)
+		if (A.Groups.IsEmpty())
 			return !AreAttributesWithAndWithoutGroupInOrder(B, A);
 
 		if (IsChildOf(A, B))
