@@ -292,14 +292,15 @@ IDetailGroup* GetOrCreateGroups(IDetailGroup& Root, const URuleAttribute* Attrib
 	IDetailGroup* AttributeGroupRoot = &Root;
 	FString AttributeGroupImportPath;
 
-	auto GetOrCreateGroup = [&GroupCache, Delimiter](IDetailGroup& Parent, FString ImportPath, FString Name) -> IDetailGroup* {
-		const FString CacheGroupKey = ImportPath + Delimiter + Name;
+	auto GetOrCreateGroup = [&GroupCache, Delimiter](IDetailGroup& Parent, FString ImportPath, FString FullyQualifiedName,
+													 FString DisplayName) -> IDetailGroup* {
+		const FString CacheGroupKey = ImportPath + Delimiter + FullyQualifiedName;
 		const auto CacheResult = GroupCache.Find(CacheGroupKey);
 		if (CacheResult)
 		{
 			return *CacheResult;
 		}
-		IDetailGroup& Group = Parent.AddGroup(*CacheGroupKey, FText::FromString(Name));
+		IDetailGroup& Group = Parent.AddGroup(*CacheGroupKey, FText::FromString(DisplayName));
 		GroupCache.Add(CacheGroupKey, &Group);
 
 		return &Group;
@@ -307,7 +308,7 @@ IDetailGroup* GetOrCreateGroups(IDetailGroup& Root, const URuleAttribute* Attrib
 
 	for (const FString& CurrImport : Imports)
 	{
-		AttributeGroupRoot = GetOrCreateGroup(*AttributeGroupRoot, AttributeGroupImportPath, CurrImport);
+		AttributeGroupRoot = GetOrCreateGroup(*AttributeGroupRoot, AttributeGroupImportPath, CurrImport, CurrImport);
 
 		AttributeGroupImportPath += CurrImport + Delimiter;
 	}
@@ -318,11 +319,12 @@ IDetailGroup* GetOrCreateGroups(IDetailGroup& Root, const URuleAttribute* Attrib
 	}
 
 	FString QualifiedIdentifier = Groups[0];
-	IDetailGroup* CurrentGroup = GetOrCreateGroup(*AttributeGroupRoot, AttributeGroupImportPath + Delimiter, QualifiedIdentifier);
+	IDetailGroup* CurrentGroup =
+		GetOrCreateGroup(*AttributeGroupRoot, AttributeGroupImportPath + Delimiter, QualifiedIdentifier, QualifiedIdentifier);
 	for (auto GroupIndex = 1; GroupIndex < Groups.Num(); ++GroupIndex)
 	{
-		QualifiedIdentifier += Groups[GroupIndex];
-		CurrentGroup = GetOrCreateGroup(*CurrentGroup, AttributeGroupImportPath + Delimiter, Groups[GroupIndex]);
+		QualifiedIdentifier += Delimiter + Groups[GroupIndex];
+		CurrentGroup = GetOrCreateGroup(*CurrentGroup, AttributeGroupImportPath + Delimiter, QualifiedIdentifier, Groups[GroupIndex]);
 	}
 
 	return CurrentGroup;
