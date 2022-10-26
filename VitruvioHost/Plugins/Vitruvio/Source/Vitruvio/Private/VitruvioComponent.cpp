@@ -62,7 +62,7 @@ void SetInitialShape(UVitruvioComponent* Component, bool bGenerateModel, UGenera
 {
 	if (Component->InitialShape)
 	{
-		Component->InitialShape->Uninitialize();
+		Component->DestroyInitialShapeComponent();
 		Component->InitialShape->Rename(nullptr, GetTransientPackage()); // Remove from Owner
 	}
 
@@ -460,9 +460,9 @@ void UVitruvioComponent::SetAttributes(const TMap<FString, FString>& NewAttribut
 void UVitruvioComponent::SetMeshInitialShape(UStaticMesh* StaticMesh, bool bGenerateModel, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
 	SetInitialShape(this, bGenerateModel, CallbackProxy, [this, StaticMesh]() {
-		UStaticMeshInitialShape* NewInitialShape = NewObject<UStaticMeshInitialShape>(GetOwner(), UStaticMeshInitialShape::StaticClass(), NAME_None,
-																					  RF_Transient | RF_TextExportTransient | RF_Transactional);
-		NewInitialShape->Initialize(this, StaticMesh);
+		UStaticMeshInitialShape* NewInitialShape =
+			NewObject<UStaticMeshInitialShape>(GetOwner(), UStaticMeshInitialShape::StaticClass(), NAME_None, RF_Transactional);
+		InitialShapeSceneComponent = NewInitialShape->CreateInitialShapeComponent(this, StaticMesh);
 		return NewInitialShape;
 	});
 }
@@ -471,9 +471,9 @@ void UVitruvioComponent::SetSplineInitialShape(const TArray<FSplinePoint>& Splin
 											   UGenerateCompletedCallbackProxy* CallbackProxy)
 {
 	SetInitialShape(this, bGenerateModel, CallbackProxy, [this, &SplinePoints]() {
-		USplineInitialShape* NewInitialShape = NewObject<USplineInitialShape>(GetOwner(), USplineInitialShape::StaticClass(), NAME_None,
-																			  RF_Transient | RF_TextExportTransient | RF_Transactional);
-		NewInitialShape->Initialize(this, SplinePoints);
+		USplineInitialShape* NewInitialShape =
+			NewObject<USplineInitialShape>(GetOwner(), USplineInitialShape::StaticClass(), NAME_None, RF_Transactional);
+		InitialShapeSceneComponent = NewInitialShape->CreateInitialShapeComponent(this, SplinePoints);
 		return NewInitialShape;
 	});
 }
@@ -493,6 +493,12 @@ const TMap<FString, FReport>& UVitruvioComponent::GetReports() const
 	return Reports;
 }
 
+void UVitruvioComponent::SetInitialShapeVisible(bool bVisible)
+{
+	InitialShapeSceneComponent->SetVisibility(bVisible, false);
+	InitialShapeSceneComponent->SetHiddenInGame(!bVisible);
+}
+
 void UVitruvioComponent::SetRandomSeed(int32 NewRandomSeed, bool bGenerateModel, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
 	RandomSeed = NewRandomSeed;
@@ -503,13 +509,9 @@ void UVitruvioComponent::SetRandomSeed(int32 NewRandomSeed, bool bGenerateModel,
 
 void UVitruvioComponent::LoadInitialShape()
 {
-	// If the initial shape has already been set just make sure it is valid
 	if (InitialShape)
 	{
-		if (!IsValid(InitialShape->GetComponent()))
-		{
-			InitialShape->Initialize(this);
-		}
+		InitialShapeSceneComponent = InitialShape->CreateInitialShapeComponent(this, InitialShape->Polygon);
 		return;
 	}
 
@@ -520,18 +522,18 @@ void UVitruvioComponent::LoadInitialShape()
 		UInitialShape* DefaultInitialShape = Cast<UInitialShape>(InitialShapeClasses->GetDefaultObject());
 		if (DefaultInitialShape && DefaultInitialShape->CanConstructFrom(this->GetOwner()))
 		{
-			InitialShape = NewObject<UInitialShape>(GetOwner(), DefaultInitialShape->GetClass(), NAME_None,
-													RF_Transient | RF_TextExportTransient | RF_Transactional);
+			InitialShape = NewObject<UInitialShape>(GetOwner(), DefaultInitialShape->GetClass(), NAME_None, RF_Transactional);
+			break;
 		}
 	}
 
 	if (!InitialShape)
 	{
-		InitialShape =
-			NewObject<UInitialShape>(GetOwner(), GetInitialShapesClasses()[0], NAME_None, RF_Transient | RF_TextExportTransient | RF_Transactional);
+		InitialShape = NewObject<UInitialShape>(GetOwner(), GetInitialShapesClasses()[0], NAME_None, RF_Transactional);
 	}
 
-	InitialShape->Initialize(this);
+	InitialShapeSceneComponent = InitialShape->CreateInitialShapeComponent(this);
+	InitialShape->UpdatePolygon(this);
 }
 
 void UVitruvioComponent::Initialize()
@@ -561,7 +563,7 @@ void UVitruvioComponent::Initialize()
 	OnHierarchyChanged.Broadcast(this);
 
 	CalculateRandomSeed();
-}
+}	
 
 void UVitruvioComponent::ProcessGenerateQueue()
 {
@@ -578,11 +580,10 @@ void UVitruvioComponent::ProcessGenerateQueue()
 
 		QUICK_SCOPE_CYCLE_COUNTER(STAT_VitruvioActor_CreateModelActors);
 
-		USceneComponent* InitialShapeComponent = InitialShape->GetComponent();
 		UGeneratedModelStaticMeshComponent* VitruvioModelComponent = nullptr;
 
 		TArray<USceneComponent*> InitialShapeChildComponents;
-		InitialShapeComponent->GetChildrenComponents(false, InitialShapeChildComponents);
+		InitialShapeSceneComponent->GetChildrenComponents(false, InitialShapeChildComponents);
 		for (USceneComponent* Component : InitialShapeChildComponents)
 		{
 			if (Component->IsA(UGeneratedModelStaticMeshComponent::StaticClass()))
@@ -605,11 +606,11 @@ void UVitruvioComponent::ProcessGenerateQueue()
 
 		if (!VitruvioModelComponent)
 		{
-			VitruvioModelComponent =
-				NewObject<UGeneratedModelStaticMeshComponent>(InitialShapeComponent, FName(TEXT("GeneratedModel")),
-															  RF_Transient | RF_TextExportTransient | RF_DuplicateTransient | RF_Transactional);
-			InitialShapeComponent->GetOwner()->AddInstanceComponent(VitruvioModelComponent);
-			VitruvioModelComponent->AttachToComponent(InitialShapeComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			VitruvioModelComponent = NewObject<UGeneratedModelStaticMeshComponent>(InitialShapeSceneComponent, FName(TEXT("GeneratedModel")),
+																				   RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
+			VitruvioModelComponent->CreationMethod = EComponentCreationMethod::Instance;
+			InitialShapeSceneComponent->GetOwner()->AddOwnedComponent(VitruvioModelComponent);
+			VitruvioModelComponent->AttachToComponent(InitialShapeSceneComponent, FAttachmentTransformRules::KeepRelativeTransform);
 			VitruvioModelComponent->OnComponentCreated();
 			VitruvioModelComponent->RegisterComponent();
 		}
@@ -630,8 +631,8 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		for (const FInstance& Instance : ConvertedResult.Instances)
 		{
 			FString UniqueName = UniqueComponentName(Instance.Name, NameMap);
-			auto InstancedComponent = NewObject<UGeneratedModelHISMComponent>(
-				VitruvioModelComponent, FName(UniqueName), RF_Transient | RF_TextExportTransient | RF_DuplicateTransient | RF_Transactional);
+			auto InstancedComponent = NewObject<UGeneratedModelHISMComponent>(VitruvioModelComponent, FName(UniqueName),
+																			  RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
 			const TArray<FTransform>& Transforms = Instance.Transforms;
 			InstancedComponent->SetStaticMesh(Instance.InstanceMesh->GetStaticMesh());
 			InstancedComponent->SetCollisionData(Instance.InstanceMesh->GetCollisionData());
@@ -653,7 +654,8 @@ void UVitruvioComponent::ProcessGenerateQueue()
 
 			// Attach and register instance component
 			InstancedComponent->AttachToComponent(VitruvioModelComponent, FAttachmentTransformRules::KeepRelativeTransform);
-			InitialShapeComponent->GetOwner()->AddInstanceComponent(InstancedComponent);
+			InstancedComponent->CreationMethod = EComponentCreationMethod::Instance;
+			InitialShapeSceneComponent->GetOwner()->AddOwnedComponent(InstancedComponent);
 			InstancedComponent->OnComponentCreated();
 			InstancedComponent->RegisterComponent();
 		}
@@ -662,7 +664,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 
 		HasGeneratedMesh = true;
 
-		InitialShape->SetHidden(HideAfterGeneration);
+		SetInitialShapeVisible(HideAfterGeneration);
 
 		if (Result.CallbackProxy)
 		{
@@ -736,22 +738,20 @@ void UVitruvioComponent::NotifyAttributesChanged()
 
 void UVitruvioComponent::RemoveGeneratedMeshes()
 {
-	if (!InitialShape)
+	if (!InitialShape || !InitialShapeSceneComponent)
 	{
 		return;
 	}
 
-	USceneComponent* InitialShapeComponent = InitialShape->GetComponent();
-
 	TArray<USceneComponent*> Children;
-	InitialShapeComponent->GetChildrenComponents(true, Children);
+	InitialShapeSceneComponent->GetChildrenComponents(true, Children);
 	for (USceneComponent* Child : Children)
 	{
-		Child->DestroyComponent(true);
+		Child->DestroyComponent(false);
 	}
 
 	HasGeneratedMesh = false;
-	InitialShape->SetHidden(false);
+	SetInitialShapeVisible(true);
 }
 
 bool UVitruvioComponent::GetAttributesReady()
@@ -907,7 +907,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, HideAfterGeneration))
 		{
-			InitialShape->SetHidden(HideAfterGeneration && HasGeneratedMesh);
+			SetInitialShapeVisible(!(HideAfterGeneration && HasGeneratedMesh));
 		}
 
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateAutomatically))
@@ -926,10 +926,11 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		InitialShape != nullptr && (bIsSplinePropertyUndo || InitialShape->IsRelevantProperty(Object, PropertyChangedEvent));
 	const bool bRecreateInitialShape = IsRelevantObject(this, Object) && bRelevantProperty;
 
-	// If a property has changed which is used for creating the initial shape we have to recreate it
+	// If a property has changed which is used by the initial shape we have to update it's polygon
 	if (bRecreateInitialShape)
 	{
-		InitialShape->Initialize(this);
+		Modify();
+		InitialShape->UpdatePolygon(this);
 
 		CalculateRandomSeed();
 	}
@@ -952,8 +953,9 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 
 void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& Type)
 {
+	RemoveGeneratedMeshes();
 
-	UInitialShape* NewInitialShape = NewObject<UInitialShape>(GetOwner(), Type, NAME_None, RF_Transient | RF_TextExportTransient | RF_Transactional);
+	UInitialShape* NewInitialShape = NewObject<UInitialShape>(GetOwner(), Type, NAME_None, RF_Transactional);
 
 	if (InitialShape)
 	{
@@ -962,20 +964,19 @@ void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& T
 			return;
 		}
 
-		const FInitialShapePolygon InitialShapePolygon = InitialShape->GetPolygon();
-		InitialShape->Uninitialize();
+		NewInitialShape->Polygon = InitialShape->Polygon;
+		
+		InitialShape->Rename(nullptr, GetTransientPackage()); // Remove from Owner
+		InitialShape = NewInitialShape;
 
-		NewInitialShape->Initialize(this, InitialShapePolygon);
+		DestroyInitialShapeComponent();
+		InitializeInitialShapeComponent();
 	}
 	else
 	{
-		NewInitialShape->Initialize(this);
+		InitialShape = NewInitialShape;
+		InitializeInitialShapeComponent();
 	}
-
-	InitialShape->Rename(nullptr, GetTransientPackage()); // Remove from Owner
-	InitialShape = NewInitialShape;
-
-	RemoveGeneratedMeshes();
 }
 
 #endif // WITH_EDITOR
@@ -1016,6 +1017,48 @@ void UVitruvioComponent::EvaluateRuleAttributes(bool ForceRegenerate, UGenerateC
 		EvalAttributesInvalidationToken.Reset();
 		AttributesEvaluationQueue.Enqueue({Result.Value, ForceRegenerate, CallbackProxy});
 	});
+}
+
+void UVitruvioComponent::InitializeInitialShapeComponent()
+{
+	if (InitialShapeSceneComponent)
+	{
+		return;
+	}
+
+	InitialShapeSceneComponent = InitialShape->CreateInitialShapeComponent(this);
+	InitialShape->UpdateSceneComponent(this);
+}
+
+void UVitruvioComponent::DestroyInitialShapeComponent()
+{
+	if (!InitialShapeSceneComponent)
+	{
+		return;
+	}
+
+	// Similarly to Unreal Ed component deletion. See ComponentEditorUtils#DeleteComponents
+#if WITH_EDITOR
+	Modify();
+#endif
+
+	// Note that promote to children of DestroyComponent only checks for attached children not actual child components
+	// therefore we have to destroy them manually here
+	TArray<USceneComponent*> Children;
+	InitialShapeSceneComponent->GetChildrenComponents(true, Children);
+	for (USceneComponent* Child : Children)
+	{
+		Child->DestroyComponent(true);
+	}
+
+	AActor* Owner = InitialShapeSceneComponent->GetOwner();
+
+	InitialShapeSceneComponent->DestroyComponent(false);
+#if WITH_EDITOR
+	Owner->RerunConstructionScripts();
+#endif
+
+	InitialShapeSceneComponent = nullptr;
 }
 
 TArray<TSubclassOf<UInitialShape>> UVitruvioComponent::GetInitialShapesClasses()

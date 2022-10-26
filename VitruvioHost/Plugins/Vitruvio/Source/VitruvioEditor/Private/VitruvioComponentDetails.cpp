@@ -767,7 +767,7 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			AddGenerateButton(RootCategory, VitruvioComponent);
 		}
 
-		if (VitruvioComponent->InitialShape && VitruvioComponent->InitialShape->CanDestroy())
+		if (VitruvioComponent->InitialShape && VitruvioComponent->CanChangeInitialShapeType())
 		{
 			TSharedPtr<FString> CurrentInitialShapeType;
 
