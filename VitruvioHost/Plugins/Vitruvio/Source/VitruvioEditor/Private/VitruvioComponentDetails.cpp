@@ -709,6 +709,8 @@ void FVitruvioComponentDetails::AddSwitchInitialShapeCombobox(IDetailCategoryBui
 
 					if (TempInitialShape->ShouldConvert(VitruvioComponent->InitialShape->GetPolygon()))
 					{
+						GEditor->BeginTransaction(*FGuid::NewGuid().ToString(), FText::FromString("Change Initial Shape Type"), VitruvioComponent->GetOwner());
+						VitruvioComponent->Modify();
 						VitruvioComponent->SetInitialShapeType(InitialShapeTypeMap[Selection]);
 						VitruvioComponent->Generate();
 
@@ -716,6 +718,7 @@ void FVitruvioComponentDetails::AddSwitchInitialShapeCombobox(IDetailCategoryBui
 						GEditor->SelectActor(VitruvioComponent->GetOwner(), false, true, true, true);
 						GEditor->SelectActor(VitruvioComponent->GetOwner(), true, true, true, true);
 						GEditor->SelectComponent(VitruvioComponent, true, true, true);
+						GEditor->EndTransaction();
 					}
 					else
 					{
