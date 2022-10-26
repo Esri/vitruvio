@@ -17,6 +17,8 @@
 
 #include "Modules/ModuleManager.h"
 
+class UVitruvioComponent;
+
 class VitruvioEditorModule final : public IModuleInterface
 {
 public:
@@ -25,12 +27,15 @@ public:
 
 private:
 	void OnPostEngineInit();
+	void PostUndoRedo();
 	void OnMapChanged(UWorld* World, EMapChangeType ChangeType);
 	void OnGenerateCompleted(int NumWarnings, int NumErrors);
+
 	TWeakPtr<SNotificationItem> NotificationItem;
 
 	FDelegateHandle LevelViewportContextMenuVitruvioExtenderDelegateHandle;
 	FDelegateHandle GenerateCompletedDelegateHandle;
 	FDelegateHandle OnAssetReloadHandle;
 	FDelegateHandle MapChangedHandle;
+	FDelegateHandle PostUndoRedoDelegate;
 };

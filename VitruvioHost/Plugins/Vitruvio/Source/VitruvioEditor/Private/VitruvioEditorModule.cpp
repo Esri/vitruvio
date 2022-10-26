@@ -124,6 +124,32 @@ FLevelEditorModule::FLevelViewportMenuExtender_SelectedActors LevelViewportConte
 
 } // namespace
 
+void VitruvioEditorModule::PostUndoRedo()
+{
+	// We want to call PostUndoRedo on the VitruvioComponent after the undo action has completed (note that the overriden PreEditUndo/PostEditUndo on
+	// the Component itself is called during the undo operation and always before its owners Actor undo/redo has completed). We also need to check if
+	// the VitruvioComponent was involved in the undo/redo action.
+	const FTransaction* LastTransaction = GEditor->Trans->GetTransaction(GEditor->Trans->GetQueueLength() - 1);
+	TArray<UObject*> TransactionObjects;
+	if (LastTransaction)
+	{
+		LastTransaction->GetTransactionObjects(TransactionObjects);
+	}
+
+	const TSet TransactionObjectSet(TransactionObjects);
+
+	for (FActorIterator It(GEditor->GetEditorWorldContext().World()); It; ++It)
+	{
+		const AActor* Actor = *It;
+		UVitruvioComponent* VitruvioComponent = Cast<UVitruvioComponent>(Actor->GetComponentByClass(UVitruvioComponent::StaticClass()));
+
+		if (VitruvioComponent && (TransactionObjectSet.Contains(VitruvioComponent) || TransactionObjectSet.Contains(VitruvioComponent->GetOwner())))
+		{
+			VitruvioComponent->PostUndoRedo();
+		}
+	}
+}
+
 void VitruvioEditorModule::StartupModule()
 {
 	FVitruvioStyle::Initialize();
@@ -148,6 +174,8 @@ void VitruvioEditorModule::StartupModule()
 
 	FLevelEditorModule& LevelEditor = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
 	MapChangedHandle = LevelEditor.OnMapChanged().AddRaw(this, &VitruvioEditorModule::OnMapChanged);
+
+	PostUndoRedoDelegate = FEditorDelegates::PostUndoRedo.AddRaw(this, &VitruvioEditorModule::PostUndoRedo);
 }
 
 void VitruvioEditorModule::ShutdownModule()
@@ -172,6 +200,8 @@ void VitruvioEditorModule::ShutdownModule()
 
 	FLevelEditorModule& LevelEditor = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
 	LevelEditor.OnMapChanged().Remove(MapChangedHandle);
+
+	FEditorDelegates::PostUndoRedo.Remove(PostUndoRedoDelegate);
 }
 
 void VitruvioEditorModule::OnPostEngineInit()

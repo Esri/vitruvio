@@ -352,7 +352,8 @@ public:
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 #if WITH_EDITOR
-	virtual void PostEditUndo() override;
+	virtual void PreEditUndo() override;
+	void PostUndoRedo();
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
 	void OnPropertyChanged(UObject* Object, FPropertyChangedEvent& PropertyChangedEvent);

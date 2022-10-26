@@ -856,17 +856,25 @@ void UVitruvioComponent::Generate(UGenerateCompletedCallbackProxy* CallbackProxy
 }
 
 #if WITH_EDITOR
-void UVitruvioComponent::PostEditUndo()
-{
-	// Make sure the initial shape is valid before continuing with the undo
-	LoadInitialShape();
 
-	Super::PostEditUndo();
+void UVitruvioComponent::PreEditUndo()
+{
+	Super::PreEditUndo();
+
+	DestroyInitialShapeComponent();
+}
+
+void UVitruvioComponent::PostUndoRedo()
+{
+	DestroyInitialShapeComponent();
+	InitializeInitialShapeComponent();
 
 	if (!PropertyChangeDelegate.IsValid())
 	{
 		PropertyChangeDelegate = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &UVitruvioComponent::OnPropertyChanged);
 	}
+
+	Generate();
 }
 
 void UVitruvioComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
