@@ -242,7 +242,7 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 	{
 		if (!RuleAttributeWithGroups.Groups.IsEmpty() &&
 		    (RuleAttributeWithGroups.GroupOrder == RuleAttributeWithoutGroup.Order))
-			return RuleAttributeWithGroups.Groups[0].Compare(RuleAttributeWithoutGroup.Name, ESearchCase::CaseSensitive) <= 0;
+			return RuleAttributeWithGroups.Groups[0].Compare(RuleAttributeWithoutGroup.DisplayName, ESearchCase::CaseSensitive) <= 0;
 
 		return GetGlobalGroupOrder(RuleAttributeWithGroups) < RuleAttributeWithoutGroup.Order;
 	};
@@ -289,7 +289,7 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 
 		if (A.Order == B.Order)
 		{
-			return A.Name.Compare(B.Name, ESearchCase::CaseSensitive) < 0;
+			return A.DisplayName.Compare(B.DisplayName, ESearchCase::CaseSensitive) < 0;
 		}
 		return A.Order < B.Order;
 	};
