@@ -394,6 +394,12 @@ void FInitialShapePolygon::FixOrientation()
 	}
 }
 
+void UInitialShape::SetPolygon(const FInitialShapePolygon& NewPolygon)
+{
+	Polygon = NewPolygon;
+	bIsPolygonValid = HasValidGeometry(Polygon);
+}
+
 const TArray<FVector3f>& UInitialShape::GetVertices() const
 {
 	return Polygon.Vertices;
@@ -401,7 +407,7 @@ const TArray<FVector3f>& UInitialShape::GetVertices() const
 
 bool UInitialShape::IsValid() const
 {
-	return HasValidGeometry(Polygon);
+	return bIsPolygonValid;
 }
 
 void UInitialShape::Initialize(UVitruvioComponent* Component)
@@ -464,12 +470,12 @@ void UStaticMeshInitialShape::UpdatePolygon(UVitruvioComponent* Component)
 		UStaticMesh* StaticMesh = StaticMeshComponent->GetStaticMesh();
 		if (StaticMesh)
 		{
-			Polygon = CreateInitialPolygonFromStaticMesh(StaticMesh);
+			SetPolygon(CreateInitialPolygonFromStaticMesh(StaticMesh));
 		}
 	}
 	else
 	{
-		Polygon = CreateDefaultInitialShapePolygon();	
+		SetPolygon(CreateDefaultInitialShapePolygon());
 	}
 }
 
@@ -489,9 +495,9 @@ void UStaticMeshInitialShape::UpdateSceneComponent(UVitruvioComponent* Component
 			OldPolygon = CreateInitialPolygonFromStaticMesh(StaticMeshComponent->GetStaticMesh());
 		}
 
-		if (OldPolygon != Polygon)
+		if (OldPolygon != GetPolygon())
 		{
-			UStaticMesh* NewStaticMesh = CreateStaticMeshFromInitialShapePolygon(Polygon);
+			UStaticMesh* NewStaticMesh = CreateStaticMeshFromInitialShapePolygon(GetPolygon());
 			StaticMeshComponent->SetStaticMesh(NewStaticMesh);
 
 #if WITH_EDITOR
@@ -516,14 +522,14 @@ USceneComponent* UStaticMeshInitialShape::CopySceneComponent(AActor* OldActor, A
 	const UStaticMeshComponent* OldStaticMeshComponent = OldActor->FindComponentByClass<UStaticMeshComponent>();
 	USceneComponent* RootComponent = AttachComponent<USceneComponent>(NewActor, TEXT("RootComponent"), false);
 	NewActor->SetRootComponent(RootComponent);
-	
+
 	UStaticMeshComponent* NewStaticMeshComponent = AttachComponent<UStaticMeshComponent>(NewActor, TEXT("InitialShapeStaticMesh"), true);
 	if (OldStaticMeshComponent)
 	{
 		NewStaticMeshComponent->SetStaticMesh(OldStaticMeshComponent->GetStaticMesh());
 		RootComponent->SetWorldTransform(OldStaticMeshComponent->GetComponentTransform());
 	}
-	
+
 	return NewStaticMeshComponent;
 }
 
@@ -542,7 +548,7 @@ USceneComponent* USplineInitialShape::CopySceneComponent(AActor* OldActor, AActo
 	const USplineComponent* OldSplineComponent = OldActor->FindComponentByClass<USplineComponent>();
 	USceneComponent* RootComponent = AttachComponent<USceneComponent>(NewActor, TEXT("RootComponent"), false);
 	NewActor->SetRootComponent(RootComponent);
-	
+
 	USplineComponent* NewSplineComponent = AttachComponent<USplineComponent>(NewActor, TEXT("InitialShapeSpline"), true);
 	NewSplineComponent->SetClosedLoop(true);
 	if (OldSplineComponent)
@@ -668,15 +674,9 @@ void USplineInitialShape::UpdatePolygon(UVitruvioComponent* Component)
 	Modify();
 #endif
 
-	if (USplineComponent* SplineComponent = Cast<USplineComponent>(Component->InitialShapeSceneComponent))
-	{
-		const FInitialShapePolygon InitialShapePolygon = CreateInitialShapePolygonFromSpline(SplineComponent, SplineApproximationPoints);
-		Polygon = InitialShapePolygon;
-	}
-	else
-	{
-		Polygon = CreateDefaultInitialShapePolygon();	
-	}
+	USplineComponent* SplineComponent = Cast<USplineComponent>(Component->InitialShapeSceneComponent);
+	SetPolygon(SplineComponent ? CreateInitialShapePolygonFromSpline(SplineComponent, SplineApproximationPoints)
+							   : CreateDefaultInitialShapePolygon());
 }
 
 void USplineInitialShape::UpdateSceneComponent(UVitruvioComponent* Component)
@@ -691,11 +691,11 @@ void USplineInitialShape::UpdateSceneComponent(UVitruvioComponent* Component)
 	{
 		FInitialShapePolygon OldPolygon = CreateInitialShapePolygonFromSpline(SplineComponent, SplineApproximationPoints);
 
-		if (OldPolygon != Polygon)
+		if (OldPolygon != GetPolygon())
 		{
 			SplineComponent->ClearSplinePoints(true);
 
-			TArray<FSplinePoint> SplinePoints = CreateSplinePointsFromInitialShapePolygon(Polygon);
+			TArray<FSplinePoint> SplinePoints = CreateSplinePointsFromInitialShapePolygon(GetPolygon());
 			for (const auto& Point : SplinePoints)
 			{
 				SplineComponent->AddPoint(Point, true);

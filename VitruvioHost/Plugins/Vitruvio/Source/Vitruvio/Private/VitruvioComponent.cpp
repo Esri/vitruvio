@@ -511,7 +511,7 @@ void UVitruvioComponent::LoadInitialShape()
 {
 	if (InitialShape)
 	{
-		InitialShapeSceneComponent = InitialShape->CreateInitialShapeComponent(this, InitialShape->Polygon);
+		InitialShapeSceneComponent = InitialShape->CreateInitialShapeComponent(this, InitialShape->GetPolygon());
 		return;
 	}
 
@@ -563,7 +563,7 @@ void UVitruvioComponent::Initialize()
 	OnHierarchyChanged.Broadcast(this);
 
 	CalculateRandomSeed();
-}	
+}
 
 void UVitruvioComponent::ProcessGenerateQueue()
 {
@@ -972,8 +972,8 @@ void UVitruvioComponent::SetInitialShapeType(const TSubclassOf<UInitialShape>& T
 			return;
 		}
 
-		NewInitialShape->Polygon = InitialShape->Polygon;
-		
+		NewInitialShape->SetPolygon(InitialShape->GetPolygon());
+
 		InitialShape->Rename(nullptr, GetTransientPackage()); // Remove from Owner
 		InitialShape = NewInitialShape;
 

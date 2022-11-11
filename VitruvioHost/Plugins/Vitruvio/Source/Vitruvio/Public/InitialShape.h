@@ -76,8 +76,7 @@ struct VITRUVIO_API FInitialShapeFace
 
 	friend bool operator==(const FInitialShapeFace& Lhs, const FInitialShapeFace& RHS)
 	{
-		return Lhs.Indices == RHS.Indices
-		       && Lhs.Holes == RHS.Holes;
+		return Lhs.Indices == RHS.Indices && Lhs.Holes == RHS.Holes;
 	}
 
 	friend bool operator!=(const FInitialShapeFace& Lhs, const FInitialShapeFace& RHS)
@@ -104,9 +103,7 @@ struct VITRUVIO_API FInitialShapePolygon
 
 	friend bool operator==(const FInitialShapePolygon& Lhs, const FInitialShapePolygon& RHS)
 	{
-		return Lhs.Faces == RHS.Faces
-		       && Lhs.Vertices == RHS.Vertices
-		       && Lhs.TextureCoordinateSets == RHS.TextureCoordinateSets;
+		return Lhs.Faces == RHS.Faces && Lhs.Vertices == RHS.Vertices && Lhs.TextureCoordinateSets == RHS.TextureCoordinateSets;
 	}
 
 	friend bool operator!=(const FInitialShapePolygon& Lhs, const FInitialShapePolygon& RHS)
@@ -120,14 +117,19 @@ class VITRUVIO_API UInitialShape : public UObject
 {
 	GENERATED_BODY()
 
-public:
 	UPROPERTY()
 	FInitialShapePolygon Polygon;
 
+	UPROPERTY()
+	bool bIsPolygonValid = false;
+
+public:
 	const FInitialShapePolygon& GetPolygon() const
 	{
 		return Polygon;
 	}
+
+	void SetPolygon(const FInitialShapePolygon& NewPolygon);
 
 	const TArray<FVector3f>& GetVertices() const;
 	virtual void Initialize(UVitruvioComponent* Component);
