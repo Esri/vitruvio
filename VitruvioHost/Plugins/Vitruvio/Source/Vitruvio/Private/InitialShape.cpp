@@ -439,7 +439,7 @@ USceneComponent* UStaticMeshInitialShape::CreateInitialShapeComponent(UVitruvioC
 	return CreateInitialShapeComponent(Component, CreateStaticMeshFromInitialShapePolygon(InitialShapePolygon));
 }
 
-USceneComponent* UStaticMeshInitialShape::CreateInitialShapeComponent(UVitruvioComponent* Component, UStaticMesh* OverrideStaticMesh)
+USceneComponent* UStaticMeshInitialShape::CreateInitialShapeComponent(UVitruvioComponent* Component, UStaticMesh* NewStaticMesh)
 {
 	AActor* Owner = Component->GetOwner();
 	if (!Owner)
@@ -449,11 +449,9 @@ USceneComponent* UStaticMeshInitialShape::CreateInitialShapeComponent(UVitruvioC
 
 	UStaticMeshComponent* StaticMeshComponent = AttachComponent<UStaticMeshComponent>(Owner, TEXT("InitialShapeStaticMesh"));
 
-	UStaticMesh* StaticMesh = OverrideStaticMesh ? OverrideStaticMesh : StaticMeshComponent->GetStaticMesh();
-
-	StaticMeshComponent->SetStaticMesh(StaticMesh);
+	StaticMeshComponent->SetStaticMesh(NewStaticMesh);
 #if WITH_EDITORONLY_DATA
-	InitialShapeMesh = StaticMesh;
+	InitialShapeMesh = NewStaticMesh;
 #endif
 
 	return StaticMeshComponent;
