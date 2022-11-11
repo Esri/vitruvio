@@ -120,6 +120,11 @@ bool HasValidGeometry(const FInitialShapePolygon& Polygon)
 
 FInitialShapePolygon CreateInitialPolygonFromStaticMesh(const UStaticMesh* StaticMesh)
 {
+	if (!StaticMesh)
+	{
+		return {};
+	}
+
 	TArray<FVector3f> MeshVertices;
 	TArray<int32> MeshIndices;
 	TArray<FTextureCoordinateSet> MeshTextureCoordinateSets;
@@ -464,8 +469,7 @@ void UStaticMeshInitialShape::UpdatePolygon(UVitruvioComponent* Component)
 #endif
 
 	UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Component->InitialShapeSceneComponent);
-	SetPolygon(StaticMeshComponent && StaticMeshComponent->GetStaticMesh() ? CreateInitialPolygonFromStaticMesh(StaticMeshComponent->GetStaticMesh())
-																		   : CreateDefaultInitialShapePolygon());
+	SetPolygon(StaticMeshComponent ? CreateInitialPolygonFromStaticMesh(StaticMeshComponent->GetStaticMesh()) : CreateDefaultInitialShapePolygon());
 }
 
 void UStaticMeshInitialShape::UpdateSceneComponent(UVitruvioComponent* Component)
@@ -478,11 +482,7 @@ void UStaticMeshInitialShape::UpdateSceneComponent(UVitruvioComponent* Component
 
 	if (UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Component->InitialShapeSceneComponent))
 	{
-		FInitialShapePolygon OldPolygon = {};
-		if (StaticMeshComponent->GetStaticMesh())
-		{
-			OldPolygon = CreateInitialPolygonFromStaticMesh(StaticMeshComponent->GetStaticMesh());
-		}
+		FInitialShapePolygon OldPolygon = CreateInitialPolygonFromStaticMesh(StaticMeshComponent->GetStaticMesh());
 
 		if (OldPolygon != GetPolygon())
 		{
