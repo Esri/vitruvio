@@ -463,18 +463,9 @@ void UStaticMeshInitialShape::UpdatePolygon(UVitruvioComponent* Component)
 	Modify();
 #endif
 
-	if (UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Component->InitialShapeSceneComponent))
-	{
-		UStaticMesh* StaticMesh = StaticMeshComponent->GetStaticMesh();
-		if (StaticMesh)
-		{
-			SetPolygon(CreateInitialPolygonFromStaticMesh(StaticMesh));
-		}
-	}
-	else
-	{
-		SetPolygon(CreateDefaultInitialShapePolygon());
-	}
+	UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Component->InitialShapeSceneComponent);
+	SetPolygon(StaticMeshComponent && StaticMeshComponent->GetStaticMesh() ? CreateInitialPolygonFromStaticMesh(StaticMeshComponent->GetStaticMesh())
+																		   : CreateDefaultInitialShapePolygon());
 }
 
 void UStaticMeshInitialShape::UpdateSceneComponent(UVitruvioComponent* Component)
