@@ -747,7 +747,7 @@ void UVitruvioComponent::RemoveGeneratedMeshes()
 	InitialShapeSceneComponent->GetChildrenComponents(true, Children);
 	for (USceneComponent* Child : Children)
 	{
-		Child->DestroyComponent(false);
+		Child->DestroyComponent();
 	}
 
 	HasGeneratedMesh = false;
@@ -1061,7 +1061,7 @@ void UVitruvioComponent::DestroyInitialShapeComponent()
 
 	AActor* Owner = InitialShapeSceneComponent->GetOwner();
 
-	InitialShapeSceneComponent->DestroyComponent(false);
+	InitialShapeSceneComponent->DestroyComponent();
 #if WITH_EDITOR
 	Owner->RerunConstructionScripts();
 #endif
