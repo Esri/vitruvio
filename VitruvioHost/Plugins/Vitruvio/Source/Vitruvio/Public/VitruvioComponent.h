@@ -92,8 +92,11 @@ public:
 	UPROPERTY(EditAnywhere, DisplayName = "Translucent Parent", Category = "Vitruvio Default Materials")
 	UMaterial* TranslucentParent;
 
-	UPROPERTY(VisibleAnywhere, Instanced, Category = "Vitruvio", Transient, DuplicateTransient, TextExportTransient)
+	UPROPERTY(VisibleAnywhere, Instanced, Category = "Vitruvio")
 	UInitialShape* InitialShape = nullptr;
+
+	UPROPERTY(Transient, TextExportTransient, DuplicateTransient)
+	USceneComponent* InitialShapeSceneComponent;
 
 	UPROPERTY(EditAnywhere, Category = "Vitruvio", meta = (DisplayName = "Generate Collision Mesh"))
 	bool GenerateCollision = true;
@@ -290,8 +293,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	const TMap<FString, FReport>& GetReports() const;
 
-	/**
-	 * Sets the random seed used for generation. This will reevaluate the attributes and if bGenerateModel is set to true, also generates the model.
+	/** Sets the visibility of the initial shape component. */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	void SetInitialShapeVisible(bool bVisible);
+
+	/* Sets the random seed used for generation. This will reevaluate the attributes and if bGenerateModel is set to true, also generates the model.
 	 */
 	void SetRandomSeed(int32 NewRandomSeed, bool bGenerateModel = true, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
@@ -310,6 +316,17 @@ public:
 	 * @param ForceRegenerate Whether to force regenerate even if generate automatically is set to false
 	 */
 	void EvaluateRuleAttributes(bool ForceRegenerate = false, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+
+	/* Returns whether the initial shape type can be changed */
+	bool CanChangeInitialShapeType() const
+	{
+		return !InitialShapeSceneComponent || InitialShapeSceneComponent->CreationMethod == EComponentCreationMethod::Instance;
+	}
+
+	void InitializeInitialShapeComponent();
+
+	/* Destroys the current initial shape component */
+	void DestroyInitialShapeComponent();
 
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGenerateCompletedDelegate);
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttributesEvaluatedDelegate);
@@ -335,7 +352,8 @@ public:
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 #if WITH_EDITOR
-	virtual void PostEditUndo() override;
+	virtual void PreEditUndo() override;
+	void PostUndoRedo();
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
 	void OnPropertyChanged(UObject* Object, FPropertyChangedEvent& PropertyChangedEvent);

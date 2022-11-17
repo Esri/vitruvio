@@ -27,9 +27,10 @@ namespace
 template <typename T>
 T* AttachComponent(AActor* Owner, const FString& Name, bool bAttachToRoot = true)
 {
-	T* Component = NewObject<T>(Owner, *Name, RF_Transactional);
+	T* Component = NewObject<T>(Owner, *Name, RF_DuplicateTransient | RF_Transient | RF_TextExportTransient);
 	Component->Mobility = EComponentMobility::Movable;
-	Owner->AddInstanceComponent(Component);
+	Owner->AddOwnedComponent(Component);
+	Component->CreationMethod = EComponentCreationMethod::Instance;
 	if (bAttachToRoot)
 	{
 		Component->AttachToComponent(Owner->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
@@ -119,6 +120,11 @@ bool HasValidGeometry(const FInitialShapePolygon& Polygon)
 
 FInitialShapePolygon CreateInitialPolygonFromStaticMesh(const UStaticMesh* StaticMesh)
 {
+	if (!StaticMesh)
+	{
+		return {};
+	}
+
 	TArray<FVector3f> MeshVertices;
 	TArray<int32> MeshIndices;
 	TArray<FTextureCoordinateSet> MeshTextureCoordinateSets;
@@ -349,7 +355,7 @@ TArray<FSplinePoint> CreateSplinePointsFromInitialShapePolygon(const FInitialSha
 	for (const int32& Index : CurrInitialShapePolygon.Faces[0].Indices)
 	{
 		FSplinePoint SplinePoint;
-		SplinePoint.Position = FVector(InitialShapePolygon.Vertices[Index]);
+		SplinePoint.Position = FVector(CurrInitialShapePolygon.Vertices[Index]);
 		SplinePoint.Type = ESplinePointType::Linear;
 		SplinePoint.InputKey = PointIndex;
 		SplinePoints.Add(SplinePoint);
@@ -393,105 +399,80 @@ void FInitialShapePolygon::FixOrientation()
 	}
 }
 
+void UInitialShape::SetPolygon(const FInitialShapePolygon& NewPolygon)
+{
+	Polygon = NewPolygon;
+	bIsPolygonValid = HasValidGeometry(Polygon);
+}
+
 const TArray<FVector3f>& UInitialShape::GetVertices() const
 {
 	return Polygon.Vertices;
 }
 
-void UInitialShape::SetPolygon(const FInitialShapePolygon& InPolygon)
+bool UInitialShape::IsValid() const
 {
-	Polygon = InPolygon;
-	bIsValid = HasValidGeometry(InPolygon);
+	return bIsPolygonValid;
 }
 
-bool UInitialShape::CanDestroy()
+void UInitialShape::Initialize(UVitruvioComponent* Component)
 {
-	return !InitialShapeSceneComponent || InitialShapeSceneComponent->CreationMethod == EComponentCreationMethod::Instance;
+	UpdatePolygon(Component);
 }
 
-void UInitialShape::Uninitialize()
+USceneComponent* UStaticMeshInitialShape::CreateInitialShapeComponent(UVitruvioComponent* Component)
 {
-	if (InitialShapeSceneComponent)
-	{
-		// Similarly to Unreal Ed component deletion. See ComponentEditorUtils#DeleteComponents
-#if WITH_EDITOR
-		InitialShapeSceneComponent->Modify();
-#endif
-		// Note that promote to children of DestroyComponent only checks for attached children not actual child components
-		// therefore we have to destroy them manually here
-		TArray<USceneComponent*> Children;
-		InitialShapeSceneComponent->GetChildrenComponents(true, Children);
-		for (USceneComponent* Child : Children)
-		{
-			Child->DestroyComponent(true);
-		}
-
-		AActor* Owner = InitialShapeSceneComponent->GetOwner();
-
-		InitialShapeSceneComponent->DestroyComponent(true);
-#if WITH_EDITOR
-		Owner->RerunConstructionScripts();
-#endif
-
-		InitialShapeSceneComponent = nullptr;
-		VitruvioComponent = nullptr;
-	}
-}
-
-void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component)
-{
-	Super::Initialize(Component);
-
 	AActor* Owner = Component->GetOwner();
 	if (!Owner)
 	{
-		return;
+		return nullptr;
 	}
 
-	UStaticMeshComponent* StaticMeshComponent = Owner->FindComponentByClass<UStaticMeshComponent>();
-	if (!StaticMeshComponent)
+	if (UStaticMeshComponent* StaticMeshComponent = Owner->FindComponentByClass<UStaticMeshComponent>())
 	{
-		StaticMeshComponent = AttachComponent<UStaticMeshComponent>(Owner, TEXT("InitialShapeStaticMesh"));
+#if WITH_EDITOR
+		InitialShapeMesh = StaticMeshComponent->GetStaticMesh();
+#endif
+		return StaticMeshComponent;
 	}
-	InitialShapeSceneComponent = StaticMeshComponent;
 
-	UStaticMesh* StaticMesh = StaticMeshComponent->GetStaticMesh();
+	return CreateInitialShapeComponent(Component, CreateDefaultStaticMesh());
+}
 
-	if (StaticMesh == nullptr)
+USceneComponent* UStaticMeshInitialShape::CreateInitialShapeComponent(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon)
+{
+	return CreateInitialShapeComponent(Component, CreateStaticMeshFromInitialShapePolygon(InitialShapePolygon));
+}
+
+USceneComponent* UStaticMeshInitialShape::CreateInitialShapeComponent(UVitruvioComponent* Component, UStaticMesh* NewStaticMesh)
+{
+	AActor* Owner = Component->GetOwner();
+	if (!Owner)
 	{
-		StaticMesh = CreateDefaultStaticMesh();
-		StaticMeshComponent->SetStaticMesh(StaticMesh);
+		return nullptr;
 	}
 
+	UStaticMeshComponent* StaticMeshComponent = AttachComponent<UStaticMeshComponent>(Owner, TEXT("InitialShapeStaticMesh"));
+
+	StaticMeshComponent->SetStaticMesh(NewStaticMesh);
 #if WITH_EDITORONLY_DATA
-	InitialShapeMesh = StaticMesh;
+	InitialShapeMesh = NewStaticMesh;
 #endif
 
-#if WITH_EDITOR
-	if (!StaticMesh->bAllowCPUAccess)
-	{
-		StaticMesh->Modify(true);
-		StaticMesh->bAllowCPUAccess = true;
-		StaticMesh->PostEditChange();
-	}
-#else
-	if (!ensure(StaticMesh->bAllowCPUAccess))
-	{
-		bIsValid = false;
-		return;
-	}
-#endif
-
-	const FInitialShapePolygon InitialShapePolygon = CreateInitialPolygonFromStaticMesh(StaticMesh);
-	SetPolygon(InitialShapePolygon);
+	return StaticMeshComponent;
 }
 
-void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon)
+void UStaticMeshInitialShape::UpdatePolygon(UVitruvioComponent* Component)
 {
-	Initialize(Component, CreateStaticMeshFromInitialShapePolygon(InitialShapePolygon));
+#if WITH_EDITOR
+	Modify();
+#endif
+
+	UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Component->InitialShapeSceneComponent);
+	SetPolygon(StaticMeshComponent ? CreateInitialPolygonFromStaticMesh(StaticMeshComponent->GetStaticMesh()) : CreateDefaultInitialShapePolygon());
 }
 
-void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component, UStaticMesh* StaticMesh)
+void UStaticMeshInitialShape::UpdateSceneComponent(UVitruvioComponent* Component)
 {
 	AActor* Owner = Component->GetOwner();
 	if (!Owner)
@@ -499,10 +480,20 @@ void UStaticMeshInitialShape::Initialize(UVitruvioComponent* Component, UStaticM
 		return;
 	}
 
-	UStaticMeshComponent* AttachedStaticMeshComponent = AttachComponent<UStaticMeshComponent>(Owner, TEXT("InitialShapeStaticMesh"));
-	AttachedStaticMeshComponent->SetStaticMesh(StaticMesh);
+	if (UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Component->InitialShapeSceneComponent))
+	{
+		FInitialShapePolygon OldPolygon = CreateInitialPolygonFromStaticMesh(StaticMeshComponent->GetStaticMesh());
 
-	Initialize(Component);
+		if (OldPolygon != GetPolygon())
+		{
+			UStaticMesh* NewStaticMesh = CreateStaticMeshFromInitialShapePolygon(GetPolygon());
+			StaticMeshComponent->SetStaticMesh(NewStaticMesh);
+
+#if WITH_EDITOR
+			InitialShapeMesh = NewStaticMesh;
+#endif
+		}
+	}
 }
 
 bool UStaticMeshInitialShape::CanConstructFrom(AActor* Owner) const
@@ -518,20 +509,17 @@ bool UStaticMeshInitialShape::CanConstructFrom(AActor* Owner) const
 USceneComponent* UStaticMeshInitialShape::CopySceneComponent(AActor* OldActor, AActor* NewActor) const
 {
 	const UStaticMeshComponent* OldStaticMeshComponent = OldActor->FindComponentByClass<UStaticMeshComponent>();
-	UStaticMeshComponent* NewStaticMeshComponent = AttachComponent<UStaticMeshComponent>(NewActor, TEXT("InitialShapeStaticMesh"), false);
+	USceneComponent* RootComponent = AttachComponent<USceneComponent>(NewActor, TEXT("RootComponent"), false);
+	NewActor->SetRootComponent(RootComponent);
+
+	UStaticMeshComponent* NewStaticMeshComponent = AttachComponent<UStaticMeshComponent>(NewActor, TEXT("InitialShapeStaticMesh"), true);
 	if (OldStaticMeshComponent)
 	{
 		NewStaticMeshComponent->SetStaticMesh(OldStaticMeshComponent->GetStaticMesh());
-		NewStaticMeshComponent->SetWorldTransform(OldStaticMeshComponent->GetComponentTransform());
+		RootComponent->SetWorldTransform(OldStaticMeshComponent->GetComponentTransform());
 	}
-	NewActor->SetRootComponent(NewStaticMeshComponent);
-	return NewStaticMeshComponent;
-}
 
-void UStaticMeshInitialShape::SetHidden(bool bHidden)
-{
-	InitialShapeSceneComponent->SetVisibility(!bHidden, false);
-	InitialShapeSceneComponent->SetHiddenInGame(bHidden);
+	return NewStaticMeshComponent;
 }
 
 bool USplineInitialShape::CanConstructFrom(AActor* Owner) const
@@ -547,14 +535,16 @@ bool USplineInitialShape::CanConstructFrom(AActor* Owner) const
 USceneComponent* USplineInitialShape::CopySceneComponent(AActor* OldActor, AActor* NewActor) const
 {
 	const USplineComponent* OldSplineComponent = OldActor->FindComponentByClass<USplineComponent>();
-	USplineComponent* NewSplineComponent = AttachComponent<USplineComponent>(NewActor, TEXT("InitialShapeSpline"), false);
+	USceneComponent* RootComponent = AttachComponent<USceneComponent>(NewActor, TEXT("RootComponent"), false);
+	NewActor->SetRootComponent(RootComponent);
+
+	USplineComponent* NewSplineComponent = AttachComponent<USplineComponent>(NewActor, TEXT("InitialShapeSpline"), true);
 	NewSplineComponent->SetClosedLoop(true);
 	if (OldSplineComponent)
 	{
 		NewSplineComponent->SplineCurves = OldSplineComponent->SplineCurves;
-		NewSplineComponent->SetWorldTransform(OldSplineComponent->GetComponentTransform());
+		RootComponent->SetWorldTransform(OldSplineComponent->GetComponentTransform());
 	}
-	NewActor->SetRootComponent(NewSplineComponent);
 	return NewSplineComponent;
 }
 #if WITH_EDITOR
@@ -582,7 +572,7 @@ bool UStaticMeshInitialShape::IsRelevantProperty(UObject* Object, const FPropert
 
 bool USplineInitialShape::ShouldConvert(const FInitialShapePolygon& InitialShapePolygon)
 {
-	if (InitialShapePolygon.Faces.Num() > 1 || InitialShapePolygon.Faces[0].Holes.Num() > 0)
+	if (InitialShapePolygon.Faces.Num() > 1 || (InitialShapePolygon.Faces.Num() > 0 && InitialShapePolygon.Faces[0].Holes.Num() > 0))
 	{
 		auto Result = FMessageDialog::Open(EAppMsgType::OkCancel,
 										   FText::FromString(TEXT("The initial shape contains multiple faces or faces with holes which spline "
@@ -601,18 +591,24 @@ void UStaticMeshInitialShape::PostEditChangeProperty(FPropertyChangedEvent& Prop
 	if (PropertyChangedEvent.Property &&
 		PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UStaticMeshInitialShape, InitialShapeMesh))
 	{
-		UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(InitialShapeSceneComponent);
-		StaticMeshComponent->SetStaticMesh(InitialShapeMesh);
-
-		// We need to fire the property changed event manually
-		for (TFieldIterator<FProperty> PropIt(StaticMeshComponent->GetClass()); PropIt; ++PropIt)
+		if (AActor* Owner = Cast<AActor>(GetOuter()))
 		{
-			if (PropIt->GetFName() == TEXT("StaticMesh"))
+			if (UVitruvioComponent* VitruvioComponent = Owner->FindComponentByClass<UVitruvioComponent>())
 			{
-				FProperty* Property = *PropIt;
-				FPropertyChangedEvent StaticMeshPropertyChangedEvent(Property);
-				VitruvioComponent->OnPropertyChanged(VitruvioComponent, StaticMeshPropertyChangedEvent);
-				break;
+				UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(VitruvioComponent->InitialShapeSceneComponent);
+				StaticMeshComponent->SetStaticMesh(InitialShapeMesh);
+
+				// We need to fire the property changed event manually
+				for (TFieldIterator<FProperty> PropIt(StaticMeshComponent->GetClass()); PropIt; ++PropIt)
+				{
+					if (PropIt->GetFName() == TEXT("StaticMesh"))
+					{
+						FProperty* Property = *PropIt;
+						FPropertyChangedEvent StaticMeshPropertyChangedEvent(Property);
+						VitruvioComponent->OnPropertyChanged(VitruvioComponent, StaticMeshPropertyChangedEvent);
+						break;
+					}
+				}
 			}
 		}
 	}
@@ -620,31 +616,59 @@ void UStaticMeshInitialShape::PostEditChangeProperty(FPropertyChangedEvent& Prop
 }
 #endif
 
-void USplineInitialShape::Initialize(UVitruvioComponent* Component)
+USceneComponent* USplineInitialShape::CreateInitialShapeComponent(UVitruvioComponent* Component)
 {
-	Super::Initialize(Component);
-
 	AActor* Owner = Component->GetOwner();
-	USplineComponent* SplineComponent = Owner->FindComponentByClass<USplineComponent>();
-	if (!SplineComponent)
+	if (!Owner)
 	{
-		SplineComponent = AttachComponent<USplineComponent>(Owner, TEXT("InitialShapeSpline"));
+		return nullptr;
 	}
 
+	if (USplineComponent* SplineComponent = Owner->FindComponentByClass<USplineComponent>())
+	{
+		return SplineComponent;
+	}
+
+	return CreateInitialShapeComponent(Component, CreateSplinePointsFromInitialShapePolygon(CreateDefaultInitialShapePolygon()));
+}
+
+USceneComponent* USplineInitialShape::CreateInitialShapeComponent(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon)
+{
+	return CreateInitialShapeComponent(Component, CreateSplinePointsFromInitialShapePolygon(InitialShapePolygon));
+}
+
+USceneComponent* USplineInitialShape::CreateInitialShapeComponent(UVitruvioComponent* Component, const TArray<FSplinePoint>& SplinePoints)
+{
+	AActor* Owner = Component->GetOwner();
+	if (!Owner)
+	{
+		return nullptr;
+	}
+
+	const auto UniqueName = MakeUniqueObjectName(Owner, USplineComponent::StaticClass(), TEXT("InitialShapeSpline"));
+	USplineComponent* SplineComponent = AttachComponent<USplineComponent>(Owner, UniqueName.ToString());
+	SplineComponent->ClearSplinePoints(true);
+	for (const auto& Point : SplinePoints)
+	{
+		SplineComponent->AddPoint(Point, true);
+	}
 	SplineComponent->SetClosedLoop(true);
 
-	InitialShapeSceneComponent = SplineComponent;
-
-	const FInitialShapePolygon InitialShapePolygon = CreateInitialShapePolygonFromSpline(SplineComponent, SplineApproximationPoints);
-	SetPolygon(InitialShapePolygon);
+	return SplineComponent;
 }
 
-void USplineInitialShape::Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon)
+void USplineInitialShape::UpdatePolygon(UVitruvioComponent* Component)
 {
-	Initialize(Component, CreateSplinePointsFromInitialShapePolygon(InitialShapePolygon));
+#if WITH_EDITOR
+	Modify();
+#endif
+
+	USplineComponent* SplineComponent = Cast<USplineComponent>(Component->InitialShapeSceneComponent);
+	SetPolygon(SplineComponent ? CreateInitialShapePolygonFromSpline(SplineComponent, SplineApproximationPoints)
+							   : CreateDefaultInitialShapePolygon());
 }
 
-void USplineInitialShape::Initialize(UVitruvioComponent* Component, const TArray<FSplinePoint>& SplinePoints)
+void USplineInitialShape::UpdateSceneComponent(UVitruvioComponent* Component)
 {
 	AActor* Owner = Component->GetOwner();
 	if (!Owner)
@@ -652,13 +676,20 @@ void USplineInitialShape::Initialize(UVitruvioComponent* Component, const TArray
 		return;
 	}
 
-	const auto UniqueName = MakeUniqueObjectName(Owner, USplineComponent::StaticClass(), TEXT("InitialShapeSpline"));
-	USplineComponent* Spline = AttachComponent<USplineComponent>(Owner, UniqueName.ToString());
-	Spline->ClearSplinePoints(true);
-	for (const auto& Point : SplinePoints)
+	if (USplineComponent* SplineComponent = Cast<USplineComponent>(Component->InitialShapeSceneComponent))
 	{
-		Spline->AddPoint(Point, true);
-	}
+		FInitialShapePolygon OldPolygon = CreateInitialShapePolygonFromSpline(SplineComponent, SplineApproximationPoints);
 
-	Initialize(Component);
+		if (OldPolygon != GetPolygon())
+		{
+			SplineComponent->ClearSplinePoints(true);
+
+			TArray<FSplinePoint> SplinePoints = CreateSplinePointsFromInitialShapePolygon(GetPolygon());
+			for (const auto& Point : SplinePoints)
+			{
+				SplineComponent->AddPoint(Point, true);
+			}
+			SplineComponent->SetClosedLoop(true);
+		}
+	}
 }
