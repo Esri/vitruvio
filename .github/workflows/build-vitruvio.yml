@@ -6,12 +6,16 @@ on:
       - main
       - develop
       - 'arisona/workflows'
+      - v1.2.1
+  pull_request:
+    branches:
+      - v1.2.1
 
 jobs:
   package-host-main:
     runs-on: self-hosted
     name: Package host project (shipping) on main branch
-    if: github.ref == 'refs/heads/main'
+    if: github.ref != 'refs/heads/develop'
     steps:
       - uses: actions/checkout@v2
       - run: |
@@ -20,7 +24,7 @@ jobs:
   build-plugin-main:
     runs-on: self-hosted
     name: Build plugin on main branch
-    if: github.ref == 'refs/heads/main'
+    if: github.ref != 'refs/heads/develop'
     steps:
       - uses: actions/checkout@v2
       - run: |
@@ -29,7 +33,7 @@ jobs:
   package-host-develop:
     runs-on: self-hosted
     name: Package host project (debug) on develop branch
-    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/arisona/workflows'
+    if: github.ref != 'refs/heads/main'
     steps:
       - uses: actions/checkout@v2
       - run: |
@@ -38,7 +42,7 @@ jobs:
   build-plugin-develop:
     runs-on: self-hosted
     name: Build plugin on develop branch
-    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/arisona/workflows'
+    if: github.ref != 'refs/heads/main'
     steps:
       - uses: actions/checkout@v2
       - run: |
