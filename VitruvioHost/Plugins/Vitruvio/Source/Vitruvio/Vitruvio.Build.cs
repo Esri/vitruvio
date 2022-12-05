@@ -23,7 +23,8 @@ public class Vitruvio : ModuleRules
 		bUseRTTI = true;
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		PrecompileForTargets = PrecompileTargetsType.Any;
-
+		bPrecompile = true;
+		
 		PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
 
 		PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Private"));
