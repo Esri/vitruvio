@@ -1015,7 +1015,7 @@ void UVitruvioComponent::EvaluateRuleAttributes(bool ForceRegenerate, UGenerateC
 	EvalAttributesInvalidationToken = AttributesResult.Token;
 
 	AttributesResult.Result.Next([this, CallbackProxy, ForceRegenerate](const FAttributeMapResult::ResultType& Result) {
-		FScopeLock(&Result.Token->Lock);
+		FScopeLock Lock(&Result.Token->Lock);
 
 		if (Result.Token->IsInvalid())
 		{
