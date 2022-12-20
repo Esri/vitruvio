@@ -664,7 +664,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 
 		HasGeneratedMesh = true;
 
-		SetInitialShapeVisible(HideAfterGeneration);
+		SetInitialShapeVisible(!HideAfterGeneration);
 
 		if (Result.CallbackProxy)
 		{
