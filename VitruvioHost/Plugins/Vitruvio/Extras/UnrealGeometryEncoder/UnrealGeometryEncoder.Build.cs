@@ -30,6 +30,9 @@ namespace UnrealBuildTool.Rules
 				"PRT",
 			});
 
+			PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+			DefaultBuildSettings = BuildSettingsVersion.V2;
+			IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 			bUseRTTI = true;
 			bEnableExceptions = true;
 		}
