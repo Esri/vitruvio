@@ -232,7 +232,10 @@ TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(Attr* Attribute, TSharedPt
 	auto Annotation = Attribute->GetRangeAnnotation();
 
 	auto OnValueCommit = [FloatProperty](double Value, ETextCommit::Type Type) {
-		FloatProperty->SetValue(Value);
+		if (FloatProperty->GetPropertyNode().IsValid())
+		{
+			FloatProperty->SetValue(Value);
+		}
 	};
 
 	// clang-format off
