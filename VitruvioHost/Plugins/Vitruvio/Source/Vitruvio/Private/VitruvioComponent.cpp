@@ -511,7 +511,7 @@ void UVitruvioComponent::LoadInitialShape()
 {
 	if (InitialShape)
 	{
-		InitialShapeSceneComponent = InitialShape->CreateInitialShapeComponent(this, InitialShape->GetPolygon());
+		InitialShapeSceneComponent = InitialShape->CreateInitialShapeComponent(this);
 		return;
 	}
 
@@ -532,6 +532,7 @@ void UVitruvioComponent::LoadInitialShape()
 		InitialShape = NewObject<UInitialShape>(GetOwner(), GetInitialShapesClasses()[0], NAME_None, RF_Transactional);
 	}
 
+	InitialShape->Initialize();
 	InitialShapeSceneComponent = InitialShape->CreateInitialShapeComponent(this);
 	InitialShape->UpdatePolygon(this);
 }

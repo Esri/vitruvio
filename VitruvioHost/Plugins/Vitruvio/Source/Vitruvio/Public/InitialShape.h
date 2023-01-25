@@ -132,14 +132,8 @@ public:
 	void SetPolygon(const FInitialShapePolygon& NewPolygon);
 
 	const TArray<FVector3f>& GetVertices() const;
-	virtual void Initialize(UVitruvioComponent* Component);
 	bool IsValid() const;
-
-	virtual USceneComponent* CreateInitialShapeComponent(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon)
-	{
-		unimplemented();
-		return nullptr;
-	}
+	void Initialize();
 
 	virtual USceneComponent* CreateInitialShapeComponent(UVitruvioComponent* Component)
 	{
@@ -191,7 +185,6 @@ public:
 	GENERATED_BODY()
 
 	virtual USceneComponent* CreateInitialShapeComponent(UVitruvioComponent* Component) override;
-	virtual USceneComponent* CreateInitialShapeComponent(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon) override;
 	USceneComponent* CreateInitialShapeComponent(UVitruvioComponent* Component, UStaticMesh* StaticMesh);
 	virtual void UpdatePolygon(UVitruvioComponent* Component) override;
 	void UpdateSceneComponent(UVitruvioComponent* Component) override;
@@ -204,8 +197,8 @@ public:
 #endif
 
 #if WITH_EDITORONLY_DATA
-	UPROPERTY(EditAnywhere, Category = "Vitruvio", TextExportTransient, Transient, DuplicateTransient)
-	UStaticMesh* InitialShapeMesh;
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
+	TSoftObjectPtr<UStaticMesh> InitialShapeMesh;
 #endif
 };
 
@@ -219,7 +212,6 @@ public:
 	int32 SplineApproximationPoints = 15;
 
 	virtual USceneComponent* CreateInitialShapeComponent(UVitruvioComponent* Component) override;
-	virtual USceneComponent* CreateInitialShapeComponent(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon) override;
 	USceneComponent* CreateInitialShapeComponent(UVitruvioComponent* Component, const TArray<FSplinePoint>& SplinePoints);
 	virtual void UpdatePolygon(UVitruvioComponent* Component) override;
 	virtual void UpdateSceneComponent(UVitruvioComponent* Component) override;

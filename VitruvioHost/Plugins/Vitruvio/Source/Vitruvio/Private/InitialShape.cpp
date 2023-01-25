@@ -300,7 +300,16 @@ UStaticMesh* CreateDefaultStaticMesh()
 	StaticMesh = NewObject<UStaticMesh>();
 #endif
 
-	StaticMesh->BuildFromMeshDescriptions(MeshDescriptions);
+	UStaticMesh::FBuildMeshDescriptionsParams Params;
+	Params.bCommitMeshDescription = true;
+	Params.bMarkPackageDirty = false;
+#if !WITH_EDITOR
+	Params.bFastBuild = true;
+#endif
+
+	StaticMesh->BuildFromMeshDescriptions(MeshDescriptions, Params);
+
+	check(StaticMesh->GetRenderData() && StaticMesh->GetRenderData()->IsInitialized());
 
 #if WITH_EDITOR
 	const FString PackageFileName = InitialShapeName + FPackageName::GetAssetPackageExtension();
@@ -325,19 +334,24 @@ UStaticMesh* CreateStaticMeshFromInitialShapePolygon(const FInitialShapePolygon&
 	TArray<const FMeshDescription*> MeshDescriptions;
 	MeshDescriptions.Emplace(&MeshDescription);
 
-	UStaticMesh* StaticMesh;
-#if WITH_EDITOR
-	const FString InitialShapeName = TEXT("InitialShape");
-	const FString PackageName = TEXT("/Game/Vitruvio/") + InitialShapeName;
-	UPackage* Package = CreatePackage(*PackageName);
-	const FName StaticMeshName = MakeUniqueObjectName(Package, UStaticMesh::StaticClass(), FName(InitialShapeName));
+	auto Name = MakeUniqueObjectName(GetTransientPackage(), UStaticMesh::StaticClass(), TEXT("InitialShape"));
+	UStaticMesh* StaticMesh = NewObject<UStaticMesh>(GetTransientPackage(), Name, RF_Public | RF_Standalone);
 
-	StaticMesh = NewObject<UStaticMesh>(Package, StaticMeshName, RF_Public | RF_Standalone | RF_Transactional);
-#else
-	StaticMesh = NewObject<UStaticMesh>();
+#if WITH_EDITOR
+	StaticMesh->SetNumSourceModels(MeshDescriptions.Num());
 #endif
 
-	StaticMesh->BuildFromMeshDescriptions(MeshDescriptions);
+	UStaticMesh::FBuildMeshDescriptionsParams Params;
+	Params.bCommitMeshDescription = true;
+	Params.bMarkPackageDirty = false;
+#if !WITH_EDITOR
+	Params.bFastBuild = true;
+#endif
+
+	StaticMesh->BuildFromMeshDescriptions(MeshDescriptions, Params);
+
+	check(StaticMesh->GetRenderData() && StaticMesh->GetRenderData()->IsInitialized());
+
 	return StaticMesh;
 }
 
@@ -415,9 +429,9 @@ bool UInitialShape::IsValid() const
 	return bIsPolygonValid;
 }
 
-void UInitialShape::Initialize(UVitruvioComponent* Component)
+void UInitialShape::Initialize()
 {
-	UpdatePolygon(Component);
+	SetPolygon(CreateDefaultInitialShapePolygon());
 }
 
 USceneComponent* UStaticMeshInitialShape::CreateInitialShapeComponent(UVitruvioComponent* Component)
@@ -436,12 +450,20 @@ USceneComponent* UStaticMeshInitialShape::CreateInitialShapeComponent(UVitruvioC
 		return StaticMeshComponent;
 	}
 
-	return CreateInitialShapeComponent(Component, CreateDefaultStaticMesh());
-}
+	UStaticMesh* StaticMesh = nullptr;
+#if WITH_EDITOR
+	StaticMesh = InitialShapeMesh.LoadSynchronous();
+#endif
+	if (!StaticMesh)
+	{
+		StaticMesh = CreateStaticMeshFromInitialShapePolygon(GetPolygon());
+	}
 
-USceneComponent* UStaticMeshInitialShape::CreateInitialShapeComponent(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon)
-{
-	return CreateInitialShapeComponent(Component, CreateStaticMeshFromInitialShapePolygon(InitialShapePolygon));
+#if WITH_EDITOR
+	InitialShapeMesh = StaticMesh && StaticMesh->GetOuter() != GetTransientPackage() ? StaticMesh : nullptr;
+#endif
+
+	return CreateInitialShapeComponent(Component, StaticMesh);
 }
 
 USceneComponent* UStaticMeshInitialShape::CreateInitialShapeComponent(UVitruvioComponent* Component, UStaticMesh* NewStaticMesh)
@@ -453,11 +475,7 @@ USceneComponent* UStaticMeshInitialShape::CreateInitialShapeComponent(UVitruvioC
 	}
 
 	UStaticMeshComponent* StaticMeshComponent = AttachComponent<UStaticMeshComponent>(Owner, TEXT("InitialShapeStaticMesh"));
-
 	StaticMeshComponent->SetStaticMesh(NewStaticMesh);
-#if WITH_EDITORONLY_DATA
-	InitialShapeMesh = NewStaticMesh;
-#endif
 
 	return StaticMeshComponent;
 }
@@ -488,10 +506,6 @@ void UStaticMeshInitialShape::UpdateSceneComponent(UVitruvioComponent* Component
 		{
 			UStaticMesh* NewStaticMesh = CreateStaticMeshFromInitialShapePolygon(GetPolygon());
 			StaticMeshComponent->SetStaticMesh(NewStaticMesh);
-
-#if WITH_EDITOR
-			InitialShapeMesh = NewStaticMesh;
-#endif
 		}
 	}
 }
@@ -596,7 +610,7 @@ void UStaticMeshInitialShape::PostEditChangeProperty(FPropertyChangedEvent& Prop
 			if (UVitruvioComponent* VitruvioComponent = Owner->FindComponentByClass<UVitruvioComponent>())
 			{
 				UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(VitruvioComponent->InitialShapeSceneComponent);
-				StaticMeshComponent->SetStaticMesh(InitialShapeMesh);
+				StaticMeshComponent->SetStaticMesh(InitialShapeMesh.LoadSynchronous());
 
 				// We need to fire the property changed event manually
 				for (TFieldIterator<FProperty> PropIt(StaticMeshComponent->GetClass()); PropIt; ++PropIt)
@@ -629,12 +643,7 @@ USceneComponent* USplineInitialShape::CreateInitialShapeComponent(UVitruvioCompo
 		return SplineComponent;
 	}
 
-	return CreateInitialShapeComponent(Component, CreateSplinePointsFromInitialShapePolygon(CreateDefaultInitialShapePolygon()));
-}
-
-USceneComponent* USplineInitialShape::CreateInitialShapeComponent(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon)
-{
-	return CreateInitialShapeComponent(Component, CreateSplinePointsFromInitialShapePolygon(InitialShapePolygon));
+	return CreateInitialShapeComponent(Component, CreateSplinePointsFromInitialShapePolygon(GetPolygon()));
 }
 
 USceneComponent* USplineInitialShape::CreateInitialShapeComponent(UVitruvioComponent* Component, const TArray<FSplinePoint>& SplinePoints)
