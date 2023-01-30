@@ -265,6 +265,19 @@ bool IsDefaultInitialShape(const FInitialShapePolygon& InitialShapePolygon)
 	return false;
 }
 
+void BuildMesh(const TArray<const FMeshDescription*>& MeshDescriptions, UStaticMesh* StaticMesh)
+{
+	UStaticMesh::FBuildMeshDescriptionsParams Params;
+	Params.bMarkPackageDirty = false;
+#if !WITH_EDITOR
+	Params.bFastBuild = true;
+#endif
+
+	StaticMesh->BuildFromMeshDescriptions(MeshDescriptions, Params);
+
+	check(StaticMesh->GetRenderData() && StaticMesh->GetRenderData()->IsInitialized());
+}
+
 UStaticMesh* CreateDefaultStaticMesh()
 {
 	UStaticMesh* StaticMesh;
@@ -300,16 +313,7 @@ UStaticMesh* CreateDefaultStaticMesh()
 	StaticMesh = NewObject<UStaticMesh>();
 #endif
 
-	UStaticMesh::FBuildMeshDescriptionsParams Params;
-	Params.bCommitMeshDescription = true;
-	Params.bMarkPackageDirty = false;
-#if !WITH_EDITOR
-	Params.bFastBuild = true;
-#endif
-
-	StaticMesh->BuildFromMeshDescriptions(MeshDescriptions, Params);
-
-	check(StaticMesh->GetRenderData() && StaticMesh->GetRenderData()->IsInitialized());
+	BuildMesh(MeshDescriptions, StaticMesh);
 
 #if WITH_EDITOR
 	const FString PackageFileName = InitialShapeName + FPackageName::GetAssetPackageExtension();
@@ -341,16 +345,7 @@ UStaticMesh* CreateStaticMeshFromInitialShapePolygon(const FInitialShapePolygon&
 	StaticMesh->SetNumSourceModels(MeshDescriptions.Num());
 #endif
 
-	UStaticMesh::FBuildMeshDescriptionsParams Params;
-	Params.bCommitMeshDescription = true;
-	Params.bMarkPackageDirty = false;
-#if !WITH_EDITOR
-	Params.bFastBuild = true;
-#endif
-
-	StaticMesh->BuildFromMeshDescriptions(MeshDescriptions, Params);
-
-	check(StaticMesh->GetRenderData() && StaticMesh->GetRenderData()->IsInitialized());
+	BuildMesh(MeshDescriptions, StaticMesh);
 
 	return StaticMesh;
 }
