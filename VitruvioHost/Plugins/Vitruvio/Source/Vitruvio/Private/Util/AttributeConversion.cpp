@@ -1,4 +1,4 @@
-/* Copyright 2022 Esri
+/* Copyright 2023 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -164,13 +164,10 @@ TMap<FGroupOrderKey, int> GetGlobalGroupOrderMap(const TMap<FString, URuleAttrib
 }
 
 bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribute& OtherAttribute,
-							const TMap<FGroupOrderKey, int> GlobalGroupOrderMap)
+                            const TMap<FGroupOrderKey, int> GlobalGroupOrderMap)
 {
-	auto AreStringsInAlphabeticalOrder = [](const FString A, const FString B) {
-		return A.ToLower() < B.ToLower();
-	};
-
-	auto AreImportPathsInOrder = [&](const URuleAttribute& A, const URuleAttribute& B) {
+	auto AreImportPathsInOrder = [](const URuleAttribute& A, const URuleAttribute& B)
+	{
 		// sort main rule attributes before the rest
 		if (A.ImportPath.Len() == 0 && B.ImportPath.Len() > 0)
 		{
@@ -187,10 +184,11 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 			return A.ImportOrder < B.ImportOrder;
 		}
 
-		return AreStringsInAlphabeticalOrder(A.ImportPath, B.ImportPath);
+		return A.ImportPath.Compare(B.ImportPath, ESearchCase::CaseSensitive) < 0;
 	};
 
-	auto IsChildOf = [](const URuleAttribute& Child, const URuleAttribute& Parent) {
+	auto IsChildOf = [](const URuleAttribute& Child, const URuleAttribute& Parent)
+	{
 		const size_t ParentGroupNum = Parent.Groups.Num();
 		const size_t ChildGroupNum = Child.Groups.Num();
 
@@ -211,23 +209,52 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 		return true;
 	};
 
-	auto GetFirstDifferentGroupInA = [](const URuleAttribute& A, const URuleAttribute& B) {
-		check(A.Groups.Num() == B.Groups.Num());
-		size_t i = 0;
-
-		while ((i < A.Groups.Num()) && (A.Groups[i] == B.Groups[i]))
-		{
-			i++;
-		}
-		return A.Groups[i];
-	};
-
-	auto GetGlobalGroupOrder = [&GlobalGroupOrderMap](const URuleAttribute& RuleAttribute) {
+	auto GetGlobalGroupOrder = [&GlobalGroupOrderMap](const URuleAttribute& RuleAttribute)
+	{
 		const int* GroupOrderPtr = GlobalGroupOrderMap.Find(FGroupOrderKey(RuleAttribute));
 		return (GroupOrderPtr == nullptr) ? AttributeGroupOrderNone : (*GroupOrderPtr);
 	};
 
-	auto AreAttributeGroupsInOrder = [&](const URuleAttribute& A, const URuleAttribute& B) {
+	auto AreAttributeGroupsInOrder = [](const URuleAttribute& A, const URuleAttribute& B)
+	{
+		const size_t GroupSizeA = A.Groups.Num();
+		const size_t GroupSizeB = B.Groups.Num();
+
+		for (size_t GroupIndex = 0; GroupIndex < FMath::Max(GroupSizeA, GroupSizeB); ++GroupIndex)
+		{
+			// a descendant of b
+			if (GroupIndex >= GroupSizeA)
+				return false;
+
+			// b descendant of a
+			if (GroupIndex >= GroupSizeB)
+				return true;
+
+			// difference in groups
+			if (A.Groups[GroupIndex].Equals(B.Groups[GroupIndex], ESearchCase::CaseSensitive))
+				return A.Groups[GroupIndex].Compare(B.Groups[GroupIndex], ESearchCase::CaseSensitive) < 0;
+		}
+		return false;
+	};
+
+	auto AreAttributesWithAndWithoutGroupInOrder = [&](const URuleAttribute& RuleAttributeWithGroups,
+	                                                   const URuleAttribute& RuleAttributeWithoutGroup)
+	{
+		if (!RuleAttributeWithGroups.Groups.IsEmpty() &&
+		    (RuleAttributeWithGroups.GroupOrder == RuleAttributeWithoutGroup.Order))
+			return RuleAttributeWithGroups.Groups[0].Compare(RuleAttributeWithoutGroup.DisplayName, ESearchCase::CaseSensitive) <= 0;
+
+		return GetGlobalGroupOrder(RuleAttributeWithGroups) < RuleAttributeWithoutGroup.Order;
+	};
+
+	auto AreAttributeGroupOrdersInOrder = [&](const URuleAttribute& A, const URuleAttribute& B)
+	{
+		if (B.Groups.IsEmpty())
+			return AreAttributesWithAndWithoutGroupInOrder(A, B);
+
+		if (A.Groups.IsEmpty())
+			return !AreAttributesWithAndWithoutGroupInOrder(B, A);
+
 		if (IsChildOf(A, B))
 		{
 			return false; // child A should be sorted after parent B
@@ -245,15 +272,11 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 			return (GlobalOrderA < GlobalOrderB);
 		}
 
-		// sort higher level before lower level
-		if (A.Groups.Num() != B.Groups.Num())
-		{
-			return (A.Groups.Num() < B.Groups.Num());
-		}
-		return AreStringsInAlphabeticalOrder(GetFirstDifferentGroupInA(A, B), GetFirstDifferentGroupInA(B, A));
+		return AreAttributeGroupsInOrder(A, B);
 	};
 
-	auto AreAttributesInOrder = [&](const URuleAttribute& A, const URuleAttribute& B) {
+	auto AreAttributesInOrder = [&](const URuleAttribute& A, const URuleAttribute& B)
+	{
 		if (A.ImportPath != B.ImportPath)
 		{
 			return AreImportPathsInOrder(A, B);
@@ -261,12 +284,12 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 
 		if (A.Groups != B.Groups)
 		{
-			return AreAttributeGroupsInOrder(A, B);
+			return AreAttributeGroupOrdersInOrder(A, B);
 		}
 
 		if (A.Order == B.Order)
 		{
-			return AreStringsInAlphabeticalOrder(A.Name, B.Name);
+			return A.DisplayName.Compare(B.DisplayName, ESearchCase::CaseSensitive) < 0;
 		}
 		return A.Order < B.Order;
 	};
@@ -277,9 +300,8 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 
 namespace Vitruvio
 {
-
 void UpdateAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo,
-						UObject* const Outer)
+                        UObject* const Outer)
 {
 	bool bNeedsResorting = false;
 	TMap<FString, int> ImportOrderMap = ParseImportOrderMap(RuleInfo);
@@ -341,7 +363,10 @@ void UpdateAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, const A
 	{
 		TMap<FGroupOrderKey, int> GlobalGroupOrder = GetGlobalGroupOrderMap(AttributeMapOut);
 		AttributeMapOut.ValueSort(
-			[&GlobalGroupOrder](const URuleAttribute& A, const URuleAttribute& B) { return IsAttributeBeforeOther(A, B, GlobalGroupOrder); });
+			[&GlobalGroupOrder](const URuleAttribute& A, const URuleAttribute& B)
+			{
+				return IsAttributeBeforeOther(A, B, GlobalGroupOrder);
+			});
 	}
 }
 
@@ -376,12 +401,12 @@ AttributeMapUPtr CreateAttributeMap(const TMap<FString, URuleAttribute*>& Attrib
 		else if (const UBoolArrayAttribute* BoolArrayAttribute = Cast<UBoolArrayAttribute>(Attribute))
 		{
 			AttributeMapBuilder->setBoolArray(TCHAR_TO_WCHAR(*Attribute->Name), BoolArrayAttribute->Values.GetData(),
-											  BoolArrayAttribute->Values.Num());
+			                                  BoolArrayAttribute->Values.Num());
 		}
 		else if (const UFloatArrayAttribute* FloatArrayAttribute = Cast<UFloatArrayAttribute>(Attribute))
 		{
 			AttributeMapBuilder->setFloatArray(TCHAR_TO_WCHAR(*Attribute->Name), FloatArrayAttribute->Values.GetData(),
-											   FloatArrayAttribute->Values.Num());
+			                                   FloatArrayAttribute->Values.Num());
 		}
 	}
 

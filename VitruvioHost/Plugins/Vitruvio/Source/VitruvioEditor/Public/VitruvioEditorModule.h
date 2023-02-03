@@ -1,4 +1,4 @@
-/* Copyright 2022 Esri
+/* Copyright 2023 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
 
 #include "Modules/ModuleManager.h"
 
+class UVitruvioComponent;
+
 class VitruvioEditorModule final : public IModuleInterface
 {
 public:
@@ -25,12 +27,15 @@ public:
 
 private:
 	void OnPostEngineInit();
+	void PostUndoRedo();
 	void OnMapChanged(UWorld* World, EMapChangeType ChangeType);
 	void OnGenerateCompleted(int NumWarnings, int NumErrors);
+
 	TWeakPtr<SNotificationItem> NotificationItem;
 
 	FDelegateHandle LevelViewportContextMenuVitruvioExtenderDelegateHandle;
 	FDelegateHandle GenerateCompletedDelegateHandle;
 	FDelegateHandle OnAssetReloadHandle;
 	FDelegateHandle MapChangedHandle;
+	FDelegateHandle PostUndoRedoDelegate;
 };

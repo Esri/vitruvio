@@ -1,4 +1,4 @@
-/* Copyright 2020 Esri
+/* Copyright 2023 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,12 +20,15 @@ using System.IO;
 using EpicGames.Core;
 using UnrealBuildBase;
 
-public class UnrealGeometryEncoderTarget : TargetRules
+public sealed class UnrealGeometryEncoderTarget : TargetRules
 {
 	public UnrealGeometryEncoderTarget(TargetInfo Target)
 		: base(Target)
 	{
 		Type = TargetType.Program;
+		DefaultBuildSettings = BuildSettingsVersion.V2;
+		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
+		
 		SolutionDirectory = "Programs";
 
 		LaunchModuleName = "UnrealGeometryEncoder";

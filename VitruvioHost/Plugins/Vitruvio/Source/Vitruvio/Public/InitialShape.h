@@ -1,4 +1,4 @@
-/* Copyright 2022 Esri
+/* Copyright 2023 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,16 @@ struct VITRUVIO_API FTextureCoordinateSet
 
 	UPROPERTY()
 	TArray<FVector2f> TextureCoordinates;
+
+	friend bool operator==(const FTextureCoordinateSet& Lhs, const FTextureCoordinateSet& RHS)
+	{
+		return Lhs.TextureCoordinates == RHS.TextureCoordinates;
+	}
+
+	friend bool operator!=(const FTextureCoordinateSet& Lhs, const FTextureCoordinateSet& RHS)
+	{
+		return !(Lhs == RHS);
+	}
 };
 
 USTRUCT()
@@ -41,6 +51,16 @@ struct VITRUVIO_API FInitialShapeHole
 
 	UPROPERTY()
 	TArray<int32> Indices;
+
+	friend bool operator==(const FInitialShapeHole& Lhs, const FInitialShapeHole& RHS)
+	{
+		return Lhs.Indices == RHS.Indices;
+	}
+
+	friend bool operator!=(const FInitialShapeHole& Lhs, const FInitialShapeHole& RHS)
+	{
+		return !(Lhs == RHS);
+	}
 };
 
 USTRUCT()
@@ -53,6 +73,16 @@ struct VITRUVIO_API FInitialShapeFace
 
 	UPROPERTY()
 	TArray<FInitialShapeHole> Holes;
+
+	friend bool operator==(const FInitialShapeFace& Lhs, const FInitialShapeFace& RHS)
+	{
+		return Lhs.Indices == RHS.Indices && Lhs.Holes == RHS.Holes;
+	}
+
+	friend bool operator!=(const FInitialShapeFace& Lhs, const FInitialShapeFace& RHS)
+	{
+		return !(Lhs == RHS);
+	}
 };
 
 USTRUCT()
@@ -70,6 +100,16 @@ struct VITRUVIO_API FInitialShapePolygon
 	TArray<FTextureCoordinateSet> TextureCoordinateSets;
 
 	void FixOrientation();
+
+	friend bool operator==(const FInitialShapePolygon& Lhs, const FInitialShapePolygon& RHS)
+	{
+		return Lhs.Faces == RHS.Faces && Lhs.Vertices == RHS.Vertices && Lhs.TextureCoordinateSets == RHS.TextureCoordinateSets;
+	}
+
+	friend bool operator!=(const FInitialShapePolygon& Lhs, const FInitialShapePolygon& RHS)
+	{
+		return !(Lhs == RHS);
+	}
 };
 
 UCLASS(Abstract)
@@ -80,15 +120,8 @@ class VITRUVIO_API UInitialShape : public UObject
 	UPROPERTY()
 	FInitialShapePolygon Polygon;
 
-protected:
 	UPROPERTY()
-	bool bIsValid;
-
-	UPROPERTY()
-	USceneComponent* InitialShapeSceneComponent;
-
-	UPROPERTY()
-	UVitruvioComponent* VitruvioComponent;
+	bool bIsPolygonValid = false;
 
 public:
 	const FInitialShapePolygon& GetPolygon() const
@@ -96,28 +129,26 @@ public:
 		return Polygon;
 	}
 
+	void SetPolygon(const FInitialShapePolygon& NewPolygon);
+
 	const TArray<FVector3f>& GetVertices() const;
+	bool IsValid() const;
+	void Initialize();
 
-	bool IsValid() const
+	virtual USceneComponent* CreateInitialShapeComponent(UVitruvioComponent* Component)
 	{
-		return bIsValid;
+		unimplemented();
+		return nullptr;
 	}
 
-	USceneComponent* GetComponent() const
-	{
-		return InitialShapeSceneComponent;
-	}
-
-	void SetPolygon(const FInitialShapePolygon& InFaces);
-
-	virtual void Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon)
+	virtual void UpdatePolygon(UVitruvioComponent* Component)
 	{
 		unimplemented();
 	}
 
-	virtual void Initialize(UVitruvioComponent* Component)
+	virtual void UpdateSceneComponent(UVitruvioComponent* Component)
 	{
-		VitruvioComponent = Component;
+		unimplemented();
 	}
 
 	virtual bool CanConstructFrom(AActor* Owner) const
@@ -131,11 +162,6 @@ public:
 		unimplemented();
 		return nullptr;
 	}
-
-	virtual void SetHidden(bool bHidden) {}
-
-	virtual bool CanDestroy();
-	virtual void Uninitialize();
 
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent)
@@ -158,12 +184,12 @@ class VITRUVIO_API UStaticMeshInitialShape : public UInitialShape
 public:
 	GENERATED_BODY()
 
-	virtual void Initialize(UVitruvioComponent* Component) override;
-	virtual void Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon) override;
-	void Initialize(UVitruvioComponent* Component, UStaticMesh* StaticMesh);
+	virtual USceneComponent* CreateInitialShapeComponent(UVitruvioComponent* Component) override;
+	USceneComponent* CreateInitialShapeComponent(UVitruvioComponent* Component, UStaticMesh* StaticMesh);
+	virtual void UpdatePolygon(UVitruvioComponent* Component) override;
+	void UpdateSceneComponent(UVitruvioComponent* Component) override;
 	virtual bool CanConstructFrom(AActor* Owner) const override;
 	virtual USceneComponent* CopySceneComponent(AActor* OldActor, AActor* NewActor) const override;
-	virtual void SetHidden(bool bHidden) override;
 
 #if WITH_EDITOR
 	virtual bool IsRelevantProperty(UObject* Object, const FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -171,8 +197,8 @@ public:
 #endif
 
 #if WITH_EDITORONLY_DATA
-	UPROPERTY(EditAnywhere, Category = "Vitruvio", TextExportTransient, Transient, DuplicateTransient)
-	UStaticMesh* InitialShapeMesh;
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
+	TSoftObjectPtr<UStaticMesh> InitialShapeMesh;
 #endif
 };
 
@@ -185,9 +211,10 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Vitruvio", Meta = (UIMin = 5, UIMax = 50))
 	int32 SplineApproximationPoints = 15;
 
-	virtual void Initialize(UVitruvioComponent* Component) override;
-	virtual void Initialize(UVitruvioComponent* Component, const FInitialShapePolygon& InitialShapePolygon) override;
-	void Initialize(UVitruvioComponent* Component, const TArray<FSplinePoint>& SplinePoints);
+	virtual USceneComponent* CreateInitialShapeComponent(UVitruvioComponent* Component) override;
+	USceneComponent* CreateInitialShapeComponent(UVitruvioComponent* Component, const TArray<FSplinePoint>& SplinePoints);
+	virtual void UpdatePolygon(UVitruvioComponent* Component) override;
+	virtual void UpdateSceneComponent(UVitruvioComponent* Component) override;
 	virtual bool CanConstructFrom(AActor* Owner) const override;
 	virtual USceneComponent* CopySceneComponent(AActor* OldActor, AActor* NewActor) const override;
 
