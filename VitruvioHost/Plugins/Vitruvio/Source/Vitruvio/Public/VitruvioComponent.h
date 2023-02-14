@@ -21,7 +21,10 @@
 
 #include "CoreMinimal.h"
 #include "GenerateCompletedCallbackProxy.h"
+#include "GeneratedModelHISMComponent.h"
+#include "GeneratedModelStaticMeshComponent.h"
 #include "InitialShape.h"
+#include "MaterialReplacement.h"
 #include "VitruvioTypes.h"
 
 #include "VitruvioComponent.generated.h"
@@ -68,6 +71,7 @@ class VITRUVIO_API UVitruvioComponent : public UActorComponent
 	bool bAttributesReady = false;
 
 	bool bIsGenerating = false;
+	bool bHasGeneratedModel = false;
 
 	bool bNotifyAttributeChange = false;
 
@@ -81,6 +85,10 @@ public:
 	/** Automatically hide initial shape after generation. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Hide Initial Shape after Generation", Category = "Vitruvio")
 	bool HideAfterGeneration = false;
+
+	/** The material replacement asset which defines how materials are replaced after generating a model. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vitruvio")
+	UMaterialReplacementAsset* MaterialReplacement;
 
 	/** Default parent material for opaque geometry. */
 	UPROPERTY(EditAnywhere, DisplayName = "Opaque Parent", Category = "Vitruvio Default Materials")
@@ -310,7 +318,16 @@ public:
 	void RemoveGeneratedMeshes();
 
 	/* Returns whether the attributes are ready. */
-	bool GetAttributesReady();
+	bool GetAttributesReady() const;
+
+	/* Returns whether this component has a generated model */
+	bool HasGeneratedModel() const;
+
+	/* Returns the generated model component */
+	UGeneratedModelStaticMeshComponent* GetGeneratedModelComponent() const;
+
+	/* Returns the generated model HISM components */
+	TArray<UGeneratedModelHISMComponent*> GetGeneratedModelHISMComponents() const;
 
 	/**
 	 * Evaluate rule attributes.
@@ -403,7 +420,7 @@ private:
 
 	FConvertedGenerateResult BuildResult(FGenerateResultDescription& GenerateResult,
 										 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-										 TMap<FString, Vitruvio::FTextureData>& TextureCache);
+										 TMap<FString, Vitruvio::FTextureData>& TextureCache) const;
 
 #if WITH_EDITOR
 	FDelegateHandle PropertyChangeDelegate;

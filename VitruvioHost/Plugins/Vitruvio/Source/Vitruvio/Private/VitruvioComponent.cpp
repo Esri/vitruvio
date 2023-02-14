@@ -325,6 +325,26 @@ FString UniqueComponentName(const FString& Name, TMap<FString, int32>& UsedNames
 	return CurrentName;
 }
 
+void ApplyMaterialReplacements(UStaticMeshComponent* StaticMeshComponent, UMaterialReplacementAsset* Replacement)
+{
+	if (!Replacement)
+	{
+		return;
+	}
+
+	for (int32 MaterialIndex = 0; MaterialIndex < StaticMeshComponent->GetNumMaterials(); ++MaterialIndex)
+	{
+		const FName MaterialSlotName = StaticMeshComponent->GetMaterialSlotNames()[MaterialIndex];
+		for (const FMaterialReplacementData& ReplacementData : Replacement->Replacements)
+		{
+			if (MaterialSlotName == ReplacementData.SourceMaterialSlotName)
+			{
+				StaticMeshComponent->SetMaterial(MaterialIndex, ReplacementData.ReplacementMaterial);
+			}
+		}
+	}
+}
+
 } // namespace
 
 UVitruvioComponent::FOnHierarchyChanged UVitruvioComponent::OnHierarchyChanged;
@@ -614,6 +634,14 @@ void UVitruvioComponent::ProcessGenerateQueue()
 			VitruvioModelComponent->SetStaticMesh(ConvertedResult.ShapeMesh->GetStaticMesh());
 			VitruvioModelComponent->SetCollisionData(ConvertedResult.ShapeMesh->GetCollisionData());
 			CreateCollision(ConvertedResult.ShapeMesh->GetStaticMesh(), VitruvioModelComponent, GenerateCollision);
+
+			// Reset Material replacements
+			for (int32 MaterialIndex = 0; MaterialIndex < VitruvioModelComponent->GetNumMaterials(); ++MaterialIndex)
+			{
+				VitruvioModelComponent->SetMaterial(MaterialIndex, VitruvioModelComponent->GetStaticMesh()->GetMaterial(MaterialIndex));
+			}
+
+			ApplyMaterialReplacements(VitruvioModelComponent, MaterialReplacement);
 		}
 		else
 		{
@@ -652,11 +680,13 @@ void UVitruvioComponent::ProcessGenerateQueue()
 			InitialShapeSceneComponent->GetOwner()->AddOwnedComponent(InstancedComponent);
 			InstancedComponent->OnComponentCreated();
 			InstancedComponent->RegisterComponent();
+
+			ApplyMaterialReplacements(InstancedComponent, MaterialReplacement);
 		}
 
 		OnHierarchyChanged.Broadcast(this);
 
-		HasGeneratedMesh = true;
+		bHasGeneratedModel = true;
 
 		SetInitialShapeVisible(!HideAfterGeneration);
 
@@ -744,18 +774,68 @@ void UVitruvioComponent::RemoveGeneratedMeshes()
 		Child->DestroyComponent();
 	}
 
-	HasGeneratedMesh = false;
+	bHasGeneratedModel = false;
 	SetInitialShapeVisible(true);
 }
 
-bool UVitruvioComponent::GetAttributesReady()
+bool UVitruvioComponent::GetAttributesReady() const
 {
 	return bAttributesReady;
 }
 
+bool UVitruvioComponent::HasGeneratedModel() const
+{
+	return bHasGeneratedModel;
+}
+
+UGeneratedModelStaticMeshComponent* UVitruvioComponent::GetGeneratedModelComponent() const
+{
+	if (!InitialShapeSceneComponent)
+	{
+		return nullptr;
+	}
+
+	UGeneratedModelStaticMeshComponent* VitruvioModelComponent = nullptr;
+
+	TArray<USceneComponent*> InitialShapeChildComponents;
+	InitialShapeSceneComponent->GetChildrenComponents(false, InitialShapeChildComponents);
+	for (USceneComponent* Component : InitialShapeChildComponents)
+	{
+		if (Component->IsA(UGeneratedModelStaticMeshComponent::StaticClass()))
+		{
+			VitruvioModelComponent = Cast<UGeneratedModelStaticMeshComponent>(Component);
+			break;
+		}
+	}
+
+	return VitruvioModelComponent;
+}
+
+TArray<UGeneratedModelHISMComponent*> UVitruvioComponent::GetGeneratedModelHISMComponents() const
+{
+	if (!InitialShapeSceneComponent)
+	{
+		return {};
+	}
+
+	TArray<UGeneratedModelHISMComponent*> VitruvioModelHISMComponents;
+	TArray<USceneComponent*> InitialShapeChildComponents;
+
+	InitialShapeSceneComponent->GetChildrenComponents(true, InitialShapeChildComponents);
+	for (USceneComponent* Component : InitialShapeChildComponents)
+	{
+		if (Component->IsA(UGeneratedModelHISMComponent::StaticClass()))
+		{
+			VitruvioModelHISMComponents.Add(Cast<UGeneratedModelHISMComponent>(Component));
+		}
+	}
+
+	return VitruvioModelHISMComponents;
+}
+
 FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescription& GenerateResult,
 														 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-														 TMap<FString, Vitruvio::FTextureData>& TextureCache)
+														 TMap<FString, Vitruvio::FTextureData>& TextureCache) const
 {
 	// build all meshes
 	for (auto& IdAndMesh : GenerateResult.Meshes)
@@ -771,12 +851,12 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 		auto VitruvioMesh = GenerateResult.Meshes[Instance.Key.PrototypeId];
 		FString MeshName = GenerateResult.Names[Instance.Key.PrototypeId];
 		TArray<UMaterialInstanceDynamic*> OverrideMaterials;
+		TMap<FString, int32> UniqueMaterialNames;
 		for (size_t MaterialIndex = 0; MaterialIndex < Instance.Key.MaterialOverrides.Num(); ++MaterialIndex)
 		{
 			const Vitruvio::FMaterialAttributeContainer& MaterialContainer = Instance.Key.MaterialOverrides[MaterialIndex];
-			FName MaterialName = FName(MaterialContainer.Name);
 			OverrideMaterials.Add(CacheMaterial(OpaqueParent, MaskedParent, TranslucentParent, TextureCache, MaterialCache, MaterialContainer,
-												VitruvioMesh->GetStaticMesh()));
+												UniqueMaterialNames, VitruvioMesh->GetStaticMesh()));
 		}
 
 		Instances.Add({MeshName, VitruvioMesh, OverrideMaterials, Instance.Value});
@@ -909,10 +989,15 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, HideAfterGeneration))
 		{
-			SetInitialShapeVisible(!(HideAfterGeneration && HasGeneratedMesh));
+			SetInitialShapeVisible(!(HideAfterGeneration && bHasGeneratedModel));
 		}
 
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateAutomatically))
+		{
+			bComponentPropertyChanged = true;
+		}
+
+		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, MaterialReplacement))
 		{
 			bComponentPropertyChanged = true;
 		}

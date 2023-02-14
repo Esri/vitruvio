@@ -44,7 +44,7 @@ public class VitruvioEditor : ModuleRules
 				"InputCore",
 				"UnrealEd",
 				"EditorStyle",
-				"PropertyEditor"
+				"PropertyEditor",
 			}
 		);
 		
@@ -54,6 +54,7 @@ public class VitruvioEditor : ModuleRules
 				"SlateCore",
 				"Slate",
 				"AppFramework",
+				"UMGEditor",
 				"Vitruvio",
 			}
 		);

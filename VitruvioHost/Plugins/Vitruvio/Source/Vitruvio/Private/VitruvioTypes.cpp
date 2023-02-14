@@ -93,35 +93,6 @@ FLinearColor GetLinearColor(const prt::AttributeMap* MaterialAttributes, wchar_t
 
 } // namespace
 
-/**
- * Hash function for TMap. Requires that the Key K and Value V support GetTypeHash.
- */
-template <typename K, typename V>
-uint32 GetMapHash(const TMap<K, V>& In)
-{
-	uint32 CombinedHash = 0;
-	for (const auto& Entry : In)
-	{
-		const uint32 EntryHash = HashCombine(GetTypeHash(Entry.Key), GetTypeHash(Entry.Value));
-		CombinedHash += EntryHash;
-	}
-	return CombinedHash;
-}
-
-/**
- * Hash function for TArray. Requires that the Value V supports GetTypeHash.
- */
-template <typename V>
-uint32 GetArrayHash(const TArray<V>& In)
-{
-	uint32 CombinedHash = 0;
-	for (const auto& Entry : In)
-	{
-		CombinedHash += GetTypeHash(Entry);
-	}
-	return CombinedHash;
-}
-
 namespace Vitruvio
 {
 FMaterialAttributeContainer::FMaterialAttributeContainer(const prt::AttributeMap* AttributeMap)

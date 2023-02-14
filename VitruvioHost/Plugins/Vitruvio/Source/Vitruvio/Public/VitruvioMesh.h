@@ -20,7 +20,8 @@
 UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
 										TMap<FString, Vitruvio::FTextureData>& TextureCache,
 										TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-										const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, UObject* Outer);
+										const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, TMap<FString, int32>& UniqueMaterialNames,
+										UObject* Outer);
 
 struct FCollisionData
 {
