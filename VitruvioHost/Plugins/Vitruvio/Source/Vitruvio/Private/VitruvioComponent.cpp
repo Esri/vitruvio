@@ -656,7 +656,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 
 		OnHierarchyChanged.Broadcast(this);
 
-		HasGeneratedMesh = true;
+		bHasGeneratedModel = true;
 
 		SetInitialShapeVisible(!HideAfterGeneration);
 
@@ -744,13 +744,41 @@ void UVitruvioComponent::RemoveGeneratedMeshes()
 		Child->DestroyComponent();
 	}
 
-	HasGeneratedMesh = false;
+	bHasGeneratedModel = false;
 	SetInitialShapeVisible(true);
 }
 
-bool UVitruvioComponent::GetAttributesReady()
+bool UVitruvioComponent::GetAttributesReady() const
 {
 	return bAttributesReady;
+}
+
+bool UVitruvioComponent::HasGeneratedModel() const
+{
+	return bHasGeneratedModel;
+}
+
+UGeneratedModelStaticMeshComponent* UVitruvioComponent::GetGeneratedModelComponent() const
+{
+	if (!InitialShapeSceneComponent)
+	{
+		return nullptr;
+	}
+
+	UGeneratedModelStaticMeshComponent* VitruvioModelComponent = nullptr;
+
+	TArray<USceneComponent*> InitialShapeChildComponents;
+	InitialShapeSceneComponent->GetChildrenComponents(false, InitialShapeChildComponents);
+	for (USceneComponent* Component : InitialShapeChildComponents)
+	{
+		if (Component->IsA(UGeneratedModelStaticMeshComponent::StaticClass()))
+		{
+			VitruvioModelComponent = Cast<UGeneratedModelStaticMeshComponent>(Component);
+			break;
+		}
+	}
+
+	return VitruvioModelComponent;
 }
 
 FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescription& GenerateResult,
@@ -909,7 +937,7 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, HideAfterGeneration))
 		{
-			SetInitialShapeVisible(!(HideAfterGeneration && HasGeneratedMesh));
+			SetInitialShapeVisible(!(HideAfterGeneration && bHasGeneratedModel));
 		}
 
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateAutomatically))

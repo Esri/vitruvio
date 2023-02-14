@@ -25,6 +25,7 @@
 #include "IPropertyRowGenerator.h"
 #include "ISinglePropertyView.h"
 #include "LevelEditor.h"
+#include "MaterialReplacementDialog.h"
 #include "Widgets/Colors/SColorBlock.h"
 #include "Widgets/Colors/SColorPicker.h"
 #include "Widgets/Input/SCheckBox.h"
@@ -531,6 +532,37 @@ void AddGenerateButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent*
 	// clang-format on
 }
 
+void OpenReplacementDialog(UVitruvioComponent* VitruvioComponent)
+{
+	UGeneratedModelStaticMeshComponent* GeneratedModel = VitruvioComponent->GetGeneratedModelComponent();
+	FMaterialReplacementDialog::OpenDialog(GeneratedModel);
+}
+
+void AddMaterialReplacementButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioComponent)
+{
+	// clang-format off
+	RootCategory.AddCustomRow(FText::FromString(L"Replace Materials"), true)
+	.WholeRowContent()
+	.VAlign(VAlign_Center)
+	.HAlign(HAlign_Center)
+	[
+		SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot()
+		[
+			SNew(SButton)
+			.Text(FText::FromString("Replace Materials"))
+			.ContentPadding(FMargin(30, 2))
+			.OnClicked_Lambda([VitruvioComponent]()
+			{
+				OpenReplacementDialog(VitruvioComponent);
+				return FReply::Handled();
+			})
+		]
+		.VAlign(VAlign_Fill)
+	];
+	// clang-format on
+}
+
 } // namespace
 
 template <typename T>
@@ -771,6 +803,8 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		{
 			AddGenerateButton(RootCategory, VitruvioComponent);
 		}
+
+		AddMaterialReplacementButton(RootCategory, VitruvioComponent);
 
 		if (VitruvioComponent->InitialShape && VitruvioComponent->CanChangeInitialShapeType())
 		{
