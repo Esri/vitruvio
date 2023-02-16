@@ -1018,12 +1018,13 @@ void UVitruvioComponent::EvaluateRuleAttributes(bool ForceRegenerate, UGenerateC
 	AttributesResult.Result.Next([this, CallbackProxy, ForceRegenerate](const FAttributeMapResult::ResultType& Result) {
 		FScopeLock Lock(&Result.Token->Lock);
 
-		if (Result.Token->IsInvalid())
+		EvalAttributesInvalidationToken.Reset();
+
+		if (Result.Token->IsInvalid() || !Result.Value)
 		{
 			return;
 		}
 
-		EvalAttributesInvalidationToken.Reset();
 		AttributesEvaluationQueue.Enqueue({Result.Value, ForceRegenerate, CallbackProxy});
 	});
 }

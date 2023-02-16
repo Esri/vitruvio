@@ -14,9 +14,9 @@
  */
 
 #include "VitruvioEditorModule.h"
-
 #include "ChooseRulePackageDialog.h"
 #include "RulePackageAssetTypeActions.h"
+#include "UnrealLogHandler.h"
 #include "VitruvioActor.h"
 #include "VitruvioComponentDetails.h"
 #include "VitruvioCooker.h"
@@ -176,6 +176,8 @@ void VitruvioEditorModule::StartupModule()
 	MapChangedHandle = LevelEditor.OnMapChanged().AddRaw(this, &VitruvioEditorModule::OnMapChanged);
 
 	PostUndoRedoDelegate = FEditorDelegates::PostUndoRedo.AddRaw(this, &VitruvioEditorModule::PostUndoRedo);
+
+	GLog->AddOutputDevice(this);
 }
 
 void VitruvioEditorModule::ShutdownModule()
@@ -192,6 +194,7 @@ void VitruvioEditorModule::ShutdownModule()
 		});
 
 	FCoreDelegates::OnPostEngineInit.RemoveAll(this);
+
 	VitruvioModule::Get().OnAllGenerateCompleted.Remove(GenerateCompletedDelegateHandle);
 	if (GEditor)
 	{
@@ -202,6 +205,11 @@ void VitruvioEditorModule::ShutdownModule()
 	LevelEditor.OnMapChanged().Remove(MapChangedHandle);
 
 	FEditorDelegates::PostUndoRedo.Remove(PostUndoRedoDelegate);
+
+	if (GLog)
+	{
+		GLog->RemoveOutputDevice(this);
+	}
 }
 
 void VitruvioEditorModule::OnPostEngineInit()
@@ -287,6 +295,14 @@ void VitruvioEditorModule::OnGenerateCompleted(int NumWarnings, int NumErrors)
 		NotificationItem.Reset();
 	}
 	NotificationItem = FSlateNotificationManager::Get().AddNotification(Info);
+}
+
+void VitruvioEditorModule::Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category)
+{
+	if (Category == UnrealPrtLog.GetCategoryName() && Verbosity == ELogVerbosity::Error)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("PRT ERROR"))
+	}
 }
 
 #undef LOCTEXT_NAMESPACE

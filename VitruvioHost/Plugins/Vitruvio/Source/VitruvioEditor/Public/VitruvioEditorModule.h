@@ -19,7 +19,7 @@
 
 class UVitruvioComponent;
 
-class VitruvioEditorModule final : public IModuleInterface
+class VitruvioEditorModule final : public IModuleInterface, public FOutputDevice
 {
 public:
 	void StartupModule() override;
@@ -31,6 +31,10 @@ private:
 	void OnMapChanged(UWorld* World, EMapChangeType ChangeType);
 	void OnGenerateCompleted(int NumWarnings, int NumErrors);
 
+public:
+	virtual void Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category) override;
+
+private:
 	TWeakPtr<SNotificationItem> NotificationItem;
 
 	FDelegateHandle LevelViewportContextMenuVitruvioExtenderDelegateHandle;

@@ -415,8 +415,14 @@ FGenerateResultDescription VitruvioModule::Generate(const FInitialShapePolygon& 
 	const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
 	const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
 
-	const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
-	const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
+	prt::Status InfoStatus;
+	const RuleFileInfoUPtr RuleInfo(prt::createRuleFileInfo(RuleFileUri, PrtCache.get(), &InfoStatus));
+	if (!RuleInfo || InfoStatus != prt::STATUS_OK)
+	{
+		UE_LOG(LogUnrealPrt, Error, TEXT("Could not get rule file info from rule file %s"), RuleFileUri)
+	}
+
+	const std::wstring StartRule = prtu::detectStartRule(RuleInfo);
 
 	InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), RandomSeed, L"", Attributes.get(), ResolveMap.get());
 
@@ -505,19 +511,18 @@ FAttributeMapResult VitruvioModule::EvaluateRuleAttributesAsync(const FInitialSh
 		const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
 		const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
 
-		const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
-		const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
-
 		prt::Status InfoStatus;
 		RuleFileInfoUPtr RuleInfo(prt::createRuleFileInfo(RuleFileUri, PrtCache.get(), &InfoStatus));
 		if (!RuleInfo || InfoStatus != prt::STATUS_OK)
 		{
-			UE_LOG(LogUnrealPrt, Error, TEXT("could not get rule file info from rule file %s"), RuleFileUri)
+			UE_LOG(LogUnrealPrt, Error, TEXT("Could not get rule file info from rule file %s"), RuleFileUri)
 			return FAttributeMapResult::ResultType{
 				InvalidationToken,
 				nullptr,
 			};
 		}
+
+		const std::wstring StartRule = prtu::detectStartRule(RuleInfo);
 
 		AttributeMapUPtr DefaultAttributeMap(
 			EvaluateRuleAttributes(RuleFile.c_str(), StartRule.c_str(), std::move(Attributes), ResolveMap, InitialShape, PrtCache.get(), RandomSeed));
@@ -563,6 +568,7 @@ TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(URulePackage* const 
 
 	if (!Initialized)
 	{
+		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
 		Promise.SetValue({});
 		return Future;
 	}
