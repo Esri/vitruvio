@@ -497,10 +497,12 @@ SerializedGeometry serializeGeometry(const prtx::GeometryPtrVector& geometries, 
 				sg.faceVertexCounts.push_back(vtxCnt);
 				const uint32_t* vtxIdx = mesh->getFaceVertexIndices(fi);
 				const uint32_t* nrmIdx = mesh->getFaceVertexNormalIndices(fi);
+				const size_t nrmCnt = mesh->getFaceVertexNormalCount(fi);
 				for (uint32_t vi = 0; vi < vtxCnt; vi++)
 				{
 					sg.vertexIndices.push_back(vertexIndexBase + vtxIdx[vi]);
-					sg.normalIndices.push_back(normalIndexBase + nrmIdx[vi]);
+					if (nrmCnt > vi && nrmIdx != nullptr)
+						sg.normalIndices.push_back(normalIndexBase + nrmIdx[vi]);
 				}
 			}
 
