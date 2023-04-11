@@ -51,7 +51,8 @@ public class Vitruvio : ModuleRules
 				"ImageCore",
 				"PRT",
 				"UnrealGeometryEncoderLib",
-				"GeometryCore"
+				"GeometryCore", 
+				"PCG"
 			}
 		);
 		

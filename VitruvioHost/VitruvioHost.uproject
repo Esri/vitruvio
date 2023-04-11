@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.1",
+	"EngineAssociation": "5.2",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -16,7 +16,8 @@
 	"Plugins": [
 		{
 			"Name": "Vitruvio",
-			"Enabled": true
+			"Enabled": true,
+			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/9bf931969c174491bd9a7ca517a40653"
 		},
 		{
 			"Name": "SteamVR",
@@ -27,6 +28,10 @@
 				"Linux",
 				"Mac"
 			]
+		},
+		{
+			"Name": "PCG",
+			"Enabled": true
 		}
 	]
 }
