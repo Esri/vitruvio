@@ -22,8 +22,8 @@
 // TODO get version when we automatically download PRT from github and set in build script
 namespace
 {
-const int VERSION_MAJOR = 2;
-const int VERSION_MINOR = 7;
+const int VERSION_MAJOR = 3;
+const int VERSION_MINOR = 0;
 } // namespace
 
 extern "C"
