@@ -265,11 +265,17 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 	}
 }
 
-TMap<FString, FReport> ExtractReports(const prt::AttributeMap* reports)
+void UnrealCallbacks::addReport(const prt::AttributeMap* reports)
 {
+	if (!reports)
+	{
+		UE_LOG(LogUnrealCallbacks, Warning, TEXT("Trying to add empty report, ignoring."));
+		return;
+	}
+
 	TMap<FString, FReport> ReportMap;
 	size_t KeyCount = 0;
-	auto Keys = reports->getKeys(&KeyCount);
+	const auto Keys = reports->getKeys(&KeyCount);
 	ReportMap.Reserve(KeyCount);
 
 	for (size_t i = 0; i < KeyCount; ++i)
@@ -303,18 +309,8 @@ TMap<FString, FReport> ExtractReports(const prt::AttributeMap* reports)
 
 		ReportMap.Add(Report.Name, Report);
 	}
-	return ReportMap;
-}
 
-void UnrealCallbacks::addReport(const prt::AttributeMap* reports)
-{
-	if (!reports)
-	{
-		UE_LOG(LogUnrealCallbacks, Warning, TEXT("Trying to add empty report, ignoring."));
-		return;
-	}
-
-	Reports = ExtractReports(reports);
+	Reports = ReportMap;
 }
 
 void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform, const prt::AttributeMap** instanceMaterials,
