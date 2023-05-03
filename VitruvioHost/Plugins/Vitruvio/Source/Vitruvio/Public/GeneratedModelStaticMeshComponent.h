@@ -25,34 +25,4 @@ UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class VITRUVIO_API UGeneratedModelStaticMeshComponent : public UStaticMeshComponent, public IInterface_CollisionDataProvider
 {
 	GENERATED_BODY()
-
-	virtual bool GetPhysicsTriMeshData(FTriMeshCollisionData* TriCollisionData, bool InUseAllTriData) override
-	{
-		if (!CollisionData.IsValid())
-		{
-			return false;
-		}
-
-		TriCollisionData->Indices = CollisionData.Indices;
-		TArray<uint16> MaterialIndices;
-		MaterialIndices.SetNumZeroed(CollisionData.Indices.Num());
-		TriCollisionData->MaterialIndices = MaterialIndices;
-		TriCollisionData->Vertices = CollisionData.Vertices;
-		TriCollisionData->bFlipNormals = true;
-		return true;
-	}
-
-	virtual bool ContainsPhysicsTriMeshData(bool InUseAllTriData) const override
-	{
-		return CollisionData.IsValid();
-	}
-
-public:
-	void SetCollisionData(const FCollisionData& InCollisionData)
-	{
-		CollisionData = InCollisionData;
-	}
-
-private:
-	FCollisionData CollisionData;
 };

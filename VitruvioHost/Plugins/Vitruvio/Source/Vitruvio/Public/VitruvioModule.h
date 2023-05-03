@@ -203,16 +203,6 @@ public:
 		return TextureCache;
 	}
 
-	/**
-	 * Registers a generated mesh to keep it from being garbage collected.
-	 */
-	VITRUVIO_API void RegisterMesh(UStaticMesh* StaticMesh);
-
-	/**
-	 * Unregisters a generated mesh and therefore allows the garbage collector to delete it if it not referenced anywhere else.
-	 */
-	VITRUVIO_API void UnregisterMesh(UStaticMesh* StaticMesh);
-
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnGenerateCompleted, int);
 
 	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnAllGenerateCompleted, int, int);
@@ -230,7 +220,6 @@ public:
 	void AddReferencedObjects(FReferenceCollector& Collector) override
 	{
 		Collector.AddReferencedObjects(MaterialCache);
-		Collector.AddReferencedObjects(RegisteredMeshes);
 	}
 
 	FString GetReferencerName() const override
@@ -271,9 +260,6 @@ private:
 	TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*> MaterialCache;
 	TMap<FString, Vitruvio::FTextureData> TextureCache;
 	FMeshCache MeshCache;
-
-	FCriticalSection RegisterMeshLock;
-	TSet<UStaticMesh*> RegisteredMeshes;
 
 	TFuture<ResolveMapSPtr> LoadResolveMapAsync(URulePackage* RulePackage) const;
 	void InitializePrt();

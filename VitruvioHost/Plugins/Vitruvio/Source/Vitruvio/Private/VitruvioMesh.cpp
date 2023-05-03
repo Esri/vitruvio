@@ -38,19 +38,6 @@ UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* Mask
 	return Material;
 }
 
-FVitruvioMesh::~FVitruvioMesh()
-{
-	if (IsEngineExitRequested())
-	{
-		return;
-	}
-	VitruvioModule* VitruvioModule = VitruvioModule::GetUnchecked();
-	if (StaticMesh && VitruvioModule)
-	{
-		VitruvioModule->UnregisterMesh(StaticMesh);
-	}
-}
-
 void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
 						  TMap<FString, Vitruvio::FTextureData>& TextureCache, UMaterial* OpaqueParent, UMaterial* MaskedParent,
 						  UMaterial* TranslucentParent)

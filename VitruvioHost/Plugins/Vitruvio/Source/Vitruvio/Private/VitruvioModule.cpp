@@ -544,18 +544,6 @@ void VitruvioModule::EvictFromResolveMapCache(URulePackage* RulePackage)
 	PrtCache->flushAll();
 }
 
-void VitruvioModule::RegisterMesh(UStaticMesh* StaticMesh)
-{
-	FScopeLock Lock(&RegisterMeshLock);
-	RegisteredMeshes.Add(StaticMesh);
-}
-
-void VitruvioModule::UnregisterMesh(UStaticMesh* StaticMesh)
-{
-	FScopeLock Lock(&RegisterMeshLock);
-	RegisteredMeshes.Remove(StaticMesh);
-}
-
 TFuture<ResolveMapSPtr> VitruvioModule::LoadResolveMapAsync(URulePackage* const RulePackage) const
 {
 	TPromise<ResolveMapSPtr> Promise;

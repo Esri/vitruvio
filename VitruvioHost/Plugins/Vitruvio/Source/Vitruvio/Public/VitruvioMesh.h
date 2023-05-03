@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "DynamicMesh/DynamicMesh3.h"
 #include "VitruvioTypes.h"
 
 UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
@@ -22,34 +23,18 @@ UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* Mask
 										TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
 										const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, UObject* Outer);
 
-struct FCollisionData
-{
-	TArray<FTriIndices> Indices;
-	TArray<FVector3f> Vertices;
-
-	bool IsValid() const
-	{
-		return Indices.Num() > 0 && Vertices.Num() > 0;
-	}
-};
-
 class FVitruvioMesh
 {
 	FString Uri;
 
-	FMeshDescription MeshDescription;
+	UE::Geometry::FDynamicMesh3* DynamicMesh;
 	TArray<Vitruvio::FMaterialAttributeContainer> Materials;
 
-	UStaticMesh* StaticMesh;
-	FCollisionData CollisionData;
-
 public:
-	FVitruvioMesh(const FString& Uri, const FMeshDescription& MeshDescription, const TArray<Vitruvio::FMaterialAttributeContainer>& Materials)
-		: Uri(Uri), MeshDescription(MeshDescription), Materials(Materials), StaticMesh(nullptr)
+	FVitruvioMesh(const FString& Uri, UE::Geometry::FDynamicMesh3* DynamicMesh, const TArray<Vitruvio::FMaterialAttributeContainer>& Materials)
+		: Uri(Uri), DynamicMesh(DynamicMesh), Materials(Materials)
 	{
 	}
-
-	~FVitruvioMesh();
 
 	FString GetUri() const
 	{
@@ -61,14 +46,9 @@ public:
 		return Materials;
 	}
 
-	UStaticMesh* GetStaticMesh() const
+	UE::Geometry::FDynamicMesh3* GetDynamicMesh() const
 	{
-		return StaticMesh;
-	}
-
-	const FCollisionData& GetCollisionData() const
-	{
-		return CollisionData;
+		return DynamicMesh;
 	}
 
 	void Build(const FString& Name, TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,

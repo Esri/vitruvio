@@ -253,6 +253,18 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 			FStaticMeshOperations::ComputeMikktTangents(Description, true);
 		}
 
+		/*
+		FDynamicMeshAttributeSet& Attribs = *FullMesh.Attributes();
+		FDynamicMeshNormalOverlay* NTB[3]{ Attribs.PrimaryNormals(), Attribs.PrimaryTangents(), Attribs.PrimaryBiTangents() };
+		if (bHasInvalidNormals)
+		{
+		FMeshNormals::InitializeOverlayToPerVertexNormals(NTB[0], false);
+		}
+		FMeshTangentsf Tangents(&FullMesh);
+		Tangents.ComputeTriVertexTangents(NTB[0], Attribs.PrimaryUV(), { true, true });
+		Tangents.CopyToOverlays(FullMesh);
+		*/
+
 		TSharedPtr<FVitruvioMesh> Mesh = MakeShared<FVitruvioMesh>(UriString, Description, MeshMaterials);
 
 		if (!UriString.IsEmpty())
