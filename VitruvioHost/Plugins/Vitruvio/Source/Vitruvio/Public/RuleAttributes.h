@@ -202,7 +202,7 @@ public:
 		return Cast<UColorAnnotation>(Annotation);
 	}
 
-	void CopyValue(const URuleAttribute* FromAttribute) override
+	virtual void CopyValue(const URuleAttribute* FromAttribute) override
 	{
 		const UStringAttribute* FromStringAttribute = Cast<UStringAttribute>(FromAttribute);
 		if (FromStringAttribute)
@@ -250,7 +250,7 @@ public:
 		return Cast<UColorAnnotation>(Annotation);
 	}
 
-	void CopyValue(const URuleAttribute* FromAttribute) override
+	virtual void CopyValue(const URuleAttribute* FromAttribute) override
 	{
 		const UStringArrayAttribute* FromStringAttribute = Cast<UStringArrayAttribute>(FromAttribute);
 		if (FromStringAttribute)
@@ -318,7 +318,7 @@ public:
 		return Cast<URangeAnnotation>(Annotation);
 	}
 
-	void CopyValue(const URuleAttribute* FromAttribute) override
+	virtual void CopyValue(const URuleAttribute* FromAttribute) override
 	{
 		const UFloatAttribute* FromFloatAttribute = Cast<UFloatAttribute>(FromAttribute);
 		if (FromFloatAttribute)
@@ -366,7 +366,7 @@ public:
 		return Cast<URangeAnnotation>(Annotation);
 	}
 
-	void CopyValue(const URuleAttribute* FromAttribute) override
+	virtual void CopyValue(const URuleAttribute* FromAttribute) override
 	{
 		const UFloatArrayAttribute* FromFloatArrayAttribute = Cast<UFloatArrayAttribute>(FromAttribute);
 		if (FromFloatArrayAttribute)
@@ -425,7 +425,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	bool Value;
 
-	void CopyValue(const URuleAttribute* FromAttribute) override
+	virtual void CopyValue(const URuleAttribute* FromAttribute) override
 	{
 		const UBoolAttribute* FromBoolAttribute = Cast<UBoolAttribute>(FromAttribute);
 		if (FromBoolAttribute)
@@ -461,7 +461,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	TArray<bool> Values;
 
-	void CopyValue(const URuleAttribute* FromAttribute) override
+	virtual void CopyValue(const URuleAttribute* FromAttribute) override
 	{
 		const UBoolArrayAttribute* FromBoolArrayAttribute = Cast<UBoolArrayAttribute>(FromAttribute);
 		if (FromBoolArrayAttribute)
