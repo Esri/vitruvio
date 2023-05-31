@@ -20,15 +20,15 @@
 
 #include "RuleAttributes.generated.h"
 
-UENUM()
-enum class EFilesystemMode
+UENUM(BlueprintType)
+enum class EFilesystemMode : uint8
 {
 	File,
 	Directory,
 	None
 };
 
-UCLASS()
+UCLASS(BlueprintType)
 class UAttributeAnnotation : public UObject
 {
 	GENERATED_BODY()
@@ -37,65 +37,65 @@ public:
 	virtual ~UAttributeAnnotation() = default;
 };
 
-UCLASS()
+UCLASS(BlueprintType)
 class UColorAnnotation final : public UAttributeAnnotation
 {
 	GENERATED_BODY()
 };
 
-UCLASS()
+UCLASS(BlueprintType)
 class UFilesystemAnnotation final : public UAttributeAnnotation
 {
 	GENERATED_BODY()
 
 public:
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	EFilesystemMode Mode = EFilesystemMode::None;
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	FString Extensions;
 };
 
-UCLASS()
+UCLASS(BlueprintType)
 class URangeAnnotation final : public UAttributeAnnotation
 {
 	GENERATED_BODY()
 
 public:
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	bool HasMin = false;
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	bool HasMax = false;
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	double Min = 0;
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	double Max = 0;
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	double StepSize = 0.1;
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	bool Restricted = true;
 };
 
-UCLASS()
+UCLASS(BlueprintType)
 class UStringEnumAnnotation final : public UAttributeAnnotation
 {
 	GENERATED_BODY()
 
 public:
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	TArray<FString> Values;
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	bool Restricted = true;
 };
 
-UCLASS()
+UCLASS(BlueprintType)
 class UFloatEnumAnnotation final : public UAttributeAnnotation
 {
 	GENERATED_BODY()
 
 public:
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	TArray<double> Values;
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	bool Restricted = true;
 };
 
@@ -114,28 +114,29 @@ protected:
 	}
 
 public:
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	FString Name;
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	FString DisplayName;
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	FString ImportPath;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	FString Description;
-	UPROPERTY()
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	TArray<FString> Groups;
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	int Order = INT32_MAX;
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	int GroupOrder = INT32_MAX;
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	int ImportOrder = INT32_MAX;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	bool bHidden;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vitruvio")
 	bool bUserSet;
 
 	void SetAnnotation(UAttributeAnnotation* InAnnotation)
@@ -144,9 +145,34 @@ public:
 	}
 
 	virtual void CopyValue(const URuleAttribute* FromAttribute) {}
+
+	/**
+	 * Returns value of this Attribute as a String.
+	 * 
+	 * Note to get the actual value you need to cast this object to its correct type (eg. UFloatAttribute).
+	 * @return the value of this Attribute as a String.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Vitruvio")
+	virtual FString GetValueAsString()
+	{
+		return TEXT("");
+	}
+
+	/**
+	 * Returns the annotation associated with this attribute. Needs to be casted to its actual type to access relevant
+	 * fields (eg. to UStringEnumAnnotation). More specific sub types of URuleAttribute contain helper methods to access appropriate
+	 * annotations (eg. UFloatAttribute#GetRangeAnnotation).
+	 * 
+	 * @return the annotation associated with this attribute.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Vitruvio")
+	virtual UAttributeAnnotation* GetAnnotation()
+	{
+		return Annotation;
+	}
 };
 
-UCLASS()
+UCLASS(Abstract)
 class VITRUVIO_API UArrayAttribute : public URuleAttribute
 {
 	GENERATED_BODY()
@@ -155,7 +181,7 @@ public:
 	virtual void InitializeDefaultArrayValue(int32 Index) {}
 };
 
-UCLASS()
+UCLASS(BlueprintType)
 class VITRUVIO_API UStringAttribute final : public URuleAttribute
 {
 	GENERATED_BODY()
@@ -164,17 +190,19 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	FString Value;
 
+	UFUNCTION(BlueprintPure, Category = "Vitruvio")
 	UStringEnumAnnotation* GetEnumAnnotation() const
 	{
 		return Cast<UStringEnumAnnotation>(Annotation);
 	}
 
+	UFUNCTION(BlueprintPure, Category = "Vitruvio")
 	UColorAnnotation* GetColorAnnotation() const
 	{
 		return Cast<UColorAnnotation>(Annotation);
 	}
 
-	void CopyValue(const URuleAttribute* FromAttribute) override
+	virtual void CopyValue(const URuleAttribute* FromAttribute) override
 	{
 		const UStringAttribute* FromStringAttribute = Cast<UStringAttribute>(FromAttribute);
 		if (FromStringAttribute)
@@ -182,9 +210,26 @@ public:
 			Value = FromStringAttribute->Value;
 		}
 	}
+
+	virtual FString GetValueAsString() override
+	{
+		return Value;
+	}
+
+	/**
+	 * Returns the value of this Attribute.
+	 * 
+	 * Note to set the value, you need to use UVitruvioComponent#SetStringAttribute.
+	 * @return the value of this Attribute.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Vitruvio")
+	const FString& GetValue() const
+	{
+		return Value;
+	}
 };
 
-UCLASS()
+UCLASS(BlueprintType)
 class VITRUVIO_API UStringArrayAttribute final : public UArrayAttribute
 {
 	GENERATED_BODY()
@@ -193,17 +238,19 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	TArray<FString> Values;
 
+	UFUNCTION(BlueprintPure, Category = "Vitruvio")
 	UStringEnumAnnotation* GetEnumAnnotation() const
 	{
 		return Cast<UStringEnumAnnotation>(Annotation);
 	}
 
+	UFUNCTION(BlueprintPure, Category = "Vitruvio")
 	UColorAnnotation* GetColorAnnotation() const
 	{
 		return Cast<UColorAnnotation>(Annotation);
 	}
 
-	void CopyValue(const URuleAttribute* FromAttribute) override
+	virtual void CopyValue(const URuleAttribute* FromAttribute) override
 	{
 		const UStringArrayAttribute* FromStringAttribute = Cast<UStringArrayAttribute>(FromAttribute);
 		if (FromStringAttribute)
@@ -231,9 +278,26 @@ public:
 			Values[Index] = TEXT("#") + FLinearColor::White.ToFColor(true).ToHex();
 		}
 	}
+
+	virtual FString GetValueAsString() override
+	{
+		return FString::Join(Values, TEXT(", "));
+	}
+
+	/**
+	 * Returns the value of this Attribute. 
+	 * 
+	 * Note to set the value, you need to use UVitruvioComponent#SetStringArrayAttribute.
+	 * @return the value of this Attribute.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Vitruvio")
+	const TArray<FString>& GetValue() const
+	{
+		return Values;
+	}
 };
 
-UCLASS()
+UCLASS(BlueprintType)
 class VITRUVIO_API UFloatAttribute final : public URuleAttribute
 {
 	GENERATED_BODY()
@@ -242,17 +306,19 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	double Value;
 
+	UFUNCTION(BlueprintPure, Category = "Vitruvio")
 	UFloatEnumAnnotation* GetEnumAnnotation() const
 	{
 		return Cast<UFloatEnumAnnotation>(Annotation);
 	}
 
+	UFUNCTION(BlueprintPure, Category = "Vitruvio")
 	URangeAnnotation* GetRangeAnnotation() const
 	{
 		return Cast<URangeAnnotation>(Annotation);
 	}
 
-	void CopyValue(const URuleAttribute* FromAttribute) override
+	virtual void CopyValue(const URuleAttribute* FromAttribute) override
 	{
 		const UFloatAttribute* FromFloatAttribute = Cast<UFloatAttribute>(FromAttribute);
 		if (FromFloatAttribute)
@@ -260,9 +326,26 @@ public:
 			Value = FromFloatAttribute->Value;
 		}
 	}
+
+	virtual FString GetValueAsString() override
+	{
+		return FString::SanitizeFloat(Value);
+	}
+
+	/**
+	 * Returns the value of this Attribute. 
+	 * 
+	 * Note to set the value, you need to use UVitruvioComponent#SetFloatAttribute.
+	 * @return the value of this Attribute.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Vitruvio")
+	double GetValue() const
+	{
+		return Value;
+	}
 };
 
-UCLASS()
+UCLASS(BlueprintType)
 class VITRUVIO_API UFloatArrayAttribute final : public UArrayAttribute
 {
 	GENERATED_BODY()
@@ -271,17 +354,19 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	TArray<double> Values;
 
+	UFUNCTION(BlueprintPure, Category = "Vitruvio")
 	UFloatEnumAnnotation* GetEnumAnnotation() const
 	{
 		return Cast<UFloatEnumAnnotation>(Annotation);
 	}
 
+	UFUNCTION(BlueprintPure, Category = "Vitruvio")
 	URangeAnnotation* GetRangeAnnotation() const
 	{
 		return Cast<URangeAnnotation>(Annotation);
 	}
 
-	void CopyValue(const URuleAttribute* FromAttribute) override
+	virtual void CopyValue(const URuleAttribute* FromAttribute) override
 	{
 		const UFloatArrayAttribute* FromFloatArrayAttribute = Cast<UFloatArrayAttribute>(FromAttribute);
 		if (FromFloatArrayAttribute)
@@ -312,9 +397,26 @@ public:
 			}
 		}
 	}
+
+	virtual FString GetValueAsString() override
+	{
+		return FString::JoinBy(Values, TEXT(", "), [](double Item) { return FString::SanitizeFloat(Item); });
+	}
+
+	/**
+	 * Returns the value of this Attribute. 
+	 * 
+	 * Note to set the value, you need to use UVitruvioComponent#SetFloatArrayAttribute.
+	 * @return the value of this Attribute.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Vitruvio")
+	const TArray<double>& GetValue() const
+	{
+		return Values;
+	}
 };
 
-UCLASS()
+UCLASS(BlueprintType)
 class VITRUVIO_API UBoolAttribute final : public URuleAttribute
 {
 	GENERATED_BODY()
@@ -323,7 +425,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	bool Value;
 
-	void CopyValue(const URuleAttribute* FromAttribute) override
+	virtual void CopyValue(const URuleAttribute* FromAttribute) override
 	{
 		const UBoolAttribute* FromBoolAttribute = Cast<UBoolAttribute>(FromAttribute);
 		if (FromBoolAttribute)
@@ -331,9 +433,26 @@ public:
 			Value = FromBoolAttribute->Value;
 		}
 	}
+
+	virtual FString GetValueAsString() override
+	{
+		return Value ? TEXT("True") : TEXT("False");
+	}
+
+	/**
+	 * Returns the value of this Attribute. 
+	 * 
+	 * Note to set the value, you need to use UVitruvioComponent#SetBoolAttribute.
+	 * @return the value of this Attribute.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Vitruvio")
+	bool GetValue() const
+	{
+		return Value;
+	}
 };
 
-UCLASS()
+UCLASS(BlueprintType)
 class VITRUVIO_API UBoolArrayAttribute final : public UArrayAttribute
 {
 	GENERATED_BODY()
@@ -342,12 +461,29 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	TArray<bool> Values;
 
-	void CopyValue(const URuleAttribute* FromAttribute) override
+	virtual void CopyValue(const URuleAttribute* FromAttribute) override
 	{
 		const UBoolArrayAttribute* FromBoolArrayAttribute = Cast<UBoolArrayAttribute>(FromAttribute);
 		if (FromBoolArrayAttribute)
 		{
 			Values = FromBoolArrayAttribute->Values;
 		}
+	}
+
+	virtual FString GetValueAsString() override
+	{
+		return FString::JoinBy(Values, TEXT(", "), [](bool Item) { return Item ? TEXT("True") : TEXT("False"); });
+	}
+
+	/**
+	 * Returns the value of this Attribute. 
+	 * 
+	 * Note to set the value, you need to use UVitruvioComponent#SetBoolArrayAttribute.
+	 * @return the value of this Attribute.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Vitruvio")
+	const TArray<bool>& GetValue() const
+	{
+		return Values;
 	}
 };
