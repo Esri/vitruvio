@@ -412,7 +412,7 @@ FGenerateResultDescription VitruvioModule::Generate(const FInitialShapePolygon& 
 
 	const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(RulePackage).Get();
 
-	const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
+	const std::wstring RuleFile = ResolveMap->findCGBKey();
 	const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
 
 	const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
@@ -502,7 +502,7 @@ FAttributeMapResult VitruvioModule::EvaluateRuleAttributesAsync(const FInitialSh
 	FAttributeMapResult::FFutureType AttributeMapPtrFuture = Async(EAsyncExecution::Thread, [=, Attributes = std::move(Attributes)]() mutable {
 		const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(RulePackage).Get();
 
-		const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
+		const std::wstring RuleFile = ResolveMap->findCGBKey();
 		const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
 
 		const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
