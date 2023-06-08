@@ -18,10 +18,11 @@ using System.Collections.Generic;
 
 public class VitruvioHostEditorTarget : TargetRules
 {
-	public VitruvioHostEditorTarget( TargetInfo Target) : base(Target)
+	public VitruvioHostEditorTarget(TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Editor;
-		DefaultBuildSettings = BuildSettingsVersion.V2;
+		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
+		DefaultBuildSettings = BuildSettingsVersion.Latest;
 		ExtraModuleNames.AddRange( new string[] { "VitruvioHost" } );
 	}
 }
