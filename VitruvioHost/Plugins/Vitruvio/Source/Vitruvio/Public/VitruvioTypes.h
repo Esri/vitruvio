@@ -15,7 +15,6 @@
 
 #pragma once
 
-#include "CoreUObject.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "MeshDescription.h"
 #include "PhysicsCore/Public/Interface_CollisionDataProviderCore.h"

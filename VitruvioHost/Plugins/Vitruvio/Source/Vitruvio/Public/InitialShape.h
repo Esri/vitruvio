@@ -16,10 +16,6 @@
 #pragma once
 
 #include "Components/SplineComponent.h"
-#include "CoreUObject.h"
-
-#include "StaticMeshAttributes.h"
-#include "StaticMeshDescription.h"
 
 #include "InitialShape.generated.h"
 

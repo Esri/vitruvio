@@ -20,19 +20,13 @@
 #include "PRTUtils.h"
 #include "UnrealCallbacks.h"
 
-#include "Util/AttributeConversion.h"
-#include "Util/MaterialConversion.h"
 #include "Util/PolygonWindings.h"
 
 #include "prt/API.h"
-#include "prtx/EncoderInfoBuilder.h"
 
-#include "Core.h"
-#include "IImageWrapper.h"
+#include "HAL/FileManager.h"
 #include "Interfaces/IPluginManager.h"
-#include "MeshDescription.h"
 #include "Modules/ModuleManager.h"
-#include "StaticMeshAttributes.h"
 #include "TextureDecoding.h"
 #include "UObject/UObjectBaseUtility.h"
 

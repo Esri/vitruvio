@@ -27,18 +27,9 @@
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/SplineComponent.h"
 #include "Engine/CollisionProfile.h"
-#include "Engine/StaticMeshActor.h"
-#include "ObjectEditorUtils.h"
 #include "PRTUtils.h"
 #include "PhysicsEngine/BodySetup.h"
-#include "PolygonWindings.h"
-#include "StaticMeshAttributes.h"
-
-#if WITH_EDITOR
-#include "DetailLayoutBuilder.h"
-#include "DetailWidgetRow.h"
-#include "Widgets/Input/SSpinBox.h"
-#endif
+#include "UObject/ConstructorHelpers.h"
 
 namespace
 {

@@ -15,7 +15,6 @@
 
 #pragma once
 
-#include "Core.h"
 #include "prt/LogHandler.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(UnrealPrtLog, Log, All);

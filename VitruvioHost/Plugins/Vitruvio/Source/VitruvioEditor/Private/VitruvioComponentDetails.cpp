@@ -15,7 +15,6 @@
 
 #include "VitruvioComponentDetails.h"
 
-#include "UnrealEd.h"
 #include "VitruvioComponent.h"
 
 #include "Algo/Transform.h"

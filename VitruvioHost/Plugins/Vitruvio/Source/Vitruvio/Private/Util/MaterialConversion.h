@@ -15,10 +15,6 @@
 
 #pragma once
 
-#include "prt/AttributeMap.h"
-
-#include "CoreUObject.h"
-#include "TextureDecoding.h"
 #include "VitruvioTypes.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMaterialConversion, Log, All);
