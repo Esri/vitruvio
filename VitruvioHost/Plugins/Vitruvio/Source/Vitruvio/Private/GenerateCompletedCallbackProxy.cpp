@@ -16,6 +16,7 @@
 #include "GenerateCompletedCallbackProxy.h"
 
 #include "Algo/Count.h"
+#include "Engine/World.h"
 #include "VitruvioBlueprintLibrary.h"
 #include "VitruvioComponent.h"
 

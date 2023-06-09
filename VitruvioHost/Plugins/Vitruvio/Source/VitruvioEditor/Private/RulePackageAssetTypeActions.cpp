@@ -15,8 +15,8 @@
 
 #include "RulePackageAssetTypeActions.h"
 
+#include "EditorReimportHandler.h"
 #include "ToolMenuSection.h"
-#include "UnrealEd.h"
 
 FText FRulePackageAssetTypeActions::GetName() const
 {

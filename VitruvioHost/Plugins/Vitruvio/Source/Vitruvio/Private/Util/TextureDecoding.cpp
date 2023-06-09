@@ -14,6 +14,7 @@
  */
 
 #include "TextureDecoding.h"
+#include "HAL/PlatformFileManager.h"
 
 #include <string>
 

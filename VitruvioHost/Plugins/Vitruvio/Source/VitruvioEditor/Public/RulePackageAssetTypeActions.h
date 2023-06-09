@@ -16,7 +16,6 @@
 #pragma once
 
 #include "AssetTypeActions_Base.h"
-#include "UnrealEd.h"
 
 #include "RulePackage.h"
 
