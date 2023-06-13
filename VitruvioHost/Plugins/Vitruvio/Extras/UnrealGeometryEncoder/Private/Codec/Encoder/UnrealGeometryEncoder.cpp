@@ -604,7 +604,7 @@ void UnrealGeometryEncoder::encode(prtx::GenerateContext& context, size_t initia
 	const prtx::EncodePreparator::PreparationFlags PREP_FLAGS =
 		prtx::EncodePreparator::PreparationFlags()
 			.instancing(true)
-			.mergeByMaterial(true)
+			.meshMerging(prtx::MeshMerging::ALL_OF_SAME_MATERIAL_AND_TYPE)
 			.triangulate(false)
 			.processHoles(prtx::HoleProcessor::TRIANGULATE_FACES_WITH_HOLES)
 			.mergeVertices(true)
