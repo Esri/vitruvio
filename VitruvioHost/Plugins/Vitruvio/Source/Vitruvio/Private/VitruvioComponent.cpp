@@ -31,6 +31,8 @@
 #include "PhysicsEngine/BodySetup.h"
 #include "UObject/ConstructorHelpers.h"
 
+DEFINE_LOG_CATEGORY(LogVitruvioComponent);
+
 namespace
 {
 
