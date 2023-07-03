@@ -9,7 +9,7 @@ on:
 
 jobs:
   package-host-main:
-    runs-on: self-hosted
+    runs-on: [self-hosted, zrh-unreal]
     name: Package host project (shipping) on main branch
     if: github.ref == 'refs/heads/main'
     steps:
@@ -18,7 +18,7 @@ jobs:
           C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package_shipping
 
   build-plugin-main:
-    runs-on: self-hosted
+    runs-on: [self-hosted, zrh-unreal]
     name: Build plugin on main branch
     if: github.ref == 'refs/heads/main'
     steps:
@@ -27,7 +27,7 @@ jobs:
           C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_plugin_build
 
   package-host-develop:
-    runs-on: self-hosted
+    runs-on: [self-hosted, zrh-unreal]
     name: Package host project (debug) on develop branch
     if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/arisona/workflows'
     steps:
@@ -36,7 +36,7 @@ jobs:
           C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package_debug
 
   build-plugin-develop:
-    runs-on: self-hosted
+    runs-on: [self-hosted, zrh-unreal]
     name: Build plugin on develop branch
     if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/arisona/workflows'
     steps:

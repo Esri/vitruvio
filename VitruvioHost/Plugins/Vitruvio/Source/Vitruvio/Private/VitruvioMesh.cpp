@@ -15,6 +15,7 @@
 
 #include "VitruvioMesh.h"
 #include "MaterialConversion.h"
+#include "Materials/Material.h"
 #include "StaticMeshAttributes.h"
 #include "VitruvioModule.h"
 

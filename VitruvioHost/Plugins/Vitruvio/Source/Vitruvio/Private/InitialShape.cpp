@@ -15,11 +15,13 @@
 
 #include "InitialShape.h"
 #include "PolygonWindings.h"
+#include "StaticMeshAttributes.h"
 #include "VitruvioComponent.h"
 
 #include "CompGeom/PolygonTriangulation.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
+#include "Misc/MessageDialog.h"
 #include "UObject/SavePackage.h"
 
 namespace

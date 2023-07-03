@@ -15,7 +15,6 @@
 
 #include "VitruvioComponentDetails.h"
 
-#include "UnrealEd.h"
 #include "VitruvioComponent.h"
 
 #include "Algo/Transform.h"
@@ -135,7 +134,7 @@ void CreateColorPicker(const FLinearColor& InitialColor, C OnCommit)
 		PickerArgs.bOnlyRefreshOnOk = true;
 		PickerArgs.sRGBOverride = true;
 		PickerArgs.DisplayGamma = TAttribute<float>::Create(TAttribute<float>::FGetter::CreateUObject(GEngine, &UEngine::GetDisplayGamma));
-		PickerArgs.InitialColorOverride = InitialColor;
+		PickerArgs.InitialColor = InitialColor;
 		PickerArgs.OnColorCommitted.BindLambda(OnCommit);
 	}
 

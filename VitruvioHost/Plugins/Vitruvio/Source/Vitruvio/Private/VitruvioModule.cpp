@@ -20,19 +20,13 @@
 #include "PRTUtils.h"
 #include "UnrealCallbacks.h"
 
-#include "Util/AttributeConversion.h"
-#include "Util/MaterialConversion.h"
 #include "Util/PolygonWindings.h"
 
 #include "prt/API.h"
-#include "prtx/EncoderInfoBuilder.h"
 
-#include "Core.h"
-#include "IImageWrapper.h"
+#include "HAL/FileManager.h"
 #include "Interfaces/IPluginManager.h"
-#include "MeshDescription.h"
 #include "Modules/ModuleManager.h"
-#include "StaticMeshAttributes.h"
 #include "TextureDecoding.h"
 #include "UObject/UObjectBaseUtility.h"
 
@@ -412,7 +406,7 @@ FGenerateResultDescription VitruvioModule::Generate(const FInitialShapePolygon& 
 
 	const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(RulePackage).Get();
 
-	const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
+	const std::wstring RuleFile = ResolveMap->findCGBKey();
 	const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
 
 	const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
@@ -502,7 +496,7 @@ FAttributeMapResult VitruvioModule::EvaluateRuleAttributesAsync(const FInitialSh
 	FAttributeMapResult::FFutureType AttributeMapPtrFuture = Async(EAsyncExecution::Thread, [=, Attributes = std::move(Attributes)]() mutable {
 		const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(RulePackage).Get();
 
-		const std::wstring RuleFile = prtu::getRuleFileEntry(ResolveMap);
+		const std::wstring RuleFile = ResolveMap->findCGBKey();
 		const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
 
 		const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));

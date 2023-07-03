@@ -39,21 +39,6 @@
 
 namespace prtu
 {
-inline std::wstring getRuleFileEntry(const ResolveMapSPtr& resolveMap)
-{
-	const std::wstring sCGB(L".cgb");
-
-	size_t nKeys;
-	wchar_t const* const* keys = resolveMap->getKeys(&nKeys);
-	for (size_t k = 0; k < nKeys; k++)
-	{
-		const std::wstring key(keys[k]);
-		if (std::equal(sCGB.rbegin(), sCGB.rend(), key.rbegin()))
-			return key;
-	}
-
-	return {};
-}
 
 constexpr const wchar_t* ANNOT_START_RULE = L"@StartRule";
 

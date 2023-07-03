@@ -18,8 +18,6 @@
 #include "PRTTypes.h"
 #include "RuleAttributes.h"
 
-#include "CoreUObject.h"
-
 namespace Vitruvio
 {
 void UpdateAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo,

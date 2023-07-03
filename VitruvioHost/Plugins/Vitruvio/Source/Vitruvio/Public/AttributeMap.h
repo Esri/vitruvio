@@ -17,7 +17,6 @@
 
 #include "RuleAttributes.h"
 
-#include "CoreUObject.h"
 #include "PRTTypes.h"
 
 class VITRUVIO_API FAttributeMap

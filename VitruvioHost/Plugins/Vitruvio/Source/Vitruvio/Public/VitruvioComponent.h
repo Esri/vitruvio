@@ -26,6 +26,8 @@
 
 #include "VitruvioComponent.generated.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(LogVitruvioComponent, Log, All);
+
 struct FInstance
 {
 	FString Name;

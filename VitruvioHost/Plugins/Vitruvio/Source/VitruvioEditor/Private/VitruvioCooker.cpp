@@ -22,6 +22,10 @@
 #include "GeneratedModelHISMComponent.h"
 #include "GeneratedModelStaticMeshComponent.h"
 #include "Materials/MaterialInstanceConstant.h"
+#include "PhysicsEngine/BodySetup.h"
+#include "StaticMeshAttributes.h"
+
+#include "Misc/ScopedSlowTask.h"
 #include "VitruvioComponent.h"
 #include "VitruvioModule.h"
 
