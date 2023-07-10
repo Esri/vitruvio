@@ -32,8 +32,7 @@ UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* Mask
 		return *Result;
 	}
 
-	const FName UniqueMaterialName(MaterialAttributes.Name);
-	UMaterialInstanceDynamic* Material = Vitruvio::GameThread_CreateMaterialInstance(Outer, UniqueMaterialName, OpaqueParent, MaskedParent,
+	UMaterialInstanceDynamic* Material = GameThread_CreateMaterialInstance(Outer, OpaqueParent, MaskedParent,
 																					 TranslucentParent, MaterialAttributes, TextureCache);
 	MaterialCache.Add(MaterialAttributes, Material);
 	return Material;
