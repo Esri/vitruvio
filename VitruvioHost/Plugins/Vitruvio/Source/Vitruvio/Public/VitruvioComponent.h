@@ -21,6 +21,7 @@
 
 #include "CoreMinimal.h"
 #include "GenerateCompletedCallbackProxy.h"
+#include "GeneratedModelHISMComponent.h"
 #include "GeneratedModelStaticMeshComponent.h"
 #include "InitialShape.h"
 #include "MaterialReplacement.h"
@@ -325,6 +326,9 @@ public:
 	/* Returns the generated model component */
 	UGeneratedModelStaticMeshComponent* GetGeneratedModelComponent() const;
 
+	/* Returns the generated model HISM components */
+	TArray<UGeneratedModelHISMComponent*> GetGeneratedModelHISMComponents() const;
+	
 	/**
 	 * Evaluate rule attributes.
 	 *

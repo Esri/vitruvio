@@ -534,8 +534,7 @@ void AddGenerateButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent*
 
 void OpenReplacementDialog(UVitruvioComponent* VitruvioComponent)
 {
-	UGeneratedModelStaticMeshComponent* GeneratedModel = VitruvioComponent->GetGeneratedModelComponent();
-	FMaterialReplacementDialog::OpenDialog(GeneratedModel);
+	FMaterialReplacementDialog::OpenDialog(VitruvioComponent);
 }
 
 void AddMaterialReplacementButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioComponent)

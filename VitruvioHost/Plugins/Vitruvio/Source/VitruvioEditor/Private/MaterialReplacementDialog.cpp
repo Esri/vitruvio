@@ -4,14 +4,11 @@
 
 #include "DetailLayoutBuilder.h"
 #include "ISinglePropertyView.h"
-#include "Selection.h"
-#include "Components/SinglePropertyView.h"
-#include "Components/SizeBox.h"
+#include "VitruvioComponent.h"
 #include "Framework/Docking/TabManager.h"
 #include "Widgets/Input/SButton.h"
-#include "Widgets/Input/SHyperlink.h"
-#include "Widgets/Layout/SScaleBox.h"
 #include "Widgets/Layout/SScrollBox.h"
+#include "Widgets/Layout/SSeparator.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
 
 UMaterialReplacementAsset* PreviousMaterialReplacementTarget = nullptr;
@@ -19,17 +16,23 @@ UMaterialReplacementAsset* PreviousMaterialReplacementTarget = nullptr;
 class SCMaterialReplacementPackagePicker : public SCompoundWidget
 {
 	TWeakPtr<SWindow> WeakParentWindow;
-	UStaticMeshComponent* SourceMeshComponent = nullptr;
+	UVitruvioComponent* VitruvioComponent = nullptr;
 	UMaterialReplacementDialogOptions* ReplacementDialogOptions = nullptr;
-
+	
+	TSharedPtr<SScrollBox> ReplacementsBox;
+	TArray<TSharedPtr<SCheckBox>> IsolateCheckboxes;
+	TArray<TSharedPtr<SCheckBox>> HighlightCheckboxes;
+	TSharedPtr<SCheckBox> IncludeInstancesCheckBox;
+	
 	bool bPressedOk = false;
 
 public:
 	SLATE_BEGIN_ARGS(SCMaterialReplacementPackagePicker) {}
 	SLATE_ARGUMENT(TSharedPtr<SWindow>, ParentWindow)
-	SLATE_ARGUMENT(UStaticMeshComponent*, SourceMeshComponent)
+	SLATE_ARGUMENT(UVitruvioComponent*, VitruvioComponent)
 	SLATE_END_ARGS()
 
+	void UpdateReplacementTable();
 	void Construct(const FArguments& InArgs);
 
 	bool PressedOk() const
@@ -42,23 +45,190 @@ private:
 	FReply OnReplacementCanceled();
 };
 
-void SCMaterialReplacementPackagePicker::Construct(const FArguments& InArgs)
+void SCMaterialReplacementPackagePicker::UpdateReplacementTable()
 {
-	WeakParentWindow = InArgs._ParentWindow;
-	SourceMeshComponent = InArgs._SourceMeshComponent;
+	ReplacementsBox->ClearChildren();
+	IsolateCheckboxes.Empty();
+	HighlightCheckboxes.Empty();
+	
 	ReplacementDialogOptions = NewObject<UMaterialReplacementDialogOptions>();
 	ReplacementDialogOptions->TargetReplacementAsset = PreviousMaterialReplacementTarget;
 
-	
-	for (const auto& MaterialSlotName : InArgs._SourceMeshComponent->GetMaterialSlotNames())
+	TArray<UStaticMeshComponent*> StaticMeshComponents;
+	StaticMeshComponents.Add(VitruvioComponent->GetGeneratedModelComponent());
+
+	if (IncludeInstancesCheckBox->IsChecked())
 	{
-		int32 MaterialIndex = InArgs._SourceMeshComponent->GetMaterialIndex(MaterialSlotName);
-		UMaterialReplacement* MaterialReplacement = NewObject<UMaterialReplacement>();
-		MaterialReplacement->Source = InArgs._SourceMeshComponent->GetMaterial(MaterialIndex);
-		ReplacementDialogOptions->MaterialReplacements.Add(MaterialSlotName, MaterialReplacement);	
+		for (UGeneratedModelHISMComponent* HISMComponent : VitruvioComponent->GetGeneratedModelHISMComponents())
+		{
+			StaticMeshComponents.Add(HISMComponent);
+		}
 	}
 
-	TSharedPtr<SScrollBox> ReplacementVerticalBox;
+	for (UStaticMeshComponent* StaticMeshComponent : StaticMeshComponents)
+	{
+		for (const auto& MaterialSlotName : StaticMeshComponent->GetMaterialSlotNames())
+		{
+			int32 MaterialIndex = StaticMeshComponent->GetMaterialIndex(MaterialSlotName);
+			
+			UMaterialInterface* SourceMaterial = StaticMeshComponent->GetMaterial(MaterialIndex);
+			FMaterialKey Key { SourceMaterial, MaterialSlotName };
+			if (auto ExistingReplacementOptional = ReplacementDialogOptions->MaterialReplacements.Find(Key))
+			{
+				UMaterialReplacement* ExistingReplacement = *ExistingReplacementOptional;
+				ExistingReplacement->Components.Add(StaticMeshComponent);
+			}
+			else
+			{
+				UMaterialReplacement* MaterialReplacement = NewObject<UMaterialReplacement>();
+				MaterialReplacement->Source = StaticMeshComponent->GetMaterial(MaterialIndex);
+				MaterialReplacement->Components.Add(StaticMeshComponent);
+				ReplacementDialogOptions->MaterialReplacements.Add({ SourceMaterial, MaterialSlotName }, MaterialReplacement);	
+			}
+		}
+	}
+
+	FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
+	FSinglePropertyParams SinglePropertyArgs;
+	SinglePropertyArgs.NamePlacement = EPropertyNamePlacement::Hidden;
+	
+	auto ResetMaterialPreview = [this](bool bHighlight, const TArray<TSharedPtr<SCheckBox>>& CheckBoxes, int32 IgnoreIndex)
+	{
+		for (int32 Index = 0; Index < CheckBoxes.Num(); ++Index)
+		{
+			if (Index != IgnoreIndex)
+			{
+				const TSharedPtr<SCheckBox>& CheckBox = CheckBoxes[Index];
+				CheckBox->SetIsChecked(false);
+			}
+		}
+
+		for (const auto& [Key, Replacement] : ReplacementDialogOptions->MaterialReplacements)
+		{
+			for (UStaticMeshComponent* StaticMeshComponent : Replacement->Components)
+			{
+				StaticMeshComponent->SetVisibility(false, true);
+				
+				if (bHighlight)
+				{
+					StaticMeshComponent->SetMaterialPreview(INDEX_NONE);
+				}
+				else
+				{
+					StaticMeshComponent->SelectedEditorMaterial = INDEX_NONE;
+				}
+			}
+		}
+	};
+	
+	for (const auto& [Key, Replacement] : ReplacementDialogOptions->MaterialReplacements)
+	{
+		TSharedRef<SHorizontalBox> ReplacementBox = SNew(SHorizontalBox);
+		TSharedPtr<STextBlock> SourceMaterialText;
+
+		TSharedPtr<SCheckBox> IsolateCheckbox;
+		TSharedPtr<SCheckBox> HighlightCheckbox;
+
+		TArray<FString> ComponentNamesArray;
+		Algo::Transform(Replacement->Components, ComponentNamesArray, [](UStaticMeshComponent* Component) { return Component->GetName(); });
+		FString ComponentNames = FString::Join(ComponentNamesArray, TEXT(", "));
+		FString SourceMaterialAndComponentsText = Key.Material->GetName() + " [" + ComponentNames + "]";
+		
+		ReplacementBox->AddSlot()
+		.VAlign(VAlign_Center)
+		[
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				SAssignNew(SourceMaterialText, STextBlock)
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+				.Text(FText::FromString(SourceMaterialAndComponentsText))
+			]
+
+			+ SVerticalBox::Slot()
+			.Padding(0, 2, 0, 0)
+			.AutoHeight()
+			[
+				SAssignNew(HighlightCheckbox, SCheckBox)
+				.OnCheckStateChanged_Lambda([ResetMaterialPreview, SlotName = Key.SlotName, IgnoreIndex = HighlightCheckboxes.Num(), Replacement, this](ECheckBoxState CheckBoxState)
+                {
+                    ResetMaterialPreview(true, HighlightCheckboxes, IgnoreIndex);
+					
+                    if (CheckBoxState == ECheckBoxState::Checked)
+                    {
+                        for (UStaticMeshComponent* StaticMeshComponent : Replacement->Components)
+                        {
+                        	StaticMeshComponent->SetVisibility(true, true);
+                            const int32 MaterialIndex = StaticMeshComponent->GetMaterialIndex(SlotName);
+                        	StaticMeshComponent->SetMaterialPreview(MaterialIndex);
+                        }
+                    }
+                })
+				.IsChecked(false)
+				[
+					SNew(STextBlock)
+					.Font(IDetailLayoutBuilder::GetDetailFont())
+					.ColorAndOpacity(FLinearColor(0.4f, 0.4f, 0.4f, 1.0f))
+					.Text(FText::FromString("Highlight"))
+				]
+			]
+			
+			+ SVerticalBox::Slot()
+			  .Padding(0, 2, 0, 0)
+			  .AutoHeight()
+			[
+				SAssignNew(IsolateCheckbox, SCheckBox)
+				.OnCheckStateChanged_Lambda([ResetMaterialPreview, SlotName = Key.SlotName, IgnoreIndex = HighlightCheckboxes.Num(), Replacement, this](ECheckBoxState CheckBoxState)
+				{
+					ResetMaterialPreview(false, IsolateCheckboxes, IgnoreIndex);
+					if (CheckBoxState == ECheckBoxState::Checked)
+					{
+						for (UStaticMeshComponent* StaticMeshComponent : Replacement->Components)
+						{
+							StaticMeshComponent->SetVisibility(true, true);
+							const int32 MaterialIndex = StaticMeshComponent->GetMaterialIndex(SlotName);
+							StaticMeshComponent->SelectedEditorMaterial = MaterialIndex;
+						}
+					}
+				})
+				.IsChecked(false)
+				[
+					SNew(STextBlock)
+					.Font(IDetailLayoutBuilder::GetDetailFont())
+					.ColorAndOpacity(FLinearColor(0.4f, 0.4f, 0.4f, 1.0f))
+					.Text(FText::FromString("Isolate"))
+				]
+			]
+		];
+
+		IsolateCheckboxes.Add(IsolateCheckbox);
+		HighlightCheckboxes.Add(HighlightCheckbox);
+
+		const TSharedPtr<ISinglePropertyView> SinglePropertyViewWidget = PropertyEditorModule.CreateSingleProperty(Replacement, GET_MEMBER_NAME_CHECKED(UMaterialReplacement, Replacement), SinglePropertyArgs);
+		ReplacementBox->AddSlot()
+		[
+			SNew(SBox)
+			.MinDesiredWidth(200)
+			[
+				SinglePropertyViewWidget.ToSharedRef()
+			]
+		];
+		
+		ReplacementsBox->AddSlot()
+        .Padding(4.0f)
+        .VAlign(VAlign_Fill)
+        .HAlign(HAlign_Fill)
+		[
+			ReplacementBox
+		];
+	}
+}
+
+void SCMaterialReplacementPackagePicker::Construct(const FArguments& InArgs)
+{
+	WeakParentWindow = InArgs._ParentWindow;
+	VitruvioComponent = InArgs._VitruvioComponent;
 	
 	// clang-format off
 	ChildSlot
@@ -74,11 +244,37 @@ void SCMaterialReplacementPackagePicker::Construct(const FArguments& InArgs)
 		]
 
 		+ SVerticalBox::Slot()
+		.Padding(4)
+		.AutoHeight()
+		[
+			SAssignNew(IncludeInstancesCheckBox, SCheckBox)
+			.OnCheckStateChanged_Lambda([this](ECheckBoxState CheckBoxState)
+			{
+				UpdateReplacementTable();
+			})
+			.IsChecked(true)
+			[
+				SNew(STextBlock)
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+				.ColorAndOpacity(FLinearColor(0.4f, 0.4f, 0.4f, 1.0f))
+				.Text(FText::FromString("Include Instances"))
+			]
+		]
+
+		+ SVerticalBox::Slot()
+		.Padding(4.0f)
+		.AutoHeight()
+		[
+			SNew(SSeparator)
+			.Orientation(Orient_Horizontal)
+		]
+		
+		+ SVerticalBox::Slot()
 		.Padding(4.0f)
 		.VAlign(VAlign_Fill)
 		.HAlign(HAlign_Fill)
 		[
-			SAssignNew(ReplacementVerticalBox, SScrollBox)
+			SAssignNew(ReplacementsBox, SScrollBox)
 		]
 		
 		+ SVerticalBox::Slot()
@@ -103,87 +299,25 @@ void SCMaterialReplacementPackagePicker::Construct(const FArguments& InArgs)
 			]
 		]
 	];
-
-	FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	FSinglePropertyParams SinglePropertyArgs;
-	SinglePropertyArgs.NamePlacement = EPropertyNamePlacement::Hidden;
-
-	const TArray<FName> MaterialSlotNames = SourceMeshComponent->GetMaterialSlotNames();
-	for (const FName& SlotName : MaterialSlotNames)
-	{
-		int32 MaterialIndex = SourceMeshComponent->GetMaterialIndex(SlotName);
-		UMaterialInterface* Material = SourceMeshComponent->GetMaterial(MaterialIndex);
-
-		TSharedRef<SHorizontalBox> ReplacementBox = SNew(SHorizontalBox);
-
-		TSharedPtr<STextBlock> SourceMaterial;
-		ReplacementBox->AddSlot()
-		.VAlign(VAlign_Center)
-		[
-			SNew(SVerticalBox)
-			+ SVerticalBox::Slot()
-			.AutoHeight()
-			[
-				SAssignNew(SourceMaterial, STextBlock)
-				.Font(IDetailLayoutBuilder::GetDetailFont())
-				.Text(FText::FromString(SlotName.ToString()))
-			]
-
-			+ SVerticalBox::Slot()
-			.Padding(0, 2, 0, 0)
-			.AutoHeight()
-			[
-				SNew(SCheckBox)
-				.IsChecked(false)
-				[
-					SNew(STextBlock)
-					.Font(IDetailLayoutBuilder::GetDetailFont())
-					.ColorAndOpacity(FLinearColor(0.4f, 0.4f, 0.4f, 1.0f))
-					.Text(FText::FromString("Highlight"))
-				]
-			]
-
-			+ SVerticalBox::Slot()
-			.Padding(0, 2, 0, 0)
-			.AutoHeight()
-			[
-				SNew(SCheckBox)
-				.IsChecked(false)
-				[
-					SNew(STextBlock)
-					.Font(IDetailLayoutBuilder::GetDetailFont())
-					.ColorAndOpacity(FLinearColor(0.4f, 0.4f, 0.4f, 1.0f))
-					.Text(FText::FromString("Isolate"))
-				]
-			]
-		];
-
-		auto MaterialReplacement = ReplacementDialogOptions->MaterialReplacements.FindChecked(SlotName);
-		const TSharedPtr<ISinglePropertyView> SinglePropertyViewWidget = PropertyEditorModule.CreateSingleProperty(MaterialReplacement, GET_MEMBER_NAME_CHECKED(UMaterialReplacement, Replacement), SinglePropertyArgs);
-		ReplacementBox->AddSlot()
-		[
-			SNew(SBox)
-			.MinDesiredWidth(200) [
-				SinglePropertyViewWidget.ToSharedRef()
-			]
-		];
-		
-		ReplacementVerticalBox->AddSlot()
-		.Padding(4.0f)
-		.VAlign(VAlign_Fill)
-		.HAlign(HAlign_Fill)
-		[
-			ReplacementBox
-		];
-	}
 	// clang-format on
+	
+	UpdateReplacementTable();
 }
 
 FReply SCMaterialReplacementPackagePicker::OnReplacementConfirmed()
 {
 	PreviousMaterialReplacementTarget = ReplacementDialogOptions->TargetReplacementAsset;
 	bPressedOk = true;
-	SourceMeshComponent->SetMaterialPreview(INDEX_NONE);
+	for (const auto& [MaterialName, Replacement] : ReplacementDialogOptions->MaterialReplacements)
+	{
+		for (UStaticMeshComponent* StaticMeshComponent : Replacement->Components)
+		{
+			StaticMeshComponent->SetMaterialPreview(INDEX_NONE);
+			StaticMeshComponent->SelectedEditorMaterial = INDEX_NONE;
+		}
+	}
+	
+	// SourceMeshComponent->SetMaterialPreview(INDEX_NONE);
 	
 	if (ReplacementDialogOptions->TargetReplacementAsset)
 	{
@@ -200,7 +334,7 @@ FReply SCMaterialReplacementPackagePicker::OnReplacementConfirmed()
 
 FReply SCMaterialReplacementPackagePicker::OnReplacementCanceled()
 {
-	SourceMeshComponent->SetMaterialPreview(INDEX_NONE);
+	// SourceMeshComponent->SetMaterialPreview(INDEX_NONE);
 	if (WeakParentWindow.IsValid())
 	{
 		WeakParentWindow.Pin()->RequestDestroyWindow();
@@ -209,7 +343,7 @@ FReply SCMaterialReplacementPackagePicker::OnReplacementCanceled()
 	return FReply::Handled();
 }
 
-void FMaterialReplacementDialog::OpenDialog(UStaticMeshComponent* SourceMeshComponent)
+void FMaterialReplacementDialog::OpenDialog(UVitruvioComponent* VitruvioComponent)
 {
 	// clang-format off
 	TSharedRef<SWindow> PickerWindow = SNew(SWindow)
@@ -222,7 +356,7 @@ void FMaterialReplacementDialog::OpenDialog(UStaticMeshComponent* SourceMeshComp
 	// clang-format on
 
 	TSharedRef<SCMaterialReplacementPackagePicker> ReplacementPicker = SNew(SCMaterialReplacementPackagePicker)
-		.SourceMeshComponent(SourceMeshComponent)
+		.VitruvioComponent(VitruvioComponent)
 		.ParentWindow(PickerWindow);
 	PickerWindow->SetContent(ReplacementPicker);
 

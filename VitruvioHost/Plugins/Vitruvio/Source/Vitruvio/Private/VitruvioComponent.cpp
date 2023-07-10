@@ -781,9 +781,31 @@ UGeneratedModelStaticMeshComponent* UVitruvioComponent::GetGeneratedModelCompone
 	return VitruvioModelComponent;
 }
 
+TArray<UGeneratedModelHISMComponent*> UVitruvioComponent::GetGeneratedModelHISMComponents() const
+{
+	if (!InitialShapeSceneComponent)
+	{
+		return {};
+	}
+
+	TArray<UGeneratedModelHISMComponent*> VitruvioModelHISMComponents;
+	TArray<USceneComponent*> InitialShapeChildComponents;
+	
+	InitialShapeSceneComponent->GetChildrenComponents(true, InitialShapeChildComponents);
+	for (USceneComponent* Component : InitialShapeChildComponents)
+	{
+		if (Component->IsA(UGeneratedModelHISMComponent::StaticClass()))
+		{
+			VitruvioModelHISMComponents.Add(Cast<UGeneratedModelHISMComponent>(Component));
+		}
+	}
+
+	return VitruvioModelHISMComponents;
+}
+
 FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescription& GenerateResult,
-														 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-														 TMap<FString, Vitruvio::FTextureData>& TextureCache)
+                                                         TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+                                                         TMap<FString, Vitruvio::FTextureData>& TextureCache)
 {
 	// build all meshes
 	for (auto& IdAndMesh : GenerateResult.Meshes)
