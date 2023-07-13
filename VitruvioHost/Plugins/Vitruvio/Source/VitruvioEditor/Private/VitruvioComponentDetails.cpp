@@ -534,30 +534,60 @@ void AddGenerateButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent*
 
 void OpenReplacementDialog(UVitruvioComponent* VitruvioComponent)
 {
-	FMaterialReplacementDialog::OpenDialog(VitruvioComponent);
+	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
+	Proxy->OnGenerateCompleted.AddLambda([VitruvioComponent]()
+	{
+		FMaterialReplacementDialog::OpenDialog(VitruvioComponent);
+	});
+	VitruvioComponent->Generate(Proxy);
 }
 
 void AddMaterialReplacementButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioComponent)
 {
 	// clang-format off
-	RootCategory.AddCustomRow(FText::FromString(L"Replace Materials"), true)
+	RootCategory.AddCustomRow(FText::FromString(TEXT("Replacements")), false)
 	.WholeRowContent()
 	.VAlign(VAlign_Center)
 	.HAlign(HAlign_Center)
 	[
 		SNew(SHorizontalBox)
 		+ SHorizontalBox::Slot()
+		.VAlign(VAlign_Fill)
+		.Padding(4)
 		[
 			SNew(SButton)
-			.Text(FText::FromString("Replace Materials"))
-			.ContentPadding(FMargin(30, 2))
+			// .ContentPadding(FMargin(30, 2))
 			.OnClicked_Lambda([VitruvioComponent]()
 			{
 				OpenReplacementDialog(VitruvioComponent);
 				return FReply::Handled();
 			})
+			.Content()
+			[
+				SNew(STextBlock)
+				.Text(FText::FromString(FString(TEXT("Replace Materials"))))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
 		]
+
+		+ SHorizontalBox::Slot()
 		.VAlign(VAlign_Fill)
+		.Padding(0, 4, 4, 4)
+		[
+			SNew(SButton)
+			// .ContentPadding(FMargin(30, 2))
+			.OnClicked_Lambda([VitruvioComponent]()
+			{
+				OpenReplacementDialog(VitruvioComponent);
+				return FReply::Handled();
+			})
+			.Content()
+			[
+				SNew(STextBlock)
+				.Text(FText::FromString(FString(TEXT("Replace Instances"))))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
+		]
 	];
 	// clang-format on
 }

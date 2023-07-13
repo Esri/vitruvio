@@ -7,21 +7,20 @@
 
 #include "MaterialReplacementDialog.generated.h"
 
-
 UCLASS(BlueprintType)
 class UMaterialReplacement : public UObject
 {
 	GENERATED_BODY()
-	
+
 public:
 	UPROPERTY()
 	TArray<UStaticMeshComponent*> Components;
 	
 	UPROPERTY()
-	UMaterialInterface* Source;
-
+	FName SourceMaterialSlot;
+	
 	UPROPERTY()
-	UMaterialInterface* Replacement;
+	UMaterialInterface* ReplacementMaterial;
 };
 
 USTRUCT()
@@ -33,12 +32,11 @@ struct FMaterialKey
 	UMaterialInterface* Material;
 
 	UPROPERTY()
-	FName SlotName;
+	FName SourceMaterialSlot;
 
 	friend bool operator==(const FMaterialKey& Lhs, const FMaterialKey& RHS)
 	{
-		return Lhs.Material == RHS.Material
-		       && Lhs.SlotName == RHS.SlotName;
+		return Lhs.Material == RHS.Material && Lhs.SourceMaterialSlot == RHS.SourceMaterialSlot;
 	}
 
 	friend bool operator!=(const FMaterialKey& Lhs, const FMaterialKey& RHS)
@@ -48,7 +46,7 @@ struct FMaterialKey
 
 	friend uint32 GetTypeHash(const FMaterialKey& Object)
 	{
-		return HashCombine(GetTypeHash(Object.SlotName), GetTypeHash(Object.Material));
+		return HashCombine(GetTypeHash(Object.SourceMaterialSlot), GetTypeHash(Object.Material));
 	}
 };
 

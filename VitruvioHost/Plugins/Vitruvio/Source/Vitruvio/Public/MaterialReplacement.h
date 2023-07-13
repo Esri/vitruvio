@@ -2,50 +2,69 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
-#include "VitruvioTypes.h"
-#include "UObject/Object.h"
 #include "Algo/AllOf.h"
-#include "Algo/AnyOf.h"
+#include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "Materials/MaterialInterface.h"
+#include "UObject/Object.h"
+#include "Materials/MaterialInstance.h"
 
 #include "MaterialReplacement.generated.h"
 
-UCLASS()
-class UMaterialDescription : public UObject
+USTRUCT(BlueprintType)
+struct VITRUVIO_API FMaterialDescription
 {
 	GENERATED_BODY()
 
-public:
+	UPROPERTY(VisibleAnywhere)
 	TMap<FString, FString> TextureProperties;
+	UPROPERTY(VisibleAnywhere)
 	TMap<FString, FLinearColor> ColorProperties;
+	UPROPERTY(VisibleAnywhere)
 	TMap<FString, double> ScalarProperties;
-	TMap<FString, FString> StringProperties;
 
-	FString BlendMode;
-	FString Name; // ignored on purpose for hash and equality
+	EBlendMode BlendMode = BLEND_Opaque;
 
-	friend bool operator==(const UMaterialDescription& Lhs, const UMaterialDescription& RHS)
+	FMaterialDescription()
+	{
+	}
+
+	explicit FMaterialDescription(UMaterialInstance* MaterialInterface)
+	{
+		for (const auto& TextureParameterValue : MaterialInterface->TextureParameterValues)
+		{
+			const FString Value = TextureParameterValue.ParameterValue ? TextureParameterValue.ParameterValue->GetName() : FString {};
+			TextureProperties.Add(TextureParameterValue.ParameterInfo.Name.ToString(), Value);
+		}
+		for (const auto& VectorParameterValue : MaterialInterface->VectorParameterValues)
+		{
+			ColorProperties.Add(VectorParameterValue.ParameterInfo.Name.ToString(), VectorParameterValue.ParameterValue);
+		}
+		for (const auto& ScalarParameterValue : MaterialInterface->ScalarParameterValues)
+		{
+			ScalarProperties.Add(ScalarParameterValue.ParameterInfo.Name.ToString(), ScalarParameterValue.ParameterValue);
+		}
+
+		BlendMode = MaterialInterface->GetBlendMode();
+	}
+
+	friend bool operator==(const FMaterialDescription& Lhs, const FMaterialDescription& Rhs)
 	{
 		// clang-format off
-		return Lhs.TextureProperties.OrderIndependentCompareEqual(RHS.TextureProperties) &&
-			   Lhs.ColorProperties.OrderIndependentCompareEqual(RHS.ColorProperties) &&
-			   Lhs.ScalarProperties.OrderIndependentCompareEqual(RHS.ScalarProperties) &&
-			   Lhs.StringProperties.OrderIndependentCompareEqual(RHS.StringProperties) && 
-			   Lhs.BlendMode == RHS.BlendMode;
+		return Lhs.TextureProperties.OrderIndependentCompareEqual(Rhs.TextureProperties) &&
+			   Lhs.ColorProperties.OrderIndependentCompareEqual(Rhs.ColorProperties) &&
+			   Lhs.ScalarProperties.OrderIndependentCompareEqual(Rhs.ScalarProperties) &&
+			   Lhs.BlendMode == Rhs.BlendMode;
 		// clang-format on
 	}
 
-	friend bool operator!=(const UMaterialDescription& Lhs, const UMaterialDescription& RHS)
+	friend bool operator!=(const FMaterialDescription& Lhs, const FMaterialDescription& Rhs)
 	{
-		return !(Lhs == RHS);
+		return !(Lhs == Rhs);
 	}
 };
 
-uint32 GetTypeHash(const UMaterialDescription& Object);
-
-inline bool MaterialEquals(UMaterialInterface* Lhs, UMaterialInterface* Rhs);
+uint32 GetTypeHash(const FMaterialDescription& Object);
 
 USTRUCT(BlueprintType)
 struct FMaterialReplacementData
@@ -53,29 +72,29 @@ struct FMaterialReplacementData
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere)
-	UMaterialDescription* Source;
+	FName SourceMaterialSlotName;
 
 	UPROPERTY(EditAnywhere)
-	UMaterialInterface* Replacement;
-	
-	FMaterialReplacementData() : Source(nullptr), Replacement(nullptr)
+	UMaterialInterface* ReplacementMaterial;
+
+	FMaterialReplacementData()
+		: ReplacementMaterial(nullptr)
 	{
 	}
 
 	bool HasReplacement() const
 	{
-		return Replacement != nullptr;
-	}
-	
-	friend bool operator==(const FMaterialReplacementData& Lhs, const FMaterialReplacementData& Rhs)
-	{
-		return Lhs.Source == Rhs.Source
-			&& MaterialEquals(Lhs.Replacement, Rhs.Replacement);
+		return ReplacementMaterial != nullptr;
 	}
 
-	friend bool operator!=(const FMaterialReplacementData& Lhs, const FMaterialReplacementData& RHS)
+	friend bool operator==(const FMaterialReplacementData& Lhs, const FMaterialReplacementData& Rhs)
 	{
-		return !(Lhs == RHS);
+		return Lhs.SourceMaterialSlotName == Rhs.SourceMaterialSlotName && Lhs.ReplacementMaterial == Rhs.ReplacementMaterial;
+	}
+
+	friend bool operator!=(const FMaterialReplacementData& Lhs, const FMaterialReplacementData& Rhs)
+	{
+		return !(Lhs == Rhs);
 	}
 };
 
@@ -83,7 +102,7 @@ UCLASS(BlueprintType)
 class VITRUVIO_API UMaterialReplacementAsset : public UDataAsset
 {
 	GENERATED_BODY()
-	
+
 public:
 	UPROPERTY(EditAnywhere)
 	TArray<FMaterialReplacementData> Replacements;
@@ -93,4 +112,3 @@ public:
 		return Algo::AllOf(Replacements, [](const FMaterialReplacementData& ReplacementData) { return ReplacementData.HasReplacement(); });
 	}
 };
-

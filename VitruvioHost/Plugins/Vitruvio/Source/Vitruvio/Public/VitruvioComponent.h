@@ -420,7 +420,7 @@ private:
 
 	FConvertedGenerateResult BuildResult(FGenerateResultDescription& GenerateResult,
 										 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-										 TMap<FString, Vitruvio::FTextureData>& TextureCache);
+										 TMap<FString, Vitruvio::FTextureData>& TextureCache) const;
 
 #if WITH_EDITOR
 	FDelegateHandle PropertyChangeDelegate;
