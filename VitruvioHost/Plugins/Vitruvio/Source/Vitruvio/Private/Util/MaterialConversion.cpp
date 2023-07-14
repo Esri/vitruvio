@@ -221,18 +221,29 @@ public:
 	}
 };
 
-FName GetMaterialName(UObject* Outer, const Vitruvio::FMaterialAttributeContainer& MaterialContainer)
+FName GetMaterialName(const Vitruvio::FMaterialAttributeContainer& MaterialContainer, TMap<FString, int32>& UniqueMaterialNames)
 {
-	if (MaterialContainer.Name.StartsWith(CityEngineDefaultMaterialName))
+	FString Name = MaterialContainer.Name;
+	
+	if (Name.StartsWith(CityEngineDefaultMaterialName))
 	{
 		if (const FString* ColorMapKey = MaterialContainer.TextureProperties.Find("colorMap"))
 		{
-			const FString ColorMapName = FPaths::GetBaseFilename(*ColorMapKey);
-			return MakeUniqueObjectName(Outer, UMaterialInstance::StaticClass(), FName(ColorMapName));
+			Name = FPaths::GetBaseFilename(*ColorMapKey);
 		}
 	}
+
+	if (UniqueMaterialNames.Contains(Name))
+	{
+		const int32 Index = UniqueMaterialNames[Name]++;
+		Name += TEXT("_") + FString::FromInt(Index);
+	}
+	else
+	{
+		UniqueMaterialNames.Add(Name, 1);
+	}
 	
-	return MakeUniqueObjectName(Outer, UMaterialInstance::StaticClass(), FName(MaterialContainer.Name));
+	return FName(Name);
 }
 
 } // namespace
@@ -242,6 +253,7 @@ namespace Vitruvio
 UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, UMaterialInterface* OpaqueParent,
 															UMaterialInterface* MaskedParent, UMaterialInterface* TranslucentParent,
 															const FMaterialAttributeContainer& MaterialContainer,
+															TMap<FString, int32>& UniqueMaterialNames,
 															TMap<FString, FTextureData>& TextureCache)
 {
 	check(IsInGameThread());
@@ -330,7 +342,7 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, UMat
 		Parent = GetMaterialByBlendMode(ChosenBlendMode, OpaqueParent, MaskedParent, TranslucentParent);
 	}
 
-	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, GetTransientPackage(), GetMaterialName(Outer, MaterialContainer));
+	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, GetTransientPackage(), GetMaterialName(MaterialContainer, UniqueMaterialNames));
 	MaterialInstance->SetFlags(RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
 
 	MaterialInstance->SetScalarParameterValue(FName(TEXT("opacitySource")), UseAlphaAsOpacity);

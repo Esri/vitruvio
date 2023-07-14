@@ -851,11 +851,12 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 		auto VitruvioMesh = GenerateResult.Meshes[Instance.Key.PrototypeId];
 		FString MeshName = GenerateResult.Names[Instance.Key.PrototypeId];
 		TArray<UMaterialInstanceDynamic*> OverrideMaterials;
+		TMap<FString, int32> UniqueMaterialNames;
 		for (size_t MaterialIndex = 0; MaterialIndex < Instance.Key.MaterialOverrides.Num(); ++MaterialIndex)
 		{
 			const Vitruvio::FMaterialAttributeContainer& MaterialContainer = Instance.Key.MaterialOverrides[MaterialIndex];
 			OverrideMaterials.Add(CacheMaterial(OpaqueParent, MaskedParent, TranslucentParent, TextureCache, MaterialCache, MaterialContainer,
-												VitruvioMesh->GetStaticMesh()));
+												UniqueMaterialNames, VitruvioMesh->GetStaticMesh()));
 		}
 
 		Instances.Add({MeshName, VitruvioMesh, OverrideMaterials, Instance.Value});
