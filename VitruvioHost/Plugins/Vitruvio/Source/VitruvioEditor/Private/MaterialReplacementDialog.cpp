@@ -11,8 +11,6 @@
 #include "Widgets/Layout/SScrollBox.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
 
-UMaterialReplacementAsset* PreviousMaterialReplacementTarget = nullptr;
-
 class SCMaterialReplacementPackagePicker : public SCompoundWidget, public FGCObject
 {
 	TWeakPtr<SWindow> WeakParentWindow;
@@ -71,6 +69,15 @@ void SCMaterialReplacementPackagePicker::UpdateReplacementTable()
 		}
 	}
 
+	TMap<FName, UMaterialInterface*> CurrentReplacements;
+	if (ReplacementDialogOptions->TargetReplacementAsset)
+	{
+		for (const FMaterialReplacementData& ReplacementData : ReplacementDialogOptions->TargetReplacementAsset->Replacements)
+		{
+			CurrentReplacements.Add(ReplacementData.SourceMaterialSlotName, ReplacementData.ReplacementMaterial);
+		}
+	} 
+
 	for (UStaticMeshComponent* StaticMeshComponent : StaticMeshComponents)
 	{
 		for (const auto& MaterialSlotName : StaticMeshComponent->GetMaterialSlotNames())
@@ -88,6 +95,10 @@ void SCMaterialReplacementPackagePicker::UpdateReplacementTable()
 			else
 			{
 				UMaterialReplacement* MaterialReplacement = NewObject<UMaterialReplacement>();
+				if (UMaterialInterface** MaterialInterface = CurrentReplacements.Find(MaterialSlotName))
+				{
+					MaterialReplacement->ReplacementMaterial = *MaterialInterface;
+				}
 				MaterialReplacement->SourceMaterialSlot = MaterialSlotName;
 				MaterialReplacement->Components.Add(StaticMeshComponent);
 				ReplacementDialogOptions->MaterialReplacements.Add({ SourceMaterial, MaterialSlotName }, MaterialReplacement);
@@ -213,7 +224,7 @@ void SCMaterialReplacementPackagePicker::Construct(const FArguments& InArgs)
 	VitruvioComponent = InArgs._VitruvioComponent;
 
 	ReplacementDialogOptions = NewObject<UMaterialReplacementDialogOptions>();
-	ReplacementDialogOptions->TargetReplacementAsset = PreviousMaterialReplacementTarget;
+	ReplacementDialogOptions->TargetReplacementAsset = VitruvioComponent->MaterialReplacement;
 
 	WeakParentWindow.Pin()->GetOnWindowClosedEvent().AddLambda([this](const TSharedRef<SWindow>&) {
 		for (const auto& [MaterialName, Replacement] : ReplacementDialogOptions->MaterialReplacements)
@@ -352,7 +363,6 @@ void SCMaterialReplacementPackagePicker::Construct(const FArguments& InArgs)
 
 FReply SCMaterialReplacementPackagePicker::OnReplacementConfirmed()
 {
-	PreviousMaterialReplacementTarget = ReplacementDialogOptions->TargetReplacementAsset;
 	bPressedOk = true;
 	
 	for (const auto& [MaterialName, Replacement] : ReplacementDialogOptions->MaterialReplacements)
