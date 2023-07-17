@@ -24,6 +24,7 @@
 #include "IDetailTreeNode.h"
 #include "IPropertyRowGenerator.h"
 #include "ISinglePropertyView.h"
+#include "InstanceReplacementDialog.h"
 #include "LevelEditor.h"
 #include "MaterialReplacementDialog.h"
 #include "Widgets/Colors/SColorBlock.h"
@@ -532,10 +533,20 @@ void AddGenerateButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent*
 	// clang-format on
 }
 
-void OpenReplacementDialog(UVitruvioComponent* VitruvioComponent)
+void OpenMaterialReplacementDialog(UVitruvioComponent* VitruvioComponent)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->OnGenerateCompleted.AddLambda([VitruvioComponent]() { FMaterialReplacementDialog::OpenDialog(VitruvioComponent); });
+	VitruvioComponent->Generate(Proxy);
+}
+
+void OpenInstanceReplacementDialog(UVitruvioComponent* VitruvioComponent)
+{
+	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
+	Proxy->OnGenerateCompleted.AddLambda([VitruvioComponent]()
+	{
+		FInstanceReplacementDialog::OpenDialog(VitruvioComponent);
+	});
 	VitruvioComponent->Generate(Proxy);
 }
 
@@ -553,10 +564,9 @@ void AddMaterialReplacementButton(IDetailCategoryBuilder& RootCategory, UVitruvi
 		.Padding(4)
 		[
 			SNew(SButton)
-			// .ContentPadding(FMargin(30, 2))
 			.OnClicked_Lambda([VitruvioComponent]()
 			{
-				OpenReplacementDialog(VitruvioComponent);
+				OpenMaterialReplacementDialog(VitruvioComponent);
 				return FReply::Handled();
 			})
 			.Content()
@@ -572,10 +582,9 @@ void AddMaterialReplacementButton(IDetailCategoryBuilder& RootCategory, UVitruvi
 		.Padding(0, 4, 4, 4)
 		[
 			SNew(SButton)
-			// .ContentPadding(FMargin(30, 2))
 			.OnClicked_Lambda([VitruvioComponent]()
 			{
-				OpenReplacementDialog(VitruvioComponent);
+				OpenInstanceReplacementDialog(VitruvioComponent);
 				return FReply::Handled();
 			})
 			.Content()

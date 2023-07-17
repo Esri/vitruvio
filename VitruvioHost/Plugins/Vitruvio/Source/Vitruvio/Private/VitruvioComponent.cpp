@@ -345,6 +345,30 @@ void ApplyMaterialReplacements(UStaticMeshComponent* StaticMeshComponent, UMater
 	}
 }
 
+void ApplyInstanceReplacements(UVitruvioComponent* VitruvioComponent, UInstanceReplacementAsset* Replacement)
+{
+	if (!Replacement)
+	{
+		return;
+	}
+
+	TMap<FString, UStaticMesh*> InstanceReplacementMap;
+
+	for (const FInstanceReplacementData& ReplacementData : Replacement->Replacements)
+	{
+		InstanceReplacementMap.Add(ReplacementData.SourceMeshIdentifier, ReplacementData.ReplacementMesh);
+	}
+
+	for (UGeneratedModelHISMComponent* GeneratedModelHISMComponent : VitruvioComponent->GetGeneratedModelHISMComponents())
+	{
+		
+		if (UStaticMesh** ReplacementMesh = InstanceReplacementMap.Find(GeneratedModelHISMComponent->GetMeshIdentifier()))
+		{
+			GeneratedModelHISMComponent->SetStaticMesh(*ReplacementMesh);
+		}
+	}
+}
+
 } // namespace
 
 UVitruvioComponent::FOnHierarchyChanged UVitruvioComponent::OnHierarchyChanged;
@@ -685,6 +709,8 @@ void UVitruvioComponent::ProcessGenerateQueue()
 			ApplyMaterialReplacements(InstancedComponent, MaterialReplacement);
 		}
 
+		ApplyInstanceReplacements(this, InstanceReplacement);
+
 		OnHierarchyChanged.Broadcast(this);
 
 		bHasGeneratedModel = true;
@@ -999,6 +1025,11 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		}
 
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, MaterialReplacement))
+		{
+			bComponentPropertyChanged = true;
+		}
+
+		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, InstanceReplacement))
 		{
 			bComponentPropertyChanged = true;
 		}

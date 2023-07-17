@@ -24,6 +24,7 @@
 #include "GeneratedModelHISMComponent.h"
 #include "GeneratedModelStaticMeshComponent.h"
 #include "InitialShape.h"
+#include "InstanceReplacement.h"
 #include "MaterialReplacement.h"
 #include "VitruvioTypes.h"
 
@@ -90,6 +91,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vitruvio")
 	UMaterialReplacementAsset* MaterialReplacement;
 
+	/** The instance replacement asset which defines how instances are replaced after generating a model. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Vitruvio")
+	UInstanceReplacementAsset* InstanceReplacement;
+	
 	/** Default parent material for opaque geometry. */
 	UPROPERTY(EditAnywhere, DisplayName = "Opaque Parent", Category = "Vitruvio Default Materials")
 	UMaterial* OpaqueParent;
