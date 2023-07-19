@@ -104,7 +104,7 @@ TMap<FString, double> CreateAvailableUVSetMaterialParameterMap(uint32_t const* c
 }
 
 } // namespace
-void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wchar_t* uri, const double* vtx, size_t vtxSize, const double* nrm,
+void UnrealCallbacks::addMesh(const wchar_t* name,  const wchar_t* identifier, int32_t prototypeId, const wchar_t* uri, const double* vtx, size_t vtxSize, const double* nrm,
 							  size_t nrmSize, const uint32_t* faceVertexCounts, size_t faceVertexCountsSize, const uint32_t* vertexIndices,
 							  size_t vertexIndicesSize, const uint32_t* normalIndices, size_t normalIndicesSize,
 
@@ -117,10 +117,9 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 	const FString UriString(uri);
 	const FString NameString(name);
 
-	if (!UriString.IsEmpty())
+	if (prototypeId != NoPrototypeIndex)
 	{
-		TSharedPtr<FVitruvioMesh> Mesh = VitruvioModule::Get().GetMeshCache().Get(UriString);
-		if (Mesh)
+		if (TSharedPtr<FVitruvioMesh> Mesh = VitruvioModule::Get().GetMeshCache().Get(UriString))
 		{
 			Meshes.Add(prototypeId, Mesh);
 			Names.Add(prototypeId, NameString);
@@ -253,9 +252,10 @@ void UnrealCallbacks::addMesh(const wchar_t* name, int32_t prototypeId, const wc
 			FStaticMeshOperations::ComputeMikktTangents(Description, true);
 		}
 
-		TSharedPtr<FVitruvioMesh> Mesh = MakeShared<FVitruvioMesh>(UriString, Description, MeshMaterials);
+		const FString IdentifierString(identifier);
+		TSharedPtr<FVitruvioMesh> Mesh = MakeShared<FVitruvioMesh>(UriString, IdentifierString, Description, MeshMaterials);
 
-		if (!UriString.IsEmpty())
+		if (prototypeId != NoPrototypeIndex)
 		{
 			Mesh = VitruvioModule::Get().GetMeshCache().InsertOrGet(UriString, Mesh);
 		}

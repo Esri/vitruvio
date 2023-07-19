@@ -53,6 +53,18 @@ public:
 		CollisionData = InCollisionData;
 	}
 
+	const FString& GetMeshIdentifier() const
+	{
+		return MeshIdentifier;
+	}
+
+	void SetMeshIdentifier(const FString& NewMeshIdentifier)
+	{
+		MeshIdentifier = NewMeshIdentifier;
+	}
+
 private:
+	
+	FString MeshIdentifier;
 	FCollisionData CollisionData;
 };

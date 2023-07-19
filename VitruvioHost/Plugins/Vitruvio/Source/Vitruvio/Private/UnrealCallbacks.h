@@ -41,7 +41,7 @@ public:
 	virtual ~UnrealCallbacks() override = default;
 	UnrealCallbacks(AttributeMapBuilderUPtr& AttributeMapBuilder) : AttributeMapBuilder(AttributeMapBuilder) {}
 
-	static const int32 NO_PROTOTYPE_INDEX = -1;
+	static constexpr int32 NoPrototypeIndex = -1;
 
 	const Vitruvio::FInstanceMap& GetInstances() const
 	{
@@ -69,9 +69,10 @@ public:
 	}
 
 	/**
-	 * @param name initial shape name, optionally used to create primitive groups on output
+	 * @param name either the name of the inserted asset or the shape name
+	 * @param identifier unique identifier of this mesh if originates from an inserted asset or empty otherwise
 	 * @param prototypeId the id of the prototype or -1 of not cached
-	 * @param uri
+	 * @param uri the uri of the inserted asset or empty otherwise
 	 * @param vtx vertex coordinate array
 	 * @param vtxSize of vertex coordinate array
 	 * @param nrm vertex normal array
@@ -87,7 +88,7 @@ public:
 	 * types)
 	 */
 	// clang-format off
-	void addMesh(const wchar_t* name,
+	void addMesh(const wchar_t* name, const wchar_t* identifier,
 		int32_t prototypeId, const wchar_t* uri,
 		const double* vtx, size_t vtxSize,
 		const double* nrm, size_t nrmSize,

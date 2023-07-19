@@ -26,8 +26,10 @@ public:
 	~IUnrealCallbacks() override = default;
 
 	/**
-	 * @param name initial shape name, optionally used to create primitive groups on output
+	 * @param name either the name of the inserted asset or the shape name
+	 * @param identifier unique identifier of this mesh if originates from an inserted asset or empty otherwise
 	 * @param prototypeId the id of the prototype or -1 of not cached
+	 * @param uri the uri of the inserted asset or empty otherwise
 	 * @param vtx vertex coordinate array
 	 * @param vtxSize of vertex coordinate array
 	 * @param nrm vertex normal array
@@ -43,7 +45,7 @@ public:
 	 * types)
 	 */
 	// clang-format off
-	virtual void addMesh(const wchar_t* name,
+	virtual void addMesh(const wchar_t* name, const wchar_t* identifier,
 	                     int32_t prototypeId, const wchar_t* uri,
 	                     const double* vtx, size_t vtxSize,
 	                     const double* nrm, size_t nrmSize,

@@ -658,7 +658,8 @@ void UVitruvioComponent::ProcessGenerateQueue()
 			const TArray<FTransform>& Transforms = Instance.Transforms;
 			InstancedComponent->SetStaticMesh(Instance.InstanceMesh->GetStaticMesh());
 			InstancedComponent->SetCollisionData(Instance.InstanceMesh->GetCollisionData());
-
+			InstancedComponent->SetMeshIdentifier(Instance.InstanceMesh->GetIdentifier());
+			
 			// Add all instance transforms
 			for (const FTransform& Transform : Transforms)
 			{
@@ -862,8 +863,8 @@ FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescript
 		Instances.Add({MeshName, VitruvioMesh, OverrideMaterials, Instance.Value});
 	}
 
-	TSharedPtr<FVitruvioMesh> ShapeMesh = GenerateResult.Meshes.Contains(UnrealCallbacks::NO_PROTOTYPE_INDEX)
-											  ? GenerateResult.Meshes[UnrealCallbacks::NO_PROTOTYPE_INDEX]
+	TSharedPtr<FVitruvioMesh> ShapeMesh = GenerateResult.Meshes.Contains(UnrealCallbacks::NoPrototypeIndex)
+											  ? GenerateResult.Meshes[UnrealCallbacks::NoPrototypeIndex]
 											  : TSharedPtr<FVitruvioMesh>{};
 
 	return {ShapeMesh, Instances, GenerateResult.Reports};
