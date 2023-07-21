@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Name="${PROJECT_NAME}" Manufacturer="${PACKAGE_VENDOR_ESCAPED}" Version="${VITRUVIO_VERSION_MMP}"
+		Id="*" UpgradeCode="01ADAF24-B7EB-4E62-86F2-C3B2E4951473" Language="1033" Codepage='1252'>
+
+		<Package Platform='x64' Id='*' Keywords='Installer' Description="${PROJECT_NAME}"
+			Manufacturer='${PACKAGE_VENDOR_ESCAPED}' InstallerVersion='200'
+			Languages='1033' Compressed='yes' SummaryCodepage='1252' />
+
+		<Media Id='1' Cabinet='Sample.cab' EmbedCab='yes' DiskPrompt="CD-ROM #1" />
+		<Property Id='DiskPrompt' Value="${PROJECT_NAME} Installation [1]" />
+
+		<MajorUpgrade Schedule="afterInstallInitialize"
+			DowngradeErrorMessage="A later version of [ProductName] is already installed.&#xA;
+				Please uninstall [ProductName] first if you want to downgrade to version [ProductVersion].&#xA;
+				Setup will now exit."/>
+
+		<Property Id="ARPPRODUCTICON">ProductIcon.ico</Property>
+		<Property Id="UNREALDIR">
+			<RegistrySearch Id="UnrealEngineSearch"
+							Root="HKLM"
+							Key="SOFTWARE\EpicGames\Unreal Engine\${UNREAL_MAJOR}.${UNREAL_MINOR}"
+							Name="InstalledDirectory"
+							Type="directory" />
+		</Property>
+		<Icon Id="ProductIcon.ico" SourceFile="${RESOURCE_FOLDER}\vitruvio.ico"/>
+		<WixVariable Id="WixUIBannerBmp" Value="${RESOURCE_FOLDER}\banner.png"/>
+		<WixVariable Id="WixUIDialogBmp" Value="${RESOURCE_FOLDER}\dialog.png"/>
+		<PropertyRef Id="WIX_DIR_PERSONAL"/>
+
+		<Directory Id='TARGETDIR' Name='SourceDir' ComponentGuidGenerationSeed="1C6CF4A7-4ED2-4828-B832-6D37E6EB8042">
+			<Directory Id='UNREALDIR'>
+				<Directory Id='EngineFolder' Name='Engine'>
+					<Directory Id='PluginsFolder' Name='Plugins'>
+						<Directory Id='VitruvioInstallComponentDir' Name='Vitruvio'/>
+					</Directory>
+				</Directory>
+			</Directory>
+		</Directory>
+
+		<Feature Id='VitruvioForUnreal' Level='1' Title="Vitruvio for Unreal ${UNREAL_MAJOR}.${UNREAL_MINOR}" Description="Installs the Vitruvio Plugin for Unreal ${UNREAL_MAJOR}.${UNREAL_MINOR}">
+			<ComponentGroupRef Id='VitruvioInstallComponent' />
+		</Feature>
+
+		<Property Id="WIXUI_INSTALLDIR" Value="WIX_DIR_PERSONAL" />
+		<UIRef Id="WixUI_Minimal" />
+	</Product>
+</Wix>

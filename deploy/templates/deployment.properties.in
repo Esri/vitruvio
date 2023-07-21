@@ -1,0 +1,5 @@
+package_name = ${PACKAGE_NAME}
+package_version_base = ${VITRUVIO_VERSION_BASE}
+package_version = ${VITRUVIO_VERSION}
+package_file = ${PACKAGE_FILE_NAME}
+package_classifier = ${VITRUVIO_PKG_OS}

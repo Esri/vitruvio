@@ -90,6 +90,7 @@ steamvr_ue_editor_app.json
 *.out
 *.app
 *.ipa
+*.msi
 
 
 #----------------------------------------------------------
@@ -115,3 +116,7 @@ Build/*/**
 *.zip
 desktop.ini
 
+#----------------------------------------------------------
+# Deploy files
+
+deploy/build_msi
