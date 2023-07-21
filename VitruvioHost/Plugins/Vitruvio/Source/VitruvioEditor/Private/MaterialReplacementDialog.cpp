@@ -2,30 +2,22 @@
 
 #include "MaterialReplacementDialog.h"
 
-#include "AssetToolsModule.h"
 #include "DetailLayoutBuilder.h"
 #include "EngineUtils.h"
 #include "Framework/Docking/TabManager.h"
 #include "ISinglePropertyView.h"
-#include "ReplacementDataAssetFactory.h"
+#include "ReplacementDialog.h"
 #include "VitruvioComponent.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SScrollBox.h"
-#include "Widgets/Layout/SUniformGridPanel.h"
 
-class SCMaterialReplacementPackagePicker : public SCompoundWidget, public FGCObject
+class SCMaterialReplacementPackagePicker : public SReplacementPackagePicker
 {
-	TWeakPtr<SWindow> WeakParentWindow;
-	UVitruvioComponent* VitruvioComponent = nullptr;
 	UMaterialReplacementDialogOptions* ReplacementDialogOptions = nullptr;
 
-	TSharedPtr<SScrollBox> ReplacementsBox;
 	TArray<TSharedPtr<SCheckBox>> IsolateCheckboxes;
 	TSharedPtr<SCheckBox> IncludeInstancesCheckBox;
 	TSharedPtr<SCheckBox> ApplyToAllVitruvioActorsCheckBox;
-	TSharedPtr<SButton> ApplyButton;
-
-	bool bPressedOk = false;
 
 public:
 	SLATE_BEGIN_ARGS(SCMaterialReplacementPackagePicker) {}
@@ -35,22 +27,112 @@ public:
 
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
 
-	void UpdateReplacementTable();
 	void Construct(const FArguments& InArgs);
 
-	bool PressedOk() const
-	{
-		return bPressedOk;
-	}
-
-private:
-	FReply OnReplacementConfirmed();
-	FReply OnReplacementCanceled();
+protected:
+	virtual FText CreateHeaderText() override;
+	virtual TSharedPtr<ISinglePropertyView> CreateTargetReplacementWidget() override;
+	virtual void OnCreateNewAsset() override;
+	virtual void AddDialogOptions(const TSharedPtr<SVerticalBox>& Content) override;
+	virtual void OnWindowClosed() override;
+	virtual void UpdateReplacementTable() override;
+	virtual FReply OnReplacementConfirmed() override;
+	virtual FReply OnReplacementCanceled() override;
 };
 
 void SCMaterialReplacementPackagePicker::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	Collector.AddReferencedObject(ReplacementDialogOptions);
+}
+
+void SCMaterialReplacementPackagePicker::Construct(const FArguments& InArgs)
+{
+	ReplacementDialogOptions = NewObject<UMaterialReplacementDialogOptions>();
+	ReplacementDialogOptions->TargetReplacementAsset = InArgs._VitruvioComponent->MaterialReplacement;
+
+	// clang-format off
+	SReplacementPackagePicker::Construct(SReplacementPackagePicker::FArguments()
+		.ParentWindow(InArgs._ParentWindow)
+		.VitruvioComponent(InArgs._VitruvioComponent));
+	// clang-format on
+
+	ApplyButton->SetEnabled(ReplacementDialogOptions->TargetReplacementAsset != nullptr);
+}
+
+FText SCMaterialReplacementPackagePicker::CreateHeaderText()
+{
+	return FText::FromString(TEXT("Choose Material replacements and the DataTable where they will be added."));
+}
+
+TSharedPtr<ISinglePropertyView> SCMaterialReplacementPackagePicker::CreateTargetReplacementWidget()
+{
+	FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
+	FSinglePropertyParams SinglePropertyArgs;
+	SinglePropertyArgs.NamePlacement = EPropertyNamePlacement::Hidden;
+
+	const TSharedPtr<ISinglePropertyView> TargetReplacementWidget = PropertyEditorModule.CreateSingleProperty(
+		ReplacementDialogOptions, GET_MEMBER_NAME_CHECKED(UMaterialReplacementDialogOptions, TargetReplacementAsset), SinglePropertyArgs);
+
+	TargetReplacementWidget->GetPropertyHandle()->SetOnPropertyValueChanged(
+		FSimpleDelegate::CreateLambda([this]() { ApplyButton->SetEnabled(ReplacementDialogOptions->TargetReplacementAsset != nullptr); }));
+
+	return TargetReplacementWidget;
+}
+
+void SCMaterialReplacementPackagePicker::OnCreateNewAsset()
+{
+	CreateNewAsset<UMaterialReplacementAsset, UMaterialReplacementDialogOptions>(ReplacementDialogOptions);
+}
+
+void SCMaterialReplacementPackagePicker::AddDialogOptions(const TSharedPtr<SVerticalBox>& Content)
+{
+	// clang-format off
+	Content->AddSlot()
+	.Padding(4, 12, 4, 4)
+	.AutoHeight()
+	[
+		SAssignNew(IncludeInstancesCheckBox, SCheckBox)
+		.OnCheckStateChanged_Lambda([this](ECheckBoxState CheckBoxState)
+		{
+			UpdateReplacementTable();
+		})
+		.IsChecked(true)
+		[
+			SNew(STextBlock)
+			.Font(IDetailLayoutBuilder::GetDetailFont())
+			.ColorAndOpacity(FLinearColor(0.4f, 0.4f, 0.4f, 1.0f))
+			.Text(FText::FromString("Include Instances"))
+		]
+	];
+
+	const FString ApplyToAllCheckBoxText = TEXT("Apply to all '") + VitruvioComponent->GetRpk()->GetName() + TEXT("' VitruvioActors");
+	
+	Content->AddSlot()
+	.Padding(4)
+	.AutoHeight()
+	[
+		SAssignNew(ApplyToAllVitruvioActorsCheckBox, SCheckBox)
+		.IsChecked(true)
+		[
+			SNew(STextBlock)
+			.Font(IDetailLayoutBuilder::GetDetailFont())
+			.ColorAndOpacity(FLinearColor(0.4f, 0.4f, 0.4f, 1.0f))
+			.Text(FText::FromString(ApplyToAllCheckBoxText))
+		]
+	];
+	// clang-format on
+}
+
+void SCMaterialReplacementPackagePicker::OnWindowClosed()
+{
+	for (const auto& [MaterialName, Replacement] : ReplacementDialogOptions->MaterialReplacements)
+	{
+		for (UStaticMeshComponent* StaticMeshComponent : Replacement->Components)
+		{
+			StaticMeshComponent->SetMaterialPreview(INDEX_NONE);
+			StaticMeshComponent->SelectedEditorMaterial = INDEX_NONE;
+		}
+	}
 }
 
 void SCMaterialReplacementPackagePicker::UpdateReplacementTable()
@@ -206,6 +288,7 @@ void SCMaterialReplacementPackagePicker::UpdateReplacementTable()
 
 		const TSharedPtr<ISinglePropertyView> SinglePropertyViewWidget = PropertyEditorModule.CreateSingleProperty(
 			Replacement, GET_MEMBER_NAME_CHECKED(UMaterialReplacement, ReplacementMaterial), SinglePropertyArgs);
+
 		// clang-format off
 		ReplacementBox->AddSlot()
 		[
@@ -220,174 +303,8 @@ void SCMaterialReplacementPackagePicker::UpdateReplacementTable()
 	}
 }
 
-void SCMaterialReplacementPackagePicker::Construct(const FArguments& InArgs)
-{
-	WeakParentWindow = InArgs._ParentWindow;
-	VitruvioComponent = InArgs._VitruvioComponent;
-
-	ReplacementDialogOptions = NewObject<UMaterialReplacementDialogOptions>();
-	ReplacementDialogOptions->TargetReplacementAsset = VitruvioComponent->MaterialReplacement;
-
-	WeakParentWindow.Pin()->GetOnWindowClosedEvent().AddLambda([this](const TSharedRef<SWindow>&) {
-		for (const auto& [MaterialName, Replacement] : ReplacementDialogOptions->MaterialReplacements)
-		{
-			for (UStaticMeshComponent* StaticMeshComponent : Replacement->Components)
-			{
-				StaticMeshComponent->SetMaterialPreview(INDEX_NONE);
-				StaticMeshComponent->SelectedEditorMaterial = INDEX_NONE;
-			}
-		}
-	});
-
-	FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	FSinglePropertyParams SinglePropertyArgs;
-	SinglePropertyArgs.NamePlacement = EPropertyNamePlacement::Hidden;
-
-	const FString ApplyToAllCheckBoxText = TEXT("Apply to all '") + VitruvioComponent->GetRpk()->GetName() + TEXT("' VitruvioActors");
-	const TSharedPtr<ISinglePropertyView> TargetReplacementWidget = PropertyEditorModule.CreateSingleProperty(
-		ReplacementDialogOptions, GET_MEMBER_NAME_CHECKED(UMaterialReplacementDialogOptions, TargetReplacementAsset), SinglePropertyArgs);
-
-	TargetReplacementWidget->GetPropertyHandle()->SetOnPropertyValueChanged(
-		FSimpleDelegate::CreateLambda([this]() { ApplyButton->SetEnabled(ReplacementDialogOptions->TargetReplacementAsset != nullptr); }));
-
-	// clang-format off
-	ChildSlot
-	[
-		SNew(SVerticalBox)
-		+ SVerticalBox::Slot()
-		.HAlign(HAlign_Center)
-		.Padding(4.0f)
-		.AutoHeight()
-		[
-			SNew(STextBlock)
-			.AutoWrapText(true)
-			.Text(FText::FromString(TEXT("Choose Material replacements and the DataTable where they will be added.")))
-		]
-
-		+ SVerticalBox::Slot()
-		.HAlign(HAlign_Center)
-		.AutoHeight()
-		.Padding(4.0f)
-		[
-			SNew(SBox)
-			.MinDesiredWidth(250)
-			[
-				TargetReplacementWidget.ToSharedRef()
-			]
-		]
-
-		+ SVerticalBox::Slot()
-		.HAlign(HAlign_Center)
-		.AutoHeight()
-		.Padding(4.0f)
-		[
-			SNew(SButton)
-			.OnClicked_Lambda([this]()
-			{
-				if (const auto Window = WeakParentWindow.Pin())
-				{
-					const FAssetToolsModule& AssetToolsModule = FAssetToolsModule::GetModule();
-					UReplacementDataAssetFactory* DataAssetFactory = NewObject<UReplacementDataAssetFactory>();
-					Window->HideWindow();
-					DataAssetFactory->DataAssetClass = UMaterialReplacementAsset::StaticClass();
-					if (UMaterialReplacementAsset* NewReplacementAsset = Cast<UMaterialReplacementAsset>(AssetToolsModule.Get().CreateAssetWithDialog(UInstanceReplacementAsset::StaticClass(), DataAssetFactory)))
-					{
-						ReplacementDialogOptions->TargetReplacementAsset = NewReplacementAsset;
-					}
-						
-					Window->ShowWindow();
-
-					ApplyButton->SetEnabled(ReplacementDialogOptions->TargetReplacementAsset != nullptr);
-				}
-					
-				return FReply::Handled();
-			})
-			[
-				SNew(STextBlock)
-				.Font(IDetailLayoutBuilder::GetDetailFont())
-				.Text(FText::FromString("Create New Asset"))
-			]
-		]
-
-		+ SVerticalBox::Slot()
-		.Padding(4, 12, 4, 4)
-		.AutoHeight()
-		[
-			SAssignNew(IncludeInstancesCheckBox, SCheckBox)
-			.OnCheckStateChanged_Lambda([this](ECheckBoxState CheckBoxState)
-			{
-				UpdateReplacementTable();
-			})
-			.IsChecked(true)
-			[
-				SNew(STextBlock)
-				.Font(IDetailLayoutBuilder::GetDetailFont())
-				.ColorAndOpacity(FLinearColor(0.4f, 0.4f, 0.4f, 1.0f))
-				.Text(FText::FromString("Include Instances"))
-			]
-		]
-		
-		+ SVerticalBox::Slot()
-		.Padding(4)
-		.AutoHeight()
-		[
-			SAssignNew(ApplyToAllVitruvioActorsCheckBox, SCheckBox)
-			.IsChecked(true)
-			[
-				SNew(STextBlock)
-				.Font(IDetailLayoutBuilder::GetDetailFont())
-				.ColorAndOpacity(FLinearColor(0.4f, 0.4f, 0.4f, 1.0f))
-				.Text(FText::FromString(ApplyToAllCheckBoxText))
-			]
-		]
-			
-		+ SVerticalBox::Slot()
-		.Padding(4.0f)
-		.VAlign(VAlign_Fill)
-		.HAlign(HAlign_Fill)
-		[
-			SAssignNew(ReplacementsBox, SScrollBox)
-		]
-		
-		+ SVerticalBox::Slot()
-		.AutoHeight()
-		.HAlign(HAlign_Fill)
-		.Padding(2)
-		[
-			SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot()
-			.HAlign(HAlign_Right)
-			.VAlign(VAlign_Bottom)
-			[
-				SNew(SUniformGridPanel).SlotPadding(2)
-				+ SUniformGridPanel::Slot(0, 0)
-				[
-					SAssignNew(ApplyButton, SButton)
-					.HAlign(HAlign_Center)
-					.Text(FText::FromString("Apply"))
-					.OnClicked(this, &SCMaterialReplacementPackagePicker::OnReplacementConfirmed)
-				]
-
-				+ SUniformGridPanel::Slot(1, 0)
-				[
-					SNew(SButton)
-					.HAlign(HAlign_Center)
-					.Text(FText::FromString("Cancel"))
-					.OnClicked(this, &SCMaterialReplacementPackagePicker::OnReplacementCanceled)
-				]
-			]
-		]
-	];
-	// clang-format on
-
-	ApplyButton->SetEnabled(ReplacementDialogOptions->TargetReplacementAsset != nullptr);
-	UpdateReplacementTable();
-}
-
 FReply SCMaterialReplacementPackagePicker::OnReplacementConfirmed()
 {
-	bPressedOk = true;
-
 	for (const auto& [MaterialName, Replacement] : ReplacementDialogOptions->MaterialReplacements)
 	{
 		for (UStaticMeshComponent* StaticMeshComponent : Replacement->Components)
@@ -464,27 +381,5 @@ FReply SCMaterialReplacementPackagePicker::OnReplacementCanceled()
 
 void FMaterialReplacementDialog::OpenDialog(UVitruvioComponent* VitruvioComponent)
 {
-	// clang-format off
-	TSharedRef<SWindow> PickerWindow = SNew(SWindow)
-		.Title(FText::FromString("Choose Replacement"))
-		.SizingRule(ESizingRule::UserSized)
-		.ClientSize(FVector2D(500.f, 400.f))
-		.IsTopmostWindow(true)
-		.SupportsMaximize(false)
-		.SupportsMinimize(false);
-	// clang-format on
-
-	TSharedRef<SCMaterialReplacementPackagePicker> ReplacementPicker =
-		SNew(SCMaterialReplacementPackagePicker).VitruvioComponent(VitruvioComponent).ParentWindow(PickerWindow);
-	PickerWindow->SetContent(ReplacementPicker);
-
-	TSharedPtr<SWindow> ParentWindow = FGlobalTabmanager::Get()->GetRootWindow();
-	if (ParentWindow.IsValid())
-	{
-		FSlateApplication::Get().AddWindowAsNativeChild(PickerWindow, ParentWindow.ToSharedRef());
-	}
-	else
-	{
-		FSlateApplication::Get().AddWindow(PickerWindow);
-	}
+	FReplacementDialog::OpenDialog<SCMaterialReplacementPackagePicker>(VitruvioComponent);
 }

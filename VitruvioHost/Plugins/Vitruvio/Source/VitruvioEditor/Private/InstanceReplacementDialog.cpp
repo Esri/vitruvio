@@ -2,30 +2,21 @@
 
 #include "InstanceReplacementDialog.h"
 
-#include "AssetToolsModule.h"
 #include "DetailLayoutBuilder.h"
 #include "EngineUtils.h"
-#include "Factories/DataAssetFactory.h"
 #include "Framework/Docking/TabManager.h"
 #include "ISinglePropertyView.h"
-#include "ReplacementDataAssetFactory.h"
+#include "ReplacementDialog.h"
 #include "VitruvioComponent.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SScrollBox.h"
-#include "Widgets/Layout/SUniformGridPanel.h"
 
-class SInstanceReplacementPackagePicker : public SCompoundWidget, public FGCObject
+class SInstanceReplacementPackagePicker : public SReplacementPackagePicker
 {
-	TWeakPtr<SWindow> WeakParentWindow;
-	UVitruvioComponent* VitruvioComponent = nullptr;
 	UInstanceReplacementDialogOptions* ReplacementDialogOptions = nullptr;
 
-	TSharedPtr<SScrollBox> ReplacementsBox;
 	TArray<TSharedPtr<SCheckBox>> IsolateCheckboxes;
 	TSharedPtr<SCheckBox> ApplyToAllVitruvioActorsCheckBox;
-	TSharedPtr<SButton> ApplyButton;
-
-	bool bPressedOk = false;
 
 public:
 	SLATE_BEGIN_ARGS(SInstanceReplacementPackagePicker) {}
@@ -35,22 +26,95 @@ public:
 
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
 
-	void UpdateReplacementTable();
 	void Construct(const FArguments& InArgs);
 
-	bool PressedOk() const
-	{
-		return bPressedOk;
-	}
-
-private:
-	FReply OnReplacementConfirmed();
-	FReply OnReplacementCanceled();
+protected:
+	virtual FText CreateHeaderText() override;
+	virtual TSharedPtr<ISinglePropertyView> CreateTargetReplacementWidget() override;
+	virtual void OnCreateNewAsset() override;
+	virtual void AddDialogOptions(const TSharedPtr<SVerticalBox>& Content) override;
+	virtual void OnWindowClosed() override;
+	virtual void UpdateReplacementTable() override;
+	virtual FReply OnReplacementConfirmed() override;
+	virtual FReply OnReplacementCanceled() override;
 };
 
 void SInstanceReplacementPackagePicker::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	Collector.AddReferencedObject(ReplacementDialogOptions);
+}
+
+void SInstanceReplacementPackagePicker::Construct(const FArguments& InArgs)
+{
+	ReplacementDialogOptions = NewObject<UInstanceReplacementDialogOptions>();
+	ReplacementDialogOptions->TargetReplacementAsset = InArgs._VitruvioComponent->InstanceReplacement;
+
+	// clang-format off
+	SReplacementPackagePicker::Construct(SReplacementPackagePicker::FArguments()
+		.ParentWindow(InArgs._ParentWindow)
+		.VitruvioComponent(InArgs._VitruvioComponent));
+	// clang-format on
+
+	ApplyButton->SetEnabled(ReplacementDialogOptions->TargetReplacementAsset != nullptr);
+}
+
+FText SInstanceReplacementPackagePicker::CreateHeaderText()
+{
+	return FText::FromString(TEXT("Choose Instance replacements and the DataTable where they will be added."));
+}
+
+TSharedPtr<ISinglePropertyView> SInstanceReplacementPackagePicker::CreateTargetReplacementWidget()
+{
+	FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
+	FSinglePropertyParams SinglePropertyArgs;
+	SinglePropertyArgs.NamePlacement = EPropertyNamePlacement::Hidden;
+
+	const TSharedPtr<ISinglePropertyView> TargetReplacementWidget = PropertyEditorModule.CreateSingleProperty(
+		ReplacementDialogOptions, GET_MEMBER_NAME_CHECKED(UInstanceReplacementDialogOptions, TargetReplacementAsset), SinglePropertyArgs);
+
+	TargetReplacementWidget->GetPropertyHandle()->SetOnPropertyValueChanged(
+		FSimpleDelegate::CreateLambda([this]() { ApplyButton->SetEnabled(ReplacementDialogOptions->TargetReplacementAsset != nullptr); }));
+
+	return TargetReplacementWidget;
+}
+
+void SInstanceReplacementPackagePicker::OnCreateNewAsset()
+{
+	CreateNewAsset<UInstanceReplacementAsset, UInstanceReplacementDialogOptions>(ReplacementDialogOptions);
+}
+
+void SInstanceReplacementPackagePicker::AddDialogOptions(const TSharedPtr<SVerticalBox>& Content)
+{
+	// clang-format off
+	const FString ApplyToAllCheckBoxText = TEXT("Apply to all '") + VitruvioComponent->GetRpk()->GetName() + TEXT("' VitruvioActors");
+	
+	Content->AddSlot()
+	.Padding(4)
+	.AutoHeight()
+	[
+		SAssignNew(ApplyToAllVitruvioActorsCheckBox, SCheckBox)
+		.IsChecked(true)
+		[
+			SNew(STextBlock)
+			.Font(IDetailLayoutBuilder::GetDetailFont())
+			.ColorAndOpacity(FLinearColor(0.4f, 0.4f, 0.4f, 1.0f))
+			.Text(FText::FromString(ApplyToAllCheckBoxText))
+		]
+	];
+	// clang-format on
+}
+
+void SInstanceReplacementPackagePicker::OnWindowClosed()
+{
+	for (const auto& [InstanceKey, Replacement] : ReplacementDialogOptions->InstanceReplacements)
+	{
+		if (VitruvioComponent->GetGeneratedModelComponent())
+		{
+			VitruvioComponent->GetGeneratedModelComponent()->SetVisibility(true, false);
+		}
+
+		InstanceKey.MeshComponent->SetVisibility(true, false);
+	}
 }
 
 void SInstanceReplacementPackagePicker::UpdateReplacementTable()
@@ -172,159 +236,8 @@ void SInstanceReplacementPackagePicker::UpdateReplacementTable()
 	}
 }
 
-void SInstanceReplacementPackagePicker::Construct(const FArguments& InArgs)
-{
-	WeakParentWindow = InArgs._ParentWindow;
-	VitruvioComponent = InArgs._VitruvioComponent;
-
-	ReplacementDialogOptions = NewObject<UInstanceReplacementDialogOptions>();
-	ReplacementDialogOptions->TargetReplacementAsset = VitruvioComponent->InstanceReplacement;
-
-	WeakParentWindow.Pin()->GetOnWindowClosedEvent().AddLambda([this](const TSharedRef<SWindow>&) {
-		for (const auto& [InstanceKey, Replacement] : ReplacementDialogOptions->InstanceReplacements)
-		{
-			if (VitruvioComponent->GetGeneratedModelComponent())
-			{
-				VitruvioComponent->GetGeneratedModelComponent()->SetVisibility(true, false);
-			}
-
-			InstanceKey.MeshComponent->SetVisibility(true, false);
-		}
-	});
-
-	FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	FSinglePropertyParams SinglePropertyArgs;
-	SinglePropertyArgs.NamePlacement = EPropertyNamePlacement::Hidden;
-
-	const FString ApplyToAllCheckBoxText = TEXT("Apply to all '") + VitruvioComponent->GetRpk()->GetName() + TEXT("' VitruvioActors");
-	const TSharedPtr<ISinglePropertyView> TargetReplacementWidget = PropertyEditorModule.CreateSingleProperty(
-		ReplacementDialogOptions, GET_MEMBER_NAME_CHECKED(UInstanceReplacementDialogOptions, TargetReplacementAsset), SinglePropertyArgs);
-
-	TargetReplacementWidget->GetPropertyHandle()->SetOnPropertyValueChanged(
-		FSimpleDelegate::CreateLambda([this]() { ApplyButton->SetEnabled(ReplacementDialogOptions->TargetReplacementAsset != nullptr); }));
-
-	// clang-format off
-	ChildSlot
-	[
-		SNew(SVerticalBox)
-		+ SVerticalBox::Slot()
-		.HAlign(HAlign_Center)
-		.Padding(4.0f)
-		.AutoHeight()
-		[
-			SNew(STextBlock)
-			.AutoWrapText(true)
-			.Text(FText::FromString(TEXT("Choose Instance replacements and the DataTable where they will be added.")))
-		]
-
-		+ SVerticalBox::Slot()
-		.HAlign(HAlign_Center)
-		.AutoHeight()
-		.Padding(4.0f)
-		[
-			SNew(SBox)
-			.MinDesiredWidth(250)
-			[
-				TargetReplacementWidget.ToSharedRef()
-			]
-		]
-		
-		+ SVerticalBox::Slot()
-		.HAlign(HAlign_Center)
-		.AutoHeight()
-		.Padding(4.0f)
-		[
-			SNew(SButton)
-			.OnClicked_Lambda([this]()
-			{
-				if (const auto Window = WeakParentWindow.Pin())
-				{
-					const FAssetToolsModule& AssetToolsModule = FAssetToolsModule::GetModule();
-					UReplacementDataAssetFactory* DataAssetFactory = NewObject<UReplacementDataAssetFactory>();
-					Window->HideWindow();
-					DataAssetFactory->DataAssetClass = UInstanceReplacementAsset::StaticClass();
-					if (UInstanceReplacementAsset* NewReplacementAsset = Cast<UInstanceReplacementAsset>(AssetToolsModule.Get().CreateAssetWithDialog(UInstanceReplacementAsset::StaticClass(), DataAssetFactory)))
-					{
-						ReplacementDialogOptions->TargetReplacementAsset = NewReplacementAsset;
-					}
-					
-					Window->ShowWindow();
-
-					ApplyButton->SetEnabled(ReplacementDialogOptions->TargetReplacementAsset != nullptr);
-				}
-				
-				return FReply::Handled();
-			})
-			[
-				SNew(STextBlock)
-				.Font(IDetailLayoutBuilder::GetDetailFont())
-				.Text(FText::FromString("Create New Asset"))
-			]
-		]
-				
-		+ SVerticalBox::Slot()
-		.Padding(4)
-		.AutoHeight()
-		[
-			SAssignNew(ApplyToAllVitruvioActorsCheckBox, SCheckBox)
-			.IsChecked(true)
-			[
-				SNew(STextBlock)
-				.Font(IDetailLayoutBuilder::GetDetailFont())
-				.ColorAndOpacity(FLinearColor(0.4f, 0.4f, 0.4f, 1.0f))
-				.Text(FText::FromString(ApplyToAllCheckBoxText))
-			]
-		]
-			
-		+ SVerticalBox::Slot()
-		.Padding(4.0f)
-		.VAlign(VAlign_Fill)
-		.HAlign(HAlign_Fill)
-		[
-			SAssignNew(ReplacementsBox, SScrollBox)
-		]
-		
-		+ SVerticalBox::Slot()
-		.AutoHeight()
-		.HAlign(HAlign_Fill)
-		.Padding(2)
-		[
-			SNew(SHorizontalBox)
-
-
-			+ SHorizontalBox::Slot()
-			.HAlign(HAlign_Right)
-			.VAlign(VAlign_Bottom)
-			[
-				SNew(SUniformGridPanel).SlotPadding(2)
-				+ SUniformGridPanel::Slot(0, 0)
-				[
-					SAssignNew(ApplyButton, SButton)
-					.HAlign(HAlign_Center)
-					.Text(FText::FromString("Apply"))
-					.OnClicked(this, &SInstanceReplacementPackagePicker::OnReplacementConfirmed)
-				]
-
-				+ SUniformGridPanel::Slot(1, 0)
-				[
-					SNew(SButton)
-					.HAlign(HAlign_Center)
-					.Text(FText::FromString("Cancel"))
-					.OnClicked(this, &SInstanceReplacementPackagePicker::OnReplacementCanceled)
-				]
-			]
-		]
-	];
-	// clang-format on
-
-	ApplyButton->SetEnabled(ReplacementDialogOptions->TargetReplacementAsset != nullptr);
-	UpdateReplacementTable();
-}
-
 FReply SInstanceReplacementPackagePicker::OnReplacementConfirmed()
 {
-	bPressedOk = true;
-
 	if (ReplacementDialogOptions->TargetReplacementAsset)
 	{
 		for (const auto& Replacement : ReplacementDialogOptions->InstanceReplacements)
@@ -383,27 +296,5 @@ FReply SInstanceReplacementPackagePicker::OnReplacementCanceled()
 
 void FInstanceReplacementDialog::OpenDialog(UVitruvioComponent* VitruvioComponent)
 {
-	// clang-format off
-	TSharedRef<SWindow> PickerWindow = SNew(SWindow)
-		.Title(FText::FromString("Choose Replacement"))
-		.SizingRule(ESizingRule::UserSized)
-		.ClientSize(FVector2D(500.f, 400.f))
-		.IsTopmostWindow(true)
-		.SupportsMaximize(false)
-		.SupportsMinimize(false);
-	// clang-format on
-
-	TSharedRef<SInstanceReplacementPackagePicker> ReplacementPicker =
-		SNew(SInstanceReplacementPackagePicker).VitruvioComponent(VitruvioComponent).ParentWindow(PickerWindow);
-	PickerWindow->SetContent(ReplacementPicker);
-
-	TSharedPtr<SWindow> ParentWindow = FGlobalTabmanager::Get()->GetRootWindow();
-	if (ParentWindow.IsValid())
-	{
-		FSlateApplication::Get().AddWindowAsNativeChild(PickerWindow, ParentWindow.ToSharedRef());
-	}
-	else
-	{
-		FSlateApplication::Get().AddWindow(PickerWindow);
-	}
+	FReplacementDialog::OpenDialog<SInstanceReplacementPackagePicker>(VitruvioComponent);
 }
