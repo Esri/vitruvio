@@ -2,10 +2,12 @@
 
 #include "MaterialReplacementDialog.h"
 
+#include "AssetToolsModule.h"
 #include "DetailLayoutBuilder.h"
 #include "EngineUtils.h"
 #include "Framework/Docking/TabManager.h"
 #include "ISinglePropertyView.h"
+#include "ReplacementDataAssetFactory.h"
 #include "VitruvioComponent.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SScrollBox.h"
@@ -271,6 +273,39 @@ void SCMaterialReplacementPackagePicker::Construct(const FArguments& InArgs)
 			.MinDesiredWidth(250)
 			[
 				TargetReplacementWidget.ToSharedRef()
+			]
+		]
+
+		+ SVerticalBox::Slot()
+		.HAlign(HAlign_Center)
+		.AutoHeight()
+		.Padding(4.0f)
+		[
+			SNew(SButton)
+			.OnClicked_Lambda([this]()
+			{
+				if (const auto Window = WeakParentWindow.Pin())
+				{
+					const FAssetToolsModule& AssetToolsModule = FAssetToolsModule::GetModule();
+					UReplacementDataAssetFactory* DataAssetFactory = NewObject<UReplacementDataAssetFactory>();
+					Window->HideWindow();
+					DataAssetFactory->DataAssetClass = UMaterialReplacementAsset::StaticClass();
+					if (UMaterialReplacementAsset* NewReplacementAsset = Cast<UMaterialReplacementAsset>(AssetToolsModule.Get().CreateAssetWithDialog(UInstanceReplacementAsset::StaticClass(), DataAssetFactory)))
+					{
+						ReplacementDialogOptions->TargetReplacementAsset = NewReplacementAsset;
+					}
+						
+					Window->ShowWindow();
+
+					ApplyButton->SetEnabled(ReplacementDialogOptions->TargetReplacementAsset != nullptr);
+				}
+					
+				return FReply::Handled();
+			})
+			[
+				SNew(STextBlock)
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+				.Text(FText::FromString("Create New Asset"))
 			]
 		]
 
