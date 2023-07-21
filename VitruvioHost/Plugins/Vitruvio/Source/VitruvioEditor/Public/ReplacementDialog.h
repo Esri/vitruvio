@@ -8,7 +8,7 @@
 #include "VitruvioComponent.h"
 #include "Widgets/Layout/SScrollBox.h"
 
-class SReplacementPackagePicker : public SCompoundWidget, public FGCObject
+class SReplacementDialogWidget : public SCompoundWidget, public FGCObject
 {
 protected:
 	TWeakPtr<SWindow> WeakParentWindow;
@@ -18,7 +18,7 @@ protected:
 	TSharedPtr<SButton> ApplyButton;
 
 public:
-	SLATE_BEGIN_ARGS(SReplacementPackagePicker) {}
+	SLATE_BEGIN_ARGS(SReplacementDialogWidget) {}
 	SLATE_ARGUMENT(TSharedPtr<SWindow>, ParentWindow)
 	SLATE_ARGUMENT(UVitruvioComponent*, VitruvioComponent)
 	SLATE_END_ARGS()

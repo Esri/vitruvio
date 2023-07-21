@@ -11,7 +11,7 @@
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SScrollBox.h"
 
-class SInstanceReplacementPackagePicker : public SReplacementPackagePicker
+class SInstanceReplacementDialogWidget : public SReplacementDialogWidget
 {
 	UInstanceReplacementDialogOptions* ReplacementDialogOptions = nullptr;
 
@@ -19,7 +19,7 @@ class SInstanceReplacementPackagePicker : public SReplacementPackagePicker
 	TSharedPtr<SCheckBox> ApplyToAllVitruvioActorsCheckBox;
 
 public:
-	SLATE_BEGIN_ARGS(SInstanceReplacementPackagePicker) {}
+	SLATE_BEGIN_ARGS(SInstanceReplacementDialogWidget) {}
 	SLATE_ARGUMENT(TSharedPtr<SWindow>, ParentWindow)
 	SLATE_ARGUMENT(UVitruvioComponent*, VitruvioComponent)
 	SLATE_END_ARGS()
@@ -39,18 +39,18 @@ protected:
 	virtual FReply OnReplacementCanceled() override;
 };
 
-void SInstanceReplacementPackagePicker::AddReferencedObjects(FReferenceCollector& Collector)
+void SInstanceReplacementDialogWidget::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	Collector.AddReferencedObject(ReplacementDialogOptions);
 }
 
-void SInstanceReplacementPackagePicker::Construct(const FArguments& InArgs)
+void SInstanceReplacementDialogWidget::Construct(const FArguments& InArgs)
 {
 	ReplacementDialogOptions = NewObject<UInstanceReplacementDialogOptions>();
 	ReplacementDialogOptions->TargetReplacementAsset = InArgs._VitruvioComponent->InstanceReplacement;
 
 	// clang-format off
-	SReplacementPackagePicker::Construct(SReplacementPackagePicker::FArguments()
+	SReplacementDialogWidget::Construct(SReplacementDialogWidget::FArguments()
 		.ParentWindow(InArgs._ParentWindow)
 		.VitruvioComponent(InArgs._VitruvioComponent));
 	// clang-format on
@@ -58,12 +58,12 @@ void SInstanceReplacementPackagePicker::Construct(const FArguments& InArgs)
 	ApplyButton->SetEnabled(ReplacementDialogOptions->TargetReplacementAsset != nullptr);
 }
 
-FText SInstanceReplacementPackagePicker::CreateHeaderText()
+FText SInstanceReplacementDialogWidget::CreateHeaderText()
 {
 	return FText::FromString(TEXT("Choose Instance replacements and the DataTable where they will be added."));
 }
 
-TSharedPtr<ISinglePropertyView> SInstanceReplacementPackagePicker::CreateTargetReplacementWidget()
+TSharedPtr<ISinglePropertyView> SInstanceReplacementDialogWidget::CreateTargetReplacementWidget()
 {
 	FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	FSinglePropertyParams SinglePropertyArgs;
@@ -78,12 +78,12 @@ TSharedPtr<ISinglePropertyView> SInstanceReplacementPackagePicker::CreateTargetR
 	return TargetReplacementWidget;
 }
 
-void SInstanceReplacementPackagePicker::OnCreateNewAsset()
+void SInstanceReplacementDialogWidget::OnCreateNewAsset()
 {
 	CreateNewAsset<UInstanceReplacementAsset, UInstanceReplacementDialogOptions>(ReplacementDialogOptions);
 }
 
-void SInstanceReplacementPackagePicker::AddDialogOptions(const TSharedPtr<SVerticalBox>& Content)
+void SInstanceReplacementDialogWidget::AddDialogOptions(const TSharedPtr<SVerticalBox>& Content)
 {
 	// clang-format off
 	const FString ApplyToAllCheckBoxText = TEXT("Apply to all '") + VitruvioComponent->GetRpk()->GetName() + TEXT("' VitruvioActors");
@@ -104,7 +104,7 @@ void SInstanceReplacementPackagePicker::AddDialogOptions(const TSharedPtr<SVerti
 	// clang-format on
 }
 
-void SInstanceReplacementPackagePicker::OnWindowClosed()
+void SInstanceReplacementDialogWidget::OnWindowClosed()
 {
 	for (const auto& [InstanceKey, Replacement] : ReplacementDialogOptions->InstanceReplacements)
 	{
@@ -117,7 +117,7 @@ void SInstanceReplacementPackagePicker::OnWindowClosed()
 	}
 }
 
-void SInstanceReplacementPackagePicker::UpdateReplacementTable()
+void SInstanceReplacementDialogWidget::UpdateReplacementTable()
 {
 	ReplacementsBox->ClearChildren();
 	IsolateCheckboxes.Empty();
@@ -236,7 +236,7 @@ void SInstanceReplacementPackagePicker::UpdateReplacementTable()
 	}
 }
 
-FReply SInstanceReplacementPackagePicker::OnReplacementConfirmed()
+FReply SInstanceReplacementDialogWidget::OnReplacementConfirmed()
 {
 	if (ReplacementDialogOptions->TargetReplacementAsset)
 	{
@@ -284,7 +284,7 @@ FReply SInstanceReplacementPackagePicker::OnReplacementConfirmed()
 	return FReply::Handled();
 }
 
-FReply SInstanceReplacementPackagePicker::OnReplacementCanceled()
+FReply SInstanceReplacementDialogWidget::OnReplacementCanceled()
 {
 	if (WeakParentWindow.IsValid())
 	{
@@ -296,5 +296,5 @@ FReply SInstanceReplacementPackagePicker::OnReplacementCanceled()
 
 void FInstanceReplacementDialog::OpenDialog(UVitruvioComponent* VitruvioComponent)
 {
-	FReplacementDialog::OpenDialog<SInstanceReplacementPackagePicker>(VitruvioComponent);
+	FReplacementDialog::OpenDialog<SInstanceReplacementDialogWidget>(VitruvioComponent);
 }

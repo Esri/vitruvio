@@ -11,7 +11,7 @@
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SScrollBox.h"
 
-class SCMaterialReplacementPackagePicker : public SReplacementPackagePicker
+class SMaterialReplacementDialogWidget : public SReplacementDialogWidget
 {
 	UMaterialReplacementDialogOptions* ReplacementDialogOptions = nullptr;
 
@@ -20,7 +20,7 @@ class SCMaterialReplacementPackagePicker : public SReplacementPackagePicker
 	TSharedPtr<SCheckBox> ApplyToAllVitruvioActorsCheckBox;
 
 public:
-	SLATE_BEGIN_ARGS(SCMaterialReplacementPackagePicker) {}
+	SLATE_BEGIN_ARGS(SMaterialReplacementDialogWidget) {}
 	SLATE_ARGUMENT(TSharedPtr<SWindow>, ParentWindow)
 	SLATE_ARGUMENT(UVitruvioComponent*, VitruvioComponent)
 	SLATE_END_ARGS()
@@ -40,18 +40,18 @@ protected:
 	virtual FReply OnReplacementCanceled() override;
 };
 
-void SCMaterialReplacementPackagePicker::AddReferencedObjects(FReferenceCollector& Collector)
+void SMaterialReplacementDialogWidget::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	Collector.AddReferencedObject(ReplacementDialogOptions);
 }
 
-void SCMaterialReplacementPackagePicker::Construct(const FArguments& InArgs)
+void SMaterialReplacementDialogWidget::Construct(const FArguments& InArgs)
 {
 	ReplacementDialogOptions = NewObject<UMaterialReplacementDialogOptions>();
 	ReplacementDialogOptions->TargetReplacementAsset = InArgs._VitruvioComponent->MaterialReplacement;
 
 	// clang-format off
-	SReplacementPackagePicker::Construct(SReplacementPackagePicker::FArguments()
+	SReplacementDialogWidget::Construct(SReplacementDialogWidget::FArguments()
 		.ParentWindow(InArgs._ParentWindow)
 		.VitruvioComponent(InArgs._VitruvioComponent));
 	// clang-format on
@@ -59,12 +59,12 @@ void SCMaterialReplacementPackagePicker::Construct(const FArguments& InArgs)
 	ApplyButton->SetEnabled(ReplacementDialogOptions->TargetReplacementAsset != nullptr);
 }
 
-FText SCMaterialReplacementPackagePicker::CreateHeaderText()
+FText SMaterialReplacementDialogWidget::CreateHeaderText()
 {
 	return FText::FromString(TEXT("Choose Material replacements and the DataTable where they will be added."));
 }
 
-TSharedPtr<ISinglePropertyView> SCMaterialReplacementPackagePicker::CreateTargetReplacementWidget()
+TSharedPtr<ISinglePropertyView> SMaterialReplacementDialogWidget::CreateTargetReplacementWidget()
 {
 	FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	FSinglePropertyParams SinglePropertyArgs;
@@ -79,12 +79,12 @@ TSharedPtr<ISinglePropertyView> SCMaterialReplacementPackagePicker::CreateTarget
 	return TargetReplacementWidget;
 }
 
-void SCMaterialReplacementPackagePicker::OnCreateNewAsset()
+void SMaterialReplacementDialogWidget::OnCreateNewAsset()
 {
 	CreateNewAsset<UMaterialReplacementAsset, UMaterialReplacementDialogOptions>(ReplacementDialogOptions);
 }
 
-void SCMaterialReplacementPackagePicker::AddDialogOptions(const TSharedPtr<SVerticalBox>& Content)
+void SMaterialReplacementDialogWidget::AddDialogOptions(const TSharedPtr<SVerticalBox>& Content)
 {
 	// clang-format off
 	Content->AddSlot()
@@ -123,7 +123,7 @@ void SCMaterialReplacementPackagePicker::AddDialogOptions(const TSharedPtr<SVert
 	// clang-format on
 }
 
-void SCMaterialReplacementPackagePicker::OnWindowClosed()
+void SMaterialReplacementDialogWidget::OnWindowClosed()
 {
 	for (const auto& [MaterialName, Replacement] : ReplacementDialogOptions->MaterialReplacements)
 	{
@@ -135,7 +135,7 @@ void SCMaterialReplacementPackagePicker::OnWindowClosed()
 	}
 }
 
-void SCMaterialReplacementPackagePicker::UpdateReplacementTable()
+void SMaterialReplacementDialogWidget::UpdateReplacementTable()
 {
 	ReplacementsBox->ClearChildren();
 	IsolateCheckboxes.Empty();
@@ -303,7 +303,7 @@ void SCMaterialReplacementPackagePicker::UpdateReplacementTable()
 	}
 }
 
-FReply SCMaterialReplacementPackagePicker::OnReplacementConfirmed()
+FReply SMaterialReplacementDialogWidget::OnReplacementConfirmed()
 {
 	for (const auto& [MaterialName, Replacement] : ReplacementDialogOptions->MaterialReplacements)
 	{
@@ -360,7 +360,7 @@ FReply SCMaterialReplacementPackagePicker::OnReplacementConfirmed()
 	return FReply::Handled();
 }
 
-FReply SCMaterialReplacementPackagePicker::OnReplacementCanceled()
+FReply SMaterialReplacementDialogWidget::OnReplacementCanceled()
 {
 	for (const auto& [MaterialName, Replacement] : ReplacementDialogOptions->MaterialReplacements)
 	{
@@ -381,5 +381,5 @@ FReply SCMaterialReplacementPackagePicker::OnReplacementCanceled()
 
 void FMaterialReplacementDialog::OpenDialog(UVitruvioComponent* VitruvioComponent)
 {
-	FReplacementDialog::OpenDialog<SCMaterialReplacementPackagePicker>(VitruvioComponent);
+	FReplacementDialog::OpenDialog<SMaterialReplacementDialogWidget>(VitruvioComponent);
 }

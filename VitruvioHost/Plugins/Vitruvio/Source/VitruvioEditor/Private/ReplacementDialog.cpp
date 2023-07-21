@@ -9,7 +9,7 @@
 #include "Widgets/Layout/SScrollBox.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
 
-void SReplacementPackagePicker::Construct(const FArguments& InArgs)
+void SReplacementDialogWidget::Construct(const FArguments& InArgs)
 {
 	WeakParentWindow = InArgs._ParentWindow;
 	VitruvioComponent = InArgs._VitruvioComponent;
@@ -93,7 +93,7 @@ void SReplacementPackagePicker::Construct(const FArguments& InArgs)
 				SAssignNew(ApplyButton, SButton)
 				.HAlign(HAlign_Center)
 				.Text(FText::FromString("Apply"))
-				.OnClicked(this, &SReplacementPackagePicker::OnReplacementConfirmed)
+				.OnClicked(this, &SReplacementDialogWidget::OnReplacementConfirmed)
 			]
 
 			+ SUniformGridPanel::Slot(1, 0)
@@ -101,7 +101,7 @@ void SReplacementPackagePicker::Construct(const FArguments& InArgs)
 				SNew(SButton)
 				.HAlign(HAlign_Center)
 				.Text(FText::FromString("Cancel"))
-				.OnClicked(this, &SReplacementPackagePicker::OnReplacementCanceled)
+				.OnClicked(this, &SReplacementDialogWidget::OnReplacementCanceled)
 			]
 		]
 	];
