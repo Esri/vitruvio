@@ -214,9 +214,20 @@ void SInstanceReplacementPackagePicker::Construct(const FArguments& InArgs)
 			.Text(FText::FromString(TEXT("Choose Instance replacements and the DataTable where they will be added.")))
 		]
 
-		
 		+ SVerticalBox::Slot()
-		.Padding(4)
+		.HAlign(HAlign_Center)
+		.AutoHeight()
+		.Padding(4.0f)
+		[
+			SNew(SBox)
+			.MinDesiredWidth(250)
+			[
+				TargetReplacementWidget.ToSharedRef()
+			]
+		]
+				
+		+ SVerticalBox::Slot()
+		.Padding(4,12,4,4)
 		.AutoHeight()
 		[
 			SNew(SCheckBox)
@@ -257,15 +268,7 @@ void SInstanceReplacementPackagePicker::Construct(const FArguments& InArgs)
 		.Padding(2)
 		[
 			SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot()
-			.HAlign(HAlign_Fill)
-			[
-				SNew(SBox)
-				.MinDesiredWidth(200)
-				[
-					TargetReplacementWidget.ToSharedRef()
-				]
-			]
+
 
 			+ SHorizontalBox::Slot()
 			.HAlign(HAlign_Right)
