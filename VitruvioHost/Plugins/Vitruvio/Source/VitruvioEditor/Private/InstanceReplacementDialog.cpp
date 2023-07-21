@@ -227,20 +227,6 @@ void SInstanceReplacementPackagePicker::Construct(const FArguments& InArgs)
 		]
 				
 		+ SVerticalBox::Slot()
-		.Padding(4,12,4,4)
-		.AutoHeight()
-		[
-			SNew(SCheckBox)
-			.IsChecked(true)
-			[
-				SNew(STextBlock)
-				.Font(IDetailLayoutBuilder::GetDetailFont())
-				.ColorAndOpacity(FLinearColor(0.4f, 0.4f, 0.4f, 1.0f))
-				.Text(FText::FromString("Preview Replacements"))
-			]
-		]
-
-		+ SVerticalBox::Slot()
 		.Padding(4)
 		.AutoHeight()
 		[
