@@ -19,7 +19,7 @@ public:
 	UPROPERTY()
 	TArray<UStaticMeshComponent*> MeshComponents;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, DisplayName = "Options", Category = "Replacements")
 	TArray<FReplacementOption> Replacements;
 };
 
