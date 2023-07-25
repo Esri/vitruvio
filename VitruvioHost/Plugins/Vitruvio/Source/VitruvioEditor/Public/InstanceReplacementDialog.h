@@ -7,44 +7,20 @@
 
 #include "InstanceReplacementDialog.generated.h"
 
-UCLASS(BlueprintType)
-class UInstanceReplacement : public UObject
+UCLASS(DisplayName = "Instance Replacement")
+class UInstanceReplacementWrapper : public UObject
 {
 	GENERATED_BODY()
 
 public:
 	UPROPERTY()
 	FString SourceMeshIdentifier;
-	
-	UPROPERTY()
-	UStaticMesh* ReplacementMesh;
-};
-
-USTRUCT()
-struct FInstanceKey
-{
-	GENERATED_BODY()
 
 	UPROPERTY()
-	FString SourceMeshIdentifier;
-	
-	UPROPERTY()
-	UStaticMeshComponent* MeshComponent;
+	TArray<UStaticMeshComponent*> MeshComponents;
 
-	friend bool operator==(const FInstanceKey& Lhs, const FInstanceKey& RHS)
-	{
-		return Lhs.MeshComponent == RHS.MeshComponent && Lhs.SourceMeshIdentifier == RHS.SourceMeshIdentifier;
-	}
-
-	friend bool operator!=(const FInstanceKey& Lhs, const FInstanceKey& RHS)
-	{
-		return !(Lhs == RHS);
-	}
-
-	friend uint32 GetTypeHash(const FInstanceKey& Object)
-	{
-		return HashCombine(GetTypeHash(Object.SourceMeshIdentifier), GetTypeHash(Object.MeshComponent));
-	}
+	UPROPERTY(EditAnywhere)
+	TArray<FReplacementOption> Replacements;
 };
 
 UCLASS(meta = (DisplayName = "Options"))
@@ -57,7 +33,7 @@ public:
 	UInstanceReplacementAsset* TargetReplacementAsset;
 
 	UPROPERTY(EditAnywhere)
-	TMap<FInstanceKey, UInstanceReplacement*> InstanceReplacements;
+	TMap<FString, UInstanceReplacementWrapper*> InstanceReplacements;
 };
 
 class FInstanceReplacementDialog

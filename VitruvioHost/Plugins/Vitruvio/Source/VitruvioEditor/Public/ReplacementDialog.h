@@ -61,13 +61,13 @@ class FReplacementDialog
 {
 public:
 	template <typename TDialogType>
-	static void OpenDialog(UVitruvioComponent* VitruvioComponent)
+	static void OpenDialog(UVitruvioComponent* VitruvioComponent, const FVector2D& DialogSize = {500, 400})
 	{
 		// clang-format off
 		TSharedRef<SWindow> PickerWindow = SNew(SWindow)
 			.Title(FText::FromString("Choose Replacement"))
 			.SizingRule(ESizingRule::UserSized)
-			.ClientSize(FVector2D(500.f, 400.f))
+			.ClientSize(DialogSize)
 			.IsTopmostWindow(true)
 			.SupportsMaximize(false)
 			.SupportsMinimize(false);

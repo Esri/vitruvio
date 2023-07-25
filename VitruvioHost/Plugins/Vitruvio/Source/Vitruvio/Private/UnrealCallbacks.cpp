@@ -253,7 +253,7 @@ void UnrealCallbacks::addMesh(const wchar_t* name,  const wchar_t* identifier, i
 		}
 
 		const FString IdentifierString(identifier);
-		TSharedPtr<FVitruvioMesh> Mesh = MakeShared<FVitruvioMesh>(UriString, IdentifierString, Description, MeshMaterials);
+		TSharedPtr<FVitruvioMesh> Mesh = MakeShared<FVitruvioMesh>(UriString, IdentifierString.IsEmpty() ? UriString : IdentifierString, Description, MeshMaterials);
 
 		if (prototypeId != NoPrototypeIndex)
 		{

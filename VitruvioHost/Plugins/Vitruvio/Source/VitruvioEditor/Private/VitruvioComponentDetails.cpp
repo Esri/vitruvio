@@ -15,6 +15,7 @@
 
 #include "VitruvioComponentDetails.h"
 
+#include "GenerateCompletedCallbackProxy.h"
 #include "VitruvioComponent.h"
 
 #include "Algo/Transform.h"

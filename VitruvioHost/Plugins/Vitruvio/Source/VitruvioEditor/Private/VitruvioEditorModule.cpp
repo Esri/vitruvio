@@ -27,6 +27,7 @@
 #include "Editor/LevelEditor/Public/LevelEditor.h"
 #include "Editor/Transactor.h"
 #include "EngineUtils.h"
+#include "GenerateCompletedCallbackProxy.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "IAssetTools.h"
 #include "Modules/ModuleManager.h"

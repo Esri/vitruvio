@@ -136,6 +136,8 @@ void SMaterialReplacementDialogWidget::OnWindowClosed()
 			StaticMeshComponent->SelectedEditorMaterial = INDEX_NONE;
 		}
 	}
+
+	VitruvioComponent->Generate();
 }
 
 void SMaterialReplacementDialogWidget::UpdateReplacementTable()

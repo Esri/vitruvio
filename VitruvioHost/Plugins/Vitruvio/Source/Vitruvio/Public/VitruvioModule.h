@@ -16,13 +16,10 @@
 #pragma once
 
 #include "AttributeMap.h"
-#include "GenerateCompletedCallbackProxy.h"
 #include "InitialShape.h"
 #include "MeshCache.h"
-#include "MeshDescription.h"
 #include "PRTTypes.h"
 #include "Report.h"
-#include "RuleAttributes.h"
 #include "RulePackage.h"
 
 #include "prt/Object.h"

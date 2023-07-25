@@ -116,8 +116,13 @@ void SInstanceReplacementDialogWidget::OnWindowClosed()
 			VitruvioComponent->GetGeneratedModelComponent()->SetVisibility(true, false);
 		}
 
-		InstanceKey.MeshComponent->SetVisibility(true, false);
+		for (UStaticMeshComponent* MeshComponent : Replacement->MeshComponents)
+		{
+			MeshComponent->SetVisibility(true, false);
+		}
 	}
+
+	VitruvioComponent->Generate();
 }
 
 void SInstanceReplacementDialogWidget::UpdateReplacementTable()
@@ -127,26 +132,35 @@ void SInstanceReplacementDialogWidget::UpdateReplacementTable()
 
 	ReplacementDialogOptions->InstanceReplacements.Empty();
 
-	TMap<FString, UStaticMesh*> CurrentReplacements;
+	TMap<FString, FInstanceReplacement> CurrentReplacements;
 	if (ReplacementDialogOptions->TargetReplacementAsset)
 	{
-		for (const FInstanceReplacementData& ReplacementData : ReplacementDialogOptions->TargetReplacementAsset->Replacements)
+		for (const FInstanceReplacement& ReplacementData : ReplacementDialogOptions->TargetReplacementAsset->Replacements)
 		{
-			CurrentReplacements.Add(ReplacementData.SourceMeshIdentifier, ReplacementData.ReplacementMesh);
+			CurrentReplacements.Add(ReplacementData.SourceMeshIdentifier, ReplacementData);
 		}
 	}
 
 	for (UGeneratedModelHISMComponent* HISMComponent : VitruvioComponent->GetGeneratedModelHISMComponents())
 	{
-		UInstanceReplacement* InstanceReplacement = NewObject<UInstanceReplacement>();
-		InstanceReplacement->SourceMeshIdentifier = HISMComponent->GetMeshIdentifier();
-
-		UStaticMesh** ReplacementMesh = CurrentReplacements.Find(HISMComponent->GetMeshIdentifier());
-		if (ReplacementMesh)
+		UInstanceReplacementWrapper* InstanceReplacement;
+		if (UInstanceReplacementWrapper** Existing = ReplacementDialogOptions->InstanceReplacements.Find(HISMComponent->GetMeshIdentifier()))
 		{
-			InstanceReplacement->ReplacementMesh = *ReplacementMesh;
+			InstanceReplacement = *Existing;
 		}
-		ReplacementDialogOptions->InstanceReplacements.Add(FInstanceKey{HISMComponent->GetMeshIdentifier(), HISMComponent}, InstanceReplacement);
+		else
+		{
+			InstanceReplacement = NewObject<UInstanceReplacementWrapper>();
+			InstanceReplacement->SourceMeshIdentifier = HISMComponent->GetMeshIdentifier();
+			ReplacementDialogOptions->InstanceReplacements.Add(HISMComponent->GetMeshIdentifier(), InstanceReplacement);
+
+			if (FInstanceReplacement* Replacement = CurrentReplacements.Find(HISMComponent->GetMeshIdentifier()))
+			{
+				InstanceReplacement->Replacements = Replacement->Replacements;
+			}
+		}
+		
+		InstanceReplacement->MeshComponents.Add(HISMComponent);
 	}
 
 	FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
@@ -166,15 +180,21 @@ void SInstanceReplacementDialogWidget::UpdateReplacementTable()
 
 	for (const auto& [Key, Replacement] : ReplacementDialogOptions->InstanceReplacements)
 	{
+		bool bValid = !Replacement->SourceMeshIdentifier.IsEmpty();
+
 		TSharedRef<SHorizontalBox> ReplacementBox = SNew(SHorizontalBox);
 		TSharedPtr<STextBlock> SourceMaterialText;
 
 		TSharedPtr<SCheckBox> IsolateCheckbox;
 
-		FString MeshIdentifier = Key.MeshComponent->GetStaticMesh()->GetName();
-		if (!Key.SourceMeshIdentifier.IsEmpty())
+		FString MeshIdentifier = Replacement->SourceMeshIdentifier;
+
+		TArray<FString> MeshNamesArray;
+		Algo::Transform(Replacement->MeshComponents, MeshNamesArray, [](const UStaticMeshComponent* StaticMeshComponent) { return StaticMeshComponent->GetName(); });
+		if (!MeshNamesArray.IsEmpty())
 		{
-			MeshIdentifier += " [" + Key.SourceMeshIdentifier + "]";
+			const FString MeshNameString = FString::Join(MeshNamesArray, TEXT(", "));
+			MeshIdentifier += " [" + MeshNameString + "]";
 		}
 
 		// clang-format off
@@ -189,6 +209,7 @@ void SInstanceReplacementDialogWidget::UpdateReplacementTable()
 				SAssignNew(SourceMaterialText, STextBlock)
 				.Font(IDetailLayoutBuilder::GetDetailFont())
 				.Text(FText::FromString(MeshIdentifier))
+				.ColorAndOpacity(bValid ? FLinearColor(1.0f, 1.0f, 1.0f, 1.0f) : FLinearColor(0.4f, 0.4f, 0.4f, 1.0f))
 			]
 			
 			+ SVerticalBox::Slot()
@@ -207,10 +228,15 @@ void SInstanceReplacementDialogWidget::UpdateReplacementTable()
 						{
 							const bool bVisible = (CheckBoxState == ECheckBoxState::Checked && Replacement == OtherReplacement) ||
 													CheckBoxState == ECheckBoxState::Unchecked;
-							OtherKey.MeshComponent->SetVisibility(bVisible, false);
+
+							for (UStaticMeshComponent* MeshComponent : OtherReplacement->MeshComponents)
+							{
+								MeshComponent->SetVisibility(bVisible, false);
+							}
 						}
 					})
 				.IsChecked(false)
+				.IsEnabled(bValid)
 				[
 					SNew(STextBlock)
 					.Font(IDetailLayoutBuilder::GetDetailFont())
@@ -223,16 +249,36 @@ void SInstanceReplacementDialogWidget::UpdateReplacementTable()
 
 		IsolateCheckboxes.Add(IsolateCheckbox);
 
-		const TSharedPtr<ISinglePropertyView> SinglePropertyViewWidget = PropertyEditorModule.CreateSingleProperty(
-			Replacement, GET_MEMBER_NAME_CHECKED(UInstanceReplacement, ReplacementMesh), SinglePropertyArgs);
+		FDetailsViewArgs DetailsViewArgs;
+		DetailsViewArgs.bShowObjectLabel = false;
+		DetailsViewArgs.bShowOptions = false;
+		DetailsViewArgs.bShowCustomFilterOption = false;
+		DetailsViewArgs.bShowScrollBar = false;
+		DetailsViewArgs.bAllowSearch = false;
+		DetailsViewArgs.bLockable = false;
+		DetailsViewArgs.bShowSectionSelector = false;
+		DetailsViewArgs.NameAreaSettings = FDetailsViewArgs::ENameAreaSettings::HideNameArea;
+
+		TSharedRef<IDetailsView> MeshReplacementsDetailsView = PropertyEditorModule.CreateDetailView(DetailsViewArgs);
+
+		MeshReplacementsDetailsView->SetEnabled(bValid);
+		MeshReplacementsDetailsView->SetObject(Replacement, true);
+
 		// clang-format off
 		ReplacementBox->AddSlot()
 		[
-			SNew(SBox).MinDesiredWidth(200)
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot()
+			.Padding(4)
 			[
-				SinglePropertyViewWidget.ToSharedRef()
+				SNew(SBox)
+				.MinDesiredWidth(200)
+				[
+					MeshReplacementsDetailsView
+				]
 			]
 		];
+
 		// clang-format on
 
 		ReplacementsBox->AddSlot().Padding(4.0f).VAlign(VAlign_Fill).HAlign(HAlign_Fill)[ReplacementBox];
@@ -245,13 +291,15 @@ FReply SInstanceReplacementDialogWidget::OnReplacementConfirmed()
 	{
 		for (const auto& Replacement : ReplacementDialogOptions->InstanceReplacements)
 		{
-			if (Replacement.Value->ReplacementMesh)
+			if (Replacement.Value->Replacements.IsEmpty())
 			{
-				FInstanceReplacementData InstanceReplacementData;
-				InstanceReplacementData.SourceMeshIdentifier = Replacement.Value->SourceMeshIdentifier;
-				InstanceReplacementData.ReplacementMesh = Replacement.Value->ReplacementMesh;
-				ReplacementDialogOptions->TargetReplacementAsset->Replacements.Add(InstanceReplacementData);
+				continue;
 			}
+
+			FInstanceReplacement InstanceReplacement;
+			InstanceReplacement.SourceMeshIdentifier = Replacement.Value->SourceMeshIdentifier;
+			InstanceReplacement.Replacements = Replacement.Value->Replacements;
+			ReplacementDialogOptions->TargetReplacementAsset->Replacements.Add(InstanceReplacement);
 		}
 	}
 
@@ -299,5 +347,5 @@ FReply SInstanceReplacementDialogWidget::OnReplacementCanceled()
 
 void FInstanceReplacementDialog::OpenDialog(UVitruvioComponent* VitruvioComponent)
 {
-	FReplacementDialog::OpenDialog<SInstanceReplacementDialogWidget>(VitruvioComponent);
+	FReplacementDialog::OpenDialog<SInstanceReplacementDialogWidget>(VitruvioComponent, {800, 600});
 }

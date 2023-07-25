@@ -37,7 +37,7 @@ USTRUCT(BlueprintType)
 struct FGenerateOptions
 {
 	GENERATED_BODY()
-	
+
 	bool bIgnoreMaterialReplacements = false;
 	bool bIgnoreInstanceReplacements = false;
 };
@@ -48,6 +48,21 @@ struct FInstance
 	TSharedPtr<FVitruvioMesh> InstanceMesh;
 	TArray<UMaterialInstanceDynamic*> OverrideMaterials;
 	TArray<FTransform> Transforms;
+
+	friend FORCEINLINE uint32 GetTypeHash(const FInstance& Request)
+	{
+		return GetTypeHash(Request.InstanceMesh->GetUri());
+	}
+
+	friend bool operator==(const FInstance& Lhs, const FInstance& Rhs)
+	{
+		return Lhs.InstanceMesh && Rhs.InstanceMesh ? Lhs.InstanceMesh->GetUri() == Rhs.InstanceMesh->GetUri() : false;
+	}
+
+	friend bool operator!=(const FInstance& Lhs, const FInstance& Rhs)
+	{
+		return !(Lhs == Rhs);
+	}
 };
 
 struct FConvertedGenerateResult
@@ -103,9 +118,9 @@ public:
 	UMaterialReplacementAsset* MaterialReplacement;
 
 	/** The instance replacement asset which defines how instances are replaced after generating a model. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Vitruvio")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vitruvio")
 	UInstanceReplacementAsset* InstanceReplacement;
-	
+
 	/** Default parent material for opaque geometry. */
 	UPROPERTY(EditAnywhere, DisplayName = "Opaque Parent", Category = "Vitruvio Default Materials")
 	UMaterial* OpaqueParent;
