@@ -113,14 +113,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Hide Initial Shape after Generation", Category = "Vitruvio")
 	bool HideAfterGeneration = false;
 
-	/** The material replacement asset which defines how materials are replaced after generating a model. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vitruvio")
-	UMaterialReplacementAsset* MaterialReplacement;
-
-	/** The instance replacement asset which defines how instances are replaced after generating a model. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vitruvio")
-	UInstanceReplacementAsset* InstanceReplacement;
-
 	/** Default parent material for opaque geometry. */
 	UPROPERTY(EditAnywhere, DisplayName = "Opaque Parent", Category = "Vitruvio Default Materials")
 	UMaterial* OpaqueParent;
@@ -141,6 +133,26 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Vitruvio", meta = (DisplayName = "Generate Collision Mesh"))
 	bool GenerateCollision = true;
+
+	/** The material replacement asset which defines how materials are replaced after generating a model. */
+	UPROPERTY(EditAnywhere, Category = "Vitruvio Replacmeents", Setter = SetMaterialReplacementAsset)
+	UMaterialReplacementAsset* MaterialReplacement;
+
+	/** The instance replacement asset which defines how instances are replaced after generating a model. */
+	UPROPERTY(EditAnywhere, Category = "Vitruvio Replacmeents", Setter = SetInstanceReplacementAsset)
+	UInstanceReplacementAsset* InstanceReplacement;
+
+	/**
+	 * Sets the material replacement Asset and regenerates the model.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio Replacmeents")
+	void SetMaterialReplacementAsset(UMaterialReplacementAsset* MaterialReplacementAsset);
+
+	/**
+	 * Sets the instance replacement Asset and regenerates the model.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio Replacmeents")
+	void SetInstanceReplacementAsset(UInstanceReplacementAsset* InstanceReplacementAsset);
 
 	/**
 	 * Generates a model using the current Rule Package and initial shape. If the attributes are not yet available, they will first be evaluated. If

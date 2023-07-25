@@ -485,6 +485,18 @@ void UVitruvioComponent::SetRpk(URulePackage* RulePackage, bool bGenerateModel, 
 	EvaluateRuleAttributes(bGenerateModel, CallbackProxy);
 }
 
+void UVitruvioComponent::SetMaterialReplacementAsset(UMaterialReplacementAsset* MaterialReplacementAsset)
+{
+	MaterialReplacement = MaterialReplacementAsset;
+	Generate();
+}
+
+void UVitruvioComponent::SetInstanceReplacementAsset(UInstanceReplacementAsset* InstanceReplacementAsset)
+{
+	InstanceReplacement = InstanceReplacementAsset;
+	Generate();
+}
+
 void UVitruvioComponent::SetStringAttribute(const FString& Name, const FString& Value, bool bGenerateModel,
 											UGenerateCompletedCallbackProxy* CallbackProxy)
 {
