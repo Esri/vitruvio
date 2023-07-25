@@ -27,6 +27,7 @@ public:
 
 protected:
 	virtual void UpdateReplacementTable() = 0;
+	virtual void UpdateApplyButtonEnablement() = 0;
 	virtual FText CreateHeaderText() = 0;
 	virtual TSharedPtr<ISinglePropertyView> CreateTargetReplacementWidget() = 0;
 	virtual void OnCreateNewAsset() = 0;

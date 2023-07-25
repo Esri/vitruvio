@@ -32,6 +32,7 @@ public:
 protected:
 	virtual FText CreateHeaderText() override;
 	virtual TSharedPtr<ISinglePropertyView> CreateTargetReplacementWidget() override;
+	virtual void UpdateApplyButtonEnablement() override;
 	virtual void OnCreateNewAsset() override;
 	virtual void AddDialogOptions(const TSharedPtr<SVerticalBox>& Content) override;
 	virtual void OnWindowClosed() override;
@@ -73,10 +74,12 @@ TSharedPtr<ISinglePropertyView> SMaterialReplacementDialogWidget::CreateTargetRe
 	const TSharedPtr<ISinglePropertyView> TargetReplacementWidget = PropertyEditorModule.CreateSingleProperty(
 		ReplacementDialogOptions, GET_MEMBER_NAME_CHECKED(UMaterialReplacementDialogOptions, TargetReplacementAsset), SinglePropertyArgs);
 
-	TargetReplacementWidget->GetPropertyHandle()->SetOnPropertyValueChanged(
-		FSimpleDelegate::CreateLambda([this]() { ApplyButton->SetEnabled(ReplacementDialogOptions->TargetReplacementAsset != nullptr); }));
-
 	return TargetReplacementWidget;
+}
+
+void SMaterialReplacementDialogWidget::UpdateApplyButtonEnablement()
+{
+	ApplyButton->SetEnabled(ReplacementDialogOptions->TargetReplacementAsset != nullptr);
 }
 
 void SMaterialReplacementDialogWidget::OnCreateNewAsset()

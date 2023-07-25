@@ -17,6 +17,12 @@ void SReplacementDialogWidget::Construct(const FArguments& InArgs)
 	WeakParentWindow.Pin()->GetOnWindowClosedEvent().AddLambda([this](const TSharedRef<SWindow>&) { OnWindowClosed(); });
 
 	const TSharedPtr<ISinglePropertyView> TargetReplacementWidget = CreateTargetReplacementWidget();
+	TargetReplacementWidget->GetPropertyHandle()->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([this]() {
+		UpdateApplyButtonEnablement();
+
+		UpdateReplacementTable();
+	}));
+
 	const FText HeaderText = CreateHeaderText();
 
 	TSharedPtr<SVerticalBox> ContentVerticalBox;
