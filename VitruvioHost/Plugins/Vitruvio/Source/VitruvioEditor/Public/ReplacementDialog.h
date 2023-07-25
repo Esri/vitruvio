@@ -25,6 +25,11 @@ public:
 
 	void Construct(const FArguments& InArgs);
 
+	virtual FString GetReferencerName() const override
+	{
+		return TEXT("ReplacementDialogWidget");
+	}
+
 protected:
 	virtual void UpdateReplacementTable() = 0;
 	virtual void UpdateApplyButtonEnablement() = 0;
