@@ -28,6 +28,8 @@
 #include "InstanceReplacementDialog.h"
 #include "LevelEditor.h"
 #include "MaterialReplacementDialog.h"
+#include "Misc/ScopedSlowTask.h"
+#include "VitruvioEditorModule.h"
 #include "Widgets/Colors/SColorBlock.h"
 #include "Widgets/Colors/SColorPicker.h"
 #include "Widgets/Input/SCheckBox.h"
@@ -537,21 +539,19 @@ void AddGenerateButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent*
 void OpenMaterialReplacementDialog(UVitruvioComponent* VitruvioComponent)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
-	Proxy->OnGenerateCompleted.AddLambda([VitruvioComponent]()
-	{
-		FMaterialReplacementDialog::OpenDialog(VitruvioComponent);
-	});
-	VitruvioComponent->Generate(Proxy, { true, false });
+	Proxy->OnGenerateCompleted.AddLambda([VitruvioComponent]() { FMaterialReplacementDialog::OpenDialog(VitruvioComponent); });
+	VitruvioComponent->Generate(Proxy, {true, false});
+
+	VitruvioEditorModule::Get().BlockUntilGenerated();
 }
 
 void OpenInstanceReplacementDialog(UVitruvioComponent* VitruvioComponent)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
-	Proxy->OnGenerateCompleted.AddLambda([VitruvioComponent]()
-	{
-		FInstanceReplacementDialog::OpenDialog(VitruvioComponent);
-	});
-	VitruvioComponent->Generate(Proxy, { false, true });
+	Proxy->OnGenerateCompleted.AddLambda([VitruvioComponent]() { FInstanceReplacementDialog::OpenDialog(VitruvioComponent); });
+	VitruvioComponent->Generate(Proxy, {false, true});
+
+	VitruvioEditorModule::Get().BlockUntilGenerated();
 }
 
 void AddMaterialReplacementButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioComponent)
