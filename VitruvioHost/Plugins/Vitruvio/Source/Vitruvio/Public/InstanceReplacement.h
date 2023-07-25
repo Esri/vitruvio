@@ -16,7 +16,7 @@ struct FReplacementOption
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere)
-	TSoftObjectPtr<UStaticMesh> Mesh;
+	TObjectPtr<UStaticMesh> Mesh;
 
 	UPROPERTY(EditAnywhere)
 	double Frequency = 1;
@@ -66,7 +66,7 @@ struct FInstanceReplacement
 
 	bool HasReplacement() const
 	{
-		return Algo::AnyOf(Replacements, [](const FReplacementOption& Replacement) { return Replacement.Mesh.IsValid(); });
+		return Algo::AnyOf(Replacements, [](const FReplacementOption& Replacement) { return Replacement.Mesh != nullptr; });
 	}
 
 	friend bool operator==(const FInstanceReplacement& Lhs, const FInstanceReplacement& Rhs)
