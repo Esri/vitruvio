@@ -20,7 +20,6 @@
 #include "VitruvioModule.h"
 
 #include "CoreMinimal.h"
-#include "GenerateCompletedCallbackProxy.h"
 #include "GeneratedModelHISMComponent.h"
 #include "GeneratedModelStaticMeshComponent.h"
 #include "InitialShape.h"
@@ -31,6 +30,17 @@
 #include "VitruvioComponent.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogVitruvioComponent, Log, All);
+
+class UGenerateCompletedCallbackProxy;
+
+USTRUCT(BlueprintType)
+struct FGenerateOptions
+{
+	GENERATED_BODY()
+	
+	bool bIgnoreMaterialReplacements = false;
+	bool bIgnoreInstanceReplacements = false;
+};
 
 struct FInstance
 {
@@ -57,6 +67,7 @@ struct FAttributesEvaluationQueueItem
 struct FGenerateQueueItem
 {
 	FGenerateResultDescription GenerateResultDescription;
+	FGenerateOptions GenerateOptions;
 	UGenerateCompletedCallbackProxy* CallbackProxy;
 };
 
@@ -120,7 +131,7 @@ public:
 	 * Generates a model using the current Rule Package and initial shape. If the attributes are not yet available, they will first be evaluated. If
 	 * no Initial Shape or Rule Package is set, this method will do nothing.
 	 */
-	void Generate(UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void Generate(UGenerateCompletedCallbackProxy* CallbackProxy = nullptr, const FGenerateOptions& GenerateOptions = {});
 
 	/**
 	 * Sets the given Rule Package. This will reevaluate the attributes and if bGenerateModel is set to true, also generates the model.

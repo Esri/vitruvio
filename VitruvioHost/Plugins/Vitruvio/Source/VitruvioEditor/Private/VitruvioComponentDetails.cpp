@@ -536,8 +536,11 @@ void AddGenerateButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent*
 void OpenMaterialReplacementDialog(UVitruvioComponent* VitruvioComponent)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
-	Proxy->OnGenerateCompleted.AddLambda([VitruvioComponent]() { FMaterialReplacementDialog::OpenDialog(VitruvioComponent); });
-	VitruvioComponent->Generate(Proxy);
+	Proxy->OnGenerateCompleted.AddLambda([VitruvioComponent]()
+	{
+		FMaterialReplacementDialog::OpenDialog(VitruvioComponent);
+	});
+	VitruvioComponent->Generate(Proxy, { true, false });
 }
 
 void OpenInstanceReplacementDialog(UVitruvioComponent* VitruvioComponent)
@@ -547,7 +550,7 @@ void OpenInstanceReplacementDialog(UVitruvioComponent* VitruvioComponent)
 	{
 		FInstanceReplacementDialog::OpenDialog(VitruvioComponent);
 	});
-	VitruvioComponent->Generate(Proxy);
+	VitruvioComponent->Generate(Proxy, { false, true });
 }
 
 void AddMaterialReplacementButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioComponent)
