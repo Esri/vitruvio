@@ -9,6 +9,25 @@
 #include "Widgets/Layout/SScrollBox.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
 
+void SReplacementDialogWidget::AddCommonDialogOptions(const TSharedPtr<SVerticalBox>& Content)
+{
+	// clang-format off
+	Content->AddSlot()
+	.Padding(4, 12, 4, 4)
+	.AutoHeight()
+	[
+		SAssignNew(OverrideExistingReplacements, SCheckBox)
+		.IsChecked(true)
+		[
+			SNew(STextBlock)
+			.Font(IDetailLayoutBuilder::GetDetailFont())
+			.ColorAndOpacity(FLinearColor(0.4f, 0.4f, 0.4f, 1.0f))
+			.Text(FText::FromString("Override Existing Replacements"))
+		]
+	];
+	// clang-format on
+}
+
 void SReplacementDialogWidget::Construct(const FArguments& InArgs)
 {
 	WeakParentWindow = InArgs._ParentWindow;
@@ -73,6 +92,7 @@ void SReplacementDialogWidget::Construct(const FArguments& InArgs)
 		]
 	];
 
+	AddCommonDialogOptions(ContentVerticalBox);
 	AddDialogOptions(ContentVerticalBox);
 	
 	ContentVerticalBox->AddSlot()

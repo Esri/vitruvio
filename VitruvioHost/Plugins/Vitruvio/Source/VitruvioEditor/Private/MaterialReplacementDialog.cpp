@@ -91,7 +91,7 @@ void SMaterialReplacementDialogWidget::AddDialogOptions(const TSharedPtr<SVertic
 {
 	// clang-format off
 	Content->AddSlot()
-	.Padding(4, 12, 4, 4)
+	.Padding(4)
 	.AutoHeight()
 	[
 		SAssignNew(IncludeInstancesCheckBox, SCheckBox)
@@ -321,6 +321,11 @@ FReply SMaterialReplacementDialogWidget::OnReplacementConfirmed()
 
 	if (ReplacementDialogOptions->TargetReplacementAsset)
 	{
+		if (OverrideExistingReplacements->IsChecked())
+		{
+			ReplacementDialogOptions->TargetReplacementAsset->Replacements.Empty();
+		}
+		
 		for (const auto& Replacement : ReplacementDialogOptions->MaterialReplacements)
 		{
 			if (Replacement.Value->ReplacementMaterial)

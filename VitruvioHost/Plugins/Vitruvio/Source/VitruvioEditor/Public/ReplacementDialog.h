@@ -16,6 +16,7 @@ protected:
 
 	TSharedPtr<SScrollBox> ReplacementsBox;
 	TSharedPtr<SButton> ApplyButton;
+	TSharedPtr<SCheckBox> OverrideExistingReplacements;
 
 public:
 	SLATE_BEGIN_ARGS(SReplacementDialogWidget) {}
@@ -60,6 +61,9 @@ protected:
 			ApplyButton->SetEnabled(DialogOptions->TargetReplacementAsset != nullptr);
 		}
 	}
+
+private:
+	void AddCommonDialogOptions(const TSharedPtr<SVerticalBox>& Content);
 };
 
 class FReplacementDialog
