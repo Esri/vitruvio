@@ -565,8 +565,8 @@ bool USplineInitialShape::IsRelevantProperty(UObject* Object, const FPropertyCha
 	if (Object)
 	{
 		FProperty* Property = PropertyChangedEvent.Property;
-		return Property && (Property->GetFName() == TEXT("SplineCurves") || (Property->GetFName() == TEXT("SplineApproximationPoints") &&
-																			 PropertyChangedEvent.ChangeType == EPropertyChangeType::ValueSet));
+		return Property && (Property->GetFName() == TEXT("SplineCurves") || Property->GetFName() == TEXT("SplineApproximationPoints")) &&
+																			 PropertyChangedEvent.ChangeType == EPropertyChangeType::ValueSet;
 	}
 	return false;
 }
