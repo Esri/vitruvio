@@ -11,6 +11,7 @@
 		<Property Id='DiskPrompt' Value="${PROJECT_NAME} Installation [1]" />
 
 		<MajorUpgrade Schedule="afterInstallInitialize"
+			AllowSameVersionUpgrades="yes"
 			DowngradeErrorMessage="A later version of [ProductName] is already installed.&#xA;
 				Please uninstall [ProductName] first if you want to downgrade to version [ProductVersion].&#xA;
 				Setup will now exit."/>
