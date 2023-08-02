@@ -41,6 +41,9 @@
 
 namespace
 {
+
+bool ReplacementDialogOpen = false;
+
 FString ValueToString(const TSharedPtr<FString>& In)
 {
 	return *In;
@@ -536,20 +539,19 @@ void AddGenerateButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent*
 	// clang-format on
 }
 
-void OpenMaterialReplacementDialog(UVitruvioComponent* VitruvioComponent)
+template <typename TInstanceDialogType>
+void OpenReplacementDialog(UVitruvioComponent* VitruvioComponent)
 {
-	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
-	Proxy->OnGenerateCompleted.AddLambda([VitruvioComponent]() { FMaterialReplacementDialog::OpenDialog(VitruvioComponent); });
-	VitruvioComponent->Generate(Proxy, {true, false});
+	auto OnDialogClosed = [](const TSharedRef<SWindow>&) {
+		ReplacementDialogOpen = false;
+	};
 
-	VitruvioEditorModule::Get().BlockUntilGenerated();
-}
+	ReplacementDialogOpen = true;
 
-void OpenInstanceReplacementDialog(UVitruvioComponent* VitruvioComponent)
-{
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
-	Proxy->OnGenerateCompleted.AddLambda([VitruvioComponent]() { FInstanceReplacementDialog::OpenDialog(VitruvioComponent); });
-	VitruvioComponent->Generate(Proxy, {false, true});
+	Proxy->OnGenerateCompleted.AddLambda(
+		[VitruvioComponent, OnDialogClosed]() { TInstanceDialogType::OpenDialog(VitruvioComponent, OnDialogClosed); });
+	VitruvioComponent->Generate(Proxy, {true, true});
 
 	VitruvioEditorModule::Get().BlockUntilGenerated();
 }
@@ -570,9 +572,13 @@ void AddMaterialReplacementButton(IDetailCategoryBuilder& RootCategory, UVitruvi
 			SNew(SButton)
 			.OnClicked_Lambda([VitruvioComponent]()
 			{
-				OpenMaterialReplacementDialog(VitruvioComponent);
+				OpenReplacementDialog<FMaterialReplacementDialog>(VitruvioComponent);
 				return FReply::Handled();
 			})
+			.IsEnabled(TAttribute<bool>::CreateLambda([]()
+			{
+				return !ReplacementDialogOpen;
+			}))
 			.Content()
 			[
 				SNew(STextBlock)
@@ -588,9 +594,13 @@ void AddMaterialReplacementButton(IDetailCategoryBuilder& RootCategory, UVitruvi
 			SNew(SButton)
 			.OnClicked_Lambda([VitruvioComponent]()
 			{
-				OpenInstanceReplacementDialog(VitruvioComponent);
+				OpenReplacementDialog<FInstanceReplacementDialog>(VitruvioComponent);
 				return FReply::Handled();
 			})
+			.IsEnabled(TAttribute<bool>::CreateLambda([]()
+			{
+				return !ReplacementDialogOpen;
+			}))
 			.Content()
 			[
 				SNew(STextBlock)

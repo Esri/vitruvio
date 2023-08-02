@@ -69,8 +69,8 @@ private:
 class FReplacementDialog
 {
 public:
-	template <typename TDialogType>
-	static void OpenDialog(UVitruvioComponent* VitruvioComponent, const FVector2D& DialogSize = {500, 400})
+	template <typename TDialogType, typename TOnWindowClosed>
+	static void OpenDialog(UVitruvioComponent* VitruvioComponent, TOnWindowClosed OnWindowClosed, const FVector2D& DialogSize = {500, 400})
 	{
 		// clang-format off
 		TSharedRef<SWindow> PickerWindow = SNew(SWindow)
@@ -81,6 +81,8 @@ public:
 			.SupportsMaximize(false)
 			.SupportsMinimize(false);
 		// clang-format on
+
+		PickerWindow->GetOnWindowClosedEvent().AddLambda(OnWindowClosed);
 
 		TSharedRef<TDialogType> ReplacementPicker = SNew(TDialogType).VitruvioComponent(VitruvioComponent).ParentWindow(PickerWindow);
 		PickerWindow->SetContent(ReplacementPicker);

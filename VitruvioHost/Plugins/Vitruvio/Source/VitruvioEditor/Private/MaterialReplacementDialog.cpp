@@ -11,36 +11,6 @@
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SScrollBox.h"
 
-class SMaterialReplacementDialogWidget : public SReplacementDialogWidget
-{
-	UMaterialReplacementDialogOptions* ReplacementDialogOptions = nullptr;
-
-	TArray<TSharedPtr<SCheckBox>> IsolateCheckboxes;
-	TSharedPtr<SCheckBox> IncludeInstancesCheckBox;
-	TSharedPtr<SCheckBox> ApplyToAllVitruvioActorsCheckBox;
-
-public:
-	SLATE_BEGIN_ARGS(SMaterialReplacementDialogWidget) {}
-	SLATE_ARGUMENT(TSharedPtr<SWindow>, ParentWindow)
-	SLATE_ARGUMENT(UVitruvioComponent*, VitruvioComponent)
-	SLATE_END_ARGS()
-
-	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
-
-	void Construct(const FArguments& InArgs);
-
-protected:
-	virtual FText CreateHeaderText() override;
-	virtual TSharedPtr<ISinglePropertyView> CreateTargetReplacementWidget() override;
-	virtual void UpdateApplyButtonEnablement() override;
-	virtual void OnCreateNewAsset() override;
-	virtual void AddDialogOptions(const TSharedPtr<SVerticalBox>& Content) override;
-	virtual void OnWindowClosed() override;
-	virtual void UpdateReplacementTable() override;
-	virtual FReply OnReplacementConfirmed() override;
-	virtual FReply OnReplacementCanceled() override;
-};
-
 void SMaterialReplacementDialogWidget::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	Collector.AddReferencedObject(ReplacementDialogOptions);
@@ -325,7 +295,7 @@ FReply SMaterialReplacementDialogWidget::OnReplacementConfirmed()
 		{
 			ReplacementDialogOptions->TargetReplacementAsset->Replacements.Empty();
 		}
-		
+
 		for (const auto& Replacement : ReplacementDialogOptions->MaterialReplacements)
 		{
 			if (Replacement.Value->ReplacementMaterial)
@@ -387,9 +357,4 @@ FReply SMaterialReplacementDialogWidget::OnReplacementCanceled()
 	}
 
 	return FReply::Handled();
-}
-
-void FMaterialReplacementDialog::OpenDialog(UVitruvioComponent* VitruvioComponent)
-{
-	FReplacementDialog::OpenDialog<SMaterialReplacementDialogWidget>(VitruvioComponent);
 }

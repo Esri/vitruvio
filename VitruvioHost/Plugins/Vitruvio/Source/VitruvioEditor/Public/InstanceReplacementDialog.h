@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "InstanceReplacement.h"
+#include "ReplacementDialog.h"
 
 #include "InstanceReplacementDialog.generated.h"
 
@@ -36,8 +37,41 @@ public:
 	TMap<FString, UInstanceReplacementWrapper*> InstanceReplacements;
 };
 
+class SInstanceReplacementDialogWidget : public SReplacementDialogWidget
+{
+	UInstanceReplacementDialogOptions* ReplacementDialogOptions = nullptr;
+
+	TArray<TSharedPtr<SCheckBox>> IsolateCheckboxes;
+	TSharedPtr<SCheckBox> ApplyToAllVitruvioActorsCheckBox;
+
+public:
+	SLATE_BEGIN_ARGS(SInstanceReplacementDialogWidget) {}
+	SLATE_ARGUMENT(TSharedPtr<SWindow>, ParentWindow)
+	SLATE_ARGUMENT(UVitruvioComponent*, VitruvioComponent)
+	SLATE_END_ARGS()
+
+	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
+
+	void Construct(const FArguments& InArgs);
+
+protected:
+	virtual FText CreateHeaderText() override;
+	virtual TSharedPtr<ISinglePropertyView> CreateTargetReplacementWidget() override;
+	virtual void UpdateApplyButtonEnablement() override;
+	virtual void OnCreateNewAsset() override;
+	virtual void AddDialogOptions(const TSharedPtr<SVerticalBox>& Content) override;
+	virtual void OnWindowClosed() override;
+	virtual void UpdateReplacementTable() override;
+	virtual FReply OnReplacementConfirmed() override;
+	virtual FReply OnReplacementCanceled() override;
+};
+
 class FInstanceReplacementDialog
 {
 public:
-	static void OpenDialog(class UVitruvioComponent* VitruvioComponent);
+	template <typename TOnWindowClosed>
+	static void OpenDialog(UVitruvioComponent* VitruvioComponent, TOnWindowClosed OnWindowClosed)
+	{
+		FReplacementDialog::OpenDialog<SInstanceReplacementDialogWidget>(VitruvioComponent, OnWindowClosed, {800, 600});
+	}
 };

@@ -11,35 +11,6 @@
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SScrollBox.h"
 
-class SInstanceReplacementDialogWidget : public SReplacementDialogWidget
-{
-	UInstanceReplacementDialogOptions* ReplacementDialogOptions = nullptr;
-
-	TArray<TSharedPtr<SCheckBox>> IsolateCheckboxes;
-	TSharedPtr<SCheckBox> ApplyToAllVitruvioActorsCheckBox;
-
-public:
-	SLATE_BEGIN_ARGS(SInstanceReplacementDialogWidget) {}
-	SLATE_ARGUMENT(TSharedPtr<SWindow>, ParentWindow)
-	SLATE_ARGUMENT(UVitruvioComponent*, VitruvioComponent)
-	SLATE_END_ARGS()
-
-	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
-
-	void Construct(const FArguments& InArgs);
-
-protected:
-	virtual FText CreateHeaderText() override;
-	virtual TSharedPtr<ISinglePropertyView> CreateTargetReplacementWidget() override;
-	virtual void UpdateApplyButtonEnablement() override;
-	virtual void OnCreateNewAsset() override;
-	virtual void AddDialogOptions(const TSharedPtr<SVerticalBox>& Content) override;
-	virtual void OnWindowClosed() override;
-	virtual void UpdateReplacementTable() override;
-	virtual FReply OnReplacementConfirmed() override;
-	virtual FReply OnReplacementCanceled() override;
-};
-
 void SInstanceReplacementDialogWidget::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	Collector.AddReferencedObject(ReplacementDialogOptions);
@@ -159,7 +130,7 @@ void SInstanceReplacementDialogWidget::UpdateReplacementTable()
 				InstanceReplacement->Replacements = Replacement->Replacements;
 			}
 		}
-		
+
 		InstanceReplacement->MeshComponents.Add(HISMComponent);
 	}
 
@@ -190,7 +161,8 @@ void SInstanceReplacementDialogWidget::UpdateReplacementTable()
 		FString MeshIdentifier = Replacement->SourceMeshIdentifier;
 
 		TArray<FString> MeshNamesArray;
-		Algo::Transform(Replacement->MeshComponents, MeshNamesArray, [](const UStaticMeshComponent* StaticMeshComponent) { return StaticMeshComponent->GetName(); });
+		Algo::Transform(Replacement->MeshComponents, MeshNamesArray,
+						[](const UStaticMeshComponent* StaticMeshComponent) { return StaticMeshComponent->GetName(); });
 		if (!MeshNamesArray.IsEmpty())
 		{
 			const FString MeshNameString = FString::Join(MeshNamesArray, TEXT(", "));
@@ -293,7 +265,7 @@ FReply SInstanceReplacementDialogWidget::OnReplacementConfirmed()
 		{
 			ReplacementDialogOptions->TargetReplacementAsset->Replacements.Empty();
 		}
-		
+
 		for (const auto& Replacement : ReplacementDialogOptions->InstanceReplacements)
 		{
 			if (Replacement.Value->Replacements.IsEmpty())
@@ -348,9 +320,4 @@ FReply SInstanceReplacementDialogWidget::OnReplacementCanceled()
 	}
 
 	return FReply::Handled();
-}
-
-void FInstanceReplacementDialog::OpenDialog(UVitruvioComponent* VitruvioComponent)
-{
-	FReplacementDialog::OpenDialog<SInstanceReplacementDialogWidget>(VitruvioComponent, {800, 600});
 }

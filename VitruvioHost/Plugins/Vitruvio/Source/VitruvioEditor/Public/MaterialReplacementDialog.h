@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "MaterialReplacement.h"
+#include "ReplacementDialog.h"
 
 #include "MaterialReplacementDialog.generated.h"
 
@@ -63,8 +64,42 @@ public:
 	TMap<FMaterialKey, UMaterialReplacement*> MaterialReplacements;
 };
 
+class SMaterialReplacementDialogWidget : public SReplacementDialogWidget
+{
+	UMaterialReplacementDialogOptions* ReplacementDialogOptions = nullptr;
+
+	TArray<TSharedPtr<SCheckBox>> IsolateCheckboxes;
+	TSharedPtr<SCheckBox> IncludeInstancesCheckBox;
+	TSharedPtr<SCheckBox> ApplyToAllVitruvioActorsCheckBox;
+
+public:
+	SLATE_BEGIN_ARGS(SMaterialReplacementDialogWidget) {}
+	SLATE_ARGUMENT(TSharedPtr<SWindow>, ParentWindow)
+	SLATE_ARGUMENT(UVitruvioComponent*, VitruvioComponent)
+	SLATE_END_ARGS()
+
+	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
+
+	void Construct(const FArguments& InArgs);
+
+protected:
+	virtual FText CreateHeaderText() override;
+	virtual TSharedPtr<ISinglePropertyView> CreateTargetReplacementWidget() override;
+	virtual void UpdateApplyButtonEnablement() override;
+	virtual void OnCreateNewAsset() override;
+	virtual void AddDialogOptions(const TSharedPtr<SVerticalBox>& Content) override;
+	virtual void OnWindowClosed() override;
+	virtual void UpdateReplacementTable() override;
+	virtual FReply OnReplacementConfirmed() override;
+	virtual FReply OnReplacementCanceled() override;
+};
+
 class FMaterialReplacementDialog
 {
 public:
-	static void OpenDialog(class UVitruvioComponent* VitruvioComponent);
+	template <typename TOnWindowClosed>
+	static void OpenDialog(UVitruvioComponent* VitruvioComponent, TOnWindowClosed OnWindowClosed)
+	{
+		FReplacementDialog::OpenDialog<SMaterialReplacementDialogWidget>(VitruvioComponent, OnWindowClosed);
+	}
 };
