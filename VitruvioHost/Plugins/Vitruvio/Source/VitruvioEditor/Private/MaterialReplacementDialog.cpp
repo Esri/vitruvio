@@ -24,7 +24,8 @@ void SMaterialReplacementDialogWidget::Construct(const FArguments& InArgs)
 	// clang-format off
 	SReplacementDialogWidget::Construct(SReplacementDialogWidget::FArguments()
 		.ParentWindow(InArgs._ParentWindow)
-		.VitruvioComponent(InArgs._VitruvioComponent));
+		.VitruvioComponent(InArgs._VitruvioComponent)
+		.GeneratedWithoutReplacements(InArgs._GeneratedWithoutReplacements));
 	// clang-format on
 
 	ApplyButton->SetEnabled(ReplacementDialogOptions->TargetReplacementAsset != nullptr);
@@ -106,8 +107,6 @@ void SMaterialReplacementDialogWidget::OnWindowClosed()
 			StaticMeshComponent->SelectedEditorMaterial = INDEX_NONE;
 		}
 	}
-
-	VitruvioComponent->Generate();
 }
 
 void SMaterialReplacementDialogWidget::UpdateReplacementTable()
@@ -306,6 +305,8 @@ FReply SMaterialReplacementDialogWidget::OnReplacementConfirmed()
 				ReplacementDialogOptions->TargetReplacementAsset->Replacements.Add(MaterialReplacementData);
 			}
 		}
+
+		bReplacementsApplied = true;
 	}
 
 	TArray<UVitruvioComponent*> ApplyToComponents;

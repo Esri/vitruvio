@@ -18,10 +18,13 @@ protected:
 	TSharedPtr<SButton> ApplyButton;
 	TSharedPtr<SCheckBox> OverrideExistingReplacements;
 
+	bool bReplacementsApplied = false;
+
 public:
 	SLATE_BEGIN_ARGS(SReplacementDialogWidget) {}
 	SLATE_ARGUMENT(TSharedPtr<SWindow>, ParentWindow)
 	SLATE_ARGUMENT(UVitruvioComponent*, VitruvioComponent)
+	SLATE_ARGUMENT(bool, GeneratedWithoutReplacements)
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs);
@@ -70,7 +73,8 @@ class FReplacementDialog
 {
 public:
 	template <typename TDialogType, typename TOnWindowClosed>
-	static void OpenDialog(UVitruvioComponent* VitruvioComponent, TOnWindowClosed OnWindowClosed, const FVector2D& DialogSize = {500, 400})
+	static void OpenDialog(UVitruvioComponent* VitruvioComponent, TOnWindowClosed OnWindowClosed, bool bGeneratedWithoutReplacements,
+						   const FVector2D& DialogSize = {500, 400})
 	{
 		// clang-format off
 		TSharedRef<SWindow> PickerWindow = SNew(SWindow)
@@ -80,11 +84,15 @@ public:
 			.IsTopmostWindow(true)
 			.SupportsMaximize(false)
 			.SupportsMinimize(false);
-		// clang-format on
-
+		
 		PickerWindow->GetOnWindowClosedEvent().AddLambda(OnWindowClosed);
 
-		TSharedRef<TDialogType> ReplacementPicker = SNew(TDialogType).VitruvioComponent(VitruvioComponent).ParentWindow(PickerWindow);
+		TSharedRef<TDialogType> ReplacementPicker = SNew(TDialogType)
+			.VitruvioComponent(VitruvioComponent)
+			.ParentWindow(PickerWindow)
+			.GeneratedWithoutReplacements(bGeneratedWithoutReplacements);
+		// clang-format on
+
 		PickerWindow->SetContent(ReplacementPicker);
 
 		TSharedPtr<SWindow> ParentWindow = FGlobalTabmanager::Get()->GetRootWindow();

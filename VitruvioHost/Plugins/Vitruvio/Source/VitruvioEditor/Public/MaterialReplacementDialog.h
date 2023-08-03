@@ -76,6 +76,7 @@ public:
 	SLATE_BEGIN_ARGS(SMaterialReplacementDialogWidget) {}
 	SLATE_ARGUMENT(TSharedPtr<SWindow>, ParentWindow)
 	SLATE_ARGUMENT(UVitruvioComponent*, VitruvioComponent)
+	SLATE_ARGUMENT(bool, GeneratedWithoutReplacements)
 	SLATE_END_ARGS()
 
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
@@ -98,8 +99,8 @@ class FMaterialReplacementDialog
 {
 public:
 	template <typename TOnWindowClosed>
-	static void OpenDialog(UVitruvioComponent* VitruvioComponent, TOnWindowClosed OnWindowClosed)
+	static void OpenDialog(UVitruvioComponent* VitruvioComponent, TOnWindowClosed OnWindowClosed, bool bGeneratedWithoutReplacements)
 	{
-		FReplacementDialog::OpenDialog<SMaterialReplacementDialogWidget>(VitruvioComponent, OnWindowClosed);
+		FReplacementDialog::OpenDialog<SMaterialReplacementDialogWidget>(VitruvioComponent, OnWindowClosed, bGeneratedWithoutReplacements);
 	}
 };

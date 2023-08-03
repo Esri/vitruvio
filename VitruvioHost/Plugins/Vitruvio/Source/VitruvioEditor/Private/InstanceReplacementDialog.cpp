@@ -24,7 +24,8 @@ void SInstanceReplacementDialogWidget::Construct(const FArguments& InArgs)
 	// clang-format off
 	SReplacementDialogWidget::Construct(SReplacementDialogWidget::FArguments()
 		.ParentWindow(InArgs._ParentWindow)
-		.VitruvioComponent(InArgs._VitruvioComponent));
+		.VitruvioComponent(InArgs._VitruvioComponent)
+		.GeneratedWithoutReplacements(InArgs._GeneratedWithoutReplacements));
 	// clang-format on
 
 	ApplyButton->SetEnabled(ReplacementDialogOptions->TargetReplacementAsset != nullptr);
@@ -92,8 +93,6 @@ void SInstanceReplacementDialogWidget::OnWindowClosed()
 			MeshComponent->SetVisibility(true, false);
 		}
 	}
-
-	VitruvioComponent->Generate();
 }
 
 void SInstanceReplacementDialogWidget::UpdateReplacementTable()
@@ -278,6 +277,8 @@ FReply SInstanceReplacementDialogWidget::OnReplacementConfirmed()
 			InstanceReplacement.Replacements = Replacement.Value->Replacements;
 			ReplacementDialogOptions->TargetReplacementAsset->Replacements.Add(InstanceReplacement);
 		}
+
+		bReplacementsApplied = true;
 	}
 
 	TArray<UVitruvioComponent*> ApplyToComponents;

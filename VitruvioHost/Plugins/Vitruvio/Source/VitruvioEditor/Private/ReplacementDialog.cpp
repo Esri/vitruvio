@@ -33,7 +33,15 @@ void SReplacementDialogWidget::Construct(const FArguments& InArgs)
 	WeakParentWindow = InArgs._ParentWindow;
 	VitruvioComponent = InArgs._VitruvioComponent;
 
-	WeakParentWindow.Pin()->GetOnWindowClosedEvent().AddLambda([this](const TSharedRef<SWindow>&) { OnWindowClosed(); });
+	WeakParentWindow.Pin()->GetOnWindowClosedEvent().AddLambda([this, InArgs](const TSharedRef<SWindow>&) {
+		OnWindowClosed();
+
+		// We either want to regenerate if replacements have been applied or if we regenerated the model without replacements when opening the dialog
+		if (bReplacementsApplied || InArgs._GeneratedWithoutReplacements)
+		{
+			VitruvioComponent->Generate();
+		}
+	});
 
 	const TSharedPtr<ISinglePropertyView> TargetReplacementWidget = CreateTargetReplacementWidget();
 	TargetReplacementWidget->GetPropertyHandle()->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([this]() {

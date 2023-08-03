@@ -540,7 +540,7 @@ void AddGenerateButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent*
 }
 
 template <typename TInstanceDialogType>
-void OpenReplacementDialog(UVitruvioComponent* VitruvioComponent)
+void OpenReplacementDialog(UVitruvioComponent* VitruvioComponent, bool bNeedsRegenerate)
 {
 	auto OnDialogClosed = [](const TSharedRef<SWindow>&) {
 		ReplacementDialogOpen = false;
@@ -548,16 +548,25 @@ void OpenReplacementDialog(UVitruvioComponent* VitruvioComponent)
 
 	ReplacementDialogOpen = true;
 
-	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
-	Proxy->OnGenerateCompleted.AddLambda(
-		[VitruvioComponent, OnDialogClosed]() { TInstanceDialogType::OpenDialog(VitruvioComponent, OnDialogClosed); });
-	VitruvioComponent->Generate(Proxy, {true, true});
+	if (bNeedsRegenerate)
+	{
+		UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
+		Proxy->OnGenerateCompleted.AddLambda(
+			[VitruvioComponent, OnDialogClosed]() { TInstanceDialogType::OpenDialog(VitruvioComponent, OnDialogClosed, true); });
+		VitruvioComponent->Generate(Proxy, {true, true});
+	}
+	else
+	{
+		TInstanceDialogType::OpenDialog(VitruvioComponent, OnDialogClosed, false);
+	}
 
 	VitruvioEditorModule::Get().BlockUntilGenerated();
 }
 
 void AddMaterialReplacementButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioComponent)
 {
+	bool bHasReplacement = VitruvioComponent->InstanceReplacement != nullptr || VitruvioComponent->MaterialReplacement != nullptr;
+
 	// clang-format off
 	RootCategory.AddCustomRow(FText::FromString(TEXT("Replacements")), false)
 	.WholeRowContent()
@@ -570,9 +579,9 @@ void AddMaterialReplacementButton(IDetailCategoryBuilder& RootCategory, UVitruvi
 		.Padding(4)
 		[
 			SNew(SButton)
-			.OnClicked_Lambda([VitruvioComponent]()
+			.OnClicked_Lambda([VitruvioComponent, bHasReplacement]()
 			{
-				OpenReplacementDialog<FMaterialReplacementDialog>(VitruvioComponent);
+				OpenReplacementDialog<FMaterialReplacementDialog>(VitruvioComponent, bHasReplacement);
 				return FReply::Handled();
 			})
 			.IsEnabled(TAttribute<bool>::CreateLambda([]()
@@ -592,9 +601,9 @@ void AddMaterialReplacementButton(IDetailCategoryBuilder& RootCategory, UVitruvi
 		.Padding(0, 4, 4, 4)
 		[
 			SNew(SButton)
-			.OnClicked_Lambda([VitruvioComponent]()
+			.OnClicked_Lambda([VitruvioComponent, bHasReplacement]()
 			{
-				OpenReplacementDialog<FInstanceReplacementDialog>(VitruvioComponent);
+				OpenReplacementDialog<FInstanceReplacementDialog>(VitruvioComponent, bHasReplacement);
 				return FReply::Handled();
 			})
 			.IsEnabled(TAttribute<bool>::CreateLambda([]()

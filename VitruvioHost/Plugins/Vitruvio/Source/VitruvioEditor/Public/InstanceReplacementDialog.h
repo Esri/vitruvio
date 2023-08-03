@@ -48,6 +48,7 @@ public:
 	SLATE_BEGIN_ARGS(SInstanceReplacementDialogWidget) {}
 	SLATE_ARGUMENT(TSharedPtr<SWindow>, ParentWindow)
 	SLATE_ARGUMENT(UVitruvioComponent*, VitruvioComponent)
+	SLATE_ARGUMENT(bool, GeneratedWithoutReplacements)
 	SLATE_END_ARGS()
 
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
@@ -70,8 +71,9 @@ class FInstanceReplacementDialog
 {
 public:
 	template <typename TOnWindowClosed>
-	static void OpenDialog(UVitruvioComponent* VitruvioComponent, TOnWindowClosed OnWindowClosed)
+	static void OpenDialog(UVitruvioComponent* VitruvioComponent, TOnWindowClosed OnWindowClosed, bool bGeneratedWithoutReplacements)
 	{
-		FReplacementDialog::OpenDialog<SInstanceReplacementDialogWidget>(VitruvioComponent, OnWindowClosed, {800, 600});
+		FReplacementDialog::OpenDialog<SInstanceReplacementDialogWidget>(VitruvioComponent, OnWindowClosed, bGeneratedWithoutReplacements,
+																		 {800, 600});
 	}
 };
