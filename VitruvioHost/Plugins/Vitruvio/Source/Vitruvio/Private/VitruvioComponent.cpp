@@ -413,7 +413,15 @@ TSet<FInstance> ApplyInstanceReplacements(UVitruvioComponent* VitruvioComponent,
 				FTransform ModifiedTransform = Transform;
 				if (ReplacementOption.bRandomScale)
 				{
-					ModifiedTransform.SetScale3D(RandomVector(ReplacementOption.MinScale, ReplacementOption.MaxScale));
+					if (ReplacementOption.bUniformScale)
+					{
+						const double RandScale = FMath::RandRange(ReplacementOption.UniformMinScale, ReplacementOption.UniformMaxScale);
+						ModifiedTransform.SetScale3D({RandScale, RandScale, RandScale});
+					}
+					else
+					{
+						ModifiedTransform.SetScale3D(RandomVector(ReplacementOption.MinScale, ReplacementOption.MaxScale));
+					}
 				}
 
 				if (ReplacementOption.bRandomRotation)

@@ -25,9 +25,18 @@ struct FReplacementOption
 	bool bRandomScale = false;
 
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomScale", EditConditionHides))
+	bool bUniformScale = true;
+
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomScale && bUniformScale", EditConditionHides))
+	float UniformMinScale = 1;
+
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomScale && bUniformScale", EditConditionHides))
+	float UniformMaxScale = 1;
+
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomScale && !bUniformScale", EditConditionHides))
 	FVector MinScale = {1, 1, 1};
 
-	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomScale", EditConditionHides))
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomScale && !bUniformScale", EditConditionHides))
 	FVector MaxScale = {1, 1, 1};
 
 	UPROPERTY(EditAnywhere)
