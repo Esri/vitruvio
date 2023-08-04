@@ -162,11 +162,8 @@ void SInstanceReplacementDialogWidget::UpdateReplacementTable()
 		TArray<FString> MeshNamesArray;
 		Algo::Transform(Replacement->MeshComponents, MeshNamesArray,
 						[](const UStaticMeshComponent* StaticMeshComponent) { return StaticMeshComponent->GetName(); });
-		if (!MeshNamesArray.IsEmpty())
-		{
-			const FString MeshNameString = FString::Join(MeshNamesArray, TEXT(", "));
-			MeshIdentifier += " [" + MeshNameString + "]";
-		}
+
+		const FString MeshNameString = FString::Join(MeshNamesArray, TEXT(", "));
 
 		// clang-format off
 		ReplacementBox->AddSlot()
@@ -181,6 +178,16 @@ void SInstanceReplacementDialogWidget::UpdateReplacementTable()
 				.Font(IDetailLayoutBuilder::GetDetailFont())
 				.Text(FText::FromString(MeshIdentifier))
 				.ColorAndOpacity(bValid ? FLinearColor(1.0f, 1.0f, 1.0f, 1.0f) : FLinearColor(0.4f, 0.4f, 0.4f, 1.0f))
+			]
+
+			+ SVerticalBox::Slot()
+			.Padding(0, 4, 0, 0)
+			.AutoHeight()
+			[
+				SAssignNew(SourceMaterialText, STextBlock)
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+				.ColorAndOpacity(FLinearColor(0.2f, 0.2f, 0.2f, 1.0f))
+				.Text(FText::FromString("[" + MeshNameString + "]"))
 			]
 			
 			+ SVerticalBox::Slot()

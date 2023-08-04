@@ -21,7 +21,7 @@ UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* Mask
 										TMap<FString, Vitruvio::FTextureData>& TextureCache,
 										TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
 										const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, TMap<FString, int32>& UniqueMaterialNames,
-										UObject* Outer);
+										TMap<UMaterialInterface*, FString>& MaterialIdentifiers, UObject* Outer);
 
 struct FCollisionData
 {
@@ -46,7 +46,8 @@ class FVitruvioMesh
 	FCollisionData CollisionData;
 
 public:
-	FVitruvioMesh(const FString& Uri, const FString& Identifier, const FMeshDescription& MeshDescription, const TArray<Vitruvio::FMaterialAttributeContainer>& Materials)
+	FVitruvioMesh(const FString& Uri, const FString& Identifier, const FMeshDescription& MeshDescription,
+				  const TArray<Vitruvio::FMaterialAttributeContainer>& Materials)
 		: Uri(Uri), Identifier(Identifier), MeshDescription(MeshDescription), Materials(Materials), StaticMesh(nullptr)
 	{
 	}
@@ -57,7 +58,7 @@ public:
 	{
 		return Uri;
 	}
-	
+
 	FString GetIdentifier() const
 	{
 		return Identifier;
@@ -79,5 +80,6 @@ public:
 	}
 
 	void Build(const FString& Name, TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-			   TMap<FString, Vitruvio::FTextureData>& TextureCache, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent);
+			   TMap<FString, Vitruvio::FTextureData>& TextureCache, TMap<UMaterialInterface*, FString>& MaterialIdentifiers,
+			   TMap<FString, int32>& UniqueMaterialNames, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent);
 };

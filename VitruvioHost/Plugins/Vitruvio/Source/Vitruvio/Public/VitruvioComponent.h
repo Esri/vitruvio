@@ -372,6 +372,9 @@ public:
 	/* Returns the generated model HISM components */
 	TArray<UGeneratedModelHISMComponent*> GetGeneratedModelHISMComponents() const;
 
+	/* Returns the material identifier of the given material for replacements. Returns an empty String in case the material is not found. */
+	FString GetMaterialIdentifier(const UMaterialInterface* SourceMaterial) const;
+
 	/**
 	 * Evaluate rule attributes.
 	 *
@@ -454,6 +457,11 @@ private:
 
 	bool HasGeneratedMesh = false;
 
+	// Note that these are only unique per VitruvioComponent
+	UPROPERTY()
+	TMap<UMaterialInterface*, FString> MaterialIdentifiers;
+	TMap<FString, int32> UniqueMaterialIdentifiers;
+
 	void CalculateRandomSeed();
 
 	void NotifyAttributesChanged();
@@ -463,7 +471,7 @@ private:
 
 	FConvertedGenerateResult BuildResult(FGenerateResultDescription& GenerateResult,
 										 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-										 TMap<FString, Vitruvio::FTextureData>& TextureCache) const;
+										 TMap<FString, Vitruvio::FTextureData>& TextureCache);
 
 #if WITH_EDITOR
 	FDelegateHandle PropertyChangeDelegate;

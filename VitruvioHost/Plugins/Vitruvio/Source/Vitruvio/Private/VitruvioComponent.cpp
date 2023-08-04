@@ -325,22 +325,29 @@ FString UniqueComponentName(const FString& Name, TMap<FString, int32>& UsedNames
 	return CurrentName;
 }
 
-void ApplyMaterialReplacements(UStaticMeshComponent* StaticMeshComponent, UMaterialReplacementAsset* Replacement)
+void ApplyMaterialReplacements(UStaticMeshComponent* StaticMeshComponent, const TMap<UMaterialInterface*, FString>& MaterialIdentifiers,
+							   UMaterialReplacementAsset* Replacement)
 {
 	if (!Replacement)
 	{
 		return;
 	}
 
+	TMap<FString, UMaterialInterface*> ReplacementMaterials;
+	for (const FMaterialReplacementData& ReplacementData : Replacement->Replacements)
+	{
+		ReplacementMaterials.Add(ReplacementData.MaterialIdentifier, ReplacementData.ReplacementMaterial);
+	}
+
 	for (int32 MaterialIndex = 0; MaterialIndex < StaticMeshComponent->GetNumMaterials(); ++MaterialIndex)
 	{
-		const FName MaterialSlotName = StaticMeshComponent->GetMaterialSlotNames()[MaterialIndex];
-		for (const FMaterialReplacementData& ReplacementData : Replacement->Replacements)
+		const UMaterialInterface* SourceMaterial = StaticMeshComponent->GetMaterial(MaterialIndex);
+		FString MaterialIdentifier = MaterialIdentifiers[SourceMaterial];
+
+		if (UMaterialInterface** Result = ReplacementMaterials.Find(MaterialIdentifier))
 		{
-			if (MaterialSlotName == ReplacementData.SourceMaterialSlotName)
-			{
-				StaticMeshComponent->SetMaterial(MaterialIndex, ReplacementData.ReplacementMaterial);
-			}
+			UMaterialInterface* ReplacementMaterial = *Result;
+			StaticMeshComponent->SetMaterial(MaterialIndex, ReplacementMaterial);
 		}
 	}
 }
@@ -748,7 +755,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 
 			if (!Result.GenerateOptions.bIgnoreMaterialReplacements)
 			{
-				ApplyMaterialReplacements(VitruvioModelComponent, MaterialReplacement);
+				ApplyMaterialReplacements(VitruvioModelComponent, MaterialIdentifiers, MaterialReplacement);
 			}
 		}
 		else
@@ -804,7 +811,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 
 			if (!Result.GenerateOptions.bIgnoreMaterialReplacements)
 			{
-				ApplyMaterialReplacements(InstancedComponent, MaterialReplacement);
+				ApplyMaterialReplacements(InstancedComponent, MaterialIdentifiers, MaterialReplacement);
 			}
 		}
 
@@ -957,30 +964,44 @@ TArray<UGeneratedModelHISMComponent*> UVitruvioComponent::GetGeneratedModelHISMC
 	return VitruvioModelHISMComponents;
 }
 
-FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescription& GenerateResult,
-														 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-														 TMap<FString, Vitruvio::FTextureData>& TextureCache) const
+FString UVitruvioComponent::GetMaterialIdentifier(const UMaterialInterface* SourceMaterial) const
 {
-	// build all meshes
-	for (auto& IdAndMesh : GenerateResult.Meshes)
+	if (const FString* Result = MaterialIdentifiers.Find(SourceMaterial))
 	{
-		FString Name = GenerateResult.Names[IdAndMesh.Key];
-		IdAndMesh.Value->Build(Name, MaterialCache, TextureCache, OpaqueParent, MaskedParent, TranslucentParent);
+		return *Result;
 	}
 
-	// convert instances
+	return {};
+}
+
+FConvertedGenerateResult UVitruvioComponent::BuildResult(FGenerateResultDescription& GenerateResult,
+														 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+														 TMap<FString, Vitruvio::FTextureData>& TextureCache)
+{
+	MaterialIdentifiers.Empty();
+	UniqueMaterialIdentifiers.Empty();
+
+	// Build all meshes
+	for (const auto& IdAndMesh : GenerateResult.Meshes)
+	{
+		FString Name = GenerateResult.Names[IdAndMesh.Key];
+		IdAndMesh.Value->Build(Name, MaterialCache, TextureCache, MaterialIdentifiers, UniqueMaterialIdentifiers, OpaqueParent, MaskedParent,
+							   TranslucentParent);
+	}
+
+	// Convert instances
 	TArray<FInstance> Instances;
 	for (const auto& Instance : GenerateResult.Instances)
 	{
 		auto VitruvioMesh = GenerateResult.Meshes[Instance.Key.PrototypeId];
 		FString MeshName = GenerateResult.Names[Instance.Key.PrototypeId];
 		TArray<UMaterialInstanceDynamic*> OverrideMaterials;
-		TMap<FString, int32> UniqueMaterialNames;
+
 		for (size_t MaterialIndex = 0; MaterialIndex < Instance.Key.MaterialOverrides.Num(); ++MaterialIndex)
 		{
 			const Vitruvio::FMaterialAttributeContainer& MaterialContainer = Instance.Key.MaterialOverrides[MaterialIndex];
 			OverrideMaterials.Add(CacheMaterial(OpaqueParent, MaskedParent, TranslucentParent, TextureCache, MaterialCache, MaterialContainer,
-												UniqueMaterialNames, VitruvioMesh->GetStaticMesh()));
+												UniqueMaterialIdentifiers, MaterialIdentifiers, VitruvioMesh->GetStaticMesh()));
 		}
 
 		Instances.Add({MeshName, VitruvioMesh, OverrideMaterials, Instance.Value});

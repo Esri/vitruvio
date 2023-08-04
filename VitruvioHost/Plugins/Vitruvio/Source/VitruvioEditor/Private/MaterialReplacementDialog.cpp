@@ -127,12 +127,12 @@ void SMaterialReplacementDialogWidget::UpdateReplacementTable()
 		}
 	}
 
-	TMap<FName, UMaterialInterface*> CurrentReplacements;
+	TMap<FString, UMaterialInterface*> CurrentReplacements;
 	if (ReplacementDialogOptions->TargetReplacementAsset)
 	{
 		for (const FMaterialReplacementData& ReplacementData : ReplacementDialogOptions->TargetReplacementAsset->Replacements)
 		{
-			CurrentReplacements.Add(ReplacementData.SourceMaterialSlotName, ReplacementData.ReplacementMaterial);
+			CurrentReplacements.Add(ReplacementData.MaterialIdentifier, {ReplacementData.ReplacementMaterial});
 		}
 	}
 
@@ -141,25 +141,27 @@ void SMaterialReplacementDialogWidget::UpdateReplacementTable()
 		for (const auto& MaterialSlotName : StaticMeshComponent->GetMaterialSlotNames())
 		{
 			int32 MaterialIndex = StaticMeshComponent->GetMaterialIndex(MaterialSlotName);
-
 			UMaterialInterface* SourceMaterial = StaticMeshComponent->GetMaterial(MaterialIndex);
+			const FString& MaterialIdentifier = VitruvioComponent->GetMaterialIdentifier(SourceMaterial);
 
-			FMaterialKey Key{SourceMaterial, MaterialSlotName};
-			if (auto ExistingReplacementOptional = ReplacementDialogOptions->MaterialReplacements.Find(Key))
+			if (auto ExistingReplacementOptional = ReplacementDialogOptions->MaterialReplacements.Find(MaterialIdentifier))
 			{
 				UMaterialReplacement* ExistingReplacement = *ExistingReplacementOptional;
 				ExistingReplacement->Components.Add(StaticMeshComponent);
+				ExistingReplacement->SourceMaterials.Add(SourceMaterial);
 			}
 			else
 			{
 				UMaterialReplacement* MaterialReplacement = NewObject<UMaterialReplacement>();
-				if (UMaterialInterface** MaterialInterface = CurrentReplacements.Find(MaterialSlotName))
+				if (UMaterialInterface** MaterialInterface = CurrentReplacements.Find(MaterialIdentifier))
 				{
 					MaterialReplacement->ReplacementMaterial = *MaterialInterface;
 				}
-				MaterialReplacement->SourceMaterialSlot = MaterialSlotName;
+				MaterialReplacement->MaterialIdentifier = MaterialIdentifier;
 				MaterialReplacement->Components.Add(StaticMeshComponent);
-				ReplacementDialogOptions->MaterialReplacements.Add({SourceMaterial, MaterialSlotName}, MaterialReplacement);
+				MaterialReplacement->SourceMaterials.Add(SourceMaterial);
+
+				ReplacementDialogOptions->MaterialReplacements.Add(MaterialIdentifier, MaterialReplacement);
 			}
 		}
 	}
@@ -195,10 +197,10 @@ void SMaterialReplacementDialogWidget::UpdateReplacementTable()
 
 		TSharedPtr<SCheckBox> IsolateCheckbox;
 
-		TArray<FString> ComponentNamesArray;
-		Algo::Transform(Replacement->Components, ComponentNamesArray, [](UStaticMeshComponent* Component) { return Component->GetName(); });
-		FString ComponentNames = FString::Join(ComponentNamesArray, TEXT(", "));
-		FString SourceMaterialAndComponentsText = Key.SourceMaterialSlot.ToString() + " [" + ComponentNames + "]";
+		TArray<FString> SourceMaterialNamesArray;
+		Algo::Transform(Replacement->SourceMaterials, SourceMaterialNamesArray,
+						[](const UMaterialInterface* MaterialInterface) { return MaterialInterface->GetName(); });
+		FString SourceMaterialNames = FString::Join(SourceMaterialNamesArray, TEXT(", "));
 
 		// clang-format off
 		ReplacementBox->AddSlot()
@@ -211,7 +213,17 @@ void SMaterialReplacementDialogWidget::UpdateReplacementTable()
 			[
 				SAssignNew(SourceMaterialText, STextBlock)
 				.Font(IDetailLayoutBuilder::GetDetailFont())
-				.Text(FText::FromString(SourceMaterialAndComponentsText))
+				.Text(FText::FromString(Key))
+			]
+
+			+ SVerticalBox::Slot()
+			.Padding(0, 4, 0, 0)
+			.AutoHeight()
+			[
+				SAssignNew(SourceMaterialText, STextBlock)
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+				.ColorAndOpacity(FLinearColor(0.2f, 0.2f, 0.2f, 1.0f))
+				.Text(FText::FromString("[" + SourceMaterialNames + "]"))
 			]
 			
 			+ SVerticalBox::Slot()
@@ -240,7 +252,7 @@ void SMaterialReplacementDialogWidget::UpdateReplacementTable()
 
 							for (int32 MaterialIndex = 0; MaterialIndex < StaticMeshComponent->GetNumMaterials(); ++MaterialIndex)
 							{
-								if (Key.Material == StaticMeshComponent->GetMaterial(MaterialIndex))
+								if (Replacement->SourceMaterials.Contains(StaticMeshComponent->GetMaterial(MaterialIndex)))
 								{
 									StaticMeshComponent->SetMaterialPreview(CheckBoxState == ECheckBoxState::Checked ? MaterialIndex : INDEX_NONE);
 								}
@@ -300,7 +312,7 @@ FReply SMaterialReplacementDialogWidget::OnReplacementConfirmed()
 			if (Replacement.Value->ReplacementMaterial)
 			{
 				FMaterialReplacementData MaterialReplacementData;
-				MaterialReplacementData.SourceMaterialSlotName = Replacement.Value->SourceMaterialSlot;
+				MaterialReplacementData.MaterialIdentifier = Replacement.Value->MaterialIdentifier;
 				MaterialReplacementData.ReplacementMaterial = Replacement.Value->ReplacementMaterial;
 				ReplacementDialogOptions->TargetReplacementAsset->Replacements.Add(MaterialReplacementData);
 			}

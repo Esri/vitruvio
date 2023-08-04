@@ -17,7 +17,7 @@ struct FMaterialReplacementData
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere)
-	FName SourceMaterialSlotName;
+	FString MaterialIdentifier;
 
 	UPROPERTY(EditAnywhere)
 	UMaterialInterface* ReplacementMaterial;
@@ -31,7 +31,7 @@ struct FMaterialReplacementData
 
 	friend bool operator==(const FMaterialReplacementData& Lhs, const FMaterialReplacementData& Rhs)
 	{
-		return Lhs.SourceMaterialSlotName == Rhs.SourceMaterialSlotName && Lhs.ReplacementMaterial == Rhs.ReplacementMaterial;
+		return Lhs.MaterialIdentifier == Rhs.MaterialIdentifier && Lhs.ReplacementMaterial == Rhs.ReplacementMaterial;
 	}
 
 	friend bool operator!=(const FMaterialReplacementData& Lhs, const FMaterialReplacementData& Rhs)

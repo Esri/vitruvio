@@ -34,7 +34,6 @@ constexpr double OpacityThreshold = 0.98;
 
 const FString CityEngineDefaultShaderName("CityEngineShader");
 const FString CityEnginePBRShaderName("CityEnginePBRShader");
-const FString CityEngineDefaultMaterialName("CityEngineMaterial");
 
 template <typename T, typename F>
 void CountOpacityMapPixels(const T* SrcColors, int32 SizeX, int32 SizeY, uint32& BlackPixels, uint32& WhitePixels, F Accessor)
@@ -221,39 +220,13 @@ public:
 	}
 };
 
-FName GetMaterialName(const Vitruvio::FMaterialAttributeContainer& MaterialContainer, TMap<FString, int32>& UniqueMaterialNames)
-{
-	FString Name = MaterialContainer.Name;
-	
-	if (Name.StartsWith(CityEngineDefaultMaterialName))
-	{
-		if (const FString* ColorMapKey = MaterialContainer.TextureProperties.Find("colorMap"))
-		{
-			Name = FPaths::GetBaseFilename(*ColorMapKey);
-		}
-	}
-
-	if (UniqueMaterialNames.Contains(Name))
-	{
-		const int32 Index = UniqueMaterialNames[Name]++;
-		Name += TEXT("_") + FString::FromInt(Index);
-	}
-	else
-	{
-		UniqueMaterialNames.Add(Name, 1);
-	}
-	
-	return FName(Name);
-}
-
 } // namespace
 
 namespace Vitruvio
 {
-UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, UMaterialInterface* OpaqueParent,
+UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, const FString& Name, UMaterialInterface* OpaqueParent,
 															UMaterialInterface* MaskedParent, UMaterialInterface* TranslucentParent,
 															const FMaterialAttributeContainer& MaterialContainer,
-															TMap<FString, int32>& UniqueMaterialNames,
 															TMap<FString, FTextureData>& TextureCache)
 {
 	check(IsInGameThread());
@@ -342,7 +315,10 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, UMat
 		Parent = GetMaterialByBlendMode(ChosenBlendMode, OpaqueParent, MaskedParent, TranslucentParent);
 	}
 
-	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, GetTransientPackage(), GetMaterialName(MaterialContainer, UniqueMaterialNames));
+	// Note that we do not want to use MakeUniqueObjectName here because it would add increasing numbers as a postfix to each material name which is
+	// not necessary. In case two materials would have the same name (eg from different VitruvioActor which use the same texture/material name)
+	// UMaterialInstanceDynamic::Create will make the names unique instead.
+	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, GetTransientPackage(), *Name);
 	MaterialInstance->SetFlags(RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
 
 	MaterialInstance->SetScalarParameterValue(FName(TEXT("opacitySource")), UseAlphaAsOpacity);

@@ -80,6 +80,8 @@ enum class EPrtUvSetType : int32
 	MetallicMap = 9
 };
 
+const FString CityEngineDefaultMaterialName("CityEngineMaterial");
+
 struct FMaterialAttributeContainer
 {
 	TMap<FString, FString> TextureProperties;
@@ -109,6 +111,19 @@ struct FMaterialAttributeContainer
 	}
 
 	friend uint32 GetTypeHash(const FMaterialAttributeContainer& Object);
+
+	FString GetMaterialName() const
+	{
+		if (Name.StartsWith(CityEngineDefaultMaterialName))
+		{
+			if (const FString* ColorMapKey = TextureProperties.Find("colorMap"))
+			{
+				return FPaths::GetBaseFilename(*ColorMapKey);
+			}
+		}
+
+		return Name;
+	}
 };
 
 struct FInstanceCacheKey
