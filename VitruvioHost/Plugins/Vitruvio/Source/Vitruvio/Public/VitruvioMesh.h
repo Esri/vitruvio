@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "MeshDescription.h"
 #include "VitruvioTypes.h"
 
 UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
