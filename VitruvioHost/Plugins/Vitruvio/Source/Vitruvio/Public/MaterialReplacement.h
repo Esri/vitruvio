@@ -16,10 +16,10 @@ struct FMaterialReplacementData
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	FString MaterialIdentifier;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	UMaterialInterface* ReplacementMaterial;
 
 	FMaterialReplacementData() : ReplacementMaterial(nullptr) {}
@@ -46,7 +46,7 @@ class VITRUVIO_API UMaterialReplacementAsset : public UDataAsset
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	TArray<FMaterialReplacementData> Replacements;
 
 	bool IsValid() const

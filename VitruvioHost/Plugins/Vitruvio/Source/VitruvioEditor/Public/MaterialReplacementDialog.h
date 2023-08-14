@@ -33,10 +33,10 @@ class UMaterialReplacementDialogOptions : public UObject
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Replacements")
 	UMaterialReplacementAsset* TargetReplacementAsset;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Replacements")
 	TMap<FString, UMaterialReplacement*> MaterialReplacements;
 };
 

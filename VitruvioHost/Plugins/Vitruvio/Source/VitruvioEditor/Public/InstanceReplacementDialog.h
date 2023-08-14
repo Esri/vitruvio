@@ -30,10 +30,10 @@ class UInstanceReplacementDialogOptions : public UObject
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Replacements")
 	UInstanceReplacementAsset* TargetReplacementAsset;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Replacements")
 	TMap<FString, UInstanceReplacementWrapper*> InstanceReplacements;
 };
 

@@ -15,37 +15,37 @@ struct FReplacementOption
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	TObjectPtr<UStaticMesh> Mesh;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	double Frequency = 1;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	bool bRandomScale = false;
 
-	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomScale", EditConditionHides))
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomScale", EditConditionHides), Category = "Vitruvio")
 	bool bUniformScale = true;
 
-	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomScale && bUniformScale", EditConditionHides))
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomScale && bUniformScale", EditConditionHides), Category = "Vitruvio")
 	float UniformMinScale = 1;
 
-	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomScale && bUniformScale", EditConditionHides))
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomScale && bUniformScale", EditConditionHides), Category = "Vitruvio")
 	float UniformMaxScale = 1;
 
-	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomScale && !bUniformScale", EditConditionHides))
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomScale && !bUniformScale", EditConditionHides), Category = "Vitruvio")
 	FVector MinScale = {1, 1, 1};
 
-	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomScale && !bUniformScale", EditConditionHides))
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomScale && !bUniformScale", EditConditionHides), Category = "Vitruvio")
 	FVector MaxScale = {1, 1, 1};
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	bool bRandomRotation = false;
 
-	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomRotation", EditConditionHides))
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomRotation", EditConditionHides), Category = "Vitruvio")
 	FVector MinRotation = {0, 0, 0};
 
-	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomRotation", EditConditionHides))
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRandomRotation", EditConditionHides), Category = "Vitruvio")
 	FVector MaxRotation = {0, 0, 0};
 
 	friend bool operator==(const FReplacementOption& Lhs, const FReplacementOption& Rhs)
@@ -65,10 +65,10 @@ struct FInstanceReplacement
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	FString SourceMeshIdentifier;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	TArray<FReplacementOption> Replacements;
 
 	FInstanceReplacement() {}
@@ -95,7 +95,7 @@ class VITRUVIO_API UInstanceReplacementAsset : public UDataAsset
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	TArray<FInstanceReplacement> Replacements;
 
 	bool IsValid() const
