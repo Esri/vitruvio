@@ -15,6 +15,7 @@
 
 #include "VitruvioComponentDetails.h"
 
+#include "GenerateCompletedCallbackProxy.h"
 #include "VitruvioComponent.h"
 
 #include "Algo/Transform.h"
@@ -24,7 +25,11 @@
 #include "IDetailTreeNode.h"
 #include "IPropertyRowGenerator.h"
 #include "ISinglePropertyView.h"
+#include "InstanceReplacementDialog.h"
 #include "LevelEditor.h"
+#include "MaterialReplacementDialog.h"
+#include "Misc/ScopedSlowTask.h"
+#include "VitruvioEditorModule.h"
 #include "Widgets/Colors/SColorBlock.h"
 #include "Widgets/Colors/SColorPicker.h"
 #include "Widgets/Input/SCheckBox.h"
@@ -36,6 +41,9 @@
 
 namespace
 {
+
+bool ReplacementDialogOpen = false;
+
 FString ValueToString(const TSharedPtr<FString>& In)
 {
 	return *In;
@@ -531,6 +539,88 @@ void AddGenerateButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent*
 	// clang-format on
 }
 
+template <typename TInstanceDialogType>
+void OpenReplacementDialog(UVitruvioComponent* VitruvioComponent, bool bNeedsRegenerate)
+{
+	auto OnDialogClosed = [](const TSharedRef<SWindow>&) {
+		ReplacementDialogOpen = false;
+	};
+
+	ReplacementDialogOpen = true;
+
+	if (bNeedsRegenerate)
+	{
+		UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
+		Proxy->OnGenerateCompleted.AddLambda(
+			[VitruvioComponent, OnDialogClosed]() { TInstanceDialogType::OpenDialog(VitruvioComponent, OnDialogClosed, true); });
+		VitruvioComponent->Generate(Proxy, {true, true});
+	}
+	else
+	{
+		TInstanceDialogType::OpenDialog(VitruvioComponent, OnDialogClosed, false);
+	}
+
+	VitruvioEditorModule::Get().BlockUntilGenerated();
+}
+
+void AddMaterialReplacementButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioComponent)
+{
+	bool bHasReplacement = VitruvioComponent->InstanceReplacement != nullptr || VitruvioComponent->MaterialReplacement != nullptr;
+
+	// clang-format off
+	RootCategory.AddCustomRow(FText::FromString(TEXT("Replacements")), false)
+	.WholeRowContent()
+	.VAlign(VAlign_Center)
+	.HAlign(HAlign_Center)
+	[
+		SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot()
+		.VAlign(VAlign_Fill)
+		.Padding(4)
+		[
+			SNew(SButton)
+			.OnClicked_Lambda([VitruvioComponent, bHasReplacement]()
+			{
+				OpenReplacementDialog<FMaterialReplacementDialog>(VitruvioComponent, bHasReplacement);
+				return FReply::Handled();
+			})
+			.IsEnabled(TAttribute<bool>::CreateLambda([]()
+			{
+				return !ReplacementDialogOpen;
+			}))
+			.Content()
+			[
+				SNew(STextBlock)
+				.Text(FText::FromString(FString(TEXT("Replace Materials"))))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
+		]
+
+		+ SHorizontalBox::Slot()
+		.VAlign(VAlign_Fill)
+		.Padding(0, 4, 4, 4)
+		[
+			SNew(SButton)
+			.OnClicked_Lambda([VitruvioComponent, bHasReplacement]()
+			{
+				OpenReplacementDialog<FInstanceReplacementDialog>(VitruvioComponent, bHasReplacement);
+				return FReply::Handled();
+			})
+			.IsEnabled(TAttribute<bool>::CreateLambda([]()
+			{
+				return !ReplacementDialogOpen;
+			}))
+			.Content()
+			[
+				SNew(STextBlock)
+				.Text(FText::FromString(FString(TEXT("Replace Instances"))))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
+		]
+	];
+	// clang-format on
+}
+
 } // namespace
 
 template <typename T>
@@ -771,6 +861,8 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		{
 			AddGenerateButton(RootCategory, VitruvioComponent);
 		}
+
+		AddMaterialReplacementButton(RootCategory, VitruvioComponent);
 
 		if (VitruvioComponent->InitialShape && VitruvioComponent->CanChangeInitialShapeType())
 		{

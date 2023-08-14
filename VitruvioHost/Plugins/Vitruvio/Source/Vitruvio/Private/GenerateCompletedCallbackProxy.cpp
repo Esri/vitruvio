@@ -18,7 +18,6 @@
 #include "Algo/Count.h"
 #include "Engine/World.h"
 #include "VitruvioBlueprintLibrary.h"
-#include "VitruvioComponent.h"
 
 namespace
 {
@@ -92,11 +91,11 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetRandomSeed(
 	});
 }
 
-UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::Generate(UVitruvioComponent* VitruvioComponent)
+UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::Generate(UVitruvioComponent* VitruvioComponent, const FGenerateOptions& GenerateOptions)
 {
-	return ExecuteIfComponentValid(TEXT("Generate"), VitruvioComponent, [](UGenerateCompletedCallbackProxy* Proxy, UVitruvioComponent* VitruvioComponent)
+	return ExecuteIfComponentValid(TEXT("Generate"), VitruvioComponent, [GenerateOptions](UGenerateCompletedCallbackProxy* Proxy, UVitruvioComponent* VitruvioComponent)
 	{
-		VitruvioComponent->Generate(Proxy);
+		VitruvioComponent->Generate(Proxy, GenerateOptions);
 	});
 }
 

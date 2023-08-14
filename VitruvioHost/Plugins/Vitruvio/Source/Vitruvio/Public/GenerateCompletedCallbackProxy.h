@@ -18,12 +18,12 @@
 #include "Components/SplineComponent.h"
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintAsyncActionBase.h"
+#include "VitruvioComponent.h"
 
 #include "GenerateCompletedCallbackProxy.generated.h"
 
 class AVitruvioActor;
 class URulePackage;
-class UVitruvioComponent;
 
 UCLASS()
 class VITRUVIO_API UGenerateCompletedCallbackProxy final : public UBlueprintAsyncActionBase
@@ -63,7 +63,7 @@ public:
 	 * no Initial Shape or Rule Package is set, this method will do nothing.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
-	static UGenerateCompletedCallbackProxy* Generate(UVitruvioComponent* VitruvioComponent);
+	static UGenerateCompletedCallbackProxy* Generate(UVitruvioComponent* VitruvioComponent, const FGenerateOptions& GenerateOptions);
 
 	/**
 	 * Sets the float attribute with the given Name to the given value. Regenerates the model if bGenerateModel is set to true.

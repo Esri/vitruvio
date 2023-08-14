@@ -24,6 +24,12 @@ class VitruvioEditorModule final : public IModuleInterface
 public:
 	void StartupModule() override;
 	void ShutdownModule() override;
+	void BlockUntilGenerated() const;
+
+	static VitruvioEditorModule& Get()
+	{
+		return FModuleManager::LoadModuleChecked<VitruvioEditorModule>("VitruvioEditor");
+	}
 
 private:
 	void OnPostEngineInit();

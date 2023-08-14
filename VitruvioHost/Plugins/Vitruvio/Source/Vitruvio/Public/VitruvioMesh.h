@@ -15,12 +15,14 @@
 
 #pragma once
 
+#include "MeshDescription.h"
 #include "VitruvioTypes.h"
 
 UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
 										TMap<FString, Vitruvio::FTextureData>& TextureCache,
 										TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-										const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, UObject* Outer);
+										const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, TMap<FString, int32>& UniqueMaterialNames,
+										TMap<UMaterialInterface*, FString>& MaterialIdentifiers, UObject* Outer);
 
 struct FCollisionData
 {
@@ -36,6 +38,7 @@ struct FCollisionData
 class FVitruvioMesh
 {
 	FString Uri;
+	FString Identifier;
 
 	FMeshDescription MeshDescription;
 	TArray<Vitruvio::FMaterialAttributeContainer> Materials;
@@ -44,8 +47,9 @@ class FVitruvioMesh
 	FCollisionData CollisionData;
 
 public:
-	FVitruvioMesh(const FString& Uri, const FMeshDescription& MeshDescription, const TArray<Vitruvio::FMaterialAttributeContainer>& Materials)
-		: Uri(Uri), MeshDescription(MeshDescription), Materials(Materials), StaticMesh(nullptr)
+	FVitruvioMesh(const FString& Uri, const FString& Identifier, const FMeshDescription& MeshDescription,
+				  const TArray<Vitruvio::FMaterialAttributeContainer>& Materials)
+		: Uri(Uri), Identifier(Identifier), MeshDescription(MeshDescription), Materials(Materials), StaticMesh(nullptr)
 	{
 	}
 
@@ -54,6 +58,11 @@ public:
 	FString GetUri() const
 	{
 		return Uri;
+	}
+
+	FString GetIdentifier() const
+	{
+		return Identifier;
 	}
 
 	const TArray<Vitruvio::FMaterialAttributeContainer>& GetMaterials() const
@@ -72,5 +81,6 @@ public:
 	}
 
 	void Build(const FString& Name, TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-			   TMap<FString, Vitruvio::FTextureData>& TextureCache, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent);
+			   TMap<FString, Vitruvio::FTextureData>& TextureCache, TMap<UMaterialInterface*, FString>& MaterialIdentifiers,
+			   TMap<FString, int32>& UniqueMaterialNames, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent);
 };

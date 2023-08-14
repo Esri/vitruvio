@@ -27,6 +27,7 @@
 
 #include "Misc/ScopedSlowTask.h"
 #include "VitruvioComponent.h"
+#include "VitruvioEditorModule.h"
 #include "VitruvioModule.h"
 
 namespace
@@ -70,21 +71,6 @@ void BlockUntilCookCompleted()
 		FPlatformProcess::Sleep(0); // SwitchToThread
 		int32 CurrentNumGenerateCalls = VitruvioModule::Get().GetNumGenerateCalls();
 		PRTGenerateCallsTasks.EnterProgressFrame(0);
-	}
-}
-
-void BlockUntilGenerated()
-{
-	// Wait until all async generate calls to PRT are finished. We want to block the UI and show a modal progress bar.
-	int32 TotalGenerateCalls = VitruvioModule::Get().GetNumGenerateCalls();
-	FScopedSlowTask PRTGenerateCallsTasks(TotalGenerateCalls, FText::FromString("Generating models..."));
-	PRTGenerateCallsTasks.MakeDialog();
-	while (VitruvioModule::Get().IsGenerating() || VitruvioModule::Get().IsLoadingRpks())
-	{
-		FPlatformProcess::Sleep(0); // SwitchToThread
-		int32 CurrentNumGenerateCalls = VitruvioModule::Get().GetNumGenerateCalls();
-		PRTGenerateCallsTasks.EnterProgressFrame(TotalGenerateCalls - CurrentNumGenerateCalls);
-		TotalGenerateCalls = CurrentNumGenerateCalls;
 	}
 }
 
@@ -304,7 +290,7 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 
 	// Wait until all ongoing generate calls to PRT have finished (might happen if we try to cook before all models of a scene
 	// have been generated).
-	BlockUntilGenerated();
+	VitruvioEditorModule::Get().BlockUntilGenerated();
 
 	// Notify on generate completed for VitruvioComponents. Unlike the busy waiting for PRT generate calls which happen async we need to use
 	// a callback here as creating the StaticMeshes from generation also happens on the game thread.

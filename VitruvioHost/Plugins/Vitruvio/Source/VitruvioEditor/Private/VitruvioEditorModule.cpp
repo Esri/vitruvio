@@ -28,6 +28,7 @@
 #include "Editor/Transactor.h"
 #include "EngineUtils.h"
 #include "Framework/Notifications/NotificationManager.h"
+#include "GenerateCompletedCallbackProxy.h"
 #include "IAssetTools.h"
 #include "Modules/ModuleManager.h"
 #include "VitruvioBlueprintLibrary.h"
@@ -203,6 +204,21 @@ void VitruvioEditorModule::ShutdownModule()
 	LevelEditor.OnMapChanged().Remove(MapChangedHandle);
 
 	FEditorDelegates::PostUndoRedo.Remove(PostUndoRedoDelegate);
+}
+
+void VitruvioEditorModule::BlockUntilGenerated() const
+{
+	// Wait until all async generate calls to PRT are finished. We want to block the UI and show a modal progress bar.
+	int32 TotalGenerateCalls = VitruvioModule::Get().GetNumGenerateCalls();
+	FScopedSlowTask PRTGenerateCallsTasks(TotalGenerateCalls, FText::FromString("Generating models..."));
+	PRTGenerateCallsTasks.MakeDialog();
+	while (VitruvioModule::Get().IsGenerating() || VitruvioModule::Get().IsLoadingRpks())
+	{
+		FPlatformProcess::Sleep(0); // SwitchToThread
+		int32 CurrentNumGenerateCalls = VitruvioModule::Get().GetNumGenerateCalls();
+		PRTGenerateCallsTasks.EnterProgressFrame(TotalGenerateCalls - CurrentNumGenerateCalls);
+		TotalGenerateCalls = CurrentNumGenerateCalls;
+	}
 }
 
 void VitruvioEditorModule::OnPostEngineInit()

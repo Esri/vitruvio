@@ -20,13 +20,27 @@
 #include "VitruvioModule.h"
 
 #include "CoreMinimal.h"
-#include "GenerateCompletedCallbackProxy.h"
+#include "GeneratedModelHISMComponent.h"
+#include "GeneratedModelStaticMeshComponent.h"
 #include "InitialShape.h"
+#include "InstanceReplacement.h"
+#include "MaterialReplacement.h"
 #include "VitruvioTypes.h"
 
 #include "VitruvioComponent.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogVitruvioComponent, Log, All);
+
+class UGenerateCompletedCallbackProxy;
+
+USTRUCT(BlueprintType)
+struct FGenerateOptions
+{
+	GENERATED_BODY()
+
+	bool bIgnoreMaterialReplacements = false;
+	bool bIgnoreInstanceReplacements = false;
+};
 
 struct FInstance
 {
@@ -34,6 +48,21 @@ struct FInstance
 	TSharedPtr<FVitruvioMesh> InstanceMesh;
 	TArray<UMaterialInstanceDynamic*> OverrideMaterials;
 	TArray<FTransform> Transforms;
+
+	friend FORCEINLINE uint32 GetTypeHash(const FInstance& Request)
+	{
+		return GetTypeHash(Request.InstanceMesh->GetUri());
+	}
+
+	friend bool operator==(const FInstance& Lhs, const FInstance& Rhs)
+	{
+		return Lhs.InstanceMesh && Rhs.InstanceMesh ? Lhs.InstanceMesh->GetUri() == Rhs.InstanceMesh->GetUri() : false;
+	}
+
+	friend bool operator!=(const FInstance& Lhs, const FInstance& Rhs)
+	{
+		return !(Lhs == Rhs);
+	}
 };
 
 struct FConvertedGenerateResult
@@ -53,6 +82,7 @@ struct FAttributesEvaluationQueueItem
 struct FGenerateQueueItem
 {
 	FGenerateResultDescription GenerateResultDescription;
+	FGenerateOptions GenerateOptions;
 	UGenerateCompletedCallbackProxy* CallbackProxy;
 };
 
@@ -68,6 +98,7 @@ class VITRUVIO_API UVitruvioComponent : public UActorComponent
 	bool bAttributesReady = false;
 
 	bool bIsGenerating = false;
+	bool bHasGeneratedModel = false;
 
 	bool bNotifyAttributeChange = false;
 
@@ -103,11 +134,31 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Vitruvio", meta = (DisplayName = "Generate Collision Mesh"))
 	bool GenerateCollision = true;
 
+	/** The material replacement asset which defines how materials are replaced after generating a model. */
+	UPROPERTY(EditAnywhere, Category = "Vitruvio Replacmeents", Setter = SetMaterialReplacementAsset)
+	UMaterialReplacementAsset* MaterialReplacement;
+
+	/** The instance replacement asset which defines how instances are replaced after generating a model. */
+	UPROPERTY(EditAnywhere, Category = "Vitruvio Replacmeents", Setter = SetInstanceReplacementAsset)
+	UInstanceReplacementAsset* InstanceReplacement;
+
+	/**
+	 * Sets the material replacement Asset and regenerates the model.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio Replacmeents")
+	void SetMaterialReplacementAsset(UMaterialReplacementAsset* MaterialReplacementAsset);
+
+	/**
+	 * Sets the instance replacement Asset and regenerates the model.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio Replacmeents")
+	void SetInstanceReplacementAsset(UInstanceReplacementAsset* InstanceReplacementAsset);
+
 	/**
 	 * Generates a model using the current Rule Package and initial shape. If the attributes are not yet available, they will first be evaluated. If
 	 * no Initial Shape or Rule Package is set, this method will do nothing.
 	 */
-	void Generate(UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void Generate(UGenerateCompletedCallbackProxy* CallbackProxy = nullptr, const FGenerateOptions& GenerateOptions = {});
 
 	/**
 	 * Sets the given Rule Package. This will reevaluate the attributes and if bGenerateModel is set to true, also generates the model.
@@ -310,7 +361,19 @@ public:
 	void RemoveGeneratedMeshes();
 
 	/* Returns whether the attributes are ready. */
-	bool GetAttributesReady();
+	bool GetAttributesReady() const;
+
+	/* Returns whether this component has a generated model */
+	bool HasGeneratedModel() const;
+
+	/* Returns the generated model component */
+	UGeneratedModelStaticMeshComponent* GetGeneratedModelComponent() const;
+
+	/* Returns the generated model HISM components */
+	TArray<UGeneratedModelHISMComponent*> GetGeneratedModelHISMComponents() const;
+
+	/* Returns the material identifier of the given material for replacements. */
+	FString GetMaterialIdentifier(const UMaterialInterface* SourceMaterial) const;
 
 	/**
 	 * Evaluate rule attributes.
@@ -393,6 +456,11 @@ private:
 	FAttributeMapResult::FTokenPtr EvalAttributesInvalidationToken;
 
 	bool HasGeneratedMesh = false;
+
+	// Note that these are only unique per VitruvioComponent
+	UPROPERTY()
+	TMap<UMaterialInterface*, FString> MaterialIdentifiers;
+	TMap<FString, int32> UniqueMaterialIdentifiers;
 
 	void CalculateRandomSeed();
 
