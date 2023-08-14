@@ -16,6 +16,7 @@
 #pragma once
 
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Misc/Paths.h"
 #include "PhysicsCore/Public/Interface_CollisionDataProviderCore.h"
 
 #include "prt/AttributeMap.h"
