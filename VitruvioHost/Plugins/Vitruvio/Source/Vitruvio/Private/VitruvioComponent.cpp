@@ -966,7 +966,7 @@ TArray<UGeneratedModelHISMComponent*> UVitruvioComponent::GetGeneratedModelHISMC
 
 FString UVitruvioComponent::GetMaterialIdentifier(const UMaterialInterface* SourceMaterial) const
 {
-	if (const FString* Result = MaterialIdentifiers.Find(SourceMaterial))
+	if (const FString* Result = MaterialIdentifiers.Find(SourceMaterial); ensure(Result))
 	{
 		return *Result;
 	}

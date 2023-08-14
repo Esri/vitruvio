@@ -372,7 +372,7 @@ public:
 	/* Returns the generated model HISM components */
 	TArray<UGeneratedModelHISMComponent*> GetGeneratedModelHISMComponents() const;
 
-	/* Returns the material identifier of the given material for replacements. Returns an empty String in case the material is not found. */
+	/* Returns the material identifier of the given material for replacements. */
 	FString GetMaterialIdentifier(const UMaterialInterface* SourceMaterial) const;
 
 	/**
