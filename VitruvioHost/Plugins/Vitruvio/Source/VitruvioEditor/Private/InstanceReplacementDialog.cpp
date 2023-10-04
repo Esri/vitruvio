@@ -267,16 +267,20 @@ FReply SInstanceReplacementDialogWidget::OnReplacementConfirmed()
 {
 	if (ReplacementDialogOptions->TargetReplacementAsset)
 	{
-		if (OverrideExistingReplacements->IsChecked())
-		{
-			ReplacementDialogOptions->TargetReplacementAsset->Replacements.Empty();
-		}
 
 		for (const auto& Replacement : ReplacementDialogOptions->InstanceReplacements)
 		{
 			if (Replacement.Value->Replacements.IsEmpty())
 			{
 				continue;
+			}
+
+			if (OverrideExistingReplacements->IsChecked())
+			{
+				ReplacementDialogOptions->TargetReplacementAsset->Replacements.RemoveAll([Replacement](const FInstanceReplacement& InstanceReplacement)
+				{
+					return InstanceReplacement.SourceMeshIdentifier == Replacement.Value->SourceMeshIdentifier;
+				});
 			}
 
 			FInstanceReplacement InstanceReplacement;

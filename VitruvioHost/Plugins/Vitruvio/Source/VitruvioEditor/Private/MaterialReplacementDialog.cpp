@@ -302,15 +302,18 @@ FReply SMaterialReplacementDialogWidget::OnReplacementConfirmed()
 
 	if (ReplacementDialogOptions->TargetReplacementAsset)
 	{
-		if (OverrideExistingReplacements->IsChecked())
-		{
-			ReplacementDialogOptions->TargetReplacementAsset->Replacements.Empty();
-		}
-
 		for (const auto& Replacement : ReplacementDialogOptions->MaterialReplacements)
 		{
 			if (Replacement.Value->ReplacementMaterial)
 			{
+				if (OverrideExistingReplacements->IsChecked())
+                {
+                	ReplacementDialogOptions->TargetReplacementAsset->Replacements.RemoveAll([Replacement](const FMaterialReplacementData& MaterialReplacement)
+                	{
+                		return MaterialReplacement.MaterialIdentifier == Replacement.Value->MaterialIdentifier;
+                	});
+                }
+                			
 				FMaterialReplacementData MaterialReplacementData;
 				MaterialReplacementData.MaterialIdentifier = Replacement.Value->MaterialIdentifier;
 				MaterialReplacementData.ReplacementMaterial = Replacement.Value->ReplacementMaterial;

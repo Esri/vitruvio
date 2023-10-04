@@ -542,6 +542,11 @@ void AddGenerateButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent*
 template <typename TInstanceDialogType>
 void OpenReplacementDialog(UVitruvioComponent* VitruvioComponent, bool bNeedsRegenerate)
 {
+	if (!VitruvioComponent->GetRpk())
+	{
+		return;
+	}
+	
 	auto OnDialogClosed = [](const TSharedRef<SWindow>&) {
 		ReplacementDialogOpen = false;
 	};
