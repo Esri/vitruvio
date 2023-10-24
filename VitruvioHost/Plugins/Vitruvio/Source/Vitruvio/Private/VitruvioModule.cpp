@@ -34,6 +34,22 @@
 
 DEFINE_LOG_CATEGORY(LogUnrealPrt);
 
+#define CHECK_PRT_INITIALIZED()                                                                                                                      \
+    if (!Initialized)                                                                                                                                \
+    {                                                                                                                                                \
+        UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))                                                                                   \
+        return {};                                                                                                                                   \
+    }
+
+#define CHECK_PRT_INITIALIZED_ASYNC(RESULT_CLASS, TOKEN_VAR)                                                                                         \
+    if (!Initialized)                                                                                                                                \
+    {                                                                                                                                                \
+        UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))                                                                                   \
+        TPromise<RESULT_CLASS::ResultType> Result;                                                                                                   \
+        Result.SetValue({TOKEN_VAR, {}});                                                                                                            \
+        return { Result.GetFuture(), TOKEN_VAR };                                                                                                    \
+    }
+
 namespace
 {
 constexpr const wchar_t* ATTRIBUTE_EVAL_ENCODER_ID = L"com.esri.prt.core.AttributeEvalEncoder";
@@ -368,17 +384,7 @@ FGenerateResult VitruvioModule::GenerateAsync(const FInitialShapePolygon& Initia
 
 	const FGenerateResult::FTokenPtr Token = MakeShared<FGenerateToken>();
 
-	if (!Initialized)
-	{
-		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
-
-		TPromise<FGenerateResult::ResultType> Result;
-		Result.SetValue({Token, {}});
-		return {
-			Result.GetFuture(),
-			Token,
-		};
-	}
+	CHECK_PRT_INITIALIZED_ASYNC(FGenerateResult, Token)
 
 	FGenerateResult::FFutureType ResultFuture = Async(EAsyncExecution::Thread, [=, AttributeMap = std::move(Attributes)]() mutable {
 		FGenerateResultDescription Result = Generate(InitialShape, RulePackage, std::move(AttributeMap), RandomSeed);
@@ -393,11 +399,7 @@ FGenerateResultDescription VitruvioModule::Generate(const FInitialShapePolygon& 
 {
 	check(RulePackage);
 
-	if (!Initialized)
-	{
-		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
-		return {};
-	}
+	CHECK_PRT_INITIALIZED()
 
 	GenerateCallsCounter.Increment();
 
@@ -435,10 +437,7 @@ FGenerateResultDescription VitruvioModule::Generate(const FInitialShapePolygon& 
 
 	const int GenerateCalls = GenerateCallsCounter.Decrement();
 
-	if (!Initialized)
-	{
-		return {};
-	}
+	CHECK_PRT_INITIALIZED()
 
 	// Notify generate complete callback on game thread
 	AsyncTask(ENamedThreads::GameThread, [this, GenerateCalls]() {
@@ -483,13 +482,7 @@ FAttributeMapResult VitruvioModule::EvaluateRuleAttributesAsync(const FInitialSh
 
 	FAttributeMapResult::FTokenPtr InvalidationToken = MakeShared<FEvalAttributesToken>();
 
-	if (!Initialized)
-	{
-		UE_LOG(LogUnrealPrt, Warning, TEXT("PRT not initialized"))
-		TPromise<FAttributeMapResult::ResultType> Result;
-		Result.SetValue({InvalidationToken, nullptr});
-		return {Result.GetFuture(), InvalidationToken};
-	}
+	CHECK_PRT_INITIALIZED_ASYNC(FAttributeMapResult, InvalidationToken)
 
 	LoadAttributesCounter.Increment();
 
