@@ -867,7 +867,10 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			AddGenerateButton(RootCategory, VitruvioComponent);
 		}
 
-		AddMaterialReplacementButton(RootCategory, VitruvioComponent);
+		if (!VitruvioComponent->bBatchGenerate)
+		{
+			AddReplacementButtons(RootCategory, VitruvioComponent);
+		}
 
 		if (VitruvioComponent->InitialShape && VitruvioComponent->CanChangeInitialShapeType())
 		{

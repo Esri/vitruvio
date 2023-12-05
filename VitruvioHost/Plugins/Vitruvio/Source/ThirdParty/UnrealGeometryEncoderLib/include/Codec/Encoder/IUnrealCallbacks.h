@@ -75,6 +75,8 @@ public:
 	 */
 	virtual void addInstance(int32_t prototypeId, const double* transform, const prt::AttributeMap** instanceMaterial,
 							 size_t numInstanceMaterials) = 0;
-	
+
+	virtual void init() = 0;
+	virtual void finish() = 0;
 	virtual void addReport(const prt::AttributeMap* reports) = 0;
 };

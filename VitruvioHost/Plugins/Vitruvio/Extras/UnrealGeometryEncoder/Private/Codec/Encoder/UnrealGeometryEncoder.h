@@ -34,6 +34,7 @@
 #include "Codec/CodecMain.h"
 
 #include <iostream>
+#include <set>
 #include <stdexcept>
 #include <string>
 
@@ -45,16 +46,22 @@ class UnrealGeometryEncoder final : public prtx::GeometryEncoder
 {
 public:
 	UnrealGeometryEncoder(const std::wstring& id, const prt::AttributeMap* options, prt::Callbacks* callbacks);
-	~UnrealGeometryEncoder() override = default;
+	virtual ~UnrealGeometryEncoder() override = default;
 
 public:
-	void init(prtx::GenerateContext& context) override;
-	void encode(prtx::GenerateContext& context, size_t initialShapeIndex) override;
-	void finish(prtx::GenerateContext& context) override;
+	virtual void init(prtx::GenerateContext& context) override;
+	virtual void encode(prtx::GenerateContext& context, size_t initialShapeIndex) override;
+	virtual void finish(prtx::GenerateContext& context) override;
 
 private:
-	void convertGeometry(const prtx::InitialShape& initialShape, const prtx::EncodePreparator::InstanceVector& instances,
-						 IUnrealCallbacks* callbacks) const;
+	void convertGeometry(const prtx::EncodePreparator::InstanceVector& instances, IUnrealCallbacks* callbacks);
+
+	prtx::DefaultNamePreparator mNamePrep;
+    prtx::EncodePreparatorPtr mEncPrep;
+    prtx::NamePreparator::NamespacePtr mNsMesh;
+    prtx::NamePreparator::NamespacePtr mNsMaterial;
+    	
+	std::set<int> serializedPrototypes;
 };
 
 class UnrealGeometryEncoderFactory final : public prtx::EncoderFactory, public prtx::Singleton<UnrealGeometryEncoderFactory>

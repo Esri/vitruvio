@@ -56,6 +56,9 @@ void FVitruvioStyle::Initialize()
 	StyleSet->Set("ClassIcon.VitruvioComponent", new FSlateVectorImageBrush(ImagePath, Icon16x16));
 	StyleSet->Set("ClassThumbnail.VitruvioComponent", new FSlateVectorImageBrush(ImagePath, Icon64x64));
 
+	StyleSet->Set("ClassIcon.VitruvioBatchActor", new FSlateVectorImageBrush(ImagePath, Icon16x16));
+	StyleSet->Set("ClassThumbnail.VitruvioBatchActor", new FSlateVectorImageBrush(ImagePath, Icon64x64));
+
 	FSlateStyleRegistry::RegisterSlateStyle(*StyleSet.Get());
 };
 
