@@ -568,7 +568,7 @@ void OpenReplacementDialog(UVitruvioComponent* VitruvioComponent, bool bNeedsReg
 	VitruvioEditorModule::Get().BlockUntilGenerated();
 }
 
-void AddMaterialReplacementButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioComponent)
+void AddReplacementButtons(IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioComponent)
 {
 	bool bHasReplacement = VitruvioComponent->InstanceReplacement != nullptr || VitruvioComponent->MaterialReplacement != nullptr;
 
