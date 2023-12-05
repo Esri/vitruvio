@@ -67,10 +67,10 @@ void SetInitialShape(UVitruvioComponent* Component, bool bGenerateModel, UGenera
 	Component->EvaluateRuleAttributes(bGenerateModel, CallbackProxy);
 }
 
-FVector3f GetCentroid(const TArray<FVector3f>& Vertices)
+FVector GetCentroid(const TArray<FVector>& Vertices)
 {
-	FVector3f Centroid = FVector3f::ZeroVector;
-	for (const FVector3f& Vertex : Vertices)
+	FVector Centroid = FVector::ZeroVector;
+	for (const FVector& Vertex : Vertices)
 	{
 		Centroid += Vertex;
 	}
@@ -467,8 +467,8 @@ void UVitruvioComponent::CalculateRandomSeed()
 {
 	if (!bValidRandomSeed && InitialShape && InitialShape->IsValid())
 	{
-		const FVector3f Centroid = GetCentroid(InitialShape->GetVertices());
-		RandomSeed = GetTypeHash(GetOwner()->GetActorTransform().TransformPosition(FVector(Centroid)));
+		const FVector Centroid = GetCentroid(InitialShape->GetVertices());
+		RandomSeed = GetTypeHash(GetOwner()->GetActorTransform().TransformPosition(Centroid));
 		bValidRandomSeed = true;
 	}
 }
