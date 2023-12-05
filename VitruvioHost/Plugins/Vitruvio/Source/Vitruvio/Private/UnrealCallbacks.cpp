@@ -341,8 +341,6 @@ void UnrealCallbacks::finish()
 {
 	if (!ModelDescription.MeshDescription.IsEmpty())
 	{
-		ModelDescription.MeshDescription.TriangulateMesh();
-
 		GeneratedModel = CreateVitruvioMesh(TEXT("GeneratedMesh"), TEXT(""), ModelDescription.MeshDescription, ModelDescription.Materials);
 	}
 }
