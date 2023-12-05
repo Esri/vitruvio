@@ -19,12 +19,12 @@
 #include "GenerateCompletedCallbackProxy.h"
 #include "VitruvioComponentTypes.h"
 
-void UTile::MarkDirty(UGenerateCompletedCallbackProxy* CallbackProxy)
+void UTile::MarkDirty(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
 	bDirty = true;
 	if (CallbackProxy)
 	{
-		CallbackProxies.Add(CallbackProxy);
+		CallbackProxies.Add(VitruvioComponent, CallbackProxy);
 	}
 }
 
@@ -87,7 +87,7 @@ void FGrid::MarkDirty(UVitruvioComponent* VitruvioComponent, UGenerateCompletedC
 	if (UTile** FoundTile = TilesByComponent.Find(VitruvioComponent))
 	{
 		UTile* Tile = *FoundTile;
-		Tile->MarkDirty(CallbackProxy);
+		Tile->MarkDirty(VitruvioComponent, CallbackProxy);
 	}
 }
 
@@ -119,7 +119,7 @@ void FGrid::Register(UVitruvioComponent* VitruvioComponent, AVitruvioBatchActor*
 	if (!Tile->Contains(VitruvioComponent))
 	{
 		Tile->Add(VitruvioComponent);
-		Tile->MarkDirty();
+		Tile->MarkDirty(VitruvioComponent);
 		TilesByComponent.Add(VitruvioComponent, Tile);
 	}
 }
@@ -130,7 +130,7 @@ void FGrid::Unregister(UVitruvioComponent* VitruvioComponent)
 	{
 		UTile* Tile = *FoundTile;
 		Tile->Remove(VitruvioComponent);
-		Tile->MarkDirty();
+		Tile->MarkDirty(VitruvioComponent);
 	}
 }
 
@@ -242,6 +242,11 @@ void AVitruvioBatchActor::ProcessTiles()
 		{
 			FBatchGenerateResult GenerateResult = VitruvioModule::Get().BatchGenerateAsync(Tile->GetInitialShapes(), Tile->GetRpk());
 
+			if (Tile->GenerateToken)
+			{
+				Tile->GenerateToken->Invalidate();
+			}
+			
 			Tile->GenerateToken = GenerateResult.Token;
 		
 			// clang-format off
@@ -249,7 +254,8 @@ void AVitruvioBatchActor::ProcessTiles()
 			{
 				FScopeLock Lock(&Result.Token->Lock);
 
-				if (Result.Token->IsInvalid()) {
+				if (Result.Token->IsInvalid())
+				{
 					return;
 				}
 
@@ -334,7 +340,7 @@ void AVitruvioBatchActor::ProcessGenerateQueue()
 			InstancedComponent->RegisterComponent();
 		}
 
-		for (UGenerateCompletedCallbackProxy* CallbackProxy : Item.Tile->CallbackProxies)
+		for (auto& [VitruvioComponent, CallbackProxy] : Item.Tile->CallbackProxies)
 		{
 			CallbackProxy->OnGenerateCompletedBlueprint.Broadcast();
 			CallbackProxy->OnGenerateCompleted.Broadcast();

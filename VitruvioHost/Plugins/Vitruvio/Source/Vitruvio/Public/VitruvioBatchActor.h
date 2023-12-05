@@ -16,6 +16,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
 #include "VitruvioModule.h"
 #include "GenerateCompletedCallbackProxy.h"
 
@@ -37,14 +38,14 @@ public:
 	bool bDirty;
 
 	UPROPERTY()
-	TArray<UGenerateCompletedCallbackProxy*> CallbackProxies;
+	TMap<UVitruvioComponent*, UGenerateCompletedCallbackProxy*> CallbackProxies;
 
 	FBatchGenerateResult::FTokenPtr GenerateToken;
 
 	UPROPERTY()
 	UGeneratedModelStaticMeshComponent* GeneratedModelComponent;
     	
-	void MarkDirty(UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void MarkDirty(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 	void UnmarkDirty();
 	
 	void Add(UVitruvioComponent* VitruvioComponent);
