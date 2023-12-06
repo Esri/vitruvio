@@ -56,6 +56,47 @@ struct FGenerateQueueItem
 	UGenerateCompletedCallbackProxy* CallbackProxy;
 };
 
+struct FInstance
+{
+	FString Name;
+	TSharedPtr<FVitruvioMesh> InstanceMesh;
+	TArray<UMaterialInstanceDynamic*> OverrideMaterials;
+	TArray<FTransform> Transforms;
+
+	friend FORCEINLINE uint32 GetTypeHash(const FInstance& Request)
+	{
+		return GetTypeHash(Request.InstanceMesh->GetUri());
+	}
+
+	friend bool operator==(const FInstance& Lhs, const FInstance& Rhs)
+	{
+		return Lhs.InstanceMesh && Rhs.InstanceMesh ? Lhs.InstanceMesh->GetUri() == Rhs.InstanceMesh->GetUri() : false;
+	}
+
+	friend bool operator!=(const FInstance& Lhs, const FInstance& Rhs)
+	{
+		return !(Lhs == Rhs);
+	}
+};
+
+struct FConvertedGenerateResult
+{
+	TSharedPtr<FVitruvioMesh> ShapeMesh;
+	TArray<FInstance> Instances;
+	TMap<FString, FReport> Reports;
+};
+
+
+FConvertedGenerateResult BuildResult(const FGenerateResultDescription& GenerateResult,
+									 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+									 TMap<FString, Vitruvio::FTextureData>& TextureCache,
+									 TMap<UMaterialInterface*, FString>& MaterialIdentifiers,
+									 TMap<FString, int32>& UniqueMaterialIdentifiers,
+									 UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent);
+
+
+FString UniqueComponentName(const FString& Name, TMap<FString, int32>& UsedNames);
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class VITRUVIO_API UVitruvioComponent : public UActorComponent
 {

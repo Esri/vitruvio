@@ -17,7 +17,6 @@
 
 #include "AttributeConversion.h"
 #include "GenerateCompletedCallbackProxy.h"
-#include "VitruvioComponentTypes.h"
 
 void UTile::MarkDirty(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
