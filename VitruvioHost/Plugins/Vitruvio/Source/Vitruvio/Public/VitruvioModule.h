@@ -101,6 +101,7 @@ struct FInitialShape
 	FInitialShapePolygon Polygon;
 	AttributeMapUPtr Attributes;
 	int32 RandomSeed;
+	URulePackage* RulePackage;
 };
 
 using FGenerateResult = TResult<FGenerateResultDescription, FGenerateToken>;
@@ -124,47 +125,42 @@ public:
 	 * \brief Asynchronously evaluates the attributes and generates the models for all given InitialShapes using the given RulePackage.
 	 *
 	 * \param InitialShapes
-	 * \param RulePackage
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API FBatchGenerateResult BatchGenerateAsync(TArray<FInitialShape> InitialShapes, URulePackage* RulePackage) const;
+	VITRUVIO_API FBatchGenerateResult BatchGenerateAsync(TArray<FInitialShape> InitialShapes) const;
 
 	/**
 	 * \brief Generate the models with the given InitialShape, RulePackage and Attributes.
 	 *
 	 * \param InitialShapes
-	 * \param RulePackage
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API FGenerateResultDescription BatchGenerate(const TArray<FInitialShape>& InitialShapes, URulePackage* RulePackage) const;
+	VITRUVIO_API FGenerateResultDescription BatchGenerate(TArray<FInitialShape> InitialShapes) const;
 
 	/**
 	 * \brief Asynchronously generate the models with the given InitialShape, RulePackage and Attributes.
 	 *
 	 * \param InitialShape
-	 * \param RulePackage
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API FGenerateResult GenerateAsync(FInitialShape InitialShape, URulePackage* RulePackage) const;
+	VITRUVIO_API FGenerateResult GenerateAsync(FInitialShape InitialShape) const;
 
 
 	/**
 	 * \brief Generate the models with the given InitialShape, RulePackage and Attributes.
 	 *
 	 * \param InitialShape
-	 * \param RulePackage
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API FGenerateResultDescription Generate(const FInitialShape& InitialShape, URulePackage* RulePackage) const;
+	VITRUVIO_API FGenerateResultDescription Generate(const FInitialShape& InitialShape) const;
 
 	/**
 	 * \brief Asynchronously evaluates attributes for the given initial shape and rule package.
 	 *
 	 * \param InitialShape
-	 * \param RulePackage
 	 * \return
 	 */
-	VITRUVIO_API FAttributeMapResult EvaluateRuleAttributesAsync(FInitialShape InitialShape, URulePackage* RulePackage) const;
+	VITRUVIO_API FAttributeMapResult EvaluateRuleAttributesAsync(FInitialShape InitialShape) const;
 
 	/**
 	 * \return whether PRT is initialized meaning installed and ready to use. Before initialization generation is not possible and will

@@ -58,22 +58,12 @@ TArray<FInitialShape> UTile::GetInitialShapes()
 		InitialShape.Polygon = VitruvioComponent->InitialShape->GetPolygon();
 		InitialShape.Attributes = Vitruvio::CreateAttributeMap(VitruvioComponent->GetAttributes());
 		InitialShape.RandomSeed = VitruvioComponent->GetRandomSeed();
+		InitialShape.RulePackage = VitruvioComponent->GetRpk();
 
 		InitialShapes.Emplace(MoveTemp(InitialShape));
 	}
 
 	return InitialShapes;
-}
-
-URulePackage* UTile::GetRpk()
-{
-	if (VitruvioComponents.IsEmpty())
-	{
-		return nullptr;
-	}
-
-	const UVitruvioComponent* Any = *VitruvioComponents.CreateIterator();
-	return Any->GetRpk();
 }
 
 const TSet<UVitruvioComponent*>& UTile::GetVitruvioComponents()
@@ -101,18 +91,17 @@ void FGrid::RegisterAll(const TSet<UVitruvioComponent*>& VitruvioComponents, AVi
 void FGrid::Register(UVitruvioComponent* VitruvioComponent, AVitruvioBatchActor* VitruvioBatchActor)
 {
 	const FIntPoint Position = VitruvioBatchActor->GetPosition(VitruvioComponent);
-	TMap<URulePackage*, UTile*>& TilesByRpk = Tiles.FindOrAdd(Position);
-
+	
 	UTile* Tile;
-	if (UTile** FoundTile = TilesByRpk.Find(VitruvioComponent->GetRpk()))
+	if (UTile** TileResult = Tiles.Find(Position))
 	{
-		Tile = *FoundTile;
+		Tile = *TileResult;
 	}
 	else
 	{
 		Tile = NewObject<UTile>();
 		Tile->Location = Position;
-		TilesByRpk.Add(VitruvioComponent->GetRpk(), Tile);
+		Tiles.Add(Position, Tile);
 	}
 
 	if (!Tile->Contains(VitruvioComponent))
@@ -150,14 +139,11 @@ void FGrid::Clear()
 TArray<UTile*> FGrid::GetDirtyTiles() const
 {
 	TArray<UTile*> DirtyTiles;
-	for (auto& [Point, TilesByRpk] : Tiles)
+	for (auto& [Point, Tile] : Tiles)
 	{
-		for (auto& [Rpk, Tile] : TilesByRpk)
+		if (Tile->bDirty)
 		{
-			if (Tile->bDirty)
-			{
-				DirtyTiles.Add(Tile);
-			}
+			DirtyTiles.Add(Tile);
 		}
 	}
 
@@ -166,12 +152,9 @@ TArray<UTile*> FGrid::GetDirtyTiles() const
 
 void FGrid::UnmarkDirty()
 {
-	for (auto& [Point, TilesByRpk] : Tiles)
+	for (auto& [Point, Tile] : Tiles)
 	{
-		for (auto& [Rpk, Tile] : TilesByRpk)
-		{
-			Tile->UnmarkDirty();
-		}
+		Tile->UnmarkDirty();
 	}
 }
 
@@ -237,9 +220,9 @@ void AVitruvioBatchActor::ProcessTiles()
 
 		// Generate model
 		const TArray<FInitialShape>& InitialShapes = Tile->GetInitialShapes();
-		if (!InitialShapes.IsEmpty() && Tile->GetRpk())
+		if (!InitialShapes.IsEmpty())
 		{
-			FBatchGenerateResult GenerateResult = VitruvioModule::Get().BatchGenerateAsync(Tile->GetInitialShapes(), Tile->GetRpk());
+			FBatchGenerateResult GenerateResult = VitruvioModule::Get().BatchGenerateAsync(Tile->GetInitialShapes());
 
 			if (Tile->GenerateToken)
 			{

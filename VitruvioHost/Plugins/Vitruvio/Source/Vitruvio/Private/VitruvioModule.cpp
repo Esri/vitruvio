@@ -54,6 +54,13 @@ namespace
 {
 constexpr const wchar_t* ATTRIBUTE_EVAL_ENCODER_ID = L"com.esri.prt.core.AttributeEvalEncoder";
 
+struct FStartRuleInfo
+{
+	ResolveMapSPtr ResolveMap;
+	FString RuleFile;
+	FString StartRule;
+};
+
 class FLoadResolveMapTask
 {
 	TLazyObjectPtr<URulePackage> LazyRulePackagePtr;
@@ -379,45 +386,53 @@ Vitruvio::FTextureData VitruvioModule::DecodeTexture(UObject* Outer, const FStri
 	return Vitruvio::DecodeTexture(Outer, Key, Path, TextureMetadata, std::move(Buffer), BufferSize);
 }
 
-FBatchGenerateResult VitruvioModule::BatchGenerateAsync(TArray<FInitialShape> InitialShapes, URulePackage* RulePackage) const
+FBatchGenerateResult VitruvioModule::BatchGenerateAsync(TArray<FInitialShape> InitialShapes) const
 {
-	check(RulePackage);
-    
     const FBatchGenerateResult::FTokenPtr Token = MakeShared<FGenerateToken>();
     	
 	CHECK_PRT_INITIALIZED_ASYNC(FBatchGenerateResult, Token)
 
-	FBatchGenerateResult::FFutureType ResultFuture = Async(EAsyncExecution::Thread, [=, InitialShapes = std::move(InitialShapes)]() mutable {
-		FGenerateResultDescription Result = BatchGenerate(InitialShapes, RulePackage);
+	FBatchGenerateResult::FFutureType ResultFuture = Async(EAsyncExecution::Thread, [=, InitialShapes = MoveTemp(InitialShapes)]() mutable {
+		FGenerateResultDescription Result = BatchGenerate(MoveTemp(InitialShapes));
 		return FBatchGenerateResult::ResultType { Token, MoveTemp(Result) };
 	});
 
 	return FBatchGenerateResult { MoveTemp(ResultFuture), Token };
 }
 
-FGenerateResultDescription VitruvioModule::BatchGenerate(const TArray<FInitialShape>& InitialShapes, URulePackage* RulePackage) const
+FGenerateResultDescription VitruvioModule::BatchGenerate(TArray<FInitialShape> InitialShapes) const
 {
-    check(RulePackage);
-
     CHECK_PRT_INITIALIZED()
 
 	GenerateCallsCounter.Add(InitialShapes.Num());
 
-    const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(RulePackage).Get();
+	TMap<URulePackage*, TArray<FInitialShape>> RulePackages;
+	for (FInitialShape& InitialShape : InitialShapes)
+	{
+		RulePackages.FindOrAdd(InitialShape.RulePackage).Add(MoveTemp(InitialShape));
+	}
 
-	const std::wstring RuleFile = ResolveMap->findCGBKey();
-	const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
+	TArray<TTuple<TFuture<ResolveMapSPtr>, TArray<FInitialShape>>> ResolveMapFutures;
+	for (auto& [RulePackage, InitialShapesByRpk] : RulePackages)
+	{
+		ResolveMapFutures.Add(MakeTuple(LoadResolveMapAsync(RulePackage), MoveTemp(InitialShapesByRpk)));
+	}
 
-	const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
-	const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
+	TArray<TTuple<FStartRuleInfo, TArray<FInitialShape>>> RuleInfoInitialShapes;
+	for (auto& [ResolveMapFuture, InitialShapesByRpk] : ResolveMapFutures)
+	{
+		const ResolveMapSPtr ResolveMap = ResolveMapFuture.Get();
 
-	prt::Status InfoStatus;
-    RuleFileInfoUPtr RuleInfo(prt::createRuleFileInfo(RuleFileUri, PrtCache.get(), &InfoStatus));
-    if (!RuleInfo || InfoStatus != prt::STATUS_OK)
-    {
-        UE_LOG(LogUnrealPrt, Error, TEXT("Could not get rule file info from rule file %s"), RuleFileUri)
-        return {};
-    }
+		const std::wstring RuleFile = ResolveMap->findCGBKey();
+		const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
+
+		const RuleFileInfoUPtr RuleFileInfo(prt::createRuleFileInfo(RuleFileUri));
+		const std::wstring StartRule = prtu::detectStartRule(RuleFileInfo);
+		
+		FStartRuleInfo StartRuleInfo { ResolveMap, RuleFile.c_str(), StartRule.c_str() };
+
+		RuleInfoInitialShapes.Add(MakeTuple(StartRuleInfo, MoveTemp(InitialShapesByRpk)));
+	}
 
 	AttributeMapBuilderUPtr GenerateOptionsBuilder(prt::AttributeMapBuilder::create());
 	GenerateOptionsBuilder->setInt(L"numberWorkerThreads", FPlatformMisc::NumberOfCores());
@@ -429,15 +444,18 @@ FGenerateResultDescription VitruvioModule::BatchGenerate(const TArray<FInitialSh
     InitialShapeNOPtrVector InitialShapePtrs;
     TArray<AttributeMapBuilderUPtr> GenerateAttributeMapBuilders;
 
-    for (const FInitialShape& InitialShape : InitialShapes)
-    {
-    	SetInitialShapeGeometry(InitialShapeBuilder, InitialShape);
-    	InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(), InitialShape.RandomSeed, L"",
-    		InitialShape.Attributes.get(), ResolveMap.get());
-    	InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShapeAndReset());
-    	InitialShapePtrs.push_back(Shape.get());
-    	InitialShapeUPtrs.push_back(std::move(Shape));
-    }
+	for (auto& [StartRuleInfo, InitialShapesByRpk] : RuleInfoInitialShapes)
+	{
+		for (const FInitialShape& InitialShape : InitialShapesByRpk)
+		{
+			SetInitialShapeGeometry(InitialShapeBuilder, InitialShape);
+			InitialShapeBuilder->setAttributes(*StartRuleInfo.RuleFile, *StartRuleInfo.StartRule, InitialShape.RandomSeed, L"",
+				InitialShape.Attributes.get(), StartRuleInfo.ResolveMap.get());
+			InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShapeAndReset());
+			InitialShapePtrs.push_back(Shape.get());
+			InitialShapeUPtrs.push_back(std::move(Shape));
+		}
+	}
     
     AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
     TSharedPtr<UnrealCallbacks> OutputHandler(new UnrealCallbacks(GenerateAttributeMapBuilders));
@@ -467,26 +485,22 @@ FGenerateResultDescription VitruvioModule::BatchGenerate(const TArray<FInitialSh
 }
 
 
-FGenerateResult VitruvioModule::GenerateAsync(FInitialShape InitialShape, URulePackage* RulePackage) const
+FGenerateResult VitruvioModule::GenerateAsync(FInitialShape InitialShape) const
 {
-	check(RulePackage);
-
 	const FGenerateResult::FTokenPtr Token = MakeShared<FGenerateToken>();
 
 	CHECK_PRT_INITIALIZED_ASYNC(FGenerateResult, Token)
 
-	FGenerateResult::FFutureType ResultFuture = Async(EAsyncExecution::Thread, [this, Token, RulePackage, InitialShape = MoveTemp(InitialShape)]() mutable {
-		FGenerateResultDescription Result = Generate(MoveTemp(InitialShape), RulePackage);
+	FGenerateResult::FFutureType ResultFuture = Async(EAsyncExecution::Thread, [this, Token, InitialShape = MoveTemp(InitialShape)]() mutable {
+		FGenerateResultDescription Result = Generate(MoveTemp(InitialShape));
 		return FGenerateResult::ResultType{Token, MoveTemp(Result)};
 	});
 
 	return FGenerateResult{MoveTemp(ResultFuture), Token};
 }
 
-FGenerateResultDescription VitruvioModule::Generate(const FInitialShape& InitialShape, URulePackage* RulePackage) const
+FGenerateResultDescription VitruvioModule::Generate(const FInitialShape& InitialShape) const
 {
-	check(RulePackage);
-
 	CHECK_PRT_INITIALIZED()
 
 	GenerateCallsCounter.Increment();
@@ -494,7 +508,7 @@ FGenerateResultDescription VitruvioModule::Generate(const FInitialShape& Initial
 	const InitialShapeBuilderUPtr InitialShapeBuilder(prt::InitialShapeBuilder::create());
 	SetInitialShapeGeometry(InitialShapeBuilder, InitialShape);
 
-	const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(RulePackage).Get();
+	const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(InitialShape.RulePackage).Get();
 
 	const std::wstring RuleFile = ResolveMap->findCGBKey();
 	const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
@@ -535,10 +549,8 @@ FGenerateResultDescription VitruvioModule::Generate(const FInitialShape& Initial
 									  OutputHandler->GetInstanceNames(), OutputHandler->GetReports()};
 }
 
-FAttributeMapResult VitruvioModule::EvaluateRuleAttributesAsync(FInitialShape InitialShape, URulePackage* RulePackage) const
+FAttributeMapResult VitruvioModule::EvaluateRuleAttributesAsync(FInitialShape InitialShape) const
 {
-	check(RulePackage);
-
 	FAttributeMapResult::FTokenPtr InvalidationToken = MakeShared<FEvalAttributesToken>();
 
 	CHECK_PRT_INITIALIZED_ASYNC(FAttributeMapResult, InvalidationToken)
@@ -546,7 +558,7 @@ FAttributeMapResult VitruvioModule::EvaluateRuleAttributesAsync(FInitialShape In
 	LoadAttributesCounter.Increment();
 
 	FAttributeMapResult::FFutureType AttributeMapPtrFuture = Async(EAsyncExecution::Thread, [=, InitialShape = MoveTemp(InitialShape)]() mutable {
-		const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(RulePackage).Get();
+		const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(InitialShape.RulePackage).Get();
 
 		const std::wstring RuleFile = ResolveMap->findCGBKey();
 		const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());

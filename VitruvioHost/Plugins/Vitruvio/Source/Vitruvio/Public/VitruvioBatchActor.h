@@ -53,7 +53,6 @@ public:
 	bool Contains(UVitruvioComponent* VitruvioComponent) const;
 	
 	TArray<FInitialShape> GetInitialShapes();
-	URulePackage* GetRpk();
 	const TSet<UVitruvioComponent*>& GetVitruvioComponents();
 };
 
@@ -62,7 +61,8 @@ struct FGrid
 {
 	GENERATED_BODY()
 
-	TMap<FIntPoint, TMap<URulePackage*, UTile*>> Tiles;
+	UPROPERTY()
+	TMap<FIntPoint, UTile*> Tiles;
 	UPROPERTY()
 	TMap<UVitruvioComponent*, UTile*> TilesByComponent;
 
