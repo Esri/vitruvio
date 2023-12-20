@@ -103,10 +103,16 @@ TMap<FString, double> CreateAvailableUVSetMaterialParameterMap(uint32_t const* c
 	return AvailableUvSetAttributeMap;
 }
 
-void ConvertMesh(FModelDescription& ModelDescription, FStaticMeshAttributes& Attributes,
-	const double* vtx, size_t vtxSize, const double* nrm, size_t nrmSize, const uint32_t* faceVertexCounts, size_t faceVertexCountsSize, const uint32_t* vertexIndices, size_t vertexIndicesSize, const uint32_t* normalIndices, size_t normalIndicesSize,
+FModelDescription ConvertMesh(const double* vtx, size_t vtxSize, const double* nrm, size_t nrmSize, const uint32_t* faceVertexCounts, size_t faceVertexCountsSize, const uint32_t* vertexIndices, size_t vertexIndicesSize, const uint32_t* normalIndices, size_t normalIndicesSize,
 	double const* const* uvs, uint32_t const* const* uvCounts, uint32_t const* const* uvIndices, size_t uvSets, const uint32_t* faceRanges, size_t faceRangesSize, const prt::AttributeMap** materials)
 {
+	FModelDescription ModelDescription;
+    FStaticMeshAttributes Attributes(ModelDescription.MeshDescription);
+    Attributes.Register();
+
+    const auto VertexUVs = Attributes.GetVertexInstanceUVs();
+    VertexUVs.SetNumChannels(8);
+    		
 	// Convert vertices and vertex instances
 	const auto VertexPositions = Attributes.GetVertexPositions();
 	for (size_t VertexIndex = 0; VertexIndex < vtxSize; VertexIndex += 3)
@@ -115,8 +121,6 @@ void ConvertMesh(FModelDescription& ModelDescription, FStaticMeshAttributes& Att
 		VertexPositions[VertexID] = FVector3f(vtx[VertexIndex], vtx[VertexIndex + 2], vtx[VertexIndex + 1]) * PRT_TO_UE_SCALE;
 	}
 	
-	const auto VertexUVs = Attributes.GetVertexInstanceUVs();
-
 	size_t BaseVertexIndex = 0;
 	TArray<size_t> BaseUVIndex;
 	BaseUVIndex.Init(0, uvSets);
@@ -205,6 +209,8 @@ void ConvertMesh(FModelDescription& ModelDescription, FStaticMeshAttributes& Att
 	}
 
 	ModelDescription.VertexIndexOffset += vtxSize / 3;
+
+	return ModelDescription;
 }
 
 TSharedPtr<FVitruvioMesh> CreateVitruvioMesh(const FString& Uri, const FString& Identifier, FMeshDescription Description, TArray<Vitruvio::FMaterialAttributeContainer> ModelMaterials)
@@ -294,11 +300,8 @@ void UnrealCallbacks::addMesh(const wchar_t* name, const wchar_t* identifier, in
 {
 	if (prototypeId == NoPrototypeIndex)
 	{
-		FStaticMeshAttributes Attributes(ModelDescription.MeshDescription);
-		
-		ConvertMesh(ModelDescription, Attributes,
-		            vtx, vtxSize, nrm, nrmSize, faceVertexCounts, faceVertexCountsSize, vertexIndices, vertexIndicesSize, normalIndices, normalIndicesSize,
-		            uvs, uvCounts, uvIndices, uvSets, faceRanges, faceRangesSize, materials);
+		ModelDescription = ConvertMesh(vtx, vtxSize, nrm, nrmSize, faceVertexCounts, faceVertexCountsSize, vertexIndices, vertexIndicesSize,
+			normalIndices, normalIndicesSize, uvs, uvCounts, uvIndices, uvSets, faceRanges, faceRangesSize, materials);
 	}
 	else
 	{
@@ -311,17 +314,9 @@ void UnrealCallbacks::addMesh(const wchar_t* name, const wchar_t* identifier, in
 			InstanceNames.Add(prototypeId, NameString);
 			return;
 		}
-
-		FModelDescription InstanceModelDescription;
-		FStaticMeshAttributes Attributes(InstanceModelDescription.MeshDescription);
-		Attributes.Register();
-
-		const auto VertexUVs = Attributes.GetVertexInstanceUVs();
-		VertexUVs.SetNumChannels(8);
-
-		ConvertMesh(InstanceModelDescription, Attributes,
-		            vtx, vtxSize, nrm, nrmSize, faceVertexCounts, faceVertexCountsSize, vertexIndices, vertexIndicesSize, normalIndices, normalIndicesSize,
-		            uvs, uvCounts, uvIndices, uvSets, faceRanges, faceRangesSize, materials);
+		
+		FModelDescription InstanceModelDescription = ConvertMesh(vtx, vtxSize, nrm, nrmSize, faceVertexCounts, faceVertexCountsSize,
+			vertexIndices, vertexIndicesSize, normalIndices, normalIndicesSize, uvs, uvCounts, uvIndices, uvSets, faceRanges, faceRangesSize, materials);
 
 		if (!InstanceModelDescription.MeshDescription.IsEmpty())
 		{
