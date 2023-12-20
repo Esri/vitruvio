@@ -454,12 +454,14 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 	TArray<TSharedRef<IDetailTreeNode>> ArrayRoots;
 	DetailTreeNodes[0]->GetChildren(ArrayRoots);
 
-	for (const auto& ArrayRoot : ArrayRoots)
+	const TSharedRef<IDetailTreeNode>* ValuesArrayRoot = ArrayRoots.FindByPredicate([](const TSharedRef<IDetailTreeNode>& TreeNode)
 	{
-		if (ArrayRoot->GetNodeType() != EDetailNodeType::Item)
-		{
-			continue;
-		}
+		return TreeNode->GetRow()->GetPropertyHandle()->GetProperty()->GetName() == TEXT("Values");
+	});
+
+	if (ValuesArrayRoot)
+	{
+		const TSharedRef<IDetailTreeNode> ArrayRoot = *ValuesArrayRoot;
 
 		// Header Row
 		const TSharedPtr<IDetailPropertyRow> HeaderPropertyRow = ArrayRoot->GetRow();
