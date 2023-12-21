@@ -1,4 +1,4 @@
-/* Copyright 2020 Esri
+/* Copyright 2023 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -597,10 +597,6 @@ void UnrealGeometryEncoder::encode(prtx::GenerateContext& context, size_t initia
 	const prtx::InitialShape& initialShape = *context.getInitialShape(initialShapeIndex);
 
 	IUnrealCallbacks* cb = static_cast<IUnrealCallbacks*>(getCallbacks());
-
-	prtx::DefaultNamePreparator namePrep;
-	prtx::NamePreparator::NamespacePtr nsMesh = namePrep.newNamespace();
-	prtx::NamePreparator::NamespacePtr nsMaterial = namePrep.newNamespace();
 
 	prtx::LeafIteratorPtr li = prtx::LeafIterator::create(context, initialShapeIndex);
 	for (prtx::ShapePtr shape = li->getNext(); shape; shape = li->getNext())
