@@ -30,6 +30,8 @@
 #include "Framework/Notifications/NotificationManager.h"
 #include "GenerateCompletedCallbackProxy.h"
 #include "IAssetTools.h"
+#include "VitruvioBatchGridVisualizerActor.h"
+#include "VitruvioBatchSubsystem.h"
 #include "Modules/ModuleManager.h"
 #include "VitruvioBlueprintLibrary.h"
 #include "VitruvioStyle.h"
@@ -265,6 +267,23 @@ void VitruvioEditorModule::OnMapChanged(UWorld* World, EMapChangeType ChangeType
 					AssetEditorSubsystem->CloseAllEditorsForAsset(EditedAsset);
 				}
 			}
+		}
+	}
+	else if (ChangeType == EMapChangeType::LoadMap || ChangeType == EMapChangeType::NewMap)
+	{
+		if (World)
+		{
+			UVitruvioBatchSubsystem* VitruvioBatchSubsystem = World->GetSubsystem<UVitruvioBatchSubsystem>();
+			VitruvioBatchSubsystem->OnComponentRegistered.AddLambda([World]()
+			{
+				const TActorIterator<AVitruvioBatchGridVisualizerActor> BatchGridVisualizerActorIter(World);
+				if (!BatchGridVisualizerActorIter)
+				{
+					FActorSpawnParameters ActorSpawnParameters;
+					ActorSpawnParameters.Name = FName(TEXT("VitruvioBatchGridVisualizerActor"));
+					World->SpawnActor<AVitruvioBatchGridVisualizerActor>(ActorSpawnParameters);
+				}
+			});
 		}
 	}
 }

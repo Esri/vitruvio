@@ -21,12 +21,16 @@ void UVitruvioBatchSubsystem::RegisterVitruvioComponent(UVitruvioComponent* Vitr
 {
 	RegisteredComponents.Add(VitruvioComponent);
 	GetBatchActor()->RegisterVitruvioComponent(VitruvioComponent);
+
+	OnComponentRegistered.Broadcast();
 }
 
 void UVitruvioBatchSubsystem::UnregisterVitruvioComponent(UVitruvioComponent* VitruvioComponent)
 {
 	RegisteredComponents.Remove(VitruvioComponent);
 	GetBatchActor()->UnregisterVitruvioComponent(VitruvioComponent);
+
+	OnComponentDeregistered.Broadcast();
 }
 
 void UVitruvioBatchSubsystem::MarkDirty(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy)
@@ -58,6 +62,11 @@ AVitruvioBatchActor* UVitruvioBatchSubsystem::GetBatchActor()
 	}
 
 	return VitruvioBatchActor;
+}
+
+bool UVitruvioBatchSubsystem::HasRegisteredVitruvioComponents() const
+{
+	return RegisteredComponents.Num() > 0;
 }
 
 void UVitruvioBatchSubsystem::Initialize(FSubsystemCollectionBase& Collection)

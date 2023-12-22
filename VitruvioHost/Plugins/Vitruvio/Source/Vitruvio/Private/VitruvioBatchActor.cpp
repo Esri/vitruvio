@@ -181,8 +181,8 @@ AVitruvioBatchActor::AVitruvioBatchActor()
 FIntPoint AVitruvioBatchActor::GetPosition(const UVitruvioComponent* VitruvioComponent) const
 {
 	const FVector Position = VitruvioComponent->GetOwner()->GetTransform().GetLocation();
-	const int PositionX = static_cast<int>(Position.X / GridDimension.X);
-	const int PositionY = static_cast<int>(Position.Y / GridDimension.Y);
+	const int PositionX = static_cast<int>(FMath::Floor(Position.X / GridDimension.X));
+	const int PositionY = static_cast<int>(FMath::Floor(Position.Y / GridDimension.Y));
 	return FIntPoint {PositionX, PositionY};
 }
 

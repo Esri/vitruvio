@@ -92,6 +92,11 @@ public:
 	UPROPERTY(EditAnywhere)
 	FIntVector2 GridDimension = {50000, 50000};
 
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(EditAnywhere)
+	bool bDebugVisualizeGrid = false;
+#endif
+	
 private:
 	UPROPERTY(Transient)
 	FGrid Grid;

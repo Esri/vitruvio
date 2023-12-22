@@ -23,7 +23,7 @@ class UGenerateCompletedCallbackProxy;
 class UVitruvioComponent;
 
 UCLASS()
-class UVitruvioBatchSubsystem final : public UWorldSubsystem
+class VITRUVIO_API UVitruvioBatchSubsystem final : public UWorldSubsystem
 {
 	GENERATED_BODY()
 	
@@ -35,6 +35,15 @@ public:
 	void UnregisterVitruvioComponent(UVitruvioComponent* VitruvioComponent);
 	void MarkDirty(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
+	AVitruvioBatchActor* GetBatchActor();
+	bool HasRegisteredVitruvioComponents() const;
+
+	DECLARE_MULTICAST_DELEGATE(FOnComponentRegistered);
+	FOnComponentRegistered OnComponentRegistered;
+
+	DECLARE_MULTICAST_DELEGATE(FOnComponentDeregistered);
+	FOnComponentDeregistered OnComponentDeregistered;
+	
 private:
 
 	UPROPERTY()
@@ -42,8 +51,6 @@ private:
 
 	UPROPERTY()
 	TSet<UVitruvioComponent*> RegisteredComponents;
-
-	AVitruvioBatchActor* GetBatchActor();
 
 #if WITH_EDITORONLY_DATA
 	FDelegateHandle OnActorMoved;
