@@ -128,6 +128,13 @@ void FGrid::Clear()
 	{
 		if (Tile->GeneratedModelComponent && IsValid(Tile->GeneratedModelComponent))
 		{
+			TArray<USceneComponent*> InstanceSceneComponents;
+			Tile->GeneratedModelComponent->GetChildrenComponents(true, InstanceSceneComponents);
+			for (USceneComponent* InstanceComponent : InstanceSceneComponents)
+			{
+				InstanceComponent->DestroyComponent(true);
+			}
+			
 			Tile->GeneratedModelComponent->DestroyComponent(true);
 		}
 	}
