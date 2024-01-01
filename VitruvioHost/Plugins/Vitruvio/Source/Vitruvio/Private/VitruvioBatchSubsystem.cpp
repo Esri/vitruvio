@@ -33,9 +33,9 @@ void UVitruvioBatchSubsystem::UnregisterVitruvioComponent(UVitruvioComponent* Vi
 	OnComponentDeregistered.Broadcast();
 }
 
-void UVitruvioBatchSubsystem::MarkDirty(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy)
+void UVitruvioBatchSubsystem::Generate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
-	GetBatchActor()->MarkDirty(VitruvioComponent, CallbackProxy);
+	GetBatchActor()->Generate(VitruvioComponent, CallbackProxy);
 }
 
 AVitruvioBatchActor* UVitruvioBatchSubsystem::GetBatchActor()

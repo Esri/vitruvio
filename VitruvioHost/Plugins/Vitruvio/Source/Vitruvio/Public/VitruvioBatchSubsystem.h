@@ -33,7 +33,7 @@ public:
 	
 	void RegisterVitruvioComponent(UVitruvioComponent* VitruvioComponent);
 	void UnregisterVitruvioComponent(UVitruvioComponent* VitruvioComponent);
-	void MarkDirty(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void Generate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	AVitruvioBatchActor* GetBatchActor();
 	bool HasRegisteredVitruvioComponents() const;

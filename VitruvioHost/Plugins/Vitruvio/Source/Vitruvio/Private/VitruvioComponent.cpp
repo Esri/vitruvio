@@ -1073,7 +1073,7 @@ void UVitruvioComponent::Generate(UGenerateCompletedCallbackProxy* CallbackProxy
 		if (bBatchGenerate)
 		{
 			UVitruvioBatchSubsystem* BatchGenerateSubsystem = GetWorld()->GetSubsystem<UVitruvioBatchSubsystem>();
-			BatchGenerateSubsystem->MarkDirty(this, CallbackProxy);
+			BatchGenerateSubsystem->Generate(this, CallbackProxy);
 		}
 		else
 		{

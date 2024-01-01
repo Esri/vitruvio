@@ -35,7 +35,7 @@ public:
 	FIntPoint Location;
 	
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
-	bool bDirty;
+	bool bMarkedForGenerate;
 
 	UPROPERTY()
 	TMap<UVitruvioComponent*, UGenerateCompletedCallbackProxy*> CallbackProxies;
@@ -45,8 +45,8 @@ public:
 	UPROPERTY()
 	UGeneratedModelStaticMeshComponent* GeneratedModelComponent;
     	
-	void MarkDirty(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
-	void UnmarkDirty();
+	void MarkForGenerate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void UnmarkForGenerate();
 	
 	void Add(UVitruvioComponent* VitruvioComponent);
 	void Remove(UVitruvioComponent* VitruvioComponent);
@@ -66,15 +66,15 @@ struct FGrid
 	UPROPERTY()
 	TMap<UVitruvioComponent*, UTile*> TilesByComponent;
 
-	void MarkDirty(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void MarkForGenerate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 	void RegisterAll(const TSet<UVitruvioComponent*>& VitruvioComponents, AVitruvioBatchActor* VitruvioBatchActor);
 	void Register(UVitruvioComponent* VitruvioComponent, AVitruvioBatchActor* VitruvioBatchActor);
 	void Unregister(UVitruvioComponent* VitruvioComponent);
 
 	void Clear();
 
-	TArray<UTile*> GetDirtyTiles() const;
-	void UnmarkDirty();
+	TArray<UTile*> GetTilesMarkedForGenerate() const;
+	void UnmarkForGenerate();
 };
 
 struct FBatchGenerateQueueItem
@@ -130,7 +130,7 @@ public:
 
 	void RegisterVitruvioComponent(UVitruvioComponent* VitruvioComponent);
 	void UnregisterVitruvioComponent(UVitruvioComponent* VitruvioComponent);
-	void MarkDirty(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void Generate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	FIntPoint GetPosition(const UVitruvioComponent* VitruvioComponent) const;
 	

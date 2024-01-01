@@ -18,18 +18,18 @@
 #include "AttributeConversion.h"
 #include "GenerateCompletedCallbackProxy.h"
 
-void UTile::MarkDirty(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy)
+void UTile::MarkForGenerate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
-	bDirty = true;
+	bMarkedForGenerate = true;
 	if (CallbackProxy)
 	{
 		CallbackProxies.Add(VitruvioComponent, CallbackProxy);
 	}
 }
 
-void UTile::UnmarkDirty()
+void UTile::UnmarkForGenerate()
 {
-	bDirty = false;
+	bMarkedForGenerate = false;
 }
 
 void UTile::Add(UVitruvioComponent* VitruvioComponent)
@@ -71,12 +71,12 @@ const TSet<UVitruvioComponent*>& UTile::GetVitruvioComponents()
 	return VitruvioComponents;
 }
 
-void FGrid::MarkDirty(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy)
+void FGrid::MarkForGenerate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
 	if (UTile** FoundTile = TilesByComponent.Find(VitruvioComponent))
 	{
 		UTile* Tile = *FoundTile;
-		Tile->MarkDirty(VitruvioComponent, CallbackProxy);
+		Tile->MarkForGenerate(VitruvioComponent, CallbackProxy);
 	}
 }
 
@@ -107,7 +107,7 @@ void FGrid::Register(UVitruvioComponent* VitruvioComponent, AVitruvioBatchActor*
 	if (!Tile->Contains(VitruvioComponent))
 	{
 		Tile->Add(VitruvioComponent);
-		Tile->MarkDirty(VitruvioComponent);
+		Tile->MarkForGenerate(VitruvioComponent);
 		TilesByComponent.Add(VitruvioComponent, Tile);
 	}
 }
@@ -118,7 +118,7 @@ void FGrid::Unregister(UVitruvioComponent* VitruvioComponent)
 	{
 		UTile* Tile = *FoundTile;
 		Tile->Remove(VitruvioComponent);
-		Tile->MarkDirty(VitruvioComponent);
+		Tile->MarkForGenerate(VitruvioComponent);
 	}
 }
 
@@ -143,25 +143,25 @@ void FGrid::Clear()
 	Tiles.Reset();
 }
 
-TArray<UTile*> FGrid::GetDirtyTiles() const
+TArray<UTile*> FGrid::GetTilesMarkedForGenerate() const
 {
-	TArray<UTile*> DirtyTiles;
+	TArray<UTile*> TilesToGenerate;
 	for (auto& [Point, Tile] : Tiles)
 	{
-		if (Tile->bDirty)
+		if (Tile->bMarkedForGenerate)
 		{
-			DirtyTiles.Add(Tile);
+			TilesToGenerate.Add(Tile);
 		}
 	}
 
-	return DirtyTiles;
+	return TilesToGenerate;
 }
 
-void FGrid::UnmarkDirty()
+void FGrid::UnmarkForGenerate()
 {
 	for (auto& [Point, Tile] : Tiles)
 	{
-		Tile->UnmarkDirty();
+		Tile->UnmarkForGenerate();
 	}
 }
 
@@ -195,7 +195,7 @@ FIntPoint AVitruvioBatchActor::GetPosition(const UVitruvioComponent* VitruvioCom
 
 void AVitruvioBatchActor::ProcessTiles()
 {
-	for (UTile* Tile : Grid.GetDirtyTiles())
+	for (UTile* Tile : Grid.GetTilesMarkedForGenerate())
 	{
 		// Initialize and cleanup the model component
 		UGeneratedModelStaticMeshComponent* VitruvioModelComponent = Tile->GeneratedModelComponent;
@@ -257,7 +257,7 @@ void AVitruvioBatchActor::ProcessTiles()
 		}
 	}
 
-	Grid.UnmarkDirty();
+	Grid.UnmarkForGenerate();
 }
 
 void AVitruvioBatchActor::ProcessGenerateQueue()
@@ -362,9 +362,9 @@ void AVitruvioBatchActor::UnregisterVitruvioComponent(UVitruvioComponent* Vitruv
 	Grid.Unregister(VitruvioComponent);
 }
 
-void AVitruvioBatchActor::MarkDirty(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy)
+void AVitruvioBatchActor::Generate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
-	Grid.MarkDirty(VitruvioComponent, CallbackProxy);
+	Grid.MarkForGenerate(VitruvioComponent, CallbackProxy);
 }
 
 bool AVitruvioBatchActor::ShouldTickIfViewportsOnly() const
