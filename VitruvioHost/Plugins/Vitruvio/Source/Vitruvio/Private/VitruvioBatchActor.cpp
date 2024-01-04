@@ -80,6 +80,14 @@ void FGrid::MarkForGenerate(UVitruvioComponent* VitruvioComponent, UGenerateComp
 	}
 }
 
+void FGrid::MarkAllForGenerate(UGenerateCompletedCallbackProxy* CallbackProxy)
+{
+	for (const auto& [Component, Tile] : TilesByComponent)
+	{
+		Tile->MarkForGenerate(Component, CallbackProxy);
+	}
+}
+
 void FGrid::RegisterAll(const TSet<UVitruvioComponent*>& VitruvioComponents, AVitruvioBatchActor* VitruvioBatchActor)
 {
 	for (UVitruvioComponent* VitruvioComponent : VitruvioComponents)
@@ -281,6 +289,14 @@ void AVitruvioBatchActor::ProcessGenerateQueue()
 		{
 			VitruvioModelComponent->SetStaticMesh(ConvertedResult.ShapeMesh->GetStaticMesh());
 			VitruvioModelComponent->SetCollisionData(ConvertedResult.ShapeMesh->GetCollisionData());
+
+			// Reset Material replacements
+			for (int32 MaterialIndex = 0; MaterialIndex < VitruvioModelComponent->GetNumMaterials(); ++MaterialIndex)
+			{
+				VitruvioModelComponent->SetMaterial(MaterialIndex, VitruvioModelComponent->GetStaticMesh()->GetMaterial(MaterialIndex));
+			}
+
+			ApplyMaterialReplacements(VitruvioModelComponent, MaterialIdentifiers, MaterialReplacement);
 		}
 
 		// Cleanup old hierarchical instances
@@ -292,8 +308,7 @@ void AVitruvioBatchActor::ProcessGenerateQueue()
 		}
 
 		TMap<FString, int32> NameMap;
-		TSet<FInstance> Replaced;
-
+		TSet<FInstance> Replaced = ApplyInstanceReplacements(VitruvioModelComponent, ConvertedResult.Instances, InstanceReplacement, NameMap);
 		for (const FInstance& Instance : ConvertedResult.Instances)
 		{
 			if (Replaced.Contains(Instance))
@@ -367,9 +382,26 @@ void AVitruvioBatchActor::Generate(UVitruvioComponent* VitruvioComponent, UGener
 	Grid.MarkForGenerate(VitruvioComponent, CallbackProxy);
 }
 
+void AVitruvioBatchActor::GenerateAll(UGenerateCompletedCallbackProxy* CallbackProxy)
+{
+	Grid.MarkAllForGenerate(CallbackProxy);
+}
+
 bool AVitruvioBatchActor::ShouldTickIfViewportsOnly() const
 {
 	return true;
+}
+
+void AVitruvioBatchActor::SetMaterialReplacementAsset(UMaterialReplacementAsset* MaterialReplacementAsset)
+{
+	MaterialReplacement = MaterialReplacementAsset;
+	GenerateAll();
+}
+
+void AVitruvioBatchActor::SetInstanceReplacementAsset(UInstanceReplacementAsset* InstanceReplacementAsset)
+{
+	InstanceReplacement = InstanceReplacementAsset;
+	GenerateAll();
 }
 
 #if WITH_EDITOR
@@ -382,6 +414,17 @@ void AVitruvioBatchActor::PostEditChangeProperty(FPropertyChangedEvent& Property
 	{
 		Grid.Clear();
 		Grid.RegisterAll(VitruvioComponents, this);
+	}
+
+	if (!PropertyChangedEvent.Property)
+	{
+		return;
+	}
+	
+	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, MaterialReplacement) ||
+		PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, InstanceReplacement))
+	{
+		GenerateAll();
 	}
 }
 #endif
