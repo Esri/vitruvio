@@ -314,6 +314,11 @@ bool IsRelevantObject(UVitruvioComponent* VitruvioComponent, UObject* Object)
 }
 #endif
 
+} // namespace
+
+UVitruvioComponent::FOnHierarchyChanged UVitruvioComponent::OnHierarchyChanged;
+UVitruvioComponent::FOnAttributesChanged UVitruvioComponent::OnAttributesChanged;
+
 void ApplyMaterialReplacements(UStaticMeshComponent* StaticMeshComponent, const TMap<UMaterialInterface*, FString>& MaterialIdentifiers,
 							   UMaterialReplacementAsset* Replacement)
 {
@@ -341,8 +346,8 @@ void ApplyMaterialReplacements(UStaticMeshComponent* StaticMeshComponent, const 
 	}
 }
 
-TSet<FInstance> ApplyInstanceReplacements(UVitruvioComponent* VitruvioComponent, USceneComponent* InitialShapeSceneComponent,
-										  const TArray<FInstance>& Instances, UInstanceReplacementAsset* Replacement, TMap<FString, int32>& NameMap)
+TSet<FInstance> ApplyInstanceReplacements(UGeneratedModelStaticMeshComponent* GeneratedModelComponent, 
+											  const TArray<FInstance>& Instances, UInstanceReplacementAsset* Replacement, TMap<FString, int32>& NameMap)
 {
 	TSet<FInstance> Replaced;
 	if (!Replacement)
@@ -376,7 +381,7 @@ TSet<FInstance> ApplyInstanceReplacements(UVitruvioComponent* VitruvioComponent,
 				CumulativeProbabilities.Add(CumulativeProbability);
 
 				FString UniqueName = UniqueComponentName(ReplacementOption.Mesh->GetName(), NameMap);
-				auto InstancedComponent = NewObject<UGeneratedModelHISMComponent>(VitruvioComponent, FName(UniqueName),
+				auto InstancedComponent = NewObject<UGeneratedModelHISMComponent>(GeneratedModelComponent, FName(UniqueName),
 																				  RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
 				InstancedComponent->SetStaticMesh(ReplacementOption.Mesh.Get());
 				InstancedComponents.Add(InstancedComponent);
@@ -385,10 +390,10 @@ TSet<FInstance> ApplyInstanceReplacements(UVitruvioComponent* VitruvioComponent,
 			for (const auto& InstancedComponent : InstancedComponents)
 			{
 				// Attach and register instance component
-				InstancedComponent->AttachToComponent(VitruvioComponent->GetGeneratedModelComponent(),
+				InstancedComponent->AttachToComponent(GeneratedModelComponent,
 													  FAttachmentTransformRules::KeepRelativeTransform);
 				InstancedComponent->CreationMethod = EComponentCreationMethod::Instance;
-				InitialShapeSceneComponent->GetOwner()->AddOwnedComponent(InstancedComponent);
+				GeneratedModelComponent->GetOwner()->AddOwnedComponent(InstancedComponent);
 				InstancedComponent->OnComponentCreated();
 				InstancedComponent->RegisterComponent();
 			}
@@ -433,11 +438,6 @@ TSet<FInstance> ApplyInstanceReplacements(UVitruvioComponent* VitruvioComponent,
 	}
 	return Replaced;
 }
-
-} // namespace
-
-UVitruvioComponent::FOnHierarchyChanged UVitruvioComponent::OnHierarchyChanged;
-UVitruvioComponent::FOnAttributesChanged UVitruvioComponent::OnAttributesChanged;
 
 FConvertedGenerateResult BuildResult(const FGenerateResultDescription& GenerateResult,
 									 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
@@ -830,7 +830,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 
 		if (!Result.GenerateOptions.bIgnoreInstanceReplacements)
 		{
-			Replaced = ApplyInstanceReplacements(this, InitialShapeSceneComponent, ConvertedResult.Instances, InstanceReplacement, NameMap);
+			Replaced = ApplyInstanceReplacements(VitruvioModelComponent, ConvertedResult.Instances, InstanceReplacement, NameMap);
 		}
 
 		for (const FInstance& Instance : ConvertedResult.Instances)

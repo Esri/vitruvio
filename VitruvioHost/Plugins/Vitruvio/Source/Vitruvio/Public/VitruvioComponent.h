@@ -86,7 +86,6 @@ struct FConvertedGenerateResult
 	TMap<FString, FReport> Reports;
 };
 
-
 FConvertedGenerateResult BuildResult(const FGenerateResultDescription& GenerateResult,
 									 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
 									 TMap<FString, Vitruvio::FTextureData>& TextureCache,
@@ -94,8 +93,13 @@ FConvertedGenerateResult BuildResult(const FGenerateResultDescription& GenerateR
 									 TMap<FString, int32>& UniqueMaterialIdentifiers,
 									 UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent);
 
-
 FString UniqueComponentName(const FString& Name, TMap<FString, int32>& UsedNames);
+
+void ApplyMaterialReplacements(UStaticMeshComponent* StaticMeshComponent, const TMap<UMaterialInterface*, FString>& MaterialIdentifiers,
+							   UMaterialReplacementAsset* Replacement);
+
+TSet<FInstance> ApplyInstanceReplacements(UGeneratedModelStaticMeshComponent* GeneratedModelComponent, 
+											  const TArray<FInstance>& Instances, UInstanceReplacementAsset* Replacement, TMap<FString, int32>& NameMap);
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class VITRUVIO_API UVitruvioComponent : public UActorComponent
