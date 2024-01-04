@@ -101,6 +101,9 @@ void ApplyMaterialReplacements(UStaticMeshComponent* StaticMeshComponent, const 
 TSet<FInstance> ApplyInstanceReplacements(UGeneratedModelStaticMeshComponent* GeneratedModelComponent, 
 											  const TArray<FInstance>& Instances, UInstanceReplacementAsset* Replacement, TMap<FString, int32>& NameMap);
 
+void InitializeBodySetup(UBodySetup* BodySetup, bool GenerateComplexCollision);
+void CreateCollision(UStaticMesh* Mesh, UStaticMeshComponent* StaticMeshComponent, bool ComplexCollision);
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class VITRUVIO_API UVitruvioComponent : public UActorComponent
 {

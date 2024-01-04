@@ -263,31 +263,6 @@ bool IsOuterOf(UObject* Inner, UObject* Outer)
 	return false;
 }
 
-void InitializeBodySetup(UBodySetup* BodySetup, bool GenerateComplexCollision)
-{
-	BodySetup->DefaultInstance.SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
-	BodySetup->CollisionTraceFlag =
-		GenerateComplexCollision ? ECollisionTraceFlag::CTF_UseComplexAsSimple : ECollisionTraceFlag::CTF_UseSimpleAsComplex;
-	BodySetup->bDoubleSidedGeometry = true;
-	BodySetup->bMeshCollideAll = true;
-	BodySetup->InvalidatePhysicsData();
-	BodySetup->CreatePhysicsMeshes();
-}
-
-void CreateCollision(UStaticMesh* Mesh, UStaticMeshComponent* StaticMeshComponent, bool ComplexCollision)
-{
-	if (!Mesh)
-	{
-		return;
-	}
-
-	UBodySetup* BodySetup =
-		NewObject<UBodySetup>(StaticMeshComponent, NAME_None, RF_Transient | RF_DuplicateTransient | RF_TextExportTransient | RF_Transactional);
-	InitializeBodySetup(BodySetup, ComplexCollision);
-	Mesh->SetBodySetup(BodySetup);
-	StaticMeshComponent->RecreatePhysicsState();
-}
-
 #if WITH_EDITOR
 bool IsRelevantObject(UVitruvioComponent* VitruvioComponent, UObject* Object)
 {
@@ -493,6 +468,31 @@ FString UniqueComponentName(const FString& Name, TMap<FString, int32>& UsedNames
 	}
 	UsedNames.Add(CurrentName, 0);
 	return CurrentName;
+}
+
+void InitializeBodySetup(UBodySetup* BodySetup, bool GenerateComplexCollision)
+{
+	BodySetup->DefaultInstance.SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
+	BodySetup->CollisionTraceFlag =
+		GenerateComplexCollision ? ECollisionTraceFlag::CTF_UseComplexAsSimple : ECollisionTraceFlag::CTF_UseSimpleAsComplex;
+	BodySetup->bDoubleSidedGeometry = true;
+	BodySetup->bMeshCollideAll = true;
+	BodySetup->InvalidatePhysicsData();
+	BodySetup->CreatePhysicsMeshes();
+}
+
+void CreateCollision(UStaticMesh* Mesh, UStaticMeshComponent* StaticMeshComponent, bool ComplexCollision)
+{
+	if (!Mesh)
+	{
+		return;
+	}
+
+	UBodySetup* BodySetup =
+		NewObject<UBodySetup>(StaticMeshComponent, NAME_None, RF_Transient | RF_DuplicateTransient | RF_TextExportTransient | RF_Transactional);
+	InitializeBodySetup(BodySetup, ComplexCollision);
+	Mesh->SetBodySetup(BodySetup);
+	StaticMeshComponent->RecreatePhysicsState();
 }
 
 UVitruvioComponent::UVitruvioComponent()

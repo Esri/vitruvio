@@ -289,7 +289,8 @@ void AVitruvioBatchActor::ProcessGenerateQueue()
 		{
 			VitruvioModelComponent->SetStaticMesh(ConvertedResult.ShapeMesh->GetStaticMesh());
 			VitruvioModelComponent->SetCollisionData(ConvertedResult.ShapeMesh->GetCollisionData());
-
+			CreateCollision(ConvertedResult.ShapeMesh->GetStaticMesh(), VitruvioModelComponent, GenerateCollision);
+			
 			// Reset Material replacements
 			for (int32 MaterialIndex = 0; MaterialIndex < VitruvioModelComponent->GetNumMaterials(); ++MaterialIndex)
 			{
@@ -323,7 +324,8 @@ void AVitruvioBatchActor::ProcessGenerateQueue()
 			InstancedComponent->SetStaticMesh(Instance.InstanceMesh->GetStaticMesh());
 			InstancedComponent->SetCollisionData(Instance.InstanceMesh->GetCollisionData());
 			InstancedComponent->SetMeshIdentifier(Instance.InstanceMesh->GetIdentifier());
-
+			CreateCollision(ConvertedResult.ShapeMesh->GetStaticMesh(), VitruvioModelComponent, GenerateCollision);
+			
 			// Add all instance transforms
 			for (const FTransform& Transform : Transforms)
 			{
@@ -422,7 +424,8 @@ void AVitruvioBatchActor::PostEditChangeProperty(FPropertyChangedEvent& Property
 	}
 	
 	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, MaterialReplacement) ||
-		PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, InstanceReplacement))
+		PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, InstanceReplacement) ||
+		PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, GenerateCollision))
 	{
 		GenerateAll();
 	}

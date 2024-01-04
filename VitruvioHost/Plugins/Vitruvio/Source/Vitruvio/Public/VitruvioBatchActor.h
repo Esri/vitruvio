@@ -133,7 +133,8 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Vitruvio Replacmeents", Setter = SetInstanceReplacementAsset)
 	UInstanceReplacementAsset* InstanceReplacement;
 
-	
+	UPROPERTY(EditAnywhere, Category = "Vitruvio", meta = (DisplayName = "Generate Collision Mesh"))
+	bool GenerateCollision = true;
 
 public:
 	AVitruvioBatchActor();
