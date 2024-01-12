@@ -67,6 +67,8 @@ struct FGrid
 	TMap<UVitruvioComponent*, UTile*> TilesByComponent;
 
 	void MarkForGenerate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void MarkAllForGenerate(UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	
 	void RegisterAll(const TSet<UVitruvioComponent*>& VitruvioComponents, AVitruvioBatchActor* VitruvioBatchActor);
 	void Register(UVitruvioComponent* VitruvioComponent, AVitruvioBatchActor* VitruvioBatchActor);
 	void Unregister(UVitruvioComponent* VitruvioComponent);
@@ -123,6 +125,17 @@ private:
 	UPROPERTY(EditAnywhere, DisplayName = "Translucent Parent", Category = "Vitruvio Default Materials")
 	UMaterial* TranslucentParent;
 
+	/** The material replacement asset which defines how materials are replaced after generating a model. */
+	UPROPERTY(EditAnywhere, Category = "Vitruvio Replacmeents", Setter = SetMaterialReplacementAsset)
+	UMaterialReplacementAsset* MaterialReplacement;
+
+	/** The instance replacement asset which defines how instances are replaced after generating a model. */
+	UPROPERTY(EditAnywhere, Category = "Vitruvio Replacmeents", Setter = SetInstanceReplacementAsset)
+	UInstanceReplacementAsset* InstanceReplacement;
+
+	UPROPERTY(EditAnywhere, Category = "Vitruvio", meta = (DisplayName = "Generate Collision Mesh"))
+	bool GenerateCollision = true;
+
 public:
 	AVitruvioBatchActor();
 
@@ -131,6 +144,7 @@ public:
 	void RegisterVitruvioComponent(UVitruvioComponent* VitruvioComponent);
 	void UnregisterVitruvioComponent(UVitruvioComponent* VitruvioComponent);
 	void Generate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void GenerateAll(UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	FIntPoint GetPosition(const UVitruvioComponent* VitruvioComponent) const;
 	
@@ -139,6 +153,19 @@ public:
 #endif
 
 	virtual bool ShouldTickIfViewportsOnly() const override;
+
+	/**
+	 * Sets the material replacement Asset and regenerates the model.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio Replacmeents")
+	void SetMaterialReplacementAsset(UMaterialReplacementAsset* MaterialReplacementAsset);
+
+	/**
+	 * Sets the instance replacement Asset and regenerates the model.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio Replacmeents")
+	void SetInstanceReplacementAsset(UInstanceReplacementAsset* InstanceReplacementAsset);
+
 	
 private:
 	void ProcessTiles();
