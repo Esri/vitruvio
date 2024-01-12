@@ -21,25 +21,38 @@
 #include "Report.h"
 #include "VitruvioTypes.h"
 
+#include "Core.h"
 #include "Engine/StaticMesh.h"
 #include "MeshDescription.h"
+#include "StaticMeshAttributes.h"
 #include "Modules/ModuleManager.h"
 #include "VitruvioMesh.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogUnrealCallbacks, Log, All);
 
+struct FModelDescription
+{
+	FMeshDescription MeshDescription;
+	size_t VertexIndexOffset = 0;
+	TArray<Vitruvio::FMaterialAttributeContainer> Materials;
+	TMap<Vitruvio::FMaterialAttributeContainer, FPolygonGroupID> MaterialToPolygonMap;
+};
+
 class UnrealCallbacks final : public IUnrealCallbacks
 {
-	AttributeMapBuilderUPtr& AttributeMapBuilder;
+	TArray<AttributeMapBuilderUPtr>& AttributeMapBuilders;
 
 	Vitruvio::FInstanceMap Instances;
-	TMap<int32, TSharedPtr<FVitruvioMesh>> Meshes;
-	TMap<FString, FReport> Reports;
-	TMap<int32, FString> Names;
+	TMap<int32, TSharedPtr<FVitruvioMesh>> InstanceMeshes;
+	TMap<int32, FString> InstanceNames;
 
+	FModelDescription ModelDescription;
+	TSharedPtr<FVitruvioMesh> GeneratedModel;
+	TMap<FString, FReport> Reports;
+	
 public:
 	virtual ~UnrealCallbacks() override = default;
-	UnrealCallbacks(AttributeMapBuilderUPtr& AttributeMapBuilder) : AttributeMapBuilder(AttributeMapBuilder) {}
+	UnrealCallbacks(TArray<AttributeMapBuilderUPtr>& AttributeMapBuilders) : AttributeMapBuilders(AttributeMapBuilders) {}
 
 	static constexpr int32 NoPrototypeIndex = -1;
 
@@ -48,14 +61,14 @@ public:
 		return Instances;
 	}
 
-	TSharedPtr<FVitruvioMesh> GetMeshById(int32 PrototypeId) const
+	const TMap<int32, TSharedPtr<FVitruvioMesh>>& GetInstanceMeshes() const
 	{
-		return Meshes[PrototypeId];
+		return InstanceMeshes;
 	}
 
-	const TMap<int32, TSharedPtr<FVitruvioMesh>>& GetMeshes() const
+	const TSharedPtr<FVitruvioMesh>& GetGeneratedModel() const
 	{
-		return Meshes;
+		return GeneratedModel;
 	}
 
 	const TMap<FString, FReport>& GetReports() const
@@ -63,9 +76,9 @@ public:
 		return Reports;
 	}
 
-	const TMap<int32, FString>& GetNames() const
+	const TMap<int32, FString>& GetInstanceNames() const
 	{
-		return Names;
+		return InstanceNames;
 	}
 
 	/**
@@ -88,21 +101,21 @@ public:
 	 * types)
 	 */
 	// clang-format off
-	void addMesh(const wchar_t* name, const wchar_t* identifier,
-		int32_t prototypeId, const wchar_t* uri,
-		const double* vtx, size_t vtxSize,
-		const double* nrm, size_t nrmSize,
-		const uint32_t* faceVertexCounts, size_t faceVertexCountsSize,
-		const uint32_t* vertexIndices, size_t vertexIndicesSize,
-		const uint32_t* normalIndices, size_t normalIndicesSize,
+	virtual void addMesh(const wchar_t* name, const wchar_t* identifier,
+	                     int32_t prototypeId, const wchar_t* uri,
+	                     const double* vtx, size_t vtxSize,
+	                     const double* nrm, size_t nrmSize,
+	                     const uint32_t* faceVertexCounts, size_t faceVertexCountsSize,
+	                     const uint32_t* vertexIndices, size_t vertexIndicesSize,
+	                     const uint32_t* normalIndices, size_t normalIndicesSize,
 
-		double const* const* uvs, size_t const* uvsSizes,
-		uint32_t const* const* uvCounts, size_t const* uvCountsSizes,
-		uint32_t const* const* uvIndices, size_t const* uvIndicesSizes,
-		size_t uvSets,
+	                     double const* const* uvs, size_t const* uvsSizes,
+	                     uint32_t const* const* uvCounts, size_t const* uvCountsSizes,
+	                     uint32_t const* const* uvIndices, size_t const* uvIndicesSizes,
+	                     size_t uvSets,
 
-		const uint32_t* faceRanges, size_t faceRangesSize,
-		const prt::AttributeMap** materials
+                         const uint32_t* faceRanges, size_t faceRangesSize,
+	                     const prt::AttributeMap** materials
 	) override;
 	// clang-format on
 
@@ -126,48 +139,53 @@ public:
 	 */
 	virtual void addReport(const prt::AttributeMap* reports) override;
 
-	prt::Status generateError(size_t /*isIndex*/, prt::Status /*status*/, const wchar_t* message) override
+	virtual void init() override;
+	
+	virtual void finish() override;
+
+	virtual prt::Status generateError(size_t /*isIndex*/, prt::Status /*status*/, const wchar_t* message) override
 	{
 		UE_LOG(LogUnrealCallbacks, Error, TEXT("GENERATE ERROR: %s"), message)
 		return prt::STATUS_OK;
 	}
-	prt::Status assetError(size_t /*isIndex*/, prt::CGAErrorLevel /*level*/, const wchar_t* /*key*/, const wchar_t* /*uri*/,
+	virtual prt::Status assetError(size_t /*isIndex*/, prt::CGAErrorLevel /*level*/, const wchar_t* /*key*/, const wchar_t* /*uri*/,
 						   const wchar_t* message) override
 	{
 		UE_LOG(LogUnrealCallbacks, Error, TEXT("ASSET ERROR: %s"), message)
 		return prt::STATUS_OK;
 	}
-	prt::Status cgaError(size_t /*isIndex*/, int32_t /*shapeID*/, prt::CGAErrorLevel /*level*/, int32_t /*methodId*/, int32_t /*pc*/,
+	virtual prt::Status cgaError(size_t /*isIndex*/, int32_t /*shapeID*/, prt::CGAErrorLevel /*level*/, int32_t /*methodId*/, int32_t /*pc*/,
 						 const wchar_t* message) override
 	{
 		UE_LOG(LogUnrealCallbacks, Error, TEXT("CGA ERROR: %s"), message)
 		return prt::STATUS_OK;
 	}
-	prt::Status cgaPrint(size_t /*isIndex*/, int32_t /*shapeID*/, const wchar_t* txt) override
+	virtual prt::Status cgaPrint(size_t /*isIndex*/, int32_t /*shapeID*/, const wchar_t* txt) override
 	{
 		UE_LOG(LogUnrealCallbacks, Display, TEXT("CGA Print: %s"), txt)
 		return prt::STATUS_OK;
 	}
 
-	prt::Status cgaReportBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value) override
+	virtual prt::Status cgaReportBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value) override
 	{
 		return prt::STATUS_OK;
 	}
-	prt::Status cgaReportFloat(size_t isIndex, int32_t shapeID, const wchar_t* key, double value) override
+	virtual prt::Status cgaReportFloat(size_t isIndex, int32_t shapeID, const wchar_t* key, double value) override
 	{
 		return prt::STATUS_OK;
 	}
-	prt::Status cgaReportString(size_t isIndex, int32_t shapeID, const wchar_t* key, const wchar_t* value) override
+	virtual prt::Status cgaReportString(size_t isIndex, int32_t shapeID, const wchar_t* key, const wchar_t* value) override
 	{
 		return prt::STATUS_OK;
 	}
 
-	prt::Status attrBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value) override;
-	prt::Status attrFloat(size_t isIndex, int32_t shapeID, const wchar_t* key, double value) override;
-	prt::Status attrString(size_t isIndex, int32_t shapeID, const wchar_t* key, const wchar_t* value) override;
+	virtual prt::Status attrBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value) override;
+	virtual prt::Status attrFloat(size_t isIndex, int32_t shapeID, const wchar_t* key, double value) override;
+	virtual prt::Status attrString(size_t isIndex, int32_t shapeID, const wchar_t* key, const wchar_t* value) override;
 
-	prt::Status attrBoolArray(size_t isIndex, int32_t shapeID, const wchar_t* key, const bool* values, size_t size, size_t nRows) override;
-	prt::Status attrFloatArray(size_t isIndex, int32_t shapeID, const wchar_t* key, const double* values, size_t size, size_t nRows) override;
-	prt::Status attrStringArray(size_t isIndex, int32_t shapeID, const wchar_t* key, const wchar_t* const* values, size_t size,
+	virtual prt::Status attrBoolArray(size_t isIndex, int32_t shapeID, const wchar_t* key, const bool* values, size_t size, size_t nRows) override;
+	virtual prt::Status attrFloatArray(size_t isIndex, int32_t shapeID, const wchar_t* key, const double* values, size_t size, size_t nRows) override;
+	virtual prt::Status attrStringArray(size_t isIndex, int32_t shapeID, const wchar_t* key, const wchar_t* const* values, size_t size,
 								size_t nRows) override;
+
 };

@@ -42,6 +42,20 @@ struct FGenerateOptions
 	bool bIgnoreInstanceReplacements = false;
 };
 
+struct FAttributesEvaluationQueueItem
+{
+	FAttributeMapPtr AttributeMap;
+	bool bForceRegenerate;
+	UGenerateCompletedCallbackProxy* CallbackProxy;
+};
+
+struct FGenerateQueueItem
+{
+	FGenerateResultDescription GenerateResultDescription;
+	FGenerateOptions GenerateOptions;
+	UGenerateCompletedCallbackProxy* CallbackProxy;
+};
+
 struct FInstance
 {
 	FString Name;
@@ -72,19 +86,16 @@ struct FConvertedGenerateResult
 	TMap<FString, FReport> Reports;
 };
 
-struct FAttributesEvaluationQueueItem
-{
-	FAttributeMapPtr AttributeMap;
-	bool bForceRegenerate;
-	UGenerateCompletedCallbackProxy* CallbackProxy;
-};
 
-struct FGenerateQueueItem
-{
-	FGenerateResultDescription GenerateResultDescription;
-	FGenerateOptions GenerateOptions;
-	UGenerateCompletedCallbackProxy* CallbackProxy;
-};
+FConvertedGenerateResult BuildResult(const FGenerateResultDescription& GenerateResult,
+									 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+									 TMap<FString, Vitruvio::FTextureData>& TextureCache,
+									 TMap<UMaterialInterface*, FString>& MaterialIdentifiers,
+									 TMap<FString, int32>& UniqueMaterialIdentifiers,
+									 UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent);
+
+
+FString UniqueComponentName(const FString& Name, TMap<FString, int32>& UsedNames);
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class VITRUVIO_API UVitruvioComponent : public UActorComponent
@@ -105,24 +116,32 @@ class VITRUVIO_API UVitruvioComponent : public UActorComponent
 public:
 	UVitruvioComponent();
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Batch Generate", Category = "Vitruvio")
+	bool bBatchGenerate = false;
+
 	/** Automatically generate after changing attributes or properties. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Generate Automatically", Category = "Vitruvio")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Generate Automatically", Category = "Vitruvio",
+		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
 	bool GenerateAutomatically = true;
 
 	/** Automatically hide initial shape after generation. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Hide Initial Shape after Generation", Category = "Vitruvio")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Hide Initial Shape after Generation", Category = "Vitruvio",
+		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
 	bool HideAfterGeneration = false;
 
 	/** Default parent material for opaque geometry. */
-	UPROPERTY(EditAnywhere, DisplayName = "Opaque Parent", Category = "Vitruvio Default Materials")
+	UPROPERTY(EditAnywhere, DisplayName = "Opaque Parent", Category = "Vitruvio Default Materials",
+		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
 	UMaterial* OpaqueParent;
 
 	/** Default parent material for masked geometry. */
-	UPROPERTY(EditAnywhere, DisplayName = "Masked Parent", Category = "Vitruvio Default Materials")
+	UPROPERTY(EditAnywhere, DisplayName = "Masked Parent", Category = "Vitruvio Default Materials",
+		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
 	UMaterial* MaskedParent;
 
 	/** Default parent material for translucent geometry. */
-	UPROPERTY(EditAnywhere, DisplayName = "Translucent Parent", Category = "Vitruvio Default Materials")
+	UPROPERTY(EditAnywhere, DisplayName = "Translucent Parent", Category = "Vitruvio Default Materials",
+		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
 	UMaterial* TranslucentParent;
 
 	UPROPERTY(VisibleAnywhere, Instanced, Category = "Vitruvio")
@@ -131,15 +150,18 @@ public:
 	UPROPERTY(Transient, TextExportTransient, DuplicateTransient)
 	USceneComponent* InitialShapeSceneComponent;
 
-	UPROPERTY(EditAnywhere, Category = "Vitruvio", meta = (DisplayName = "Generate Collision Mesh"))
+	UPROPERTY(EditAnywhere, Category = "Vitruvio", meta = (DisplayName = "Generate Collision Mesh"),
+		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
 	bool GenerateCollision = true;
 
 	/** The material replacement asset which defines how materials are replaced after generating a model. */
-	UPROPERTY(EditAnywhere, Category = "Vitruvio Replacmeents", Setter = SetMaterialReplacementAsset)
+	UPROPERTY(EditAnywhere, Category = "Vitruvio Replacmeents", Setter = SetMaterialReplacementAsset,
+		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
 	UMaterialReplacementAsset* MaterialReplacement;
 
 	/** The instance replacement asset which defines how instances are replaced after generating a model. */
-	UPROPERTY(EditAnywhere, Category = "Vitruvio Replacmeents", Setter = SetInstanceReplacementAsset)
+	UPROPERTY(EditAnywhere, Category = "Vitruvio Replacmeents", Setter = SetInstanceReplacementAsset,
+		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
 	UInstanceReplacementAsset* InstanceReplacement;
 
 	/**
@@ -350,10 +372,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	void SetInitialShapeVisible(bool bVisible);
 
-	/* Sets the random seed used for generation. This will reevaluate the attributes and if bGenerateModel is set to true, also generates the model.
+	/**
+	 * Sets the random seed used for generation. This will reevaluate the attributes and if bGenerateModel is set to true, also generates the model.
 	 */
 	void SetRandomSeed(int32 NewRandomSeed, bool bGenerateModel = true, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	/** Returns the random seed used for generation. */
+	int32 GetRandomSeed();
+	
 	/* Initialize the VitruvioComponent. Only needs to be called if the Component is natively attached. */
 	void Initialize();
 
@@ -468,10 +495,6 @@ private:
 
 	void ProcessGenerateQueue();
 	void ProcessAttributesEvaluationQueue();
-
-	FConvertedGenerateResult BuildResult(FGenerateResultDescription& GenerateResult,
-										 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-										 TMap<FString, Vitruvio::FTextureData>& TextureCache);
 
 #if WITH_EDITOR
 	FDelegateHandle PropertyChangeDelegate;

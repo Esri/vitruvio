@@ -71,7 +71,7 @@ void ColorEdges(FWindingEdge& Edge, TSortedMap<int32, TArray<FWindingEdge>>& Edg
 	}
 }
 
-bool PointInPolygon2D(const FVector3f& Point, const TArray<int32>& PolygonIndices, const TArray<FVector3f>& PolygonVertices)
+bool PointInPolygon2D(const FVector& Point, const TArray<int32>& PolygonIndices, const TArray<FVector>& PolygonVertices)
 {
 	if (PolygonIndices.Num() < 3)
 	{
@@ -81,8 +81,8 @@ bool PointInPolygon2D(const FVector3f& Point, const TArray<int32>& PolygonIndice
 	bool bIsInside = false;
 	for (int Index = 0; Index < PolygonIndices.Num(); Index++)
 	{
-		const FVector3f& Current = PolygonVertices[PolygonIndices[Index]];
-		const FVector3f& Next = PolygonVertices[PolygonIndices[Index + 1 >= PolygonIndices.Num() ? 0 : Index + 1]];
+		const FVector& Current = PolygonVertices[PolygonIndices[Index]];
+		const FVector& Next = PolygonVertices[PolygonIndices[Index + 1 >= PolygonIndices.Num() ? 0 : Index + 1]];
 		if (Current.Y < Point.Y && Next.Y >= Point.Y || Next.Y < Point.Y && Current.Y >= Point.Y)
 		{
 			if (Current.X + (Point.Y - Current.Y) / (Next.Y - Current.Y) * (Next.X - Current.X) < Point.X)
@@ -95,7 +95,7 @@ bool PointInPolygon2D(const FVector3f& Point, const TArray<int32>& PolygonIndice
 	return bIsInside;
 }
 
-bool IsInsideOf2D(const TArray<int32>& FaceA, const TArray<int32>& FaceB, const TArray<FVector3f>& Vertices)
+bool IsInsideOf2D(const TArray<int32>& FaceA, const TArray<int32>& FaceB, const TArray<FVector>& Vertices)
 {
 	if (FaceB.Num() == 1)
 	{
@@ -125,7 +125,7 @@ bool IsInsideOf2D(const TArray<int32>& FaceA, const TArray<int32>& FaceB, const 
 namespace Vitruvio
 {
 
-FInitialShapePolygon GetPolygon(const TArray<FVector3f>& InVertices, const TArray<int32>& InIndices)
+FInitialShapePolygon GetPolygon(const TArray<FVector>& InVertices, const TArray<int32>& InIndices)
 {
 	// The algorithm works as follows:
 	// 1. We construct a graph of all edges and "color" all connected edges. Note that we can have multiple faces (with holes) in a single polygon

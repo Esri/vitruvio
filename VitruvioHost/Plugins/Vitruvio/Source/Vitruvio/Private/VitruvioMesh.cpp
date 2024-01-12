@@ -144,6 +144,7 @@ void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttribute
 	MeshDescriptionPtrs.Emplace(&MeshDescription);
 
 	UStaticMesh::FBuildMeshDescriptionsParams Params;
+	Params.bCommitMeshDescription = false;
 	Params.bFastBuild = true;
 	StaticMesh->BuildFromMeshDescriptions(MeshDescriptionPtrs, Params);
 	CollisionData = {Indices, Vertices};

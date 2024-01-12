@@ -1,4 +1,4 @@
-﻿/* Copyright 2023 Esri
+/* Copyright 2023 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,16 @@
 
 #pragma once
 
-#include "InitialShape.h"
+#include "VitruvioBatchGridVisualizerActor.generated.h"
 
-namespace Vitruvio
+UCLASS(NotBlueprintable, NotPlaceable, Transient)
+class AVitruvioBatchGridVisualizerActor : public AActor
 {
-
-/**
- * Takes a triangulated input mesh (vertices and indices) and returns a polygon consisting of faces and holes.
- *
- * This will work for convex or concave polygons and polygons with holes.
- *
- * Note: This function is adapted from FPoly#GetOutsideWindings.
- *
- * @param InVertices	Input triangle vertices
- * @param InIndices		Input triangle indices
- */
-FInitialShapePolygon GetPolygon(const TArray<FVector>& InVertices, const TArray<int32>& InIndices);
-
-} // namespace Vitruvio
+	GENERATED_BODY()
+	
+	AVitruvioBatchGridVisualizerActor();
+	
+	virtual bool ShouldTickIfViewportsOnly() const override;
+	virtual void Tick(float DeltaSeconds) override;
+	virtual bool CanDeleteSelectedActor(FText& OutReason) const override;
+};
