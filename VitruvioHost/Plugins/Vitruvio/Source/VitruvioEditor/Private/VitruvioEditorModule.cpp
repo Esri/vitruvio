@@ -30,6 +30,7 @@
 #include "Framework/Notifications/NotificationManager.h"
 #include "GenerateCompletedCallbackProxy.h"
 #include "IAssetTools.h"
+#include "VitruvioBatchActorDetails.h"
 #include "VitruvioBatchGridVisualizerActor.h"
 #include "VitruvioBatchSubsystem.h"
 #include "Modules/ModuleManager.h"
@@ -165,6 +166,9 @@ void VitruvioEditorModule::StartupModule()
 	PropertyModule.RegisterCustomClassLayout(UVitruvioComponent::StaticClass()->GetFName(),
 											 FOnGetDetailCustomizationInstance::CreateStatic(&FVitruvioComponentDetails::MakeInstance));
 
+	PropertyModule.RegisterCustomClassLayout(AVitruvioBatchActor::StaticClass()->GetFName(),
+										 FOnGetDetailCustomizationInstance::CreateStatic(&FVitruvioBatchActorDetails::MakeInstance));
+
 	LevelViewportContextMenuVitruvioExtender =
 		FLevelEditorModule::FLevelViewportMenuExtender_SelectedActors::CreateStatic(&ExtendLevelViewportContextMenuForVitruvioComponents);
 	FLevelEditorModule& LevelEditorModule = FModuleManager::Get().LoadModuleChecked<FLevelEditorModule>("LevelEditor");
@@ -188,7 +192,8 @@ void VitruvioEditorModule::ShutdownModule()
 
 	FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyModule.UnregisterCustomClassLayout(UVitruvioComponent::StaticClass()->GetFName());
-
+	PropertyModule.UnregisterCustomClassLayout(AVitruvioBatchActor::StaticClass()->GetFName());
+	
 	FLevelEditorModule& LevelEditorModule = FModuleManager::LoadModuleChecked<FLevelEditorModule>("LevelEditor");
 	LevelEditorModule.GetAllLevelViewportContextMenuExtenders().RemoveAll(
 		[&](const FLevelEditorModule::FLevelViewportMenuExtender_SelectedActors& Delegate) {
