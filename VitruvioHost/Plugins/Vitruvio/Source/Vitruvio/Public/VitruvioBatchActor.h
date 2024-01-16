@@ -27,14 +27,14 @@ class UTile : public UObject
 {
 	GENERATED_BODY()
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, Category = "Vitruvio")
 	TSet<UVitruvioComponent*> VitruvioComponents;
 
 public:
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Vitruvio")
 	FIntPoint Location;
 	
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Vitruvio")
 	bool bMarkedForGenerate;
 
 	UPROPERTY()
@@ -91,11 +91,11 @@ class VITRUVIO_API AVitruvioBatchActor : public AActor
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	FIntVector2 GridDimension = {50000, 50000};
 
 #if WITH_EDITORONLY_DATA
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Vitruvio")
 	bool bDebugVisualizeGrid = false;
 #endif
 	
