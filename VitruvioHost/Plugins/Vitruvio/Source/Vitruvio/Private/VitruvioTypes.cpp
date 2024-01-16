@@ -15,8 +15,8 @@
 
 #include "VitruvioTypes.h"
 
-#include "Core/Public/Containers/UnrealString.h"
-#include "Core/Public/Templates/TypeHash.h"
+#include "Runtime/Core/Public/Containers/UnrealString.h"
+#include "Runtime/Core/Public/Templates/TypeHash.h"
 
 namespace
 {

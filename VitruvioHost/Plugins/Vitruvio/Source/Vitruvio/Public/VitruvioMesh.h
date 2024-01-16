@@ -17,6 +17,8 @@
 
 #include "MeshDescription.h"
 #include "VitruvioTypes.h"
+#include "Runtime/PhysicsCore/Public/Interface_CollisionDataProviderCore.h"
+
 
 UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
 										TMap<FString, Vitruvio::FTextureData>& TextureCache,

@@ -17,7 +17,7 @@
 #include "RulePackage.h"
 
 #include "PropertyCustomizationHelpers.h"
-#include "PropertyEditor/Public/IPropertyTable.h"
+#include "Editor/PropertyEditor/Public/IPropertyTable.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
 #include "Widgets/SCompoundWidget.h"
 
