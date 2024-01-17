@@ -16,6 +16,7 @@
 #include "VitruvioBatchActor.h"
 
 #include "AttributeConversion.h"
+#include "Runtime/CoreUObject/Public/UObject/ConstructorHelpers.h"
 #include "GenerateCompletedCallbackProxy.h"
 
 void UTile::MarkForGenerate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy)

@@ -16,6 +16,7 @@
 #pragma once
 
 #include "VitruvioBatchActor.h"
+#include "Runtime/Engine/Public/Subsystems/WorldSubsystem.h"
 
 #include "VitruvioBatchSubsystem.generated.h"
 
