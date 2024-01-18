@@ -18,6 +18,29 @@
 #include "Engine/StaticMeshActor.h"
 #include "VitruvioActor.h"
 
+TArray<AActor*> UVitruvioBlueprintLibrary::GetVitruvioActorsInHierarchy(AActor* Root)
+{
+	if (!Root)
+	{
+		return {};
+	}
+
+	TArray<AActor*> VitruvioActors;
+	if (Cast<AVitruvioActor>(Root) || Root->FindComponentByClass<UVitruvioComponent>())
+	{
+		VitruvioActors.Add(Root);
+	}
+
+	TArray<AActor*> ChildActors;
+	Root->GetAttachedActors(ChildActors);
+	for (AActor* Child : ChildActors)
+	{
+		VitruvioActors.Append(GetVitruvioActorsInHierarchy(Child));
+	}
+
+	return VitruvioActors;
+}
+
 TArray<AActor*> UVitruvioBlueprintLibrary::GetViableVitruvioActorsInHierarchy(AActor* Root)
 {
 	if (!Root)
