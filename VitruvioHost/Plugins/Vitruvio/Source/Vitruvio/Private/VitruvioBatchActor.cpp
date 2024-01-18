@@ -54,6 +54,11 @@ TArray<FInitialShape> UTile::GetInitialShapes()
 	
 	for (UVitruvioComponent* VitruvioComponent : VitruvioComponents)
 	{
+		if (!VitruvioComponent->GetRpk())
+		{
+			continue;
+		}
+		
 		FInitialShape InitialShape;
 		InitialShape.Offset = VitruvioComponent->GetOwner()->GetTransform().GetLocation();
 		InitialShape.Polygon = VitruvioComponent->InitialShape->GetPolygon();
@@ -235,10 +240,10 @@ void AVitruvioBatchActor::ProcessTiles()
 		}
 
 		// Generate model
-		const TArray<FInitialShape>& InitialShapes = Tile->GetInitialShapes();
+		TArray<FInitialShape> InitialShapes = Tile->GetInitialShapes();
 		if (!InitialShapes.IsEmpty())
 		{
-			FBatchGenerateResult GenerateResult = VitruvioModule::Get().BatchGenerateAsync(Tile->GetInitialShapes());
+			FBatchGenerateResult GenerateResult = VitruvioModule::Get().BatchGenerateAsync(MoveTemp(InitialShapes));
 
 			if (Tile->GenerateToken)
 			{

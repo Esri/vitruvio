@@ -402,6 +402,11 @@ FBatchGenerateResult VitruvioModule::BatchGenerateAsync(TArray<FInitialShape> In
 
 FGenerateResultDescription VitruvioModule::BatchGenerate(TArray<FInitialShape> InitialShapes) const
 {
+	if (InitialShapes.IsEmpty())
+	{
+		return {};
+	}
+	
     CHECK_PRT_INITIALIZED()
 
 	GenerateCallsCounter.Add(InitialShapes.Num());
