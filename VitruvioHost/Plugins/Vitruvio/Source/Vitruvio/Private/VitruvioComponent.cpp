@@ -525,7 +525,7 @@ bool UVitruvioComponent::HasValidInputData() const
 
 bool UVitruvioComponent::IsReadyToGenerate() const
 {
-	return HasValidInputData() && bAttributesReady;
+	return (HasValidInputData() && bAttributesReady) || bBatchGenerate;
 }
 
 void UVitruvioComponent::SetRpk(URulePackage* RulePackage, bool bGenerateModel, UGenerateCompletedCallbackProxy* CallbackProxy)
