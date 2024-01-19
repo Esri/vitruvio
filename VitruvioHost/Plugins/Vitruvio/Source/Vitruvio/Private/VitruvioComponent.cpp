@@ -964,6 +964,11 @@ void UVitruvioComponent::RemoveGeneratedMeshes()
 
 	bHasGeneratedModel = false;
 	SetInitialShapeVisible(true);
+
+	if (bBatchGenerate)
+	{
+		Generate();
+	}
 }
 
 bool UVitruvioComponent::GetAttributesReady() const
@@ -1213,7 +1218,9 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		CalculateRandomSeed();
 	}
 
-	if (bAttributesReady && GenerateAutomatically && (bRecreateInitialShape || bComponentPropertyChanged))
+	const bool bGenerateComponent = bAttributesReady && GenerateAutomatically && (bRecreateInitialShape || bComponentPropertyChanged);
+	const bool bGenerateBatch = bBatchGenerate && (bRecreateInitialShape || bComponentPropertyChanged);
+	if (bGenerateComponent || bGenerateBatch)
 	{
 		Generate();
 	}
