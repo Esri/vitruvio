@@ -1053,6 +1053,14 @@ void UVitruvioComponent::Generate(UGenerateCompletedCallbackProxy* CallbackProxy
 {
 	Initialize();
 
+	if (bBatchGenerate)
+	{
+		UVitruvioBatchSubsystem* BatchGenerateSubsystem = GetWorld()->GetSubsystem<UVitruvioBatchSubsystem>();
+		BatchGenerateSubsystem->Generate(this, CallbackProxy);
+
+		return;
+	}
+
 	// If either the RPK, initial shape or attributes are not ready we can not generate
 	if (!HasValidInputData())
 	{
@@ -1070,32 +1078,24 @@ void UVitruvioComponent::Generate(UGenerateCompletedCallbackProxy* CallbackProxy
 
 	if (InitialShape)
 	{
-		if (bBatchGenerate)
+		FGenerateResult GenerateResult =
+			VitruvioModule::Get().GenerateAsync({ FVector::ZeroVector, InitialShape->GetPolygon(), Vitruvio::CreateAttributeMap(Attributes), RandomSeed, Rpk});
+
+		GenerateToken = GenerateResult.Token;
+
+		// clang-format off
+		GenerateResult.Result.Next([this, CallbackProxy, GenerateOptions](const FGenerateResult::ResultType& Result)
 		{
-			UVitruvioBatchSubsystem* BatchGenerateSubsystem = GetWorld()->GetSubsystem<UVitruvioBatchSubsystem>();
-			BatchGenerateSubsystem->Generate(this, CallbackProxy);
-		}
-		else
-		{
-			FGenerateResult GenerateResult =
-				VitruvioModule::Get().GenerateAsync({ FVector::ZeroVector, InitialShape->GetPolygon(), Vitruvio::CreateAttributeMap(Attributes), RandomSeed, Rpk});
+			FScopeLock Lock(&Result.Token->Lock);
 
-			GenerateToken = GenerateResult.Token;
+			if (Result.Token->IsInvalid()) {
+				return;
+			}
 
-			// clang-format off
-			GenerateResult.Result.Next([this, CallbackProxy, GenerateOptions](const FGenerateResult::ResultType& Result)
-			{
-				FScopeLock Lock(&Result.Token->Lock);
-
-				if (Result.Token->IsInvalid()) {
-					return;
-				}
-
-				GenerateToken.Reset();
-				GenerateQueue.Enqueue({Result.Value, GenerateOptions, CallbackProxy});
-			});
-			// clang-format on
-		}
+			GenerateToken.Reset();
+			GenerateQueue.Enqueue({Result.Value, GenerateOptions, CallbackProxy});
+		});
+		// clang-format on
 	}
 }
 
