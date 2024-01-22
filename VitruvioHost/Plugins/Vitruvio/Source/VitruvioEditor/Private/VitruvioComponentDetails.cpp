@@ -839,6 +839,12 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	GenerateAutomaticallyProperty->SetOnPropertyValueChanged(
 		FSimpleDelegate::CreateSP(this, &FVitruvioComponentDetails::OnGenerateAutomaticallyChanged));
 
+	const TSharedRef<IPropertyHandle> BatchGenerateHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UVitruvioComponent, bBatchGenerate));
+	BatchGenerateHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder]()
+	{
+		DetailBuilder.ForceRefreshDetails();
+	}));
+	
 	ObjectsBeingCustomized.Empty();
 	DetailBuilder.GetObjectsBeingCustomized(ObjectsBeingCustomized);
 
