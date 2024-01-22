@@ -753,143 +753,152 @@ void UVitruvioComponent::Initialize()
 
 void UVitruvioComponent::ProcessGenerateQueue()
 {
-	if (!GenerateQueue.IsEmpty())
+	if (GenerateQueue.IsEmpty())
 	{
-		// Get from queue and build meshes
-		FGenerateQueueItem Result;
-		GenerateQueue.Dequeue(Result);
-
-		FConvertedGenerateResult ConvertedResult =
-			BuildResult(Result.GenerateResultDescription, VitruvioModule::Get().GetMaterialCache(), VitruvioModule::Get().GetTextureCache(),
-				MaterialIdentifiers, UniqueMaterialIdentifiers, OpaqueParent, MaskedParent, TranslucentParent);
-
-		Reports = ConvertedResult.Reports;
-
-		QUICK_SCOPE_CYCLE_COUNTER(STAT_VitruvioActor_CreateModelActors);
-
-		UGeneratedModelStaticMeshComponent* VitruvioModelComponent = nullptr;
-
-		TArray<USceneComponent*> InitialShapeChildComponents;
-		InitialShapeSceneComponent->GetChildrenComponents(false, InitialShapeChildComponents);
-		for (USceneComponent* Component : InitialShapeChildComponents)
-		{
-			if (Component->IsA(UGeneratedModelStaticMeshComponent::StaticClass()))
-			{
-				VitruvioModelComponent = Cast<UGeneratedModelStaticMeshComponent>(Component);
-
-				VitruvioModelComponent->SetStaticMesh(nullptr);
-
-				// Cleanup old hierarchical instances
-				TArray<USceneComponent*> InstanceComponents;
-				VitruvioModelComponent->GetChildrenComponents(true, InstanceComponents);
-				for (USceneComponent* InstanceComponent : InstanceComponents)
-				{
-					InstanceComponent->DestroyComponent(true);
-				}
-
-				break;
-			}
-		}
-
-		if (!VitruvioModelComponent)
-		{
-			VitruvioModelComponent = NewObject<UGeneratedModelStaticMeshComponent>(InitialShapeSceneComponent, FName(TEXT("GeneratedModel")),
-																				   RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
-			VitruvioModelComponent->CreationMethod = EComponentCreationMethod::Instance;
-			InitialShapeSceneComponent->GetOwner()->AddOwnedComponent(VitruvioModelComponent);
-			VitruvioModelComponent->AttachToComponent(InitialShapeSceneComponent, FAttachmentTransformRules::KeepRelativeTransform);
-			VitruvioModelComponent->OnComponentCreated();
-			VitruvioModelComponent->RegisterComponent();
-		}
-
-		if (ConvertedResult.ShapeMesh)
-		{
-			VitruvioModelComponent->SetStaticMesh(ConvertedResult.ShapeMesh->GetStaticMesh());
-			VitruvioModelComponent->SetCollisionData(ConvertedResult.ShapeMesh->GetCollisionData());
-			CreateCollision(ConvertedResult.ShapeMesh->GetStaticMesh(), VitruvioModelComponent, GenerateCollision);
-
-			// Reset Material replacements
-			for (int32 MaterialIndex = 0; MaterialIndex < VitruvioModelComponent->GetNumMaterials(); ++MaterialIndex)
-			{
-				VitruvioModelComponent->SetMaterial(MaterialIndex, VitruvioModelComponent->GetStaticMesh()->GetMaterial(MaterialIndex));
-			}
-
-			if (!Result.GenerateOptions.bIgnoreMaterialReplacements)
-			{
-				ApplyMaterialReplacements(VitruvioModelComponent, MaterialIdentifiers, MaterialReplacement);
-			}
-		}
-		else
-		{
-			VitruvioModelComponent->SetStaticMesh(nullptr);
-			VitruvioModelComponent->SetCollisionData({});
-		}
-
-		TMap<FString, int32> NameMap;
-		TSet<FInstance> Replaced;
-
-		if (!Result.GenerateOptions.bIgnoreInstanceReplacements)
-		{
-			Replaced = ApplyInstanceReplacements(VitruvioModelComponent, ConvertedResult.Instances, InstanceReplacement, NameMap);
-		}
-
-		for (const FInstance& Instance : ConvertedResult.Instances)
-		{
-			if (Replaced.Contains(Instance))
-			{
-				continue;
-			}
-
-			FString UniqueName = UniqueComponentName(Instance.Name, NameMap);
-			auto InstancedComponent = NewObject<UGeneratedModelHISMComponent>(VitruvioModelComponent, FName(UniqueName),
-																			  RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
-			const TArray<FTransform>& Transforms = Instance.Transforms;
-			InstancedComponent->SetStaticMesh(Instance.InstanceMesh->GetStaticMesh());
-			InstancedComponent->SetCollisionData(Instance.InstanceMesh->GetCollisionData());
-			InstancedComponent->SetMeshIdentifier(Instance.InstanceMesh->GetIdentifier());
-
-			// Add all instance transforms
-			for (const FTransform& Transform : Transforms)
-			{
-				InstancedComponent->AddInstance(Transform);
-			}
-
-			// Apply override materials
-			for (int32 MaterialIndex = 0; MaterialIndex < Instance.OverrideMaterials.Num(); ++MaterialIndex)
-			{
-				InstancedComponent->SetMaterial(MaterialIndex, Instance.OverrideMaterials[MaterialIndex]);
-			}
-
-			// Instanced component collision
-			CreateCollision(Instance.InstanceMesh->GetStaticMesh(), InstancedComponent, GenerateCollision);
-
-			// Attach and register instance component
-			InstancedComponent->AttachToComponent(VitruvioModelComponent, FAttachmentTransformRules::KeepRelativeTransform);
-			InstancedComponent->CreationMethod = EComponentCreationMethod::Instance;
-			InitialShapeSceneComponent->GetOwner()->AddOwnedComponent(InstancedComponent);
-			InstancedComponent->OnComponentCreated();
-			InstancedComponent->RegisterComponent();
-
-			if (!Result.GenerateOptions.bIgnoreMaterialReplacements)
-			{
-				ApplyMaterialReplacements(InstancedComponent, MaterialIdentifiers, MaterialReplacement);
-			}
-		}
-
-		OnHierarchyChanged.Broadcast(this);
-
-		bHasGeneratedModel = true;
-
-		SetInitialShapeVisible(!HideAfterGeneration);
-
-		if (Result.CallbackProxy)
-		{
-			Result.CallbackProxy->OnGenerateCompletedBlueprint.Broadcast();
-			Result.CallbackProxy->OnGenerateCompleted.Broadcast();
-			Result.CallbackProxy->SetReadyToDestroy();
-		}
-		OnGenerateCompleted.Broadcast();
+		return;
 	}
+
+	if (bBatchGenerate)
+	{
+		RemoveGeneratedMeshes();
+		GenerateQueue.Empty();
+		return;
+	}
+		
+	// Get from queue and build meshes
+	FGenerateQueueItem Result;
+	GenerateQueue.Dequeue(Result);
+
+	FConvertedGenerateResult ConvertedResult =
+		BuildResult(Result.GenerateResultDescription, VitruvioModule::Get().GetMaterialCache(), VitruvioModule::Get().GetTextureCache(),
+			MaterialIdentifiers, UniqueMaterialIdentifiers, OpaqueParent, MaskedParent, TranslucentParent);
+
+	Reports = ConvertedResult.Reports;
+
+	QUICK_SCOPE_CYCLE_COUNTER(STAT_VitruvioActor_CreateModelActors);
+
+	UGeneratedModelStaticMeshComponent* VitruvioModelComponent = nullptr;
+
+	TArray<USceneComponent*> InitialShapeChildComponents;
+	InitialShapeSceneComponent->GetChildrenComponents(false, InitialShapeChildComponents);
+	for (USceneComponent* Component : InitialShapeChildComponents)
+	{
+		if (Component->IsA(UGeneratedModelStaticMeshComponent::StaticClass()))
+		{
+			VitruvioModelComponent = Cast<UGeneratedModelStaticMeshComponent>(Component);
+
+			VitruvioModelComponent->SetStaticMesh(nullptr);
+
+			// Cleanup old hierarchical instances
+			TArray<USceneComponent*> InstanceComponents;
+			VitruvioModelComponent->GetChildrenComponents(true, InstanceComponents);
+			for (USceneComponent* InstanceComponent : InstanceComponents)
+			{
+				InstanceComponent->DestroyComponent(true);
+			}
+
+			break;
+		}
+	}
+
+	if (!VitruvioModelComponent)
+	{
+		VitruvioModelComponent = NewObject<UGeneratedModelStaticMeshComponent>(InitialShapeSceneComponent, FName(TEXT("GeneratedModel")),
+																			   RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
+		VitruvioModelComponent->CreationMethod = EComponentCreationMethod::Instance;
+		InitialShapeSceneComponent->GetOwner()->AddOwnedComponent(VitruvioModelComponent);
+		VitruvioModelComponent->AttachToComponent(InitialShapeSceneComponent, FAttachmentTransformRules::KeepRelativeTransform);
+		VitruvioModelComponent->OnComponentCreated();
+		VitruvioModelComponent->RegisterComponent();
+	}
+
+	if (ConvertedResult.ShapeMesh)
+	{
+		VitruvioModelComponent->SetStaticMesh(ConvertedResult.ShapeMesh->GetStaticMesh());
+		VitruvioModelComponent->SetCollisionData(ConvertedResult.ShapeMesh->GetCollisionData());
+		CreateCollision(ConvertedResult.ShapeMesh->GetStaticMesh(), VitruvioModelComponent, GenerateCollision);
+
+		// Reset Material replacements
+		for (int32 MaterialIndex = 0; MaterialIndex < VitruvioModelComponent->GetNumMaterials(); ++MaterialIndex)
+		{
+			VitruvioModelComponent->SetMaterial(MaterialIndex, VitruvioModelComponent->GetStaticMesh()->GetMaterial(MaterialIndex));
+		}
+
+		if (!Result.GenerateOptions.bIgnoreMaterialReplacements)
+		{
+			ApplyMaterialReplacements(VitruvioModelComponent, MaterialIdentifiers, MaterialReplacement);
+		}
+	}
+	else
+	{
+		VitruvioModelComponent->SetStaticMesh(nullptr);
+		VitruvioModelComponent->SetCollisionData({});
+	}
+
+	TMap<FString, int32> NameMap;
+	TSet<FInstance> Replaced;
+
+	if (!Result.GenerateOptions.bIgnoreInstanceReplacements)
+	{
+		Replaced = ApplyInstanceReplacements(VitruvioModelComponent, ConvertedResult.Instances, InstanceReplacement, NameMap);
+	}
+
+	for (const FInstance& Instance : ConvertedResult.Instances)
+	{
+		if (Replaced.Contains(Instance))
+		{
+			continue;
+		}
+
+		FString UniqueName = UniqueComponentName(Instance.Name, NameMap);
+		auto InstancedComponent = NewObject<UGeneratedModelHISMComponent>(VitruvioModelComponent, FName(UniqueName),
+																		  RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
+		const TArray<FTransform>& Transforms = Instance.Transforms;
+		InstancedComponent->SetStaticMesh(Instance.InstanceMesh->GetStaticMesh());
+		InstancedComponent->SetCollisionData(Instance.InstanceMesh->GetCollisionData());
+		InstancedComponent->SetMeshIdentifier(Instance.InstanceMesh->GetIdentifier());
+
+		// Add all instance transforms
+		for (const FTransform& Transform : Transforms)
+		{
+			InstancedComponent->AddInstance(Transform);
+		}
+
+		// Apply override materials
+		for (int32 MaterialIndex = 0; MaterialIndex < Instance.OverrideMaterials.Num(); ++MaterialIndex)
+		{
+			InstancedComponent->SetMaterial(MaterialIndex, Instance.OverrideMaterials[MaterialIndex]);
+		}
+
+		// Instanced component collision
+		CreateCollision(Instance.InstanceMesh->GetStaticMesh(), InstancedComponent, GenerateCollision);
+
+		// Attach and register instance component
+		InstancedComponent->AttachToComponent(VitruvioModelComponent, FAttachmentTransformRules::KeepRelativeTransform);
+		InstancedComponent->CreationMethod = EComponentCreationMethod::Instance;
+		InitialShapeSceneComponent->GetOwner()->AddOwnedComponent(InstancedComponent);
+		InstancedComponent->OnComponentCreated();
+		InstancedComponent->RegisterComponent();
+
+		if (!Result.GenerateOptions.bIgnoreMaterialReplacements)
+		{
+			ApplyMaterialReplacements(InstancedComponent, MaterialIdentifiers, MaterialReplacement);
+		}
+	}
+
+	OnHierarchyChanged.Broadcast(this);
+
+	bHasGeneratedModel = true;
+
+	SetInitialShapeVisible(!HideAfterGeneration);
+
+	if (Result.CallbackProxy)
+	{
+		Result.CallbackProxy->OnGenerateCompletedBlueprint.Broadcast();
+		Result.CallbackProxy->OnGenerateCompleted.Broadcast();
+		Result.CallbackProxy->SetReadyToDestroy();
+	}
+	OnGenerateCompleted.Broadcast();
 }
 
 void UVitruvioComponent::ProcessAttributesEvaluationQueue()
@@ -1058,6 +1067,14 @@ void UVitruvioComponent::Generate(UGenerateCompletedCallbackProxy* CallbackProxy
 {
 	Initialize();
 
+	// Since we can not abort an ongoing generate call from PRT, we invalidate the result and regenerate after the current generate call has
+	// completed.
+	if (GenerateToken)
+	{
+		GenerateToken->Invalidate();
+		GenerateToken.Reset();
+	}
+
 	if (bBatchGenerate)
 	{
 		UVitruvioBatchSubsystem* BatchGenerateSubsystem = GetWorld()->GetSubsystem<UVitruvioBatchSubsystem>();
@@ -1073,14 +1090,6 @@ void UVitruvioComponent::Generate(UGenerateCompletedCallbackProxy* CallbackProxy
 		return;
 	}
 
-	// Since we can not abort an ongoing generate call from PRT, we invalidate the result and regenerate after the current generate call has
-	// completed.
-	if (GenerateToken)
-	{
-		GenerateToken->Invalidate();
-		GenerateToken.Reset();
-	}
-
 	if (InitialShape)
 	{
 		FGenerateResult GenerateResult =
@@ -1093,7 +1102,8 @@ void UVitruvioComponent::Generate(UGenerateCompletedCallbackProxy* CallbackProxy
 		{
 			FScopeLock Lock(&Result.Token->Lock);
 
-			if (Result.Token->IsInvalid()) {
+			if (Result.Token->IsInvalid())
+			{
 				return;
 			}
 
@@ -1146,6 +1156,13 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 		if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UVitruvioComponent, bBatchGenerate))
 		{
 			bComponentPropertyChanged = true;
+
+			if (GenerateToken)
+			{
+				GenerateToken->Invalidate();
+				GenerateToken.Reset();
+			}
+
 			UVitruvioBatchSubsystem* VitruvioSubsystem = GetWorld()->GetSubsystem<UVitruvioBatchSubsystem>();
 
 			if (bBatchGenerate)
