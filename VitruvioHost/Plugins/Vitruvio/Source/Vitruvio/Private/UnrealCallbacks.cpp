@@ -213,7 +213,7 @@ FModelDescription ConvertMesh(const double* vtx, size_t vtxSize, const double* n
 	return ModelDescription;
 }
 
-TSharedPtr<FVitruvioMesh> CreateVitruvioMesh(const FString& Uri, const FString& Identifier, FMeshDescription Description, TArray<Vitruvio::FMaterialAttributeContainer> ModelMaterials)
+TSharedPtr<FVitruvioMesh> CreateVitruvioMesh(const FString& Identifier, FMeshDescription Description, TArray<Vitruvio::FMaterialAttributeContainer> ModelMaterials)
 {
 	bool bHasInvalidNormals;
 	bool bHasInvalidTangents;
@@ -232,7 +232,7 @@ TSharedPtr<FVitruvioMesh> CreateVitruvioMesh(const FString& Uri, const FString& 
 		FStaticMeshOperations::ComputeMikktTangents(Description, true);
 	}
 
-	return MakeShared<FVitruvioMesh>(Uri, Identifier, Description, ModelMaterials);
+	return MakeShared<FVitruvioMesh>(Identifier, Description, ModelMaterials);
 }
 
 TMap<FString, FReport> ExtractReports(const prt::AttributeMap* reports)
@@ -289,7 +289,7 @@ void UnrealCallbacks::init()
 	VertexUVs.SetNumChannels(8);
 }
 
-void UnrealCallbacks::addMesh(const wchar_t* name, const wchar_t* identifier, int32_t prototypeId, const wchar_t* uri, const double* vtx, size_t vtxSize, const double* nrm,
+void UnrealCallbacks::addMesh(const wchar_t* name, const wchar_t* meshId, int32_t prototypeId, const wchar_t* uri, const double* vtx, size_t vtxSize, const double* nrm,
                               size_t nrmSize, const uint32_t* faceVertexCounts, size_t faceVertexCountsSize, const uint32_t* vertexIndices,
                               size_t vertexIndicesSize, const uint32_t* normalIndices, size_t normalIndicesSize,
 
@@ -305,13 +305,13 @@ void UnrealCallbacks::addMesh(const wchar_t* name, const wchar_t* identifier, in
 	}
 	else
 	{
-		const FString UriString(uri);
 		const FString NameString(name);
+		const FString IdentifierString(meshId);
 
-		if (const TSharedPtr<FVitruvioMesh> Mesh = VitruvioModule::Get().GetMeshCache().Get(UriString))
+		if (const TSharedPtr<FVitruvioMesh> Mesh = VitruvioModule::Get().GetMeshCache().Get(IdentifierString))
 		{
-			InstanceMeshes.Add(prototypeId, Mesh);
-			InstanceNames.Add(prototypeId, NameString);
+			InstanceMeshes.Add(meshId, Mesh);
+			InstanceNames.Add(meshId, NameString);
 			return;
 		}
 		
@@ -321,13 +321,12 @@ void UnrealCallbacks::addMesh(const wchar_t* name, const wchar_t* identifier, in
 		if (!InstanceModelDescription.MeshDescription.IsEmpty())
 		{
 			InstanceModelDescription.MeshDescription.TriangulateMesh();
+			
+			TSharedPtr<FVitruvioMesh> Mesh = CreateVitruvioMesh(IdentifierString, InstanceModelDescription.MeshDescription, InstanceModelDescription.Materials);
+			Mesh = VitruvioModule::Get().GetMeshCache().InsertOrGet(IdentifierString, Mesh);
 
-			const FString IdentifierString(identifier);
-			TSharedPtr<FVitruvioMesh> Mesh = CreateVitruvioMesh(UriString, IdentifierString, InstanceModelDescription.MeshDescription, InstanceModelDescription.Materials);
-			Mesh = VitruvioModule::Get().GetMeshCache().InsertOrGet(UriString, Mesh);
-
-			InstanceMeshes.Add(prototypeId, Mesh);
-			InstanceNames.Add(prototypeId, NameString);
+			InstanceMeshes.Add(meshId, Mesh);
+			InstanceNames.Add(meshId, NameString);
 		}
 	}
 }
@@ -336,7 +335,7 @@ void UnrealCallbacks::finish()
 {
 	if (!ModelDescription.MeshDescription.IsEmpty())
 	{
-		GeneratedModel = CreateVitruvioMesh(TEXT("GeneratedMesh"), TEXT(""), ModelDescription.MeshDescription, ModelDescription.Materials);
+		GeneratedModel = CreateVitruvioMesh(TEXT("GeneratedMesh"), ModelDescription.MeshDescription, ModelDescription.Materials);
 	}
 }
 
@@ -351,7 +350,7 @@ void UnrealCallbacks::addReport(const prt::AttributeMap* reports)
 	Reports = ExtractReports(reports);
 }
 
-void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform, const prt::AttributeMap** instanceMaterials,
+void UnrealCallbacks::addInstance(int32_t prototypeId, const wchar_t* meshId, const double* transform, const prt::AttributeMap** instanceMaterials,
                                   size_t numInstanceMaterials)
 {
 	const FMatrix TransformationMat(GetColumn(transform, 0), GetColumn(transform, 1), GetColumn(transform, 2), GetColumn(transform, 3));
@@ -373,9 +372,9 @@ void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform, 
 	const FVector CEScale = FVector(Scale.X, Scale.Z, Scale.Y);
 	const FVector CETranslation = FVector(Translation.X, Translation.Z, Translation.Y) * PRT_TO_UE_SCALE;
 
-	if (!InstanceMeshes.Contains(prototypeId))
+	if (!InstanceMeshes.Contains(meshId))
 	{
-		UE_LOG(LogUnrealCallbacks, Warning, TEXT("No mesh found for prototypeId %d"), prototypeId);
+		UE_LOG(LogUnrealCallbacks, Warning, TEXT("No mesh found for meshId %s"), *meshId);
 		return;
 	}
 
@@ -391,7 +390,7 @@ void UnrealCallbacks::addInstance(int32_t prototypeId, const double* transform, 
 		}
 	}
 
-	Instances.FindOrAdd({prototypeId, MaterialOverrides}).Add(Transform);
+	Instances.FindOrAdd({meshId, MaterialOverrides}).Add(Transform);
 }
 
 prt::Status UnrealCallbacks::attrBool(size_t isIndex, int32_t shapeID, const wchar_t* key, bool value)

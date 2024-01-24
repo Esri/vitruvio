@@ -42,8 +42,8 @@ class UnrealCallbacks final : public IUnrealCallbacks
 	TArray<AttributeMapBuilderUPtr>& AttributeMapBuilders;
 
 	Vitruvio::FInstanceMap Instances;
-	TMap<int32, TSharedPtr<FVitruvioMesh>> InstanceMeshes;
-	TMap<int32, FString> InstanceNames;
+	TMap<FString, TSharedPtr<FVitruvioMesh>> InstanceMeshes;
+	TMap<FString, FString> InstanceNames;
 
 	FModelDescription ModelDescription;
 	TSharedPtr<FVitruvioMesh> GeneratedModel;
@@ -60,7 +60,7 @@ public:
 		return Instances;
 	}
 
-	const TMap<int32, TSharedPtr<FVitruvioMesh>>& GetInstanceMeshes() const
+	const TMap<FString, TSharedPtr<FVitruvioMesh>>& GetInstanceMeshes() const
 	{
 		return InstanceMeshes;
 	}
@@ -75,7 +75,7 @@ public:
 		return Reports;
 	}
 
-	const TMap<int32, FString>& GetInstanceNames() const
+	const TMap<FString, FString>& GetInstanceNames() const
 	{
 		return InstanceNames;
 	}
@@ -128,7 +128,7 @@ public:
 	 * @param numInstanceMaterials number of instance material overrides. Is either 0 or is equal to the number
 	 *                             of materials of the original mesh (by prototypeId)
 	 */
-	virtual void addInstance(int32_t prototypeId, const double* transform, const prt::AttributeMap** instanceMaterial,
+	virtual void addInstance(int32_t prototypeId, const wchar_t* meshId, const double* transform, const prt::AttributeMap** instanceMaterial,
 							 size_t numInstanceMaterials) override;
 
 	/**

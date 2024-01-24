@@ -439,20 +439,20 @@ FConvertedGenerateResult BuildResult(const FGenerateResultDescription& GenerateR
 
 	// Convert instances
 	TArray<FInstance> Instances;
-	for (const auto& Instance : GenerateResult.Instances)
+	for (const auto& [Key, Transform] : GenerateResult.Instances)
 	{
-		auto VitruvioMesh = GenerateResult.InstanceMeshes[Instance.Key.PrototypeId];
-		FString MeshName = GenerateResult.InstanceNames[Instance.Key.PrototypeId];
+		auto VitruvioMesh = GenerateResult.InstanceMeshes[Key.MeshId];
+		FString MeshName = GenerateResult.InstanceNames[Key.MeshId];
 		TArray<UMaterialInstanceDynamic*> OverrideMaterials;
 
-		for (size_t MaterialIndex = 0; MaterialIndex < Instance.Key.MaterialOverrides.Num(); ++MaterialIndex)
+		for (size_t MaterialIndex = 0; MaterialIndex < Key.MaterialOverrides.Num(); ++MaterialIndex)
 		{
-			const Vitruvio::FMaterialAttributeContainer& MaterialContainer = Instance.Key.MaterialOverrides[MaterialIndex];
+			const Vitruvio::FMaterialAttributeContainer& MaterialContainer = Key.MaterialOverrides[MaterialIndex];
 			OverrideMaterials.Add(CacheMaterial(OpaqueParent, MaskedParent, TranslucentParent, TextureCache, MaterialCache, MaterialContainer,
 												UniqueMaterialIdentifiers, MaterialIdentifiers, VitruvioMesh->GetStaticMesh()));
 		}
 
-		Instances.Add({MeshName, VitruvioMesh, OverrideMaterials, Instance.Value});
+		Instances.Add({MeshName, VitruvioMesh, OverrideMaterials, Transform});
 	}
 
 	return {GenerateResult.GeneratedModel, Instances, GenerateResult.Reports};

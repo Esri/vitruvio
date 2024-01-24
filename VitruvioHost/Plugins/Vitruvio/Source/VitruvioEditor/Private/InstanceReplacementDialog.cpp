@@ -150,8 +150,6 @@ void SInstanceReplacementDialogWidget::UpdateReplacementTable()
 
 	for (const auto& [Key, Replacement] : ReplacementDialogOptions->InstanceReplacements)
 	{
-		bool bValid = !Replacement->SourceMeshIdentifier.IsEmpty();
-
 		TSharedRef<SHorizontalBox> ReplacementBox = SNew(SHorizontalBox);
 		TSharedPtr<STextBlock> SourceMaterialText;
 
@@ -177,7 +175,6 @@ void SInstanceReplacementDialogWidget::UpdateReplacementTable()
 				SAssignNew(SourceMaterialText, STextBlock)
 				.Font(IDetailLayoutBuilder::GetDetailFont())
 				.Text(FText::FromString(MeshIdentifier))
-				.ColorAndOpacity(bValid ? FLinearColor(1.0f, 1.0f, 1.0f, 1.0f) : FLinearColor(0.4f, 0.4f, 0.4f, 1.0f))
 			]
 
 			+ SVerticalBox::Slot()
@@ -214,7 +211,6 @@ void SInstanceReplacementDialogWidget::UpdateReplacementTable()
 						}
 					})
 				.IsChecked(false)
-				.IsEnabled(bValid)
 				[
 					SNew(STextBlock)
 					.Font(IDetailLayoutBuilder::GetDetailFont())
@@ -239,7 +235,6 @@ void SInstanceReplacementDialogWidget::UpdateReplacementTable()
 
 		TSharedRef<IDetailsView> MeshReplacementsDetailsView = PropertyEditorModule.CreateDetailView(DetailsViewArgs);
 
-		MeshReplacementsDetailsView->SetEnabled(bValid);
 		MeshReplacementsDetailsView->SetObject(Replacement, true);
 
 		// clang-format off

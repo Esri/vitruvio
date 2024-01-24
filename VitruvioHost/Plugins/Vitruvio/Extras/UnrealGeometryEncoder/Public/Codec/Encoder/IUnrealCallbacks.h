@@ -27,7 +27,7 @@ public:
 
 	/**
 	 * @param name either the name of the inserted asset or the shape name
-	 * @param identifier unique identifier of this mesh if originates from an inserted asset or empty otherwise
+	 * @param meshId unique identifier of this mesh
 	 * @param prototypeId the id of the prototype or -1 of not cached
 	 * @param uri the uri of the inserted asset or empty otherwise
 	 * @param vtx vertex coordinate array
@@ -45,7 +45,7 @@ public:
 	 * types)
 	 */
 	// clang-format off
-	virtual void addMesh(const wchar_t* name, const wchar_t* identifier,
+	virtual void addMesh(const wchar_t* name, const wchar_t* meshId,
 	                     int32_t prototypeId, const wchar_t* uri,
 	                     const double* vtx, size_t vtxSize,
 	                     const double* nrm, size_t nrmSize,
@@ -66,14 +66,15 @@ public:
 	/**
 	 * Add a new instance with the given id, transform and an optional set of overriding attributes for this instance
 	 *
-	 * @param prototypeId the id of the prorotype. An @ref addMesh call with the specified prorotypeId will be called before
+	 * @param prototypeId the id of the prototype. An @ref addMesh call with the specified prototype id will be called before
 	 *                    the call to addInstance and addReport
+	 * @param meshId unique identifier of this mesh
 	 * @param transform the transformation matrix of this instance
 	 * @param instanceMaterial override materials for this instance
 	 * @param numInstanceMaterials number of instance material overrides. Is either 0 or is equal to the number
 	 *                             of materials of the original mesh (by prototypeId)
 	 */
-	virtual void addInstance(int32_t prototypeId, const double* transform, const prt::AttributeMap** instanceMaterial,
+	virtual void addInstance(int32_t prototypeId, const wchar_t* meshId, const double* transform, const prt::AttributeMap** instanceMaterial,
 							 size_t numInstanceMaterials) = 0;
 
 	virtual void init() = 0;
