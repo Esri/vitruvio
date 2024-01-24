@@ -17,7 +17,6 @@
 
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Misc/Paths.h"
-#include "PhysicsCore/Public/Interface_CollisionDataProviderCore.h"
 
 #include "prt/AttributeMap.h"
 
@@ -147,8 +146,6 @@ using FInstanceMap = TMap<FInstanceCacheKey, TArray<FTransform>>;
 
 struct FTextureData
 {
-	FTextureData() = default;
-
 	UTexture2D* Texture = nullptr;
 	uint32 NumChannels = 0;
 	FDateTime LoadTime;

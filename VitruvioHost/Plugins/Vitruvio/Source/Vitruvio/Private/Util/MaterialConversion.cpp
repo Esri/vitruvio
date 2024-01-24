@@ -16,10 +16,10 @@
 #pragma once
 
 #include "MaterialConversion.h"
-#include "Engine/Public/TextureResource.h"
+#include "Runtime/Engine/Public/TextureResource.h"
 #include "Engine/Texture2D.h"
 #include "HAL/PlatformFileManager.h"
-#include "ImageCore/Public/ImageCore.h"
+#include "Runtime/ImageCore/Public/ImageCore.h"
 #include "VitruvioModule.h"
 #include "VitruvioTypes.h"
 

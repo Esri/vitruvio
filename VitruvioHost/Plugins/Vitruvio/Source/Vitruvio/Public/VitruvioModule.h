@@ -26,12 +26,12 @@
 
 #include "Engine/StaticMesh.h"
 #include "HAL/ThreadSafeCounter.h"
+#include "HAL/ThreadSafeBool.h"
 #include "Modules/ModuleManager.h"
 
 #include "UnrealLogHandler.h"
 #include "VitruvioTypes.h"
 
-#include <map>
 #include <memory>
 #include <string>
 

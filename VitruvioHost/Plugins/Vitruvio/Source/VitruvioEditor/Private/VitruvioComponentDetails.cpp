@@ -239,7 +239,7 @@ TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(Attr* Attribute, TSharedPt
 	auto Annotation = Attribute->GetRangeAnnotation();
 
 	auto OnValueCommit = [FloatProperty](double Value, ETextCommit::Type Type) {
-		if (FloatProperty->GetPropertyNode().IsValid())
+		if (FloatProperty->IsValidHandle())
 		{
 			FloatProperty->SetValue(Value);
 		}
@@ -641,7 +641,7 @@ void SPropertyComboBox<T>::Construct(const FArguments& InArgs)
 		.Content()
 		[
 			SNew(STextBlock)
-			.Text_Lambda([=]
+			.Text_Lambda([this]
 			{
 				auto SelectedItem = SComboBox<TSharedPtr<T>>::GetSelectedItem();
 				return SelectedItem ? FText::FromString(ValueToString(SelectedItem)) : FText::FromString("");

@@ -21,7 +21,6 @@
 #include "Report.h"
 #include "VitruvioTypes.h"
 
-#include "Core.h"
 #include "Engine/StaticMesh.h"
 #include "MeshDescription.h"
 #include "StaticMeshAttributes.h"

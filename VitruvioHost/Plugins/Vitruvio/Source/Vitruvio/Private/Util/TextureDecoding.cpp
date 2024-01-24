@@ -193,6 +193,6 @@ FTextureData DecodeTexture(UObject* Outer, const FString& Key, const FString& Pa
 	NewTexture->UpdateResource();
 
 	const auto TimeStamp = FPlatformFileManager::Get().GetPlatformFile().GetAccessTimeStamp(*Path);
-	return {NewTexture, static_cast<uint32>(TextureMetadata.Bands), TimeStamp};
+	return FTextureData { NewTexture, static_cast<uint32>(TextureMetadata.Bands), TimeStamp };
 }
 } // namespace Vitruvio

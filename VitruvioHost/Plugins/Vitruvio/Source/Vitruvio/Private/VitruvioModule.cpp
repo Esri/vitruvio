@@ -15,19 +15,21 @@
 
 #include "VitruvioModule.h"
 
-#include "AsyncHelpers.h"
+#include "prt/API.h"
+
 #include "PRTTypes.h"
 #include "PRTUtils.h"
+#include "TextureDecoding.h"
 #include "UnrealCallbacks.h"
 
 #include "Util/PolygonWindings.h"
 
-#include "prt/API.h"
-
+#include "Async/Async.h"
 #include "HAL/FileManager.h"
+#include "HAL/PlatformFileManager.h"
 #include "Interfaces/IPluginManager.h"
 #include "Modules/ModuleManager.h"
-#include "TextureDecoding.h"
+
 #include "UObject/UObjectBaseUtility.h"
 
 #define LOCTEXT_NAMESPACE "VitruvioModule"
@@ -392,7 +394,7 @@ FBatchGenerateResult VitruvioModule::BatchGenerateAsync(TArray<FInitialShape> In
     	
 	CHECK_PRT_INITIALIZED_ASYNC(FBatchGenerateResult, Token)
 
-	FBatchGenerateResult::FFutureType ResultFuture = Async(EAsyncExecution::Thread, [=, InitialShapes = MoveTemp(InitialShapes)]() mutable {
+	FBatchGenerateResult::FFutureType ResultFuture = Async(EAsyncExecution::Thread, [this, Token, InitialShapes = MoveTemp(InitialShapes)]() mutable {
 		FGenerateResultDescription Result = BatchGenerate(MoveTemp(InitialShapes));
 		return FBatchGenerateResult::ResultType { Token, MoveTemp(Result) };
 	});
@@ -562,7 +564,7 @@ FAttributeMapResult VitruvioModule::EvaluateRuleAttributesAsync(FInitialShape In
 
 	LoadAttributesCounter.Increment();
 
-	FAttributeMapResult::FFutureType AttributeMapPtrFuture = Async(EAsyncExecution::Thread, [=, InitialShape = MoveTemp(InitialShape)]() mutable {
+	FAttributeMapResult::FFutureType AttributeMapPtrFuture = Async(EAsyncExecution::Thread, [this, InvalidationToken, InitialShape = MoveTemp(InitialShape)]() mutable {
 		const ResolveMapSPtr ResolveMap = LoadResolveMapAsync(InitialShape.RulePackage).Get();
 
 		const std::wstring RuleFile = ResolveMap->findCGBKey();
