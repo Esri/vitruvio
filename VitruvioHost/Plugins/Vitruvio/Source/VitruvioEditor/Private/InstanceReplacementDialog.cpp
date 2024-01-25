@@ -262,7 +262,6 @@ FReply SInstanceReplacementDialogWidget::OnReplacementConfirmed()
 {
 	if (ReplacementDialogOptions->TargetReplacementAsset)
 	{
-
 		for (const auto& Replacement : ReplacementDialogOptions->InstanceReplacements)
 		{
 			if (Replacement.Value->Replacements.IsEmpty())
@@ -285,6 +284,8 @@ FReply SInstanceReplacementDialogWidget::OnReplacementConfirmed()
 		}
 
 		bReplacementsApplied = true;
+
+		ReplacementDialogOptions->TargetReplacementAsset->MarkPackageDirty();
 	}
 
 	TArray<UVitruvioComponent*> ApplyToComponents;
