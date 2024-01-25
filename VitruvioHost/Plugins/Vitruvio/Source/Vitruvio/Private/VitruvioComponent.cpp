@@ -402,7 +402,7 @@ TSet<FInstance> ApplyInstanceReplacements(UGeneratedModelStaticMeshComponent* Ge
 
 				if (ReplacementOption.bRandomRotation)
 				{
-					ModifiedTransform.SetScale3D(RandomVector(ReplacementOption.MinRotation, ReplacementOption.MaxRotation));
+					ModifiedTransform.SetRotation(FQuat::MakeFromEuler(RandomVector(ReplacementOption.MinRotation, ReplacementOption.MaxRotation)));
 				}
 
 				InstancedComponents[ComponentIndex]->AddInstance(ModifiedTransform);
