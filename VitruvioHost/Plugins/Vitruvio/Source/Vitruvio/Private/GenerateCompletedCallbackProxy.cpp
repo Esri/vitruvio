@@ -30,6 +30,8 @@ void CopyInitialShapeSceneComponent(AActor* OldActor, AActor* NewActor)
 		{
 			DefaultInitialShape->CopySceneComponent(OldActor, NewActor);
 		}
+
+		break;
 	}
 }
 

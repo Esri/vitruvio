@@ -27,9 +27,9 @@
 namespace
 {
 template <typename T>
-T* AttachComponent(AActor* Owner, const FString& Name, bool bAttachToRoot = true)
+T* AttachComponent(AActor* Owner, const FString& Name, bool bAttachToRoot = true, EObjectFlags Flags = RF_DuplicateTransient | RF_Transient | RF_TextExportTransient)
 {
-	T* Component = NewObject<T>(Owner, *Name, RF_DuplicateTransient | RF_Transient | RF_TextExportTransient);
+	T* Component = NewObject<T>(Owner, *Name, Flags);
 	Component->Mobility = EComponentMobility::Movable;
 	Owner->AddOwnedComponent(Component);
 	Component->CreationMethod = EComponentCreationMethod::Instance;
@@ -520,14 +520,12 @@ bool UStaticMeshInitialShape::CanConstructFrom(AActor* Owner) const
 USceneComponent* UStaticMeshInitialShape::CopySceneComponent(AActor* OldActor, AActor* NewActor) const
 {
 	const UStaticMeshComponent* OldStaticMeshComponent = OldActor->FindComponentByClass<UStaticMeshComponent>();
-	USceneComponent* RootComponent = AttachComponent<USceneComponent>(NewActor, TEXT("RootComponent"), false);
-	NewActor->SetRootComponent(RootComponent);
 
-	UStaticMeshComponent* NewStaticMeshComponent = AttachComponent<UStaticMeshComponent>(NewActor, TEXT("InitialShapeStaticMesh"), true);
+	UStaticMeshComponent* NewStaticMeshComponent = AttachComponent<UStaticMeshComponent>(NewActor, TEXT("InitialShapeStaticMesh"), true, RF_Public);
 	if (OldStaticMeshComponent)
 	{
 		NewStaticMeshComponent->SetStaticMesh(OldStaticMeshComponent->GetStaticMesh());
-		RootComponent->SetWorldTransform(OldStaticMeshComponent->GetComponentTransform());
+		NewActor->GetRootComponent()->SetWorldTransform(OldStaticMeshComponent->GetComponentTransform());
 	}
 
 	return NewStaticMeshComponent;
@@ -546,15 +544,13 @@ bool USplineInitialShape::CanConstructFrom(AActor* Owner) const
 USceneComponent* USplineInitialShape::CopySceneComponent(AActor* OldActor, AActor* NewActor) const
 {
 	const USplineComponent* OldSplineComponent = OldActor->FindComponentByClass<USplineComponent>();
-	USceneComponent* RootComponent = AttachComponent<USceneComponent>(NewActor, TEXT("RootComponent"), false);
-	NewActor->SetRootComponent(RootComponent);
 
-	USplineComponent* NewSplineComponent = AttachComponent<USplineComponent>(NewActor, TEXT("InitialShapeSpline"), true);
+	USplineComponent* NewSplineComponent = AttachComponent<USplineComponent>(NewActor, TEXT("InitialShapeSpline"), true, RF_Public);
 	NewSplineComponent->SetClosedLoop(true);
 	if (OldSplineComponent)
 	{
 		NewSplineComponent->SplineCurves = OldSplineComponent->SplineCurves;
-		RootComponent->SetWorldTransform(OldSplineComponent->GetComponentTransform());
+		NewActor->GetRootComponent()->SetWorldTransform(OldSplineComponent->GetComponentTransform());
 	}
 	return NewSplineComponent;
 }
