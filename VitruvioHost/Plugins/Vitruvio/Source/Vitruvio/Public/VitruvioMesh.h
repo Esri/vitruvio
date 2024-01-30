@@ -39,7 +39,6 @@ struct FCollisionData
 
 class FVitruvioMesh
 {
-	FString Uri;
 	FString Identifier;
 
 	FMeshDescription MeshDescription;
@@ -49,18 +48,13 @@ class FVitruvioMesh
 	FCollisionData CollisionData;
 
 public:
-	FVitruvioMesh(const FString& Uri, const FString& Identifier, const FMeshDescription& MeshDescription,
+	FVitruvioMesh(const FString& Identifier, const FMeshDescription& MeshDescription,
 				  const TArray<Vitruvio::FMaterialAttributeContainer>& Materials)
-		: Uri(Uri), Identifier(Identifier), MeshDescription(MeshDescription), Materials(Materials), StaticMesh(nullptr)
+		: Identifier(Identifier), MeshDescription(MeshDescription), Materials(Materials), StaticMesh(nullptr)
 	{
 	}
 
 	~FVitruvioMesh();
-
-	FString GetUri() const
-	{
-		return Uri;
-	}
 
 	FString GetIdentifier() const
 	{

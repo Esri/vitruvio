@@ -61,7 +61,7 @@ private:
     prtx::NamePreparator::NamespacePtr mNsMesh;
     prtx::NamePreparator::NamespacePtr mNsMaterial;
     	
-	std::set<int> serializedPrototypes;
+	std::set<std::wstring> serializedPrototypes;
 };
 
 class UnrealGeometryEncoderFactory final : public prtx::EncoderFactory, public prtx::Singleton<UnrealGeometryEncoderFactory>

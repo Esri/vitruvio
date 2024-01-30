@@ -127,14 +127,14 @@ struct FMaterialAttributeContainer
 
 struct FInstanceCacheKey
 {
-	int32 PrototypeId;
+	FString MeshId;
 	TArray<Vitruvio::FMaterialAttributeContainer> MaterialOverrides;
 
 	friend uint32 GetTypeHash(const FInstanceCacheKey& Object);
 
 	friend bool operator==(const FInstanceCacheKey& Lhs, const FInstanceCacheKey& RHS)
 	{
-		return Lhs.PrototypeId == RHS.PrototypeId && Lhs.MaterialOverrides == RHS.MaterialOverrides;
+		return Lhs.MeshId == RHS.MeshId && Lhs.MaterialOverrides == RHS.MaterialOverrides;
 	}
 
 	friend bool operator!=(const FInstanceCacheKey& Lhs, const FInstanceCacheKey& RHS)

@@ -42,8 +42,8 @@ struct FGenerateResultDescription
 	TSharedPtr<FVitruvioMesh> GeneratedModel;
 	
 	Vitruvio::FInstanceMap Instances;
-	TMap<int32, TSharedPtr<FVitruvioMesh>> InstanceMeshes;
-	TMap<int32, FString> InstanceNames;
+	TMap<FString, TSharedPtr<FVitruvioMesh>> InstanceMeshes;
+	TMap<FString, FString> InstanceNames;
 	
 	TMap<FString, FReport> Reports;
 };

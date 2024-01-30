@@ -148,14 +148,14 @@ uint32_t scanValidTextures(const prtx::MaterialPtr& mat)
 		return highestUVSet + 1;
 }
 
-struct InstanceName
+struct InstanceIdentifier
 {
 	std::wstring name;
-	std::wstring identifier;
+	std::wstring meshId;
 };
 
 // use shape name by default and if the instance originates from a file we use the file name for better readability
-InstanceName createInstanceName(const prtx::EncodePreparator::FinalizedInstance& fi)
+InstanceIdentifier createInstanceIdentifier(const prtx::EncodePreparator::FinalizedInstance& fi)
 {
 	const auto geometry = fi.getGeometry();
 	const auto uri = geometry->getURI();
@@ -169,7 +169,7 @@ InstanceName createInstanceName(const prtx::EncodePreparator::FinalizedInstance&
 	if (!meshName.empty() && meshName.back() == '.')
 		meshName = meshName.substr(0, meshName.length() - 1);
 
-	return { meshName, L"" };
+	return { meshName, uri->getPath() + L"/" + meshName};
 }
 
 std::wstring uriToPath(const prtx::TexturePtr& t)
@@ -520,7 +520,7 @@ SerializedGeometry serializeGeometry(const prtx::GeometryPtrVector& geometries, 
 	return sg;
 }
 
-void encodeMesh(IUnrealCallbacks* cb, const SerializedGeometry& sg, wchar_t const* name, wchar_t const* identifier, int32_t prototypeIndex, const std::wstring& uri,
+void encodeMesh(IUnrealCallbacks* cb, const SerializedGeometry& sg, wchar_t const* name, wchar_t const* meshId, int32_t prototypeIndex, const std::wstring& uri,
 				prtx::GeometryPtrVector geometries, std::vector<prtx::MaterialPtrVector> materials)
 {
 	auto puvs = toPtrVec(sg.uvs);
@@ -549,7 +549,7 @@ void encodeMesh(IUnrealCallbacks* cb, const SerializedGeometry& sg, wchar_t cons
 		++matIt;
 	}
 
-	cb->addMesh(name, identifier, prototypeIndex, uri.c_str(), sg.coords.data(), sg.coords.size(), sg.normals.data(), sg.normals.size(),
+	cb->addMesh(name, meshId, prototypeIndex, uri.c_str(), sg.coords.data(), sg.coords.size(), sg.normals.data(), sg.normals.size(),
 				sg.faceVertexCounts.data(), sg.faceVertexCounts.size(), sg.vertexIndices.data(), sg.vertexIndices.size(), sg.normalIndices.data(),
 				sg.normalIndices.size(),
 
@@ -631,14 +631,14 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::EncodePreparator::Instan
 
 			AttributeMapNOPtrVectorOwner instMaterialsAttributeMap;
 
-			if (serializedPrototypes.find(inst.getPrototypeIndex()) == serializedPrototypes.end())
+			InstanceIdentifier identifier = createInstanceIdentifier(inst);
+			
+			if (serializedPrototypes.find(identifier.meshId) == serializedPrototypes.end())
 			{
 				const std::wstring uri = instGeom->getURI()->wstring();
 				const SerializedGeometry sg = serializeGeometry({instGeom}, {instMaterials});
-				auto instName = createInstanceName(inst);
-
-				encodeMesh(cb, sg, instName.name.c_str(), instName.identifier.c_str(), inst.getPrototypeIndex(), uri, {instGeom}, {instMaterials});
-				serializedPrototypes.insert(inst.getPrototypeIndex());
+				encodeMesh(cb, sg, identifier.name.c_str(), identifier.meshId.c_str(), inst.getPrototypeIndex(), uri, {instGeom}, {instMaterials});
+				serializedPrototypes.insert(identifier.meshId);
 			}
 
 			const prtx::MeshPtrVector& meshes = instGeom->getMeshes();
@@ -650,7 +650,7 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::EncodePreparator::Instan
 				instMaterialsAttributeMap.v.push_back(instanceMatAmb->createAttributeMapAndReset());
 			}
 
-			cb->addInstance(inst.getPrototypeIndex(), inst.getTransformation().data(), instMaterialsAttributeMap.v.data(),
+			cb->addInstance(inst.getPrototypeIndex(), identifier.meshId.c_str(), inst.getTransformation().data(), instMaterialsAttributeMap.v.data(),
 							instMaterialsAttributeMap.v.size());
 		}
 		else

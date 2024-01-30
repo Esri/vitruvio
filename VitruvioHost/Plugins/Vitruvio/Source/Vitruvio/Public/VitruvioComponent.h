@@ -65,12 +65,12 @@ struct FInstance
 
 	friend FORCEINLINE uint32 GetTypeHash(const FInstance& Request)
 	{
-		return GetTypeHash(Request.InstanceMesh->GetUri());
+		return GetTypeHash(Request.InstanceMesh->GetIdentifier());
 	}
 
 	friend bool operator==(const FInstance& Lhs, const FInstance& Rhs)
 	{
-		return Lhs.InstanceMesh && Rhs.InstanceMesh ? Lhs.InstanceMesh->GetUri() == Rhs.InstanceMesh->GetUri() : false;
+		return Lhs.InstanceMesh && Rhs.InstanceMesh ? Lhs.InstanceMesh->GetIdentifier() == Rhs.InstanceMesh->GetIdentifier() : false;
 	}
 
 	friend bool operator!=(const FInstance& Lhs, const FInstance& Rhs)

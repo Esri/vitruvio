@@ -15,23 +15,23 @@
 
 #include "MeshCache.h"
 
-TSharedPtr<FVitruvioMesh> FMeshCache::Get(const FString& Uri)
+TSharedPtr<FVitruvioMesh> FMeshCache::Get(const FString& Id)
 {
 	FScopeLock Lock(&MeshCacheCriticalSection);
-	const auto Result = Cache.Find(Uri);
+	const auto Result = Cache.Find(Id);
 
 	return Result ? *Result : TSharedPtr<FVitruvioMesh>{};
 }
 
-TSharedPtr<FVitruvioMesh> FMeshCache::InsertOrGet(const FString& Uri, const TSharedPtr<FVitruvioMesh>& Mesh)
+TSharedPtr<FVitruvioMesh> FMeshCache::InsertOrGet(const FString& Id, const TSharedPtr<FVitruvioMesh>& Mesh)
 {
 	FScopeLock Lock(&MeshCacheCriticalSection);
-	const auto Result = Cache.Find(Uri);
+	const auto Result = Cache.Find(Id);
 	if (Result)
 	{
 		return *Result;
 	}
-	Cache.Add(Uri, Mesh);
+	Cache.Add(Id, Mesh);
 	return Mesh;
 }
 
