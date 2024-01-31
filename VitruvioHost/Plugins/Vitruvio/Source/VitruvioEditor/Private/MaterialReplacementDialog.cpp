@@ -202,6 +202,11 @@ void SMaterialReplacementDialogWidget::UpdateReplacementTable()
 						[](const UMaterialInterface* MaterialInterface) { return MaterialInterface->GetName(); });
 		FString SourceMaterialNames = FString::Join(SourceMaterialNamesArray, TEXT(", "));
 
+		static const FSlateBrush* WarningBrush = FAppStyle::Get().GetBrush("Icons.AlertCircle");
+		static const FName WarningColorStyle("Colors.AccentYellow");
+
+		bool bIsDefaultMaterial = Replacement->MaterialIdentifier.StartsWith("CityEngineMaterial");
+		
 		// clang-format off
 		ReplacementBox->AddSlot()
 		.VAlign(VAlign_Top)
@@ -211,9 +216,28 @@ void SMaterialReplacementDialogWidget::UpdateReplacementTable()
 			SVerticalBox::Slot()
 			.AutoHeight()
 			[
-				SAssignNew(SourceMaterialText, STextBlock)
-				.Font(IDetailLayoutBuilder::GetDetailFont())
-				.Text(FText::FromString(Key))
+				SNew(SHorizontalBox) 
+				
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.Padding(0, 0, 4 ,0)
+				.VAlign(VAlign_Center)
+				[
+					SNew(SImage)
+					.Image(WarningBrush)
+					.ColorAndOpacity(FAppStyle::Get().GetSlateColor(WarningColorStyle))
+					.ToolTipText(FText::FromString("Materials with the default material name are discouraged from replacements as they are not unique. Consider setting an explicit material name in CGA using the material.name attribute."))
+					.Visibility(bIsDefaultMaterial ? EVisibility::Visible : EVisibility::Collapsed)
+				]
+				
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				[
+					SAssignNew(SourceMaterialText, STextBlock)
+					.Font(IDetailLayoutBuilder::GetDetailFont())
+					.Text(FText::FromString(Key))
+				]
 			]
 
 			+ SVerticalBox::Slot()
