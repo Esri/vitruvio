@@ -362,7 +362,10 @@ FReply SMaterialReplacementDialogWidget::OnReplacementConfirmed()
 			{
 				if (UVitruvioComponent* Component = It->FindComponentByClass<UVitruvioComponent>())
 				{
-					ApplyToComponents.Add(Component);
+					if (Component->GetRpk() == VitruvioComponent->GetRpk())
+					{
+						ApplyToComponents.Add(Component);
+					}
 				}
 			}
 		}
