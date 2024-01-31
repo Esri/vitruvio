@@ -3,11 +3,37 @@
 #include "ReplacementDialog.h"
 
 #include "DetailLayoutBuilder.h"
+#include "EngineUtils.h"
 #include "Framework/Docking/TabManager.h"
 #include "ISinglePropertyView.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SScrollBox.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
+
+TArray<UVitruvioComponent*> SReplacementDialogWidget::GetVitruvioActorsToApplyReplacements(bool bIncludeAll) const
+{
+	TArray<UVitruvioComponent*> ApplyToComponents;
+	ApplyToComponents.Add(VitruvioComponent);
+
+	if (bIncludeAll)
+	{
+		TArray<AActor*> Actors;
+		if (const UWorld* World = GEngine->GetWorldFromContextObject(VitruvioComponent, EGetWorldErrorMode::LogAndReturnNull))
+		{
+			for (TActorIterator<AActor> It(World, AActor::StaticClass()); It; ++It)
+			{
+				if (UVitruvioComponent* Component = It->FindComponentByClass<UVitruvioComponent>())
+				{
+					if (Component->GetRpk() == VitruvioComponent->GetRpk())
+					{
+						ApplyToComponents.Add(Component);
+					}
+				}
+			}
+		}
+	}
+	return ApplyToComponents;
+}
 
 void SReplacementDialogWidget::AddCommonDialogOptions(const TSharedPtr<SVerticalBox>& Content)
 {

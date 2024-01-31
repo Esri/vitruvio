@@ -30,6 +30,7 @@
 #include "Framework/Notifications/NotificationManager.h"
 #include "GenerateCompletedCallbackProxy.h"
 #include "IAssetTools.h"
+#include "ReplacementDialog.h"
 #include "VitruvioBatchActorDetails.h"
 #include "VitruvioBatchGridVisualizerActor.h"
 #include "VitruvioBatchSubsystem.h"
@@ -290,6 +291,17 @@ void VitruvioEditorModule::OnMapChanged(UWorld* World, EMapChangeType ChangeType
 				{
 					AssetEditorSubsystem->CloseAllEditorsForAsset(EditedAsset);
 				}
+			}
+		}
+
+		// Close all open replacement dialogs
+		TArray<TSharedRef<SWindow>> Windows;
+		FSlateApplication::Get().GetAllVisibleWindowsOrdered(Windows);
+		for (const auto& Window :  Windows)
+		{
+			if (Window->GetTag() == "ReplacementDialog")
+			{
+				Window->RequestDestroyWindow();
 			}
 		}
 	}

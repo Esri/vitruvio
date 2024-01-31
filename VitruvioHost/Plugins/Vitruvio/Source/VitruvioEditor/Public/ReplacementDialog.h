@@ -45,6 +45,8 @@ protected:
 	virtual void AddDialogOptions(const TSharedPtr<SVerticalBox>& Content) = 0;
 	virtual void OnWindowClosed() = 0;
 
+	TArray<UVitruvioComponent*> GetVitruvioActorsToApplyReplacements(bool bIncludeAll) const;
+
 	template <typename TAsset, typename TDialogOptions>
 	void CreateNewAsset(TDialogOptions* DialogOptions)
 	{
@@ -83,6 +85,7 @@ public:
 			.ClientSize(DialogSize)
 			.IsTopmostWindow(true)
 			.SupportsMaximize(false)
+			.Tag("ReplacementDialog")
 			.SupportsMinimize(false);
 		
 		PickerWindow->GetOnWindowClosedEvent().AddLambda(OnWindowClosed);
