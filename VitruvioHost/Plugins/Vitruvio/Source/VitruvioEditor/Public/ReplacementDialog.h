@@ -83,6 +83,7 @@ public:
 			.ClientSize(DialogSize)
 			.IsTopmostWindow(true)
 			.SupportsMaximize(false)
+			.Tag("ReplacementDialog")
 			.SupportsMinimize(false);
 		
 		PickerWindow->GetOnWindowClosedEvent().AddLambda(OnWindowClosed);
