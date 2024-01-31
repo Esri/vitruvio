@@ -346,6 +346,8 @@ FReply SMaterialReplacementDialogWidget::OnReplacementConfirmed()
 		}
 
 		bReplacementsApplied = true;
+
+		ReplacementDialogOptions->TargetReplacementAsset->MarkPackageDirty();
 	}
 
 	TArray<UVitruvioComponent*> ApplyToComponents;
