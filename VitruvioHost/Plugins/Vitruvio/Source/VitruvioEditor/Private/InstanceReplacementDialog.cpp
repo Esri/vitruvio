@@ -288,27 +288,7 @@ FReply SInstanceReplacementDialogWidget::OnReplacementConfirmed()
 		ReplacementDialogOptions->TargetReplacementAsset->MarkPackageDirty();
 	}
 
-	TArray<UVitruvioComponent*> ApplyToComponents;
-	ApplyToComponents.Add(VitruvioComponent);
-
-	if (ApplyToAllVitruvioActorsCheckBox->IsChecked())
-	{
-		TArray<AActor*> Actors;
-		if (const UWorld* World = GEngine->GetWorldFromContextObject(VitruvioComponent, EGetWorldErrorMode::LogAndReturnNull))
-		{
-			for (TActorIterator<AActor> It(World, AActor::StaticClass()); It; ++It)
-			{
-				if (UVitruvioComponent* Component = It->FindComponentByClass<UVitruvioComponent>())
-				{
-					if (Component->GetRpk() == VitruvioComponent->GetRpk())
-					{
-						ApplyToComponents.Add(Component);
-					}
-				}
-			}
-		}
-	}
-
+	TArray<UVitruvioComponent*> ApplyToComponents = GetVitruvioActorsToApplyReplacements(ApplyToAllVitruvioActorsCheckBox->IsChecked());
 	for (UVitruvioComponent* Component : ApplyToComponents)
 	{
 		Component->InstanceReplacement = ReplacementDialogOptions->TargetReplacementAsset;
