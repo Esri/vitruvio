@@ -44,16 +44,17 @@
 namespace
 {
 
-bool HasAnyViableVitruvioActor(TArray<AActor*> Actors)
+bool HasAnyViableVitruvioActor(const TArray<AActor*>& Actors)
 {
 	return Algo::AllOf(Actors, [](AActor* In) { return UVitruvioBlueprintLibrary::CanConvertToVitruvioActor(In); });
 }
 
-bool HasAnyVitruvioActor(TArray<AActor*> Actors)
+bool HasAnyVitruvioActor(const TArray<AActor*>& Actors)
 {
 	return Algo::AnyOf(Actors, [](AActor* In) {
-		UVitruvioComponent* VitruvioComponent = In->FindComponentByClass<UVitruvioComponent>();
-		return VitruvioComponent != nullptr;
+		const UVitruvioComponent* VitruvioComponent = In->FindComponentByClass<UVitruvioComponent>();
+		const AVitruvioBatchActor* VitruvioBatchActor = Cast<AVitruvioBatchActor>(In);
+		return VitruvioComponent || VitruvioBatchActor;
 	});
 }
 

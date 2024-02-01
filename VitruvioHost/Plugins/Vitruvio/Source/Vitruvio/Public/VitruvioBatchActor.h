@@ -143,9 +143,12 @@ public:
 
 	void RegisterVitruvioComponent(UVitruvioComponent* VitruvioComponent);
 	void UnregisterVitruvioComponent(UVitruvioComponent* VitruvioComponent);
+	void UnregisterAllVitruvioComponents();
+	TSet<UVitruvioComponent*> GetVitruvioComponents();
+
 	void Generate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 	void GenerateAll(UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
-
+	
 	FIntPoint GetPosition(const UVitruvioComponent* VitruvioComponent) const;
 	
 #if WITH_EDITOR

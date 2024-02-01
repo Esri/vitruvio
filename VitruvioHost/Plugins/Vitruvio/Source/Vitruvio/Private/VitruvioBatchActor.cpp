@@ -385,6 +385,17 @@ void AVitruvioBatchActor::UnregisterVitruvioComponent(UVitruvioComponent* Vitruv
 	Grid.Unregister(VitruvioComponent);
 }
 
+void AVitruvioBatchActor::UnregisterAllVitruvioComponents()
+{
+	Grid.Clear();
+	VitruvioComponents.Empty();
+}
+
+TSet<UVitruvioComponent*> AVitruvioBatchActor::GetVitruvioComponents()
+{
+	return VitruvioComponents;
+}
+
 void AVitruvioBatchActor::Generate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
 	Grid.MarkForGenerate(VitruvioComponent, CallbackProxy);

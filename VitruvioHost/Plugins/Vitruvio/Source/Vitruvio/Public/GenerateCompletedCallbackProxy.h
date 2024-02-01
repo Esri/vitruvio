@@ -25,6 +25,27 @@
 class AVitruvioActor;
 class URulePackage;
 
+struct FExecuteAfterCountdown
+{
+	FCriticalSection CountDownLock;
+	int32 Count;
+	TFunction<void()> Fun;
+
+	FExecuteAfterCountdown(int32 Count, TFunction<void()> Fun) : Count(Count), Fun(Fun) {}
+
+	FExecuteAfterCountdown(const FExecuteAfterCountdown& Other) : Count(Other.Count), Fun(Other.Fun) {}
+
+	void operator()()
+	{
+		FScopeLock Lock(&CountDownLock);
+		Count--;
+		if (Count <= 0)
+		{
+			Fun();
+		}
+	}
+};
+
 UCLASS()
 class VITRUVIO_API UGenerateCompletedCallbackProxy final : public UBlueprintAsyncActionBase
 {
