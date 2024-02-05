@@ -284,6 +284,148 @@ UStaticMesh* SaveStaticMesh(UStaticMesh* Mesh, const FString& Path, FStaticMeshC
 	MeshCache.Add(Mesh, PersistedMesh);
 	return PersistedMesh;
 }
+
+void CookActors(const TArray<AActor*>& Actors, const FString& CookPath)
+{
+	FScopedSlowTask CookTask(Actors.Num(), FText::FromString("Cooking models..."));
+	CookTask.MakeDialog();
+
+	FMaterialCache MaterialCache;
+	FTextureCache TextureCache;
+	FStaticMeshCache MeshCache;
+
+	for (AActor* Actor : Actors)
+	{
+		CookTask.EnterProgressFrame(1);
+
+		UVitruvioComponent* VitruvioComponent = Actor->FindComponentByClass<UVitruvioComponent>();
+		AVitruvioBatchActor* VitruvioBatchActor = Cast<AVitruvioBatchActor>(Actor);
+		if (!VitruvioComponent && !VitruvioBatchActor)
+		{
+			continue;
+		}
+		
+		if (VitruvioComponent && VitruvioComponent->bBatchGenerate)
+		{
+			continue;
+		}
+
+		AActor* OldAttachParent = Actor->GetAttachParentActor();
+
+		// Spawn new Actor with persisted geometry
+		AActor* CookedActor = Actor->GetWorld()->SpawnActor<AActor>(Actor->GetActorLocation(), Actor->GetActorRotation());
+
+		USceneComponent* RootComponent = NewObject<USceneComponent>(CookedActor, "Root");
+		RootComponent->SetMobility(EComponentMobility::Movable);
+		CookedActor->SetRootComponent(RootComponent);
+		CookedActor->AddOwnedComponent(RootComponent);
+
+		RootComponent->SetWorldRotation(Actor->GetActorRotation());
+		RootComponent->SetWorldLocation(Actor->GetActorLocation());
+		RootComponent->OnComponentCreated();
+		RootComponent->RegisterComponent();
+
+		if (OldAttachParent)
+		{
+			CookedActor->AttachToActor(OldAttachParent, FAttachmentTransformRules::KeepWorldTransform);
+		}
+
+		// Persist Generated Models
+		TArray<UGeneratedModelStaticMeshComponent*> GeneratedModelComponents;
+		Actor->GetComponents<UGeneratedModelStaticMeshComponent>(GeneratedModelComponents);
+		for (UGeneratedModelStaticMeshComponent* GeneratedModelStaticMeshComponent : GeneratedModelComponents)
+		{
+			if (!GeneratedModelStaticMeshComponent || !GeneratedModelStaticMeshComponent->GetStaticMesh())
+			{
+				continue;
+			}
+
+			auto CookOverrideMaterials = [CookPath, &MaterialCache, &TextureCache](UStaticMeshComponent* OriginalMeshComponent, UStaticMeshComponent* CookedMeshComponent)
+			{
+				for (int32 MaterialIndex = 0; MaterialIndex < OriginalMeshComponent->GetNumOverrideMaterials(); ++MaterialIndex)
+				{
+					UMaterialInterface* Material = OriginalMeshComponent->OverrideMaterials[MaterialIndex];
+					if (UMaterialInstance* MaterialInstance = Cast<UMaterialInstance>(Material))
+					{
+						Material = SaveMaterial(MaterialInstance, CookPath, MaterialCache, TextureCache);
+					}
+					CookedMeshComponent->SetMaterial(MaterialIndex, Material);
+				}
+			};
+			UStaticMesh* PersistedMesh = SaveStaticMesh(GeneratedModelStaticMeshComponent->GetStaticMesh(), CookPath, MeshCache, MaterialCache, TextureCache);
+			UStaticMeshComponent* CookedMeshComponent = AttachMeshComponent<UStaticMeshComponent>(CookedActor, PersistedMesh, GeneratedModelStaticMeshComponent->GetFName(), GeneratedModelStaticMeshComponent->GetComponentTransform());
+
+			CookOverrideMaterials(GeneratedModelStaticMeshComponent, CookedMeshComponent);
+			
+			// Persist instanced Components
+			TArray<TObjectPtr<USceneComponent>> AttachedComponents = GeneratedModelStaticMeshComponent->GetAttachChildren();
+			for (UActorComponent* ActorComponent : AttachedComponents)
+			{
+				UGeneratedModelHISMComponent* GeneratedModelHismComponent = Cast<UGeneratedModelHISMComponent>(ActorComponent);
+
+				if (!GeneratedModelHismComponent)
+				{
+					continue;
+				}
+
+				if (UStaticMesh* InstanceMesh = GeneratedModelHismComponent->GetStaticMesh())
+				{
+					if (InstanceMesh->GetOutermost() == GetTransientPackage())
+					{
+						UStaticMesh* PersistedInstanceMesh = SaveStaticMesh(InstanceMesh, CookPath, MeshCache, MaterialCache, TextureCache);
+
+						FName Name = MakeUniqueObjectName(CookedActor, UHierarchicalInstancedStaticMeshComponent::StaticClass(), *PersistedInstanceMesh->GetName());
+						auto* InstancedStaticMeshComponent = AttachMeshComponent<UHierarchicalInstancedStaticMeshComponent>(CookedActor, CookedMeshComponent, PersistedInstanceMesh, Name, GeneratedModelHismComponent->GetComponentTransform());
+
+						CookOverrideMaterials(GeneratedModelHismComponent, InstancedStaticMeshComponent);
+
+						for (int32 InstanceIndex = 0; InstanceIndex < GeneratedModelHismComponent->GetInstanceCount(); ++InstanceIndex)
+						{
+							FTransform Transform;
+							GeneratedModelHismComponent->GetInstanceTransform(InstanceIndex, Transform);
+							InstancedStaticMeshComponent->AddInstance(Transform);
+						}
+					}
+					else
+					{
+						FName Name = MakeUniqueObjectName(CookedActor, UHierarchicalInstancedStaticMeshComponent::StaticClass(), *InstanceMesh->GetName());
+						auto* InstancedStaticMeshComponent = AttachMeshComponent<UHierarchicalInstancedStaticMeshComponent>(CookedActor, CookedMeshComponent, InstanceMesh, Name, GeneratedModelHismComponent->GetComponentTransform());
+
+						for (int32 InstanceIndex = 0; InstanceIndex < GeneratedModelHismComponent->GetInstanceCount(); ++InstanceIndex)
+						{
+							FTransform Transform;
+							GeneratedModelHismComponent->GetInstanceTransform(InstanceIndex, Transform);
+							InstancedStaticMeshComponent->AddInstance(Transform);
+						}
+					}
+				}
+			}
+		}
+		
+		FString OldActorLabel = Actor->GetActorLabel();
+
+		// Destroy the old procedural Vitruvio Actors
+		if (VitruvioBatchActor)
+		{
+			TSet<UVitruvioComponent*> BatchedVitruvioComponents = VitruvioBatchActor->GetVitruvioComponents();
+			VitruvioBatchActor->UnregisterAllVitruvioComponents();
+			for (UVitruvioComponent* BatchedVitruvioComponent : BatchedVitruvioComponents)
+			{
+				BatchedVitruvioComponent->GetOwner()->Destroy();
+			}
+		}
+		else
+		{
+			Actor->Destroy();
+		}
+		
+
+		CookedActor->SetActorLabel(OldActorLabel);
+
+		GEditor->SelectActor(CookedActor, true, false);
+	}
+}
+
 } // namespace
 
 void CookVitruvioActors(TArray<AActor*> Actors)
@@ -298,191 +440,40 @@ void CookVitruvioActors(TArray<AActor*> Actors)
 	// have been generated).
 	VitruvioEditorModule::Get().BlockUntilGenerated();
 
-	// Unlike the busy waiting for PRT generate calls which happen async we need to use
-	// a callback here as creating the StaticMeshes from generation also happens on the game thread.
-	auto DoCook = [Actors]() {
-		TSharedRef<SDlgPickPath> PickContentPathDlg = SNew(SDlgPickPath).Title(FText::FromString("Choose location for cooked models."));
+	// Regenerate the selected Actors to make sure we have a model to cook.
+	TArray<AActor*> ActorsToGenerate = Actors.FilterByPredicate([](const AActor* Actor)
+	{
+		return Actor->FindComponentByClass<UVitruvioComponent>() || Cast<AVitruvioBatchActor>(Actor);
+	});
+
+	// Cook actors after all models have been generated and their meshes constructed
+	UGenerateCompletedCallbackProxy* CallbackProxy = NewObject<UGenerateCompletedCallbackProxy>();
+	CallbackProxy->RegisterWithGameInstance(ActorsToGenerate[0]);
+	CallbackProxy->OnGenerateCompleted.AddLambda(FExecuteAfterCountdown(ActorsToGenerate.Num(), [ActorsToGenerate]() {
+
+		const TSharedRef<SDlgPickPath> PickContentPathDlg = SNew(SDlgPickPath).Title(FText::FromString("Choose location for cooked models."));
 
 		if (PickContentPathDlg->ShowModal() == EAppReturnType::Cancel)
 		{
 			IsCooking = false;
 			return;
 		}
-		FString CookPath = PickContentPathDlg->GetPath().ToString();
+		const FString CookPath = PickContentPathDlg->GetPath().ToString();
 
-		// Cook actors after all models have been generated and their meshes constructed
-		FScopedSlowTask CookTask(Actors.Num(), FText::FromString("Cooking models..."));
-		CookTask.MakeDialog();
-
-		FMaterialCache MaterialCache;
-		FTextureCache TextureCache;
-		FStaticMeshCache MeshCache;
-
-		for (AActor* Actor : Actors)
-		{
-			CookTask.EnterProgressFrame(1);
-
-			UVitruvioComponent* VitruvioComponent = Actor->FindComponentByClass<UVitruvioComponent>();
-			AVitruvioBatchActor* VitruvioBatchActor = Cast<AVitruvioBatchActor>(Actor);
-			if (!VitruvioComponent && !VitruvioBatchActor)
-			{
-				continue;
-			}
-			
-			if (VitruvioComponent && VitruvioComponent->bBatchGenerate)
-			{
-				continue;
-			}
-
-			AActor* OldAttachParent = Actor->GetAttachParentActor();
-
-			// Spawn new Actor with persisted geometry
-			AActor* CookedActor = Actor->GetWorld()->SpawnActor<AActor>(Actor->GetActorLocation(), Actor->GetActorRotation());
-
-			USceneComponent* RootComponent = NewObject<USceneComponent>(CookedActor, "Root");
-			RootComponent->SetMobility(EComponentMobility::Movable);
-			CookedActor->SetRootComponent(RootComponent);
-			CookedActor->AddOwnedComponent(RootComponent);
-
-			RootComponent->SetWorldRotation(Actor->GetActorRotation());
-			RootComponent->SetWorldLocation(Actor->GetActorLocation());
-			RootComponent->OnComponentCreated();
-			RootComponent->RegisterComponent();
-
-			if (OldAttachParent)
-			{
-				CookedActor->AttachToActor(OldAttachParent, FAttachmentTransformRules::KeepWorldTransform);
-			}
-
-			// Persist Generated Models
-			TArray<UGeneratedModelStaticMeshComponent*> GeneratedModelComponents;
-			Actor->GetComponents<UGeneratedModelStaticMeshComponent>(GeneratedModelComponents);
-			for (UGeneratedModelStaticMeshComponent* GeneratedModelStaticMeshComponent : GeneratedModelComponents)
-			{
-				if (!GeneratedModelStaticMeshComponent || !GeneratedModelStaticMeshComponent->GetStaticMesh())
-				{
-					continue;
-				}
-
-				auto CookOverrideMaterials = [CookPath, &MaterialCache, &TextureCache](UStaticMeshComponent* OriginalMeshComponent, UStaticMeshComponent* CookedMeshComponent)
-				{
-					for (int32 MaterialIndex = 0; MaterialIndex < OriginalMeshComponent->GetNumOverrideMaterials(); ++MaterialIndex)
-					{
-						UMaterialInterface* Material = OriginalMeshComponent->OverrideMaterials[MaterialIndex];
-						if (UMaterialInstance* MaterialInstance = Cast<UMaterialInstance>(Material))
-						{
-							Material = SaveMaterial(MaterialInstance, CookPath, MaterialCache, TextureCache);
-						}
-						CookedMeshComponent->SetMaterial(MaterialIndex, Material);
-					}
-				};
-				UStaticMesh* PersistedMesh = SaveStaticMesh(GeneratedModelStaticMeshComponent->GetStaticMesh(), CookPath, MeshCache, MaterialCache, TextureCache);
-				UStaticMeshComponent* CookedMeshComponent = AttachMeshComponent<UStaticMeshComponent>(CookedActor, PersistedMesh, GeneratedModelStaticMeshComponent->GetFName(), GeneratedModelStaticMeshComponent->GetComponentTransform());
-
-				CookOverrideMaterials(GeneratedModelStaticMeshComponent, CookedMeshComponent);
-				
-				// Persist instanced Components
-				TArray<TObjectPtr<USceneComponent>> AttachedComponents = GeneratedModelStaticMeshComponent->GetAttachChildren();
-				for (UActorComponent* ActorComponent : AttachedComponents)
-				{
-					UGeneratedModelHISMComponent* GeneratedModelHismComponent = Cast<UGeneratedModelHISMComponent>(ActorComponent);
-
-					if (!GeneratedModelHismComponent)
-					{
-						continue;
-					}
-
-					if (UStaticMesh* InstanceMesh = GeneratedModelHismComponent->GetStaticMesh())
-					{
-						if (InstanceMesh->GetOutermost() == GetTransientPackage())
-						{
-							UStaticMesh* PersistedInstanceMesh = SaveStaticMesh(InstanceMesh, CookPath, MeshCache, MaterialCache, TextureCache);
-
-							FName Name = MakeUniqueObjectName(CookedActor, UHierarchicalInstancedStaticMeshComponent::StaticClass(), *PersistedInstanceMesh->GetName());
-							auto* InstancedStaticMeshComponent = AttachMeshComponent<UHierarchicalInstancedStaticMeshComponent>(CookedActor, CookedMeshComponent, PersistedInstanceMesh, Name, GeneratedModelHismComponent->GetComponentTransform());
-
-							CookOverrideMaterials(GeneratedModelHismComponent, InstancedStaticMeshComponent);
-
-							for (int32 InstanceIndex = 0; InstanceIndex < GeneratedModelHismComponent->GetInstanceCount(); ++InstanceIndex)
-							{
-								FTransform Transform;
-								GeneratedModelHismComponent->GetInstanceTransform(InstanceIndex, Transform);
-								InstancedStaticMeshComponent->AddInstance(Transform);
-							}
-						}
-						else
-						{
-							FName Name = MakeUniqueObjectName(CookedActor, UHierarchicalInstancedStaticMeshComponent::StaticClass(), *InstanceMesh->GetName());
-							auto* InstancedStaticMeshComponent = AttachMeshComponent<UHierarchicalInstancedStaticMeshComponent>(CookedActor, CookedMeshComponent, InstanceMesh, Name, GeneratedModelHismComponent->GetComponentTransform());
-
-							for (int32 InstanceIndex = 0; InstanceIndex < GeneratedModelHismComponent->GetInstanceCount(); ++InstanceIndex)
-							{
-								FTransform Transform;
-								GeneratedModelHismComponent->GetInstanceTransform(InstanceIndex, Transform);
-								InstancedStaticMeshComponent->AddInstance(Transform);
-							}
-						}
-					}
-				}
-			}
-			
-			FString OldActorLabel = Actor->GetActorLabel();
-
-			// Destroy the old procedural Vitruvio Actors
-			if (VitruvioBatchActor)
-			{
-				TSet<UVitruvioComponent*> BatchedVitruvioComponents = VitruvioBatchActor->GetVitruvioComponents();
-				VitruvioBatchActor->UnregisterAllVitruvioComponents();
-				for (UVitruvioComponent* BatchedVitruvioComponent : BatchedVitruvioComponents)
-				{
-					BatchedVitruvioComponent->GetOwner()->Destroy();
-				}
-			}
-			else
-			{
-				Actor->Destroy();
-			}
-			
-
-			CookedActor->SetActorLabel(OldActorLabel);
-
-			GEditor->SelectActor(CookedActor, true, false);
-		}
+		CookActors(ActorsToGenerate, CookPath);
 
 		IsCooking = false;
-	};
+	}));
 
-	// Regenerate the selected Actors to make sure we have a model to cook.
-	TArray<UVitruvioComponent*> VitruvioComponents;
-	for (AActor* Actor : Actors)
+	for (AActor* Actor : ActorsToGenerate)
 	{
 		if (UVitruvioComponent* VitruvioComponent = Actor->FindComponentByClass<UVitruvioComponent>())
 		{
-			VitruvioComponents.Add(VitruvioComponent);
+			VitruvioComponent->Generate(CallbackProxy);
 		}
 		else if (AVitruvioBatchActor* VitruvioBatchActor = Cast<AVitruvioBatchActor>(Actor))
 		{
-			UGenerateCompletedCallbackProxy* CallbackProxy = NewObject<UGenerateCompletedCallbackProxy>();
-			CallbackProxy->RegisterWithGameInstance(VitruvioBatchActor);
-			CallbackProxy->OnGenerateCompleted.AddLambda([DoCook] {
-				DoCook();
-			});
-			
 			VitruvioBatchActor->GenerateAll(CallbackProxy);
-		}
-	}
-
-	if (VitruvioComponents.Num() > 0)
-	{
-		UGenerateCompletedCallbackProxy* CallbackProxy = NewObject<UGenerateCompletedCallbackProxy>();
-		CallbackProxy->RegisterWithGameInstance(VitruvioComponents[0]);
-		CallbackProxy->OnGenerateCompleted.AddLambda(FExecuteAfterCountdown(VitruvioComponents.Num(), [DoCook]() {
-			DoCook();
-		}));
-	
-		for (UVitruvioComponent* VitruvioComponent : VitruvioComponents)
-		{
-			VitruvioComponent->Generate(CallbackProxy);
 		}
 	}
 }
