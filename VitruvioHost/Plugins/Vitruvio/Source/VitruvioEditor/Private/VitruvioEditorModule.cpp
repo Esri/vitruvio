@@ -74,12 +74,12 @@ void AssignRulePackage(TArray<AActor*> Actors)
 	}
 }
 
-void SelectAllViableVitruvioActors(TArray<AActor*> Actors)
+void SelectAllInitialShapes(TArray<AActor*> Actors)
 {
 	GEditor->SelectNone(false, true, false);
 	for (AActor* SelectedActor : Actors)
 	{
-		TArray<AActor*> NewSelection = UVitruvioBlueprintLibrary::GetVitruvioActorsInHierarchy(SelectedActor);
+		TArray<AActor*> NewSelection = UVitruvioBlueprintLibrary::GetInitialShapesInHierarchy(SelectedActor);
 		for (AActor* ActorToSelect : NewSelection)
 		{
 			GEditor->SelectActor(ActorToSelect, true, false);
@@ -130,14 +130,14 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 										 CookVitruvioActorsAction);
 			}
 
-			const FUIAction SelectAllViableVitruvioActorsAction(FExecuteAction::CreateStatic(SelectAllViableVitruvioActors, SelectedActors));
+			const FUIAction SelectAllViableVitruvioActorsAction(FExecuteAction::CreateStatic(SelectAllInitialShapes, SelectedActors));
 			MenuBuilder.AddMenuEntry(FText::FromString("Select Initial Shapes"),
-									 FText::FromString("Selects all Actors which are viable initial shapes attached to this Actor."), FSlateIcon(),
+									 FText::FromString("Select all attached Actors which are viable initial shapes."), FSlateIcon(),
 									 SelectAllViableVitruvioActorsAction);
 
 			const FUIAction SelectAllVitruvioActorsAction(FExecuteAction::CreateStatic(SelectAllVitruvioActors, SelectedActors));
 			MenuBuilder.AddMenuEntry(FText::FromString("Select Vitruvio Actors"),
-						 FText::FromString("Selects all Vitruvio Actors attached to this Actor."), FSlateIcon(),
+						 FText::FromString("Selects all attached Vitruvio Actors."), FSlateIcon(),
 						 SelectAllVitruvioActorsAction);
 
 			MenuBuilder.EndSection();

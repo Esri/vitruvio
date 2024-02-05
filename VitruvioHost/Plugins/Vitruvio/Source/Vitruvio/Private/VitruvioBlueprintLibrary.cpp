@@ -42,7 +42,7 @@ TArray<AActor*> UVitruvioBlueprintLibrary::GetVitruvioActorsInHierarchy(AActor* 
 	return VitruvioActors;
 }
 
-TArray<AActor*> UVitruvioBlueprintLibrary::GetViableVitruvioActorsInHierarchy(AActor* Root)
+TArray<AActor*> UVitruvioBlueprintLibrary::GetInitialShapesInHierarchy(AActor* Root)
 {
 	if (!Root)
 	{
@@ -63,7 +63,7 @@ TArray<AActor*> UVitruvioBlueprintLibrary::GetViableVitruvioActorsInHierarchy(AA
 
 		for (AActor* Child : ChildActors)
 		{
-			ViableActors.Append(GetViableVitruvioActorsInHierarchy(Child));
+			ViableActors.Append(GetInitialShapesInHierarchy(Child));
 		}
 	}
 

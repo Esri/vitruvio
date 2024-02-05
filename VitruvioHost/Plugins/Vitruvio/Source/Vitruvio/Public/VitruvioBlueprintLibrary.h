@@ -30,13 +30,13 @@ class UVitruvioBlueprintLibrary : public UBlueprintFunctionLibrary
 
 public:
 	/**
-	 * Returns all Actors attached to the given root Actor which are viable to be converted to VitruvioActors.
+	 * Returns all Actors attached to the given root Actor which are viable initial shapes for Vitruvio Actors.
 	 *
-	 * @param Root the root Actor whose children are checked if they are viable Vitruvio Actors.
-	 * @return all Actors attached to the given root Actor which are viable to be converted to VitruvioActors.
+	 * @param Root the root Actor whose children are checked if they are viable initial shapes.
+	 * @return all Actors attached to the given root Actor which are viable initial shapes.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	static VITRUVIO_API TArray<AActor*> GetViableVitruvioActorsInHierarchy(AActor* Root);
+	static VITRUVIO_API TArray<AActor*> GetInitialShapesInHierarchy(AActor* Root);
 
 	/**
 	 * Returns all Actors attached to the given root Actor which are VitruvioActors or contain a VitruvioComponent.
