@@ -35,27 +35,6 @@ void CopyInitialShapeSceneComponent(AActor* OldActor, AActor* NewActor)
 	}
 }
 
-struct FExecuteAfterCountdown
-{
-	FCriticalSection CountDownLock;
-	int32 Count;
-	TFunction<void()> Fun;
-
-	FExecuteAfterCountdown(int32 Count, TFunction<void()> Fun) : Count(Count), Fun(Fun) {}
-
-	FExecuteAfterCountdown(const FExecuteAfterCountdown& Other) : Count(Other.Count), Fun(Other.Fun) {}
-
-	void operator()()
-	{
-		FScopeLock Lock(&CountDownLock);
-		Count--;
-		if (Count <= 0)
-		{
-			Fun();
-		}
-	}
-};
-
 template <typename TFun>
 UGenerateCompletedCallbackProxy* ExecuteIfComponentValid(const FString& FunctionName, UVitruvioComponent* VitruvioComponent, TFun&& Function)
 {

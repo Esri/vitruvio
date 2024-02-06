@@ -86,11 +86,11 @@ void FGrid::MarkForGenerate(UVitruvioComponent* VitruvioComponent, UGenerateComp
 	}
 }
 
-void FGrid::MarkAllForGenerate(UGenerateCompletedCallbackProxy* CallbackProxy)
+void FGrid::MarkAllForGenerate()
 {
 	for (const auto& [Component, Tile] : TilesByComponent)
 	{
-		Tile->MarkForGenerate(Component, CallbackProxy);
+		Tile->MarkForGenerate(Component);
 	}
 }
 
@@ -251,6 +251,7 @@ void AVitruvioBatchActor::ProcessTiles()
 			}
 			
 			Tile->GenerateToken = GenerateResult.Token;
+			Tile->bIsGenerating = true;
 		
 			// clang-format off
 			GenerateResult.Result.Next([this, Tile](const FBatchGenerateResult::ResultType& Result)
@@ -360,10 +361,23 @@ void AVitruvioBatchActor::ProcessGenerateQueue()
 		}
 
 		Item.Tile->CallbackProxies.Empty();
+		Item.Tile->bIsGenerating = false;
 	}
 	else
 	{
 		ProcessQueueCriticalSection.Unlock();
+	}
+
+	if (GenerateAllCallbackProxy)
+	{
+		TArray<UTile*> Tiles;
+		Grid.Tiles.GenerateValueArray(Tiles);
+		bool bAllGenerated = Algo::NoneOf(Tiles, [](const UTile* Tile) { return Tile->bIsGenerating; });
+		if (bAllGenerated)
+		{
+			GenerateAllCallbackProxy->OnGenerateCompleted.Broadcast();
+			GenerateAllCallbackProxy = nullptr;
+		}
 	}
 }
 
@@ -385,6 +399,17 @@ void AVitruvioBatchActor::UnregisterVitruvioComponent(UVitruvioComponent* Vitruv
 	Grid.Unregister(VitruvioComponent);
 }
 
+void AVitruvioBatchActor::UnregisterAllVitruvioComponents()
+{
+	Grid.Clear();
+	VitruvioComponents.Empty();
+}
+
+TSet<UVitruvioComponent*> AVitruvioBatchActor::GetVitruvioComponents()
+{
+	return VitruvioComponents;
+}
+
 void AVitruvioBatchActor::Generate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
 	Grid.MarkForGenerate(VitruvioComponent, CallbackProxy);
@@ -392,7 +417,8 @@ void AVitruvioBatchActor::Generate(UVitruvioComponent* VitruvioComponent, UGener
 
 void AVitruvioBatchActor::GenerateAll(UGenerateCompletedCallbackProxy* CallbackProxy)
 {
-	Grid.MarkAllForGenerate(CallbackProxy);
+	GenerateAllCallbackProxy = CallbackProxy;
+	Grid.MarkAllForGenerate();
 }
 
 bool AVitruvioBatchActor::ShouldTickIfViewportsOnly() const

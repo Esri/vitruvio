@@ -511,8 +511,10 @@ bool UStaticMeshInitialShape::CanConstructFrom(AActor* Owner) const
 {
 	if (Owner)
 	{
-		UStaticMeshComponent* StaticMeshComponent = Owner->FindComponentByClass<UStaticMeshComponent>();
-		return StaticMeshComponent != nullptr && StaticMeshComponent->GetStaticMesh() != nullptr;
+		const UStaticMeshComponent* StaticMeshComponent = Owner->FindComponentByClass<UStaticMeshComponent>();
+	
+		return StaticMeshComponent != nullptr && StaticMeshComponent->GetStaticMesh() != nullptr &&
+			StaticMeshComponent->GetAttachChildren().Num() == 0;
 	}
 	return false;
 }
@@ -535,8 +537,9 @@ bool USplineInitialShape::CanConstructFrom(AActor* Owner) const
 {
 	if (Owner)
 	{
-		USplineComponent* SplineComponent = Owner->FindComponentByClass<USplineComponent>();
-		return SplineComponent != nullptr && SplineComponent->GetNumberOfSplinePoints() > 0;
+		const USplineComponent* SplineComponent = Owner->FindComponentByClass<USplineComponent>();
+		return SplineComponent != nullptr && SplineComponent->GetNumberOfSplinePoints() > 0 &&
+			SplineComponent->GetAttachChildren().Num() == 0;
 	}
 	return false;
 }

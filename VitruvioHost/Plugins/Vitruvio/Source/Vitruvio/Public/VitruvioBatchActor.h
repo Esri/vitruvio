@@ -30,14 +30,15 @@ class UTile : public UObject
 	UPROPERTY(VisibleAnywhere, Category = "Vitruvio")
 	TSet<UVitruvioComponent*> VitruvioComponents;
 
+
 public:
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Vitruvio")
 	FIntPoint Location;
 	
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Vitruvio")
 	bool bMarkedForGenerate;
+	bool bIsGenerating;
 
-	UPROPERTY()
 	TMap<UVitruvioComponent*, UGenerateCompletedCallbackProxy*> CallbackProxies;
 
 	FBatchGenerateResult::FTokenPtr GenerateToken;
@@ -67,7 +68,7 @@ struct FGrid
 	TMap<UVitruvioComponent*, UTile*> TilesByComponent;
 
 	void MarkForGenerate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
-	void MarkAllForGenerate(UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void MarkAllForGenerate();
 	
 	void RegisterAll(const TSet<UVitruvioComponent*>& VitruvioComponents, AVitruvioBatchActor* VitruvioBatchActor);
 	void Register(UVitruvioComponent* VitruvioComponent, AVitruvioBatchActor* VitruvioBatchActor);
@@ -143,9 +144,12 @@ public:
 
 	void RegisterVitruvioComponent(UVitruvioComponent* VitruvioComponent);
 	void UnregisterVitruvioComponent(UVitruvioComponent* VitruvioComponent);
+	void UnregisterAllVitruvioComponents();
+	TSet<UVitruvioComponent*> GetVitruvioComponents();
+
 	void Generate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 	void GenerateAll(UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
-
+	
 	FIntPoint GetPosition(const UVitruvioComponent* VitruvioComponent) const;
 	
 #if WITH_EDITOR
@@ -172,4 +176,7 @@ private:
 	void ProcessGenerateQueue();
 
 	FCriticalSection ProcessQueueCriticalSection;
+
+	UPROPERTY()
+	UGenerateCompletedCallbackProxy* GenerateAllCallbackProxy;
 };
