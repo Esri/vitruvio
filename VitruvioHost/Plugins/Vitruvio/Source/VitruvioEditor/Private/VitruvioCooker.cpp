@@ -370,33 +370,28 @@ void CookActors(const TArray<AActor*>& Actors, const FString& CookPath)
 
 				if (UStaticMesh* InstanceMesh = GeneratedModelHismComponent->GetStaticMesh())
 				{
+					UHierarchicalInstancedStaticMeshComponent* InstancedStaticMeshComponent;
+					
 					if (InstanceMesh->GetOutermost() == GetTransientPackage())
 					{
 						UStaticMesh* PersistedInstanceMesh = SaveStaticMesh(InstanceMesh, CookPath, MeshCache, MaterialCache, TextureCache);
 
 						FName Name = MakeUniqueObjectName(CookedActor, UHierarchicalInstancedStaticMeshComponent::StaticClass(), *PersistedInstanceMesh->GetName());
-						auto* InstancedStaticMeshComponent = AttachMeshComponent<UHierarchicalInstancedStaticMeshComponent>(CookedActor, CookedMeshComponent, PersistedInstanceMesh, Name, GeneratedModelHismComponent->GetComponentTransform());
+						InstancedStaticMeshComponent = AttachMeshComponent<UHierarchicalInstancedStaticMeshComponent>(CookedActor, CookedMeshComponent, PersistedInstanceMesh, Name, GeneratedModelHismComponent->GetComponentTransform());
 
 						CookOverrideMaterials(GeneratedModelHismComponent, InstancedStaticMeshComponent);
-
-						for (int32 InstanceIndex = 0; InstanceIndex < GeneratedModelHismComponent->GetInstanceCount(); ++InstanceIndex)
-						{
-							FTransform Transform;
-							GeneratedModelHismComponent->GetInstanceTransform(InstanceIndex, Transform);
-							InstancedStaticMeshComponent->AddInstance(Transform);
-						}
 					}
 					else
 					{
 						FName Name = MakeUniqueObjectName(CookedActor, UHierarchicalInstancedStaticMeshComponent::StaticClass(), *InstanceMesh->GetName());
-						auto* InstancedStaticMeshComponent = AttachMeshComponent<UHierarchicalInstancedStaticMeshComponent>(CookedActor, CookedMeshComponent, InstanceMesh, Name, GeneratedModelHismComponent->GetComponentTransform());
-
-						for (int32 InstanceIndex = 0; InstanceIndex < GeneratedModelHismComponent->GetInstanceCount(); ++InstanceIndex)
-						{
-							FTransform Transform;
-							GeneratedModelHismComponent->GetInstanceTransform(InstanceIndex, Transform);
-							InstancedStaticMeshComponent->AddInstance(Transform);
-						}
+						InstancedStaticMeshComponent = AttachMeshComponent<UHierarchicalInstancedStaticMeshComponent>(CookedActor, CookedMeshComponent, InstanceMesh, Name, GeneratedModelHismComponent->GetComponentTransform());
+					}
+					
+					for (int32 InstanceIndex = 0; InstanceIndex < GeneratedModelHismComponent->GetInstanceCount(); ++InstanceIndex)
+					{
+						FTransform Transform;
+						GeneratedModelHismComponent->GetInstanceTransform(InstanceIndex, Transform);
+						InstancedStaticMeshComponent->AddInstance(Transform);
 					}
 				}
 			}
