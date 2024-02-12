@@ -24,7 +24,7 @@ jobs:
       - run: |
           C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package_shipping
       - run: |
-          C:\dev\git\zrh-xr-devops\scripts\ue_run_action.py ${{github.workspace}} VitruvioHost 20
+          C:\dev\git\zrh-xr-devops\scripts\ue_run_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package_shipping
   
   build-plugin-main:
     runs-on: [self-hosted, zrh-unreal]
@@ -44,7 +44,7 @@ jobs:
       - run: |
           C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package_debug
       - run: |
-          C:\dev\git\zrh-xr-devops\scripts\ue_run_action.py ${{github.workspace}} VitruvioHost 20
+          C:\dev\git\zrh-xr-devops\scripts\ue_run_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package_debug
   
   build-plugin-develop:
     runs-on: [self-hosted, zrh-unreal]
