@@ -315,14 +315,7 @@ void SMaterialReplacementDialogWidget::UpdateReplacementTable()
 
 FReply SMaterialReplacementDialogWidget::OnReplacementConfirmed()
 {
-	for (const auto& [MaterialName, Replacement] : ReplacementDialogOptions->MaterialReplacements)
-	{
-		for (UStaticMeshComponent* StaticMeshComponent : Replacement->Components)
-		{
-			StaticMeshComponent->SetMaterialPreview(INDEX_NONE);
-			StaticMeshComponent->SelectedEditorMaterial = INDEX_NONE;
-		}
-	}
+	ResetMaterialPreviews();
 
 	if (ReplacementDialogOptions->TargetReplacementAsset)
 	{
@@ -367,19 +360,25 @@ FReply SMaterialReplacementDialogWidget::OnReplacementConfirmed()
 
 FReply SMaterialReplacementDialogWidget::OnReplacementCanceled()
 {
-	for (const auto& [MaterialName, Replacement] : ReplacementDialogOptions->MaterialReplacements)
-	{
-		for (UStaticMeshComponent* StaticMeshComponent : Replacement->Components)
-		{
-			StaticMeshComponent->SetMaterialPreview(INDEX_NONE);
-			StaticMeshComponent->SelectedEditorMaterial = INDEX_NONE;
-		}
-	}
-
+	ResetMaterialPreviews();
+	
 	if (WeakParentWindow.IsValid())
 	{
 		WeakParentWindow.Pin()->RequestDestroyWindow();
 	}
 
 	return FReply::Handled();
+}
+
+void SMaterialReplacementDialogWidget::ResetMaterialPreviews()
+{
+	for (const auto& [MaterialName, Replacement] : ReplacementDialogOptions->MaterialReplacements)
+	{
+		for (UStaticMeshComponent* StaticMeshComponent : Replacement->Components)
+		{
+			StaticMeshComponent->SetVisibility(true, true);
+			StaticMeshComponent->SetMaterialPreview(INDEX_NONE);
+			StaticMeshComponent->SelectedEditorMaterial = INDEX_NONE;
+		}
+	}
 }

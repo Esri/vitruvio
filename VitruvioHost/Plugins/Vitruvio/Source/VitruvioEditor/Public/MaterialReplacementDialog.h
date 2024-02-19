@@ -72,6 +72,9 @@ protected:
 	virtual void UpdateReplacementTable() override;
 	virtual FReply OnReplacementConfirmed() override;
 	virtual FReply OnReplacementCanceled() override;
+
+private:
+	void ResetMaterialPreviews();
 };
 
 class FMaterialReplacementDialog
