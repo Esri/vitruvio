@@ -76,7 +76,7 @@ class FReplacementDialog
 public:
 	template <typename TDialogType, typename TOnWindowClosed>
 	static void OpenDialog(UVitruvioComponent* VitruvioComponent, TOnWindowClosed OnWindowClosed, bool bGeneratedWithoutReplacements,
-						   const FVector2D& DialogSize = {500, 400})
+						   const FVector2D& DialogSize = {800, 600})
 	{
 		// clang-format off
 		TSharedRef<SWindow> PickerWindow = SNew(SWindow)

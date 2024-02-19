@@ -75,7 +75,6 @@ public:
 	template <typename TOnWindowClosed>
 	static void OpenDialog(UVitruvioComponent* VitruvioComponent, TOnWindowClosed OnWindowClosed, bool bGeneratedWithoutReplacements)
 	{
-		FReplacementDialog::OpenDialog<SInstanceReplacementDialogWidget>(VitruvioComponent, OnWindowClosed, bGeneratedWithoutReplacements,
-																		 {800, 600});
+		FReplacementDialog::OpenDialog<SInstanceReplacementDialogWidget>(VitruvioComponent, OnWindowClosed, bGeneratedWithoutReplacements);
 	}
 };
