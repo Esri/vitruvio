@@ -205,8 +205,18 @@ TSharedPtr<SCheckBox> CreateBoolInputWidget(TSharedPtr<IPropertyHandle> Property
 
 TSharedPtr<SHorizontalBox> CreateTextInputWidget(TSharedPtr<IPropertyHandle> StringProperty)
 {
-	auto OnTextChanged = [StringProperty](const FText& Text, ETextCommit::Type) -> void {
-		StringProperty->SetValue(Text.ToString());
+	auto OnTextChanged = [StringProperty](const FText& Text, ETextCommit::Type) {
+
+		if (StringProperty.IsValid())
+		{
+			FString OldValue;
+			StringProperty->GetValue(OldValue);
+
+			if (OldValue != Text.ToString())
+			{
+				StringProperty->SetValue(Text.ToString());
+			}
+		}
 	};
 
 	// clang-format off
@@ -241,9 +251,15 @@ TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(Attr* Attribute, TSharedPt
 	auto OnValueCommit = [FloatProperty](double Value, ETextCommit::Type Type) {
 		if (FloatProperty->IsValidHandle())
 		{
-			FloatProperty->SetValue(Value);
+			double OldValue = 0.0f;
+			FloatProperty->GetValue(OldValue);
+
+			if (!FMath::IsNearlyEqual(OldValue, Value, UE_DOUBLE_KINDA_SMALL_NUMBER))
+			{
+				FloatProperty->SetValue(Value);
+			}
 		}
-	};
+	};	
 
 	// clang-format off
 	auto ValueWidget = SNew(SSpinBox<double>)
