@@ -86,7 +86,7 @@ struct FConvertedGenerateResult
 	TMap<FString, FReport> Reports;
 };
 
-FConvertedGenerateResult BuildResult(const FGenerateResultDescription& GenerateResult,
+FConvertedGenerateResult BuildGenerateResult(const FGenerateResultDescription& GenerateResult,
 									 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
 									 TMap<FString, Vitruvio::FTextureData>& TextureCache,
 									 TMap<UMaterialInterface*, FString>& MaterialIdentifiers,
@@ -100,9 +100,6 @@ void ApplyMaterialReplacements(UStaticMeshComponent* StaticMeshComponent, const 
 
 TSet<FInstance> ApplyInstanceReplacements(UGeneratedModelStaticMeshComponent* GeneratedModelComponent, 
 											  const TArray<FInstance>& Instances, UInstanceReplacementAsset* Replacement, TMap<FString, int32>& NameMap);
-
-void InitializeBodySetup(UBodySetup* BodySetup, bool GenerateComplexCollision);
-void CreateCollision(UStaticMesh* Mesh, UStaticMeshComponent* StaticMeshComponent, bool ComplexCollision);
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class VITRUVIO_API UVitruvioComponent : public UActorComponent

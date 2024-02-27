@@ -18,6 +18,7 @@
 #include "Materials/Material.h"
 #include "StaticMeshAttributes.h"
 #include "VitruvioModule.h"
+#include "PhysicsEngine/BodySetup.h"
 
 namespace
 {
@@ -34,6 +35,16 @@ FString MakeUniqueMaterialName(FString Name, TMap<FString, int32>& UniqueMateria
 	}
 
 	return Name;
+}
+
+void InitializeBodySetup(UBodySetup* BodySetup)
+{
+	BodySetup->DefaultInstance.SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
+	BodySetup->CollisionTraceFlag = ECollisionTraceFlag::CTF_UseComplexAsSimple;
+	BodySetup->bDoubleSidedGeometry = true;
+	BodySetup->bMeshCollideAll = true;
+	BodySetup->InvalidatePhysicsData();
+	BodySetup->CreatePhysicsMeshes();
 }
 
 } // namespace
@@ -149,4 +160,8 @@ void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttribute
 	Params.bAllowCpuAccess = true;
 	StaticMesh->BuildFromMeshDescriptions(MeshDescriptionPtrs, Params);
 	CollisionData = {Indices, Vertices};
+	
+	UBodySetup* BodySetup = NewObject<UBodySetup>(StaticMesh, NAME_None, RF_Transient | RF_DuplicateTransient | RF_TextExportTransient | RF_Transactional);
+	InitializeBodySetup(BodySetup);
+	StaticMesh->SetBodySetup(BodySetup);
 }
