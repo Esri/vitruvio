@@ -27,7 +27,7 @@ FString MakeUniqueMaterialName(FString Name, TMap<FString, int32>& UniqueMateria
 	if (UniqueMaterialNames.Contains(Name))
 	{
 		const int32 Index = UniqueMaterialNames[Name]++;
-		Name += TEXT("_") + FString::FromInt(Index);
+		Name += FString::FromInt(Index);
 	}
 	else
 	{
