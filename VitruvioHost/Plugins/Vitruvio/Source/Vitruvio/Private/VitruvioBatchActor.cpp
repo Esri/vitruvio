@@ -288,15 +288,14 @@ void AVitruvioBatchActor::ProcessGenerateQueue()
 
 		UGeneratedModelStaticMeshComponent* VitruvioModelComponent = Item.Tile->GeneratedModelComponent;
 
-		const FConvertedGenerateResult ConvertedResult =
-			BuildResult(Item.GenerateResultDescription, VitruvioModule::Get().GetMaterialCache(), VitruvioModule::Get().GetTextureCache(),
+		const FConvertedGenerateResult ConvertedResult = BuildGenerateResult(Item.GenerateResultDescription,
+	VitruvioModule::Get().GetMaterialCache(), VitruvioModule::Get().GetTextureCache(),
 				MaterialIdentifiers, UniqueMaterialIdentifiers, OpaqueParent, MaskedParent, TranslucentParent);
 
 		if (ConvertedResult.ShapeMesh)
 		{
 			VitruvioModelComponent->SetStaticMesh(ConvertedResult.ShapeMesh->GetStaticMesh());
 			VitruvioModelComponent->SetCollisionData(ConvertedResult.ShapeMesh->GetCollisionData());
-			CreateCollision(ConvertedResult.ShapeMesh->GetStaticMesh(), VitruvioModelComponent, GenerateCollision);
 			
 			// Reset Material replacements
 			for (int32 MaterialIndex = 0; MaterialIndex < VitruvioModelComponent->GetNumMaterials(); ++MaterialIndex)
@@ -331,7 +330,6 @@ void AVitruvioBatchActor::ProcessGenerateQueue()
 			InstancedComponent->SetStaticMesh(Instance.InstanceMesh->GetStaticMesh());
 			InstancedComponent->SetCollisionData(Instance.InstanceMesh->GetCollisionData());
 			InstancedComponent->SetMeshIdentifier(Instance.InstanceMesh->GetIdentifier());
-			CreateCollision(ConvertedResult.ShapeMesh->GetStaticMesh(), VitruvioModelComponent, GenerateCollision);
 			
 			// Add all instance transforms
 			for (const FTransform& Transform : Transforms)

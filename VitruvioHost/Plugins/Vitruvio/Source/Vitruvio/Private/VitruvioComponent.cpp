@@ -414,7 +414,7 @@ TSet<FInstance> ApplyInstanceReplacements(UGeneratedModelStaticMeshComponent* Ge
 	return Replaced;
 }
 
-FConvertedGenerateResult BuildResult(const FGenerateResultDescription& GenerateResult,
+FConvertedGenerateResult BuildGenerateResult(const FGenerateResultDescription& GenerateResult,
 									 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
 									 TMap<FString, Vitruvio::FTextureData>& TextureCache,
 									 TMap<UMaterialInterface*, FString>& MaterialIdentifiers,
@@ -441,8 +441,8 @@ FConvertedGenerateResult BuildResult(const FGenerateResultDescription& GenerateR
 	TArray<FInstance> Instances;
 	for (const auto& [Key, Transform] : GenerateResult.Instances)
 	{
-		auto VitruvioMesh = GenerateResult.InstanceMeshes[Key.MeshId];
-		FString MeshName = GenerateResult.InstanceNames[Key.MeshId];
+		const TSharedPtr<FVitruvioMesh>& VitruvioMesh = GenerateResult.InstanceMeshes[Key.MeshId];
+		const FString MeshName = GenerateResult.InstanceNames[Key.MeshId];
 		TArray<UMaterialInstanceDynamic*> OverrideMaterials;
 
 		for (size_t MaterialIndex = 0; MaterialIndex < Key.MaterialOverrides.Num(); ++MaterialIndex)
@@ -468,31 +468,6 @@ FString UniqueComponentName(const FString& Name, TMap<FString, int32>& UsedNames
 	}
 	UsedNames.Add(CurrentName, 0);
 	return CurrentName;
-}
-
-void InitializeBodySetup(UBodySetup* BodySetup, bool GenerateComplexCollision)
-{
-	BodySetup->DefaultInstance.SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
-	BodySetup->CollisionTraceFlag =
-		GenerateComplexCollision ? ECollisionTraceFlag::CTF_UseComplexAsSimple : ECollisionTraceFlag::CTF_UseSimpleAsComplex;
-	BodySetup->bDoubleSidedGeometry = true;
-	BodySetup->bMeshCollideAll = true;
-	BodySetup->InvalidatePhysicsData();
-	BodySetup->CreatePhysicsMeshes();
-}
-
-void CreateCollision(UStaticMesh* Mesh, UStaticMeshComponent* StaticMeshComponent, bool ComplexCollision)
-{
-	if (!Mesh)
-	{
-		return;
-	}
-
-	UBodySetup* BodySetup =
-		NewObject<UBodySetup>(StaticMeshComponent, NAME_None, RF_Transient | RF_DuplicateTransient | RF_TextExportTransient | RF_Transactional);
-	InitializeBodySetup(BodySetup, ComplexCollision);
-	Mesh->SetBodySetup(BodySetup);
-	StaticMeshComponent->RecreatePhysicsState();
 }
 
 UVitruvioComponent::UVitruvioComponent()
@@ -769,8 +744,8 @@ void UVitruvioComponent::ProcessGenerateQueue()
 	FGenerateQueueItem Result;
 	GenerateQueue.Dequeue(Result);
 
-	FConvertedGenerateResult ConvertedResult =
-		BuildResult(Result.GenerateResultDescription, VitruvioModule::Get().GetMaterialCache(), VitruvioModule::Get().GetTextureCache(),
+	FConvertedGenerateResult ConvertedResult = BuildGenerateResult(Result.GenerateResultDescription,
+VitruvioModule::Get().GetMaterialCache(), VitruvioModule::Get().GetTextureCache(),
 			MaterialIdentifiers, UniqueMaterialIdentifiers, OpaqueParent, MaskedParent, TranslucentParent);
 
 	Reports = ConvertedResult.Reports;
@@ -816,7 +791,6 @@ void UVitruvioComponent::ProcessGenerateQueue()
 	{
 		VitruvioModelComponent->SetStaticMesh(ConvertedResult.ShapeMesh->GetStaticMesh());
 		VitruvioModelComponent->SetCollisionData(ConvertedResult.ShapeMesh->GetCollisionData());
-		CreateCollision(ConvertedResult.ShapeMesh->GetStaticMesh(), VitruvioModelComponent, GenerateCollision);
 
 		// Reset Material replacements
 		for (int32 MaterialIndex = 0; MaterialIndex < VitruvioModelComponent->GetNumMaterials(); ++MaterialIndex)
@@ -869,9 +843,6 @@ void UVitruvioComponent::ProcessGenerateQueue()
 		{
 			InstancedComponent->SetMaterial(MaterialIndex, Instance.OverrideMaterials[MaterialIndex]);
 		}
-
-		// Instanced component collision
-		CreateCollision(Instance.InstanceMesh->GetStaticMesh(), InstancedComponent, GenerateCollision);
 
 		// Attach and register instance component
 		InstancedComponent->AttachToComponent(VitruvioModelComponent, FAttachmentTransformRules::KeepRelativeTransform);
