@@ -520,6 +520,34 @@ void UVitruvioComponent::SetRpk(URulePackage* RulePackage, bool bGenerateModel, 
 	EvaluateRuleAttributes(bGenerateModel, CallbackProxy);
 }
 
+void UVitruvioComponent::SetBatchGenerated(bool bBatchGeneration)
+{
+	if (GenerateToken)
+	{
+		GenerateToken->Invalidate();
+		GenerateToken.Reset();
+	}
+	
+	bBatchGenerate = bBatchGeneration;
+	
+	UVitruvioBatchSubsystem* VitruvioSubsystem = GetWorld()->GetSubsystem<UVitruvioBatchSubsystem>();
+	if (bBatchGenerate)
+	{
+		RemoveGeneratedMeshes();
+		VitruvioSubsystem->RegisterVitruvioComponent(this);
+	}
+	else
+	{
+		VitruvioSubsystem->UnregisterVitruvioComponent(this);
+		EvaluateRuleAttributes(true, nullptr);
+	}
+}
+
+bool UVitruvioComponent::IsBatchGenerated() const
+{
+	return bBatchGenerate;
+}
+
 void UVitruvioComponent::SetMaterialReplacementAsset(UMaterialReplacementAsset* MaterialReplacementAsset)
 {
 	MaterialReplacement = MaterialReplacementAsset;

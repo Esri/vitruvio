@@ -122,9 +122,6 @@ class VITRUVIO_API UVitruvioComponent : public UActorComponent
 public:
 	UVitruvioComponent();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Batch Generate", Category = "Vitruvio")
-	bool bBatchGenerate = false;
-
 	/** Automatically generate after changing attributes or properties. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Generate Automatically", Category = "Vitruvio",
 		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
@@ -170,6 +167,18 @@ public:
 		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
 	UInstanceReplacementAsset* InstanceReplacement;
 
+	/**
+	 * Enables or disables batch generation.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	void SetBatchGenerated(bool bBatchGeneration);
+
+	/**
+	 * Returns whether batch generation is enabled.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	bool IsBatchGenerated() const;
+	
 	/**
 	 * Sets the material replacement Asset and regenerates the model.
 	 */
@@ -476,6 +485,9 @@ private:
 	/** CGA Reports from generation. */
 	UPROPERTY(VisibleAnywhere, DisplayName = "Reports", Category = "Vitruvio")
 	TMap<FString, FReport> Reports;
+
+	UPROPERTY(EditAnywhere, DisplayName = "Batch Generate", Category = "Vitruvio")
+	bool bBatchGenerate = false;
 
 	UPROPERTY(Transient)
 	bool bInitialized = false;
