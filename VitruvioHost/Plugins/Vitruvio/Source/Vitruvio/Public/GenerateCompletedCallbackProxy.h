@@ -166,9 +166,8 @@ public:
 
 	/**
 	 * Sets the given attributes. If a key from the NewAttributes is not found in the current attributes, the key-value pair will be ignored.
-	 * Regenerates the model if bGenerateModel is set to true. The type of the attribute will be deduced from its
-	 * string representation: <br> "1.0" for the float 1.0 <br> "hello" for the string "hello" and <br> "true" for the bool true <br>
-	 * array values are separated via a comma eg: "1.3,4.5,0" for a float array with the values 1.3, 4.5 and 0.
+	 * Regenerates the model if bGenerateModel is set to true. Arrays are surrounded with [] and their values separated by commas
+	 * eg: "[1.3,4.5,0]" for a float array with the values 1.3, 4.5 and 0.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the attribute is set.
 	 * @param NewAttributes The attributes to be set.
