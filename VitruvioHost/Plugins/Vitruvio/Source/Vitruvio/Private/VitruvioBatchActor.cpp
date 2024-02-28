@@ -132,6 +132,13 @@ void FGrid::Unregister(UVitruvioComponent* VitruvioComponent)
 	if (UTile** FoundTile = TilesByComponent.Find(VitruvioComponent))
 	{
 		UTile* Tile = *FoundTile;
+
+		if (Tile->GenerateToken)
+		{
+			Tile->GenerateToken->Invalidate();
+			Tile->GenerateToken.Reset();
+		}
+		
 		Tile->Remove(VitruvioComponent);
 		Tile->MarkForGenerate(VitruvioComponent);
 	}
