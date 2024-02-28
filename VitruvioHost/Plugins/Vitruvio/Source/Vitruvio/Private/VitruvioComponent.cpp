@@ -503,7 +503,7 @@ bool UVitruvioComponent::IsReadyToGenerate() const
 	return (HasValidInputData() && bAttributesReady) || bBatchGenerate;
 }
 
-void UVitruvioComponent::SetRpk(URulePackage* RulePackage, bool bGenerateModel, UGenerateCompletedCallbackProxy* CallbackProxy)
+void UVitruvioComponent::SetRpk(URulePackage* RulePackage, bool bEvaluateAttributes, bool bGenerateModel, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
 	if (this->Rpk == RulePackage)
 	{
@@ -517,7 +517,11 @@ void UVitruvioComponent::SetRpk(URulePackage* RulePackage, bool bGenerateModel, 
 	bNotifyAttributeChange = true;
 
 	RemoveGeneratedMeshes();
-	EvaluateRuleAttributes(bGenerateModel, CallbackProxy);
+
+	if (bEvaluateAttributes)
+	{
+		EvaluateRuleAttributes(bGenerateModel, CallbackProxy);
+	}
 }
 
 void UVitruvioComponent::SetBatchGenerated(bool bBatchGeneration)
@@ -1236,19 +1240,23 @@ void UVitruvioComponent::OnPropertyChanged(UObject* Object, FPropertyChangedEven
 
 	const bool bGenerateComponent = bAttributesReady && GenerateAutomatically && (bRecreateInitialShape || bComponentPropertyChanged);
 	const bool bGenerateBatch = bBatchGenerate && (bRecreateInitialShape || bComponentPropertyChanged);
+
 	if (bGenerateComponent || bGenerateBatch)
 	{
 		Generate();
 	}
 
-	if (!HasValidInputData())
+	if (!bBatchGenerate)
 	{
-		RemoveGeneratedMeshes();
-	}
+		if (!HasValidInputData())
+		{
+			RemoveGeneratedMeshes();
+		}
 
-	if (HasValidInputData() && (!bAttributesReady || bIsAttributeUndo))
-	{
-		EvaluateRuleAttributes(true);
+		if (HasValidInputData() && (!bAttributesReady || bIsAttributeUndo))
+		{
+			EvaluateRuleAttributes(true);
+		}
 	}
 }
 

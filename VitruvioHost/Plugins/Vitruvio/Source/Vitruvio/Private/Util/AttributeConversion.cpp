@@ -300,7 +300,7 @@ bool IsAttributeBeforeOther(const URuleAttribute& Attribute, const URuleAttribut
 
 namespace Vitruvio
 {
-void UpdateAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, const AttributeMapUPtr& AttributeMap, const RuleFileInfoUPtr& RuleInfo,
+void UpdateAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, const AttributeMapUPtr& AttributeMap, const RuleFileInfoPtr& RuleInfo,
                         UObject* const Outer)
 {
 	bool bNeedsResorting = false;

@@ -49,9 +49,10 @@ bool UTile::Contains(UVitruvioComponent* VitruvioComponent) const
 	return VitruvioComponents.Contains(VitruvioComponent);
 }
 
-TArray<FInitialShape> UTile::GetInitialShapes()
+TTuple<TArray<FInitialShape>, TArray<UVitruvioComponent*>> UTile::GetInitialShapes()
 {
 	TArray<FInitialShape> InitialShapes;
+	TArray<UVitruvioComponent*> ValidVitruvioComponents;
 	
 	for (UVitruvioComponent* VitruvioComponent : VitruvioComponents)
 	{
@@ -59,6 +60,8 @@ TArray<FInitialShape> UTile::GetInitialShapes()
 		{
 			continue;
 		}
+
+		ValidVitruvioComponents.Add(VitruvioComponent);
 		
 		FInitialShape InitialShape;
 		InitialShape.Offset = VitruvioComponent->GetOwner()->GetTransform().GetLocation();
@@ -70,12 +73,7 @@ TArray<FInitialShape> UTile::GetInitialShapes()
 		InitialShapes.Emplace(MoveTemp(InitialShape));
 	}
 
-	return InitialShapes;
-}
-
-const TSet<UVitruvioComponent*>& UTile::GetVitruvioComponents()
-{
-	return VitruvioComponents;
+	return MakeTuple(MoveTemp(InitialShapes), ValidVitruvioComponents);
 }
 
 void FGrid::MarkForGenerate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy)
@@ -248,21 +246,21 @@ void AVitruvioBatchActor::ProcessTiles()
 		}
 
 		// Generate model
-		TArray<FInitialShape> InitialShapes = Tile->GetInitialShapes();
+		auto [InitialShapes, InitialShapeVitruvioComponents] = Tile->GetInitialShapes();
 		if (!InitialShapes.IsEmpty())
 		{
-			FBatchGenerateResult GenerateResult = VitruvioModule::Get().BatchGenerateAsync(MoveTemp(InitialShapes));
-
 			if (Tile->GenerateToken)
 			{
 				Tile->GenerateToken->Invalidate();
 			}
 			
+			FBatchGenerateResult GenerateResult = VitruvioModule::Get().BatchGenerateAsync(MoveTemp(InitialShapes));
+			
 			Tile->GenerateToken = GenerateResult.Token;
 			Tile->bIsGenerating = true;
 		
 			// clang-format off
-			GenerateResult.Result.Next([this, Tile](const FBatchGenerateResult::ResultType& Result)
+			GenerateResult.Result.Next([this, Tile, InitialShapeVitruvioComponents](const FBatchGenerateResult::ResultType& Result)
 			{
 				FScopeLock Lock(&Result.Token->Lock);
 
@@ -274,7 +272,7 @@ void AVitruvioBatchActor::ProcessTiles()
 				Tile->GenerateToken.Reset();
 
 				FScopeLock GenerateQueueLock(&ProcessQueueCriticalSection);
-				GenerateQueue.Enqueue({Result.Value, Tile});
+				GenerateQueue.Enqueue({Result.Value, Tile, InitialShapeVitruvioComponents});
 			});
 			// clang-format on
 		}
@@ -293,6 +291,13 @@ void AVitruvioBatchActor::ProcessGenerateQueue()
 		GenerateQueue.Dequeue(Item);
 
 		ProcessQueueCriticalSection.Unlock();
+
+		for (int ComponentIndex = 0; ComponentIndex < Item.VitruvioComponents.Num(); ++ComponentIndex)
+		{
+			UVitruvioComponent* VitruvioComponent = Item.VitruvioComponents[ComponentIndex];
+			Item.GenerateResultDescription.EvaluatedAttributes[ComponentIndex]->UpdateUnrealAttributeMap(VitruvioComponent->Attributes, VitruvioComponent);
+			VitruvioComponent->NotifyAttributesChanged();
+		}
 
 		UGeneratedModelStaticMeshComponent* VitruvioModelComponent = Item.Tile->GeneratedModelComponent;
 

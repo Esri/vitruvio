@@ -61,6 +61,7 @@ struct FStartRuleInfo
 	ResolveMapSPtr ResolveMap;
 	FString RuleFile;
 	FString StartRule;
+	RuleFileInfoPtr RuleFileInfo;
 };
 
 class FLoadResolveMapTask
@@ -409,7 +410,7 @@ FGenerateResultDescription VitruvioModule::BatchGenerate(TArray<FInitialShape> I
 		return {};
 	}
 	
-    CHECK_PRT_INITIALIZED()
+	CHECK_PRT_INITIALIZED()
 
 	GenerateCallsCounter.Add(InitialShapes.Num());
 
@@ -433,53 +434,123 @@ FGenerateResultDescription VitruvioModule::BatchGenerate(TArray<FInitialShape> I
 		const std::wstring RuleFile = ResolveMap->findCGBKey();
 		const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
 
-		const RuleFileInfoUPtr RuleFileInfo(prt::createRuleFileInfo(RuleFileUri));
+		const RuleFileInfoPtr RuleFileInfo = prt_make_shared<const prt::RuleFileInfo>(prt::createRuleFileInfo(RuleFileUri));
 		const std::wstring StartRule = prtu::detectStartRule(RuleFileInfo);
 		
-		FStartRuleInfo StartRuleInfo { ResolveMap, RuleFile.c_str(), StartRule.c_str() };
+		FStartRuleInfo StartRuleInfo { ResolveMap, RuleFile.c_str(), StartRule.c_str(), RuleFileInfo };
 
 		RuleInfoInitialShapes.Add(MakeTuple(StartRuleInfo, MoveTemp(InitialShapesByRpk)));
 	}
-
-	AttributeMapBuilderUPtr GenerateOptionsBuilder(prt::AttributeMapBuilder::create());
-	GenerateOptionsBuilder->setInt(L"numberWorkerThreads", FPlatformMisc::NumberOfCores());
-
-    const AttributeMapUPtr GenerateOptions(GenerateOptionsBuilder->createAttributeMapAndReset());
-    const InitialShapeBuilderUPtr InitialShapeBuilder(prt::InitialShapeBuilder::create());
 	
-    InitialShapeUPtrVector InitialShapeUPtrs;
-    InitialShapeNOPtrVector InitialShapePtrs;
-    TArray<AttributeMapBuilderUPtr> GenerateAttributeMapBuilders;
-
-	for (auto& [StartRuleInfo, InitialShapesByRpk] : RuleInfoInitialShapes)
+	auto ForeachInitialShape = [&RuleInfoInitialShapes](auto Fun)
 	{
-		for (const FInitialShape& InitialShape : InitialShapesByRpk)
+		int InitialShapeIndex = 0;
+		for (auto& [StartRuleInfo, InitialShapesByRpk] : RuleInfoInitialShapes)
 		{
-			SetInitialShapeGeometry(InitialShapeBuilder, InitialShape);
+			for (const FInitialShape& InitialShape : InitialShapesByRpk)
+			{
+				Fun(InitialShapeIndex, InitialShape, StartRuleInfo);
+
+				InitialShapeIndex++;
+			}
+		}
+	};
+	
+	TArray<InitialShapeBuilderUPtr> InitialShapeBuilders;
+	InitialShapeUPtrVector InitialShapeUPtrs;
+	InitialShapeNOPtrVector InitialShapePtrs;
+
+	ForeachInitialShape([&InitialShapeBuilders, &InitialShapeUPtrs, &InitialShapePtrs]
+		(int32 InitialShapeIndex, const FInitialShape& InitialShape, const FStartRuleInfo& StartRuleInfo)
+	{
+		InitialShapeBuilderUPtr InitialShapeBuilder(prt::InitialShapeBuilder::create());
+		SetInitialShapeGeometry(InitialShapeBuilder, InitialShape);
+		InitialShapeBuilder->setAttributes(*StartRuleInfo.RuleFile, *StartRuleInfo.StartRule, InitialShape.RandomSeed, L"",
+			InitialShape.Attributes.get(), StartRuleInfo.ResolveMap.get());
+		InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShape());
+		InitialShapePtrs.push_back(Shape.get());
+		InitialShapeUPtrs.push_back(std::move(Shape));
+
+		InitialShapeBuilders.Add(MoveTemp(InitialShapeBuilder));
+	});
+
+	TArray<FAttributeMapPtr> EvaluatedAttributes;
+	
+	// Evaluate attributes
+	{
+		TArray<AttributeMapBuilderUPtr> EvaluateAttributeMapBuilders;
+		for (int32 InitialShapeIndex = 0; InitialShapeIndex < InitialShapes.Num(); ++InitialShapeIndex)
+		{
+			EvaluateAttributeMapBuilders.Add(AttributeMapBuilderUPtr(prt::AttributeMapBuilder::create()));
+		}
+		TSharedPtr<UnrealCallbacks> OutputHandler(new UnrealCallbacks(EvaluateAttributeMapBuilders));
+		
+		const std::vector EncoderIds = { ATTRIBUTE_EVAL_ENCODER_ID };
+		const AttributeMapUPtr AttributeEncodeOptions = prtu::createValidatedOptions(ATTRIBUTE_EVAL_ENCODER_ID);
+		const AttributeMapNOPtrVector EncoderOptions = {AttributeEncodeOptions.get()};
+
+		AttributeMapBuilderUPtr GenerateOptionsBuilder(prt::AttributeMapBuilder::create());
+		GenerateOptionsBuilder->setInt(L"numberWorkerThreads", FPlatformMisc::NumberOfCores());
+		const AttributeMapUPtr GenerateOptions(GenerateOptionsBuilder->createAttributeMapAndReset());
+
+		prt::Status GenerateStatus = generate(InitialShapePtrs.data(), InitialShapePtrs.size(), nullptr, EncoderIds.data(),
+			EncoderIds.size(), EncoderOptions.data(), OutputHandler.Get(),
+					  PrtCache.get(), nullptr, GenerateOptions.get());
+
+		if (GenerateStatus != prt::STATUS_OK)
+		{
+			UE_LOG(LogUnrealPrt, Error, TEXT("PRT generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
+			return {};
+		}
+		
+		ForeachInitialShape([&EvaluateAttributeMapBuilders, &EvaluatedAttributes]
+			(int32 InitialShapeIndex, const FInitialShape& InitialShape, const FStartRuleInfo& StartRuleInfo)
+		{
+			const FAttributeMapPtr AttributeMap = MakeShared<FAttributeMap>(
+				AttributeMapUPtr(EvaluateAttributeMapBuilders[InitialShapeIndex]->createAttributeMapAndReset()),
+				StartRuleInfo.RuleFileInfo);
+			EvaluatedAttributes.Add(AttributeMap);
+		});
+	}
+
+	// Generate
+	TArray<AttributeMapBuilderUPtr> GenerateAttributeMapBuilders;
+	TSharedPtr<UnrealCallbacks> GenerateOutputHandler(new UnrealCallbacks(GenerateAttributeMapBuilders));
+	{
+		InitialShapeUPtrs.clear();
+		InitialShapePtrs.clear();
+
+		ForeachInitialShape([&InitialShapeBuilders, &EvaluatedAttributes, &InitialShapePtrs, &InitialShapeUPtrs]
+			(int32 InitialShapeIndex, const FInitialShape& InitialShape, const FStartRuleInfo& StartRuleInfo)
+		{
+			const InitialShapeBuilderUPtr& InitialShapeBuilder = InitialShapeBuilders[InitialShapeIndex];
 			InitialShapeBuilder->setAttributes(*StartRuleInfo.RuleFile, *StartRuleInfo.StartRule, InitialShape.RandomSeed, L"",
-				InitialShape.Attributes.get(), StartRuleInfo.ResolveMap.get());
+				EvaluatedAttributes[InitialShapeIndex]->AttributeMap.get(), StartRuleInfo.ResolveMap.get());
 			InitialShapeUPtr Shape(InitialShapeBuilder->createInitialShapeAndReset());
 			InitialShapePtrs.push_back(Shape.get());
 			InitialShapeUPtrs.push_back(std::move(Shape));
-		}
+		});
+		
+	    AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
+
+	    const std::vector UnrealEncoderIds = { UNREAL_GEOMETRY_ENCODER_ID };
+	    const AttributeMapUPtr UnrealEncoderOptions(prtu::createValidatedOptions(UNREAL_GEOMETRY_ENCODER_ID));
+	    const AttributeMapNOPtrVector GenerateEncoderOptions = {UnrealEncoderOptions.get()};
+
+		AttributeMapBuilderUPtr GenerateOptionsBuilder(prt::AttributeMapBuilder::create());
+		GenerateOptionsBuilder->setInt(L"numberWorkerThreads", FPlatformMisc::NumberOfCores());
+		const AttributeMapUPtr GenerateOptions(GenerateOptionsBuilder->createAttributeMapAndReset());
+
+	    prt::Status GenerateStatus = generate(InitialShapePtrs.data(), InitialShapePtrs.size(), nullptr,
+			UnrealEncoderIds.data(), UnrealEncoderIds.size(), GenerateEncoderOptions.data(), GenerateOutputHandler.Get(),
+			PrtCache.get(), nullptr, GenerateOptions.get());
+
+		if (GenerateStatus != prt::STATUS_OK)
+	    {
+    		UE_LOG(LogUnrealPrt, Error, TEXT("PRT generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
+    		return {};
+	    }
 	}
-    
-    AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
-    TSharedPtr<UnrealCallbacks> OutputHandler(new UnrealCallbacks(GenerateAttributeMapBuilders));
-
-    const std::vector UnrealEncoderIds = { UNREAL_GEOMETRY_ENCODER_ID };
-    const AttributeMapUPtr UnrealEncoderOptions(prtu::createValidatedOptions(UNREAL_GEOMETRY_ENCODER_ID));
-    const AttributeMapNOPtrVector GenerateEncoderOptions = {UnrealEncoderOptions.get()};
-
-    prt::Status GenerateStatus = generate(InitialShapePtrs.data(), InitialShapePtrs.size(), nullptr,
-		UnrealEncoderIds.data(), UnrealEncoderIds.size(), GenerateEncoderOptions.data(), OutputHandler.Get(),
-		PrtCache.get(), nullptr, GenerateOptions.get());
-
-	if (GenerateStatus != prt::STATUS_OK)
-    {
-    	UE_LOG(LogUnrealPrt, Error, TEXT("PRT generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
-    	return {};
-    }
 
 	CHECK_PRT_INITIALIZED()
 
@@ -487,8 +558,8 @@ FGenerateResultDescription VitruvioModule::BatchGenerate(TArray<FInitialShape> I
 
 	NotifyGenerateCompleted();
     
-    return FGenerateResultDescription{ OutputHandler->GetGeneratedModel(), OutputHandler->GetInstances(), OutputHandler->GetInstanceMeshes(),
-							  OutputHandler->GetInstanceNames()};
+    return FGenerateResultDescription { GenerateOutputHandler->GetGeneratedModel(), GenerateOutputHandler->GetInstances(),
+    	GenerateOutputHandler->GetInstanceMeshes(), GenerateOutputHandler->GetInstanceNames(), {}, EvaluatedAttributes };
 }
 
 
@@ -520,7 +591,7 @@ FGenerateResultDescription VitruvioModule::Generate(const FInitialShape& Initial
 	const std::wstring RuleFile = ResolveMap->findCGBKey();
 	const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
 
-	const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
+	const RuleFileInfoPtr StartRuleInfo = prt_make_shared<const prt::RuleFileInfo>(prt::createRuleFileInfo(RuleFileUri));
 	const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
 
 	InitialShapeBuilder->setAttributes(RuleFile.c_str(), StartRule.c_str(),
@@ -570,7 +641,7 @@ FAttributeMapResult VitruvioModule::EvaluateRuleAttributesAsync(FInitialShape In
 		const std::wstring RuleFile = ResolveMap->findCGBKey();
 		const wchar_t* RuleFileUri = ResolveMap->getString(RuleFile.c_str());
 
-		const RuleFileInfoUPtr StartRuleInfo(prt::createRuleFileInfo(RuleFileUri));
+		const RuleFileInfoPtr StartRuleInfo = prt_make_shared<const prt::RuleFileInfo>(prt::createRuleFileInfo(RuleFileUri));
 		const std::wstring StartRule = prtu::detectStartRule(StartRuleInfo);
 
 		prt::Status InfoStatus;

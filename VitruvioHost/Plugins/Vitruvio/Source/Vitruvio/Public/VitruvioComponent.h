@@ -200,7 +200,7 @@ public:
 	/**
 	 * Sets the given Rule Package. This will reevaluate the attributes and if bGenerateModel is set to true, also generates the model.
 	 */
-	void SetRpk(URulePackage* RulePackage, bool bGenerateModel = true, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetRpk(URulePackage* RulePackage, bool bEvaluateAttributes = true, bool bGenerateModel = true, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/** Returns true if the component has valid input data (initial shape and Rule Package). */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
@@ -517,4 +517,6 @@ private:
 #if WITH_EDITOR
 	FDelegateHandle PropertyChangeDelegate;
 #endif
+
+	friend class AVitruvioBatchActor;
 };

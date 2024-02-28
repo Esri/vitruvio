@@ -234,7 +234,7 @@ void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, UR
 	}
 }
 
-TMap<FString, int> ParseImportOrderMap(const RuleFileInfoUPtr& RuleFileInfo)
+TMap<FString, int> ParseImportOrderMap(const RuleFileInfoPtr& RuleFileInfo)
 {
 	TMap<FString, int> ImportOrderMap;
 	int ImportOrder = 0;

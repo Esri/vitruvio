@@ -27,11 +27,10 @@ class UTile : public UObject
 {
 	GENERATED_BODY()
 
+public:
 	UPROPERTY(VisibleAnywhere, Category = "Vitruvio")
 	TSet<UVitruvioComponent*> VitruvioComponents;
-
-
-public:
+	
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Vitruvio")
 	FIntPoint Location;
 	
@@ -39,6 +38,7 @@ public:
 	bool bMarkedForGenerate;
 	bool bIsGenerating;
 
+	UPROPERTY()
 	TMap<UVitruvioComponent*, UGenerateCompletedCallbackProxy*> CallbackProxies;
 
 	FBatchGenerateResult::FTokenPtr GenerateToken;
@@ -53,8 +53,7 @@ public:
 	void Remove(UVitruvioComponent* VitruvioComponent);
 	bool Contains(UVitruvioComponent* VitruvioComponent) const;
 	
-	TArray<FInitialShape> GetInitialShapes();
-	const TSet<UVitruvioComponent*>& GetVitruvioComponents();
+	TTuple<TArray<FInitialShape>, TArray<UVitruvioComponent*>> GetInitialShapes();
 };
 
 USTRUCT()
@@ -84,6 +83,7 @@ struct FBatchGenerateQueueItem
 {
 	FGenerateResultDescription GenerateResultDescription;
 	UTile* Tile;
+	TArray<UVitruvioComponent*> VitruvioComponents;
 };
 
 UCLASS(NotBlueprintable, NotPlaceable)

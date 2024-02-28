@@ -262,15 +262,29 @@ void VitruvioEditorModule::OnPostEngineInit()
 
 		VitruvioModule::Get().EvictFromResolveMapCache(RulePackage);
 
+		TArray<UVitruvioComponent*> BatchedComponents;
 		for (FActorIterator It(GEditor->GetEditorWorldContext().World()); It; ++It)
 		{
 			AActor* Actor = *It;
 			UVitruvioComponent* VitruvioComponent = Cast<UVitruvioComponent>(Actor->GetComponentByClass(UVitruvioComponent::StaticClass()));
 			if (VitruvioComponent && VitruvioComponent->GetRpk() == RulePackage)
 			{
-				VitruvioComponent->RemoveGeneratedMeshes();
-				VitruvioComponent->EvaluateRuleAttributes(true);
+				if (!VitruvioComponent->IsBatchGenerated())
+				{
+					VitruvioComponent->RemoveGeneratedMeshes();
+					VitruvioComponent->EvaluateRuleAttributes(true);
+				}
+				else
+				{
+					BatchedComponents.Add(VitruvioComponent);
+				}
 			}
+		}
+
+		UVitruvioBatchSubsystem* BatchSubsystem = GEditor->GetEditorWorldContext().World()->GetSubsystem<UVitruvioBatchSubsystem>();
+		for (UVitruvioComponent* VitruvioComponent : BatchedComponents)
+		{
+			BatchSubsystem->Generate(VitruvioComponent);
 		}
 	});
 	// clang-format on
