@@ -35,6 +35,7 @@ public:
 	void RegisterVitruvioComponent(UVitruvioComponent* VitruvioComponent);
 	void UnregisterVitruvioComponent(UVitruvioComponent* VitruvioComponent);
 	void Generate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void GenerateAll(UGenerateCompletedCallbackProxy* CallbackProxy);
 
 	AVitruvioBatchActor* GetBatchActor();
 	bool HasRegisteredVitruvioComponents() const;

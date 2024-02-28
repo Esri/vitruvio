@@ -409,7 +409,7 @@ FGenerateResultDescription VitruvioModule::BatchGenerate(TArray<FInitialShape> I
 		return {};
 	}
 	
-    CHECK_PRT_INITIALIZED()
+	CHECK_PRT_INITIALIZED()
 
 	GenerateCallsCounter.Add(InitialShapes.Num());
 
@@ -444,12 +444,12 @@ FGenerateResultDescription VitruvioModule::BatchGenerate(TArray<FInitialShape> I
 	AttributeMapBuilderUPtr GenerateOptionsBuilder(prt::AttributeMapBuilder::create());
 	GenerateOptionsBuilder->setInt(L"numberWorkerThreads", FPlatformMisc::NumberOfCores());
 
-    const AttributeMapUPtr GenerateOptions(GenerateOptionsBuilder->createAttributeMapAndReset());
-    const InitialShapeBuilderUPtr InitialShapeBuilder(prt::InitialShapeBuilder::create());
+	const AttributeMapUPtr GenerateOptions(GenerateOptionsBuilder->createAttributeMapAndReset());
+	const InitialShapeBuilderUPtr InitialShapeBuilder(prt::InitialShapeBuilder::create());
 	
-    InitialShapeUPtrVector InitialShapeUPtrs;
-    InitialShapeNOPtrVector InitialShapePtrs;
-    TArray<AttributeMapBuilderUPtr> GenerateAttributeMapBuilders;
+	InitialShapeUPtrVector InitialShapeUPtrs;
+	InitialShapeNOPtrVector InitialShapePtrs;
+	
 
 	for (auto& [StartRuleInfo, InitialShapesByRpk] : RuleInfoInitialShapes)
 	{
@@ -463,23 +463,43 @@ FGenerateResultDescription VitruvioModule::BatchGenerate(TArray<FInitialShape> I
 			InitialShapeUPtrs.push_back(std::move(Shape));
 		}
 	}
-    
-    AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
-    TSharedPtr<UnrealCallbacks> OutputHandler(new UnrealCallbacks(GenerateAttributeMapBuilders));
 
-    const std::vector UnrealEncoderIds = { UNREAL_GEOMETRY_ENCODER_ID };
-    const AttributeMapUPtr UnrealEncoderOptions(prtu::createValidatedOptions(UNREAL_GEOMETRY_ENCODER_ID));
-    const AttributeMapNOPtrVector GenerateEncoderOptions = {UnrealEncoderOptions.get()};
+	// Evaluate attributes
+	{
+		TArray<AttributeMapBuilderUPtr> EvaluateAttributeMapBuilders;
+		TSharedPtr<UnrealCallbacks> OutputHandler(new UnrealCallbacks(EvaluateAttributeMapBuilders));
+		
+		const std::vector EncoderIds = {ATTRIBUTE_EVAL_ENCODER_ID};
+		const AttributeMapUPtr AttributeEncodeOptions = prtu::createValidatedOptions(ATTRIBUTE_EVAL_ENCODER_ID);
+		const AttributeMapNOPtrVector EncoderOptions = {AttributeEncodeOptions.get()};
 
-    prt::Status GenerateStatus = generate(InitialShapePtrs.data(), InitialShapePtrs.size(), nullptr,
-		UnrealEncoderIds.data(), UnrealEncoderIds.size(), GenerateEncoderOptions.data(), OutputHandler.Get(),
-		PrtCache.get(), nullptr, GenerateOptions.get());
+		prt::Status GenerateStatus = generate(InitialShapePtrs.data(), InitialShapePtrs.size(), nullptr, EncoderIds.data(),
+			EncoderIds.size(), EncoderOptions.data(), OutputHandler.Get(),
+					  PrtCache.get(), nullptr);
 
-	if (GenerateStatus != prt::STATUS_OK)
-    {
-    	UE_LOG(LogUnrealPrt, Error, TEXT("PRT generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
-    	return {};
-    }
+	}
+
+	// Generate
+	{
+		TArray<AttributeMapBuilderUPtr> GenerateAttributeMapBuilders;
+	    AttributeMapBuilderUPtr AttributeMapBuilder(prt::AttributeMapBuilder::create());
+	    TSharedPtr<UnrealCallbacks> OutputHandler(new UnrealCallbacks(GenerateAttributeMapBuilders));
+
+	    const std::vector UnrealEncoderIds = { UNREAL_GEOMETRY_ENCODER_ID };
+	    const AttributeMapUPtr UnrealEncoderOptions(prtu::createValidatedOptions(UNREAL_GEOMETRY_ENCODER_ID));
+	    const AttributeMapNOPtrVector GenerateEncoderOptions = {UnrealEncoderOptions.get()};
+
+	    prt::Status GenerateStatus = generate(InitialShapePtrs.data(), InitialShapePtrs.size(), nullptr,
+			UnrealEncoderIds.data(), UnrealEncoderIds.size(), GenerateEncoderOptions.data(), OutputHandler.Get(),
+			PrtCache.get(), nullptr, GenerateOptions.get());
+
+		if (GenerateStatus != prt::STATUS_OK)
+	    {
+    		UE_LOG(LogUnrealPrt, Error, TEXT("PRT generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
+    		return {};
+	    }
+
+	}
 
 	CHECK_PRT_INITIALIZED()
 

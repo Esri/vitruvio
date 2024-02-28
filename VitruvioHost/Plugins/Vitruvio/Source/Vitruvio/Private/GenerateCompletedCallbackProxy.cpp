@@ -15,6 +15,7 @@
 
 #include "GenerateCompletedCallbackProxy.h"
 
+#include "VitruvioBatchSubsystem.h"
 #include "Algo/Count.h"
 #include "Engine/World.h"
 #include "VitruvioBlueprintLibrary.h"
@@ -191,7 +192,7 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::ConvertToVitru
 
 			UVitruvioComponent* VitruvioComponent = VitruvioActor->VitruvioComponent;
 			VitruvioComponent->SetBatchGenerated(bBatchGeneration);
-			VitruvioComponent->SetRpk(Rpk, bGenerateModels, InternalProxy);
+			VitruvioComponent->SetRpk(Rpk, bGenerateModels && !bBatchGeneration, InternalProxy);
 
 			if (OldAttachParent)
 			{
@@ -203,5 +204,12 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::ConvertToVitru
 			OutVitruvioActors.Add(VitruvioActor);
 		}
 	}
+
+	if (bBatchGeneration)
+	{
+		UVitruvioBatchSubsystem* VitruvioBatchSubsystem = WorldContextObject->GetWorld()->GetSubsystem<UVitruvioBatchSubsystem>();
+		VitruvioBatchSubsystem->GenerateAll(Proxy);
+	}
+	
 	return Proxy;
 }

@@ -38,6 +38,11 @@ void UVitruvioBatchSubsystem::Generate(UVitruvioComponent* VitruvioComponent, UG
 	GetBatchActor()->Generate(VitruvioComponent, CallbackProxy);
 }
 
+void UVitruvioBatchSubsystem::GenerateAll(UGenerateCompletedCallbackProxy* CallbackProxy)
+{
+	GetBatchActor()->GenerateAll(CallbackProxy);
+}
+
 AVitruvioBatchActor* UVitruvioBatchSubsystem::GetBatchActor()
 {
 	if (!VitruvioBatchActor)
