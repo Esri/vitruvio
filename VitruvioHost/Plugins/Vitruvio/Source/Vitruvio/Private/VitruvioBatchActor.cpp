@@ -16,6 +16,7 @@
 #include "VitruvioBatchActor.h"
 
 #include "AttributeConversion.h"
+#include "Materials/Material.h"
 #include "Runtime/CoreUObject/Public/UObject/ConstructorHelpers.h"
 #include "GenerateCompletedCallbackProxy.h"
 

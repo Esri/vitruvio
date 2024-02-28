@@ -19,6 +19,8 @@
 #include "StaticMeshAttributes.h"
 #include "VitruvioModule.h"
 #include "PhysicsEngine/BodySetup.h"
+#include "Engine/CollisionProfile.h"
+#include "UObject/Package.h"
 
 namespace
 {
