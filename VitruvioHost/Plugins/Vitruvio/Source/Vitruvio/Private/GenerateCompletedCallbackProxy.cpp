@@ -72,7 +72,7 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetRandomSeed(
 	});
 }
 
-UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::Generate(UVitruvioComponent* VitruvioComponent, const FGenerateOptions& GenerateOptions)
+UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::Generate(UVitruvioComponent* VitruvioComponent, FGenerateOptions GenerateOptions)
 {
 	return ExecuteIfComponentValid(TEXT("Generate"), VitruvioComponent, [GenerateOptions](UGenerateCompletedCallbackProxy* Proxy, UVitruvioComponent* VitruvioComponent)
 	{

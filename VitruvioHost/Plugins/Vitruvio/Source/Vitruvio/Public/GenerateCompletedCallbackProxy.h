@@ -84,7 +84,7 @@ public:
 	 * no Initial Shape or Rule Package is set, this method will do nothing.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
-	static UGenerateCompletedCallbackProxy* Generate(UVitruvioComponent* VitruvioComponent, const FGenerateOptions& GenerateOptions);
+	static UGenerateCompletedCallbackProxy* Generate(UVitruvioComponent* VitruvioComponent, FGenerateOptions GenerateOptions);
 
 	/**
 	 * Sets the float attribute with the given Name to the given value. Regenerates the model if bGenerateModel is set to true.

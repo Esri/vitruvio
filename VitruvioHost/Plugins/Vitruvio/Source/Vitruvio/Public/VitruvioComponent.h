@@ -38,7 +38,9 @@ struct FGenerateOptions
 {
 	GENERATED_BODY()
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vitruvio")
 	bool bIgnoreMaterialReplacements = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vitruvio")
 	bool bIgnoreInstanceReplacements = false;
 };
 
