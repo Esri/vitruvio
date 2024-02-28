@@ -163,7 +163,7 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetSplineIniti
 
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::ConvertToVitruvioActor(UObject* WorldContextObject, const TArray<AActor*>& Actors,
 																						 TArray<AVitruvioActor*>& OutVitruvioActors,
-																						 URulePackage* Rpk, bool bGenerateModels)
+																						 URulePackage* Rpk, bool bGenerateModels, bool bBatchGeneration)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(WorldContextObject);
@@ -190,6 +190,7 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::ConvertToVitru
 			CopyInitialShapeSceneComponent(Actor, VitruvioActor);
 
 			UVitruvioComponent* VitruvioComponent = VitruvioActor->VitruvioComponent;
+			VitruvioComponent->SetBatchGenerated(bBatchGeneration);
 			VitruvioComponent->SetRpk(Rpk, bGenerateModels, InternalProxy);
 
 			if (OldAttachParent)

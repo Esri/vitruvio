@@ -211,10 +211,11 @@ public:
 	 * @param OutVitruvioActors The converted VitruvioActors.
 	 * @param Rpk The optional RulePackage.
 	 * @param bGenerateModels Whether a model should be generated after the conversion. Only applicable if the RulePackage has been set.
+	 * @param bBatchGeneration Whether the newly created VitruvioActors should be batch generated.
 	 * @return The converted VitruvioActors.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true, WorldContext = "WorldContextObject"), Category = "Vitruvio")
 	static UGenerateCompletedCallbackProxy* ConvertToVitruvioActor(UObject* WorldContextObject, const TArray<AActor*>& Actors,
 																   TArray<AVitruvioActor*>& OutVitruvioActors, URulePackage* Rpk = nullptr,
-																   bool bGenerateModels = true);
+																   bool bGenerateModels = true, bool bBatchGeneration = false);
 };

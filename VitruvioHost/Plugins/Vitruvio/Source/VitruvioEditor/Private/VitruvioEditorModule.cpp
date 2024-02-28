@@ -15,7 +15,7 @@
 
 #include "VitruvioEditorModule.h"
 
-#include "ChooseRulePackageDialog.h"
+#include "ConvertToVitruvioActorDialog.h"
 #include "RulePackageAssetTypeActions.h"
 #include "VitruvioActor.h"
 #include "VitruvioComponentDetails.h"
@@ -58,19 +58,19 @@ bool HasAnyVitruvioActor(const TArray<AActor*>& Actors)
 	});
 }
 
-void AssignRulePackage(TArray<AActor*> Actors)
+void ConvertToVitruvioActor(TArray<AActor*> Actors)
 {
 	if (Actors.Num() == 0)
 	{
 		return;
 	}
 
-	TOptional<URulePackage*> SelectedRpk = FChooseRulePackageDialog::OpenDialog();
+	TOptional<UConvertOptions*> Options = FConvertToVitruvioActorDialog::OpenDialog();
 
-	if (SelectedRpk.IsSet())
+	if (Options.IsSet())
 	{
 		TArray<AVitruvioActor*> ConvertedActors;
-		UGenerateCompletedCallbackProxy::ConvertToVitruvioActor(Actors[0], Actors, ConvertedActors, SelectedRpk.GetValue());
+		UGenerateCompletedCallbackProxy::ConvertToVitruvioActor(Actors[0], Actors, ConvertedActors, Options.GetValue()->RulePackage, true, Options.GetValue()->bBatchGenerate);
 	}
 }
 
@@ -113,7 +113,7 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 
 			if (HasAnyViableVitruvioActor(SelectedActors))
 			{
-				const FUIAction AddVitruvioComponentAction(FExecuteAction::CreateStatic(AssignRulePackage, SelectedActors));
+				const FUIAction AddVitruvioComponentAction(FExecuteAction::CreateStatic(ConvertToVitruvioActor, SelectedActors));
 
 				MenuBuilder.AddMenuEntry(
 					FText::FromString("Convert to Vitruvio Actor"),
