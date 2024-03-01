@@ -305,7 +305,7 @@ void CookActors(const TArray<AActor*>& Actors, const FString& CookPath)
 			continue;
 		}
 		
-		if (VitruvioComponent && VitruvioComponent->bBatchGenerate)
+		if (VitruvioComponent && VitruvioComponent->IsBatchGenerated())
 		{
 			continue;
 		}

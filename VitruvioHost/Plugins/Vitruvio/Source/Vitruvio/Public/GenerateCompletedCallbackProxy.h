@@ -84,7 +84,7 @@ public:
 	 * no Initial Shape or Rule Package is set, this method will do nothing.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
-	static UGenerateCompletedCallbackProxy* Generate(UVitruvioComponent* VitruvioComponent, const FGenerateOptions& GenerateOptions);
+	static UGenerateCompletedCallbackProxy* Generate(UVitruvioComponent* VitruvioComponent, FGenerateOptions GenerateOptions);
 
 	/**
 	 * Sets the float attribute with the given Name to the given value. Regenerates the model if bGenerateModel is set to true.
@@ -166,9 +166,8 @@ public:
 
 	/**
 	 * Sets the given attributes. If a key from the NewAttributes is not found in the current attributes, the key-value pair will be ignored.
-	 * Regenerates the model if bGenerateModel is set to true. The type of the attribute will be deduced from its
-	 * string representation: <br> "1.0" for the float 1.0 <br> "hello" for the string "hello" and <br> "true" for the bool true <br>
-	 * array values are separated via a comma eg: "1.3,4.5,0" for a float array with the values 1.3, 4.5 and 0.
+	 * Regenerates the model if bGenerateModel is set to true. Arrays are surrounded with [] and their values separated by commas
+	 * eg: "[1.3,4.5,0]" for a float array with the values 1.3, 4.5 and 0.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the attribute is set.
 	 * @param NewAttributes The attributes to be set.
@@ -212,10 +211,11 @@ public:
 	 * @param OutVitruvioActors The converted VitruvioActors.
 	 * @param Rpk The optional RulePackage.
 	 * @param bGenerateModels Whether a model should be generated after the conversion. Only applicable if the RulePackage has been set.
+	 * @param bBatchGeneration Whether the newly created VitruvioActors should be batch generated.
 	 * @return The converted VitruvioActors.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true, WorldContext = "WorldContextObject"), Category = "Vitruvio")
 	static UGenerateCompletedCallbackProxy* ConvertToVitruvioActor(UObject* WorldContextObject, const TArray<AActor*>& Actors,
 																   TArray<AVitruvioActor*>& OutVitruvioActors, URulePackage* Rpk = nullptr,
-																   bool bGenerateModels = true);
+																   bool bGenerateModels = true, bool bBatchGeneration = false);
 };

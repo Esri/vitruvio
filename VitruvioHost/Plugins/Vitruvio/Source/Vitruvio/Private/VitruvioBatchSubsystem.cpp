@@ -38,6 +38,11 @@ void UVitruvioBatchSubsystem::Generate(UVitruvioComponent* VitruvioComponent, UG
 	GetBatchActor()->Generate(VitruvioComponent, CallbackProxy);
 }
 
+void UVitruvioBatchSubsystem::GenerateAll(UGenerateCompletedCallbackProxy* CallbackProxy)
+{
+	GetBatchActor()->GenerateAll(CallbackProxy);
+}
+
 AVitruvioBatchActor* UVitruvioBatchSubsystem::GetBatchActor()
 {
 	if (!VitruvioBatchActor)
@@ -78,7 +83,7 @@ void UVitruvioBatchSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	{
 		if (UVitruvioComponent* VitruvioComponent = Actor->FindComponentByClass<UVitruvioComponent>())
 		{
-			if (VitruvioComponent->bBatchGenerate)
+			if (VitruvioComponent->IsBatchGenerated())
 			{
 				UnregisterVitruvioComponent(VitruvioComponent);
 				RegisterVitruvioComponent(VitruvioComponent);
@@ -103,7 +108,7 @@ void UVitruvioBatchSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	{
 		if (UVitruvioComponent* VitruvioComponent = Actor->FindComponentByClass<UVitruvioComponent>())
 		{
-			if (VitruvioComponent->bBatchGenerate)
+			if (VitruvioComponent->IsBatchGenerated())
 			{
 				UnregisterVitruvioComponent(VitruvioComponent);
 			}
@@ -117,7 +122,7 @@ void UVitruvioBatchSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 		if (UVitruvioComponent* VitruvioComponent = Actor->FindComponentByClass<UVitruvioComponent>())
 		{
-			if (VitruvioComponent->bBatchGenerate)
+			if (VitruvioComponent->IsBatchGenerated())
 			{
 				RegisterVitruvioComponent(VitruvioComponent);
 			}

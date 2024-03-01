@@ -38,7 +38,9 @@ struct FGenerateOptions
 {
 	GENERATED_BODY()
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vitruvio")
 	bool bIgnoreMaterialReplacements = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vitruvio")
 	bool bIgnoreInstanceReplacements = false;
 };
 
@@ -120,9 +122,6 @@ class VITRUVIO_API UVitruvioComponent : public UActorComponent
 public:
 	UVitruvioComponent();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Batch Generate", Category = "Vitruvio")
-	bool bBatchGenerate = false;
-
 	/** Automatically generate after changing attributes or properties. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Generate Automatically", Category = "Vitruvio",
 		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
@@ -169,6 +168,18 @@ public:
 	UInstanceReplacementAsset* InstanceReplacement;
 
 	/**
+	 * Enables or disables batch generation.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	void SetBatchGenerated(bool bBatchGeneration);
+
+	/**
+	 * Returns whether batch generation is enabled.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	bool IsBatchGenerated() const;
+	
+	/**
 	 * Sets the material replacement Asset and regenerates the model.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio Replacmeents")
@@ -189,7 +200,7 @@ public:
 	/**
 	 * Sets the given Rule Package. This will reevaluate the attributes and if bGenerateModel is set to true, also generates the model.
 	 */
-	void SetRpk(URulePackage* RulePackage, bool bGenerateModel = true, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetRpk(URulePackage* RulePackage, bool bEvaluateAttributes = true, bool bGenerateModel = true, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/** Returns true if the component has valid input data (initial shape and Rule Package). */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
@@ -475,6 +486,9 @@ private:
 	UPROPERTY(VisibleAnywhere, DisplayName = "Reports", Category = "Vitruvio")
 	TMap<FString, FReport> Reports;
 
+	UPROPERTY(EditAnywhere, DisplayName = "Batch Generate", Category = "Vitruvio")
+	bool bBatchGenerate = false;
+
 	UPROPERTY(Transient)
 	bool bInitialized = false;
 
@@ -503,4 +517,6 @@ private:
 #if WITH_EDITOR
 	FDelegateHandle PropertyChangeDelegate;
 #endif
+
+	friend class AVitruvioBatchActor;
 };

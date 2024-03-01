@@ -855,7 +855,7 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	GenerateAutomaticallyProperty->SetOnPropertyValueChanged(
 		FSimpleDelegate::CreateSP(this, &FVitruvioComponentDetails::OnGenerateAutomaticallyChanged));
 
-	const TSharedRef<IPropertyHandle> BatchGenerateHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UVitruvioComponent, bBatchGenerate));
+	const TSharedRef<IPropertyHandle> BatchGenerateHandle = DetailBuilder.GetProperty(TEXT("bBatchGenerate"));
 	BatchGenerateHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder]()
 	{
 		DetailBuilder.ForceRefreshDetails();
@@ -891,7 +891,7 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			AddGenerateButton(RootCategory, VitruvioComponent);
 		}
 
-		if (!VitruvioComponent->bBatchGenerate)
+		if (!VitruvioComponent->IsBatchGenerated())
 		{
 			AddReplacementButtons(RootCategory, VitruvioComponent);
 		}

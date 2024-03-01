@@ -46,8 +46,9 @@ struct FGenerateResultDescription
 	TMap<FString, FString> InstanceNames;
 	
 	TMap<FString, FReport> Reports;
-};
 
+	TArray<FAttributeMapPtr> EvaluatedAttributes;
+};
 
 class FInvalidationToken
 {
@@ -100,8 +101,8 @@ struct FInitialShape
 	FVector Offset;
 	FInitialShapePolygon Polygon;
 	AttributeMapUPtr Attributes;
-	int32 RandomSeed;
-	URulePackage* RulePackage;
+	int32 RandomSeed = 0;
+	URulePackage* RulePackage = nullptr;
 };
 
 using FGenerateResult = TResult<FGenerateResultDescription, FGenerateToken>;
@@ -122,7 +123,7 @@ public:
 	VITRUVIO_API Vitruvio::FTextureData DecodeTexture(UObject* Outer, const FString& Path, const FString& Key) const;
 
 	/**
-	 * \brief Asynchronously evaluates the attributes and generates the models for all given InitialShapes using the given RulePackage.
+	 * \brief Asynchronously evaluates the attributes and generates the models for all given InitialShapes.
 	 *
 	 * \param InitialShapes
 	 * \return the generated UStaticMesh.
@@ -130,7 +131,7 @@ public:
 	VITRUVIO_API FBatchGenerateResult BatchGenerateAsync(TArray<FInitialShape> InitialShapes) const;
 
 	/**
-	 * \brief Generate the models with the given InitialShape, RulePackage and Attributes.
+	 * \brief Generate the models with the given InitialShapes.
 	 *
 	 * \param InitialShapes
 	 * \return the generated UStaticMesh.

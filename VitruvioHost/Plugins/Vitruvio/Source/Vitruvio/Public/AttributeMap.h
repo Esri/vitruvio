@@ -24,13 +24,12 @@ class VITRUVIO_API FAttributeMap
 public:
 	FAttributeMap() {}
 
-	FAttributeMap(AttributeMapUPtr AttributeMap, RuleFileInfoUPtr RuleInfo) : AttributeMap(std::move(AttributeMap)), RuleInfo(std::move(RuleInfo)) {}
+	FAttributeMap(AttributeMapUPtr AttributeMap, const RuleFileInfoPtr& RuleInfo) : AttributeMap(std::move(AttributeMap)), RuleInfo(RuleInfo) {}
 
 	void UpdateUnrealAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, UObject* const Outer);
 
-private:
 	const AttributeMapUPtr AttributeMap;
-	const RuleFileInfoUPtr RuleInfo;
+	const RuleFileInfoPtr RuleInfo;
 };
 
 using FAttributeMapPtr = TSharedPtr<FAttributeMap>;

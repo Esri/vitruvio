@@ -42,7 +42,7 @@ namespace prtu
 
 constexpr const wchar_t* ANNOT_START_RULE = L"@StartRule";
 
-inline std::wstring detectStartRule(const RuleFileInfoUPtr& ruleFileInfo)
+inline std::wstring detectStartRule(const RuleFileInfoPtr& ruleFileInfo)
 {
 	for (size_t r = 0; r < ruleFileInfo->getNumRules(); r++)
 	{

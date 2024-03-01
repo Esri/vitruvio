@@ -15,6 +15,7 @@
 
 #include "GenerateCompletedCallbackProxy.h"
 
+#include "VitruvioBatchSubsystem.h"
 #include "Algo/Count.h"
 #include "Engine/World.h"
 #include "VitruvioBlueprintLibrary.h"
@@ -59,7 +60,7 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetRpk(UVitruv
 {
 	return ExecuteIfComponentValid(TEXT("SetRpk"), VitruvioComponent, [RulePackage, bGenerateModel](UGenerateCompletedCallbackProxy* Proxy, UVitruvioComponent* VitruvioComponent)
 	{
-		VitruvioComponent->SetRpk(RulePackage, bGenerateModel, Proxy);
+		VitruvioComponent->SetRpk(RulePackage, true, bGenerateModel, Proxy);
 	});
 }
 
@@ -72,7 +73,7 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetRandomSeed(
 	});
 }
 
-UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::Generate(UVitruvioComponent* VitruvioComponent, const FGenerateOptions& GenerateOptions)
+UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::Generate(UVitruvioComponent* VitruvioComponent, FGenerateOptions GenerateOptions)
 {
 	return ExecuteIfComponentValid(TEXT("Generate"), VitruvioComponent, [GenerateOptions](UGenerateCompletedCallbackProxy* Proxy, UVitruvioComponent* VitruvioComponent)
 	{
@@ -163,22 +164,26 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetSplineIniti
 
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::ConvertToVitruvioActor(UObject* WorldContextObject, const TArray<AActor*>& Actors,
 																						 TArray<AVitruvioActor*>& OutVitruvioActors,
-																						 URulePackage* Rpk, bool bGenerateModels)
+																						 URulePackage* Rpk, bool bGenerateModels, bool bBatchGeneration)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(WorldContextObject);
-	const int32 TotalActors = Algo::CountIf(Actors, [](AActor* Actor) { return UVitruvioBlueprintLibrary::CanConvertToVitruvioActor(Actor); });
 
-	UGenerateCompletedCallbackProxy* InternalProxy = NewObject<UGenerateCompletedCallbackProxy>();
-	InternalProxy->RegisterWithGameInstance(WorldContextObject);
-	InternalProxy->OnGenerateCompleted.AddLambda(FExecuteAfterCountdown(TotalActors, [Proxy]() {
-		Proxy->OnGenerateCompletedBlueprint.Broadcast();
-		Proxy->OnGenerateCompleted.Broadcast();
-	}));
-	InternalProxy->OnAttributesEvaluated.AddLambda(FExecuteAfterCountdown(TotalActors, [Proxy]() {
-		Proxy->OnAttributesEvaluatedBlueprint.Broadcast();
-		Proxy->OnAttributesEvaluated.Broadcast();
-	}));
+	UGenerateCompletedCallbackProxy* NonBatchedProxy = nullptr;
+	if (!bBatchGeneration)
+	{
+		NonBatchedProxy = NewObject<UGenerateCompletedCallbackProxy>();
+		const int32 TotalActors = Algo::CountIf(Actors, [](AActor* Actor) { return UVitruvioBlueprintLibrary::CanConvertToVitruvioActor(Actor); });
+		NonBatchedProxy->RegisterWithGameInstance(WorldContextObject);
+		NonBatchedProxy->OnGenerateCompleted.AddLambda(FExecuteAfterCountdown(TotalActors, [Proxy]() {
+			Proxy->OnGenerateCompletedBlueprint.Broadcast();
+			Proxy->OnGenerateCompleted.Broadcast();
+		}));
+		NonBatchedProxy->OnAttributesEvaluated.AddLambda(FExecuteAfterCountdown(TotalActors, [Proxy]() {
+			Proxy->OnAttributesEvaluatedBlueprint.Broadcast();
+			Proxy->OnAttributesEvaluated.Broadcast();
+		}));
+	}
 
 	for (AActor* Actor : Actors)
 	{
@@ -190,7 +195,9 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::ConvertToVitru
 			CopyInitialShapeSceneComponent(Actor, VitruvioActor);
 
 			UVitruvioComponent* VitruvioComponent = VitruvioActor->VitruvioComponent;
-			VitruvioComponent->SetRpk(Rpk, bGenerateModels, InternalProxy);
+			VitruvioComponent->SetBatchGenerated(bBatchGeneration);
+
+			VitruvioComponent->SetRpk(Rpk, !bBatchGeneration, bGenerateModels, NonBatchedProxy);
 
 			if (OldAttachParent)
 			{
@@ -202,5 +209,12 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::ConvertToVitru
 			OutVitruvioActors.Add(VitruvioActor);
 		}
 	}
+
+	if (bBatchGeneration)
+	{
+		UVitruvioBatchSubsystem* VitruvioBatchSubsystem = WorldContextObject->GetWorld()->GetSubsystem<UVitruvioBatchSubsystem>();
+		VitruvioBatchSubsystem->GenerateAll(Proxy);
+	}
+	
 	return Proxy;
 }
