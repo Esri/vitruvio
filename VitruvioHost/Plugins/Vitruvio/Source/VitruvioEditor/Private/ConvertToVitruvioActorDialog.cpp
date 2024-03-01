@@ -13,10 +13,8 @@
  * limitations under the License.
  */
 
-#include "..\Public\ConvertToVitruvioActorDialog.h"
-#include "RulePackage.h"
+#include "ConvertToVitruvioActorDialog.h"
 
-#include "PropertyCustomizationHelpers.h"
 #include "Editor/PropertyEditor/Public/IPropertyTable.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
 #include "Widgets/SCompoundWidget.h"
