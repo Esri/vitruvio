@@ -262,7 +262,7 @@ void VitruvioEditorModule::OnPostEngineInit()
 
 		VitruvioModule::Get().EvictFromResolveMapCache(RulePackage);
 
-		TArray<UVitruvioComponent*> BatchedComponents;
+		UVitruvioBatchSubsystem* BatchSubsystem = GEditor->GetEditorWorldContext().World()->GetSubsystem<UVitruvioBatchSubsystem>();
 		for (FActorIterator It(GEditor->GetEditorWorldContext().World()); It; ++It)
 		{
 			AActor* Actor = *It;
@@ -276,15 +276,9 @@ void VitruvioEditorModule::OnPostEngineInit()
 				}
 				else
 				{
-					BatchedComponents.Add(VitruvioComponent);
+					BatchSubsystem->Generate(VitruvioComponent);
 				}
 			}
-		}
-
-		UVitruvioBatchSubsystem* BatchSubsystem = GEditor->GetEditorWorldContext().World()->GetSubsystem<UVitruvioBatchSubsystem>();
-		for (UVitruvioComponent* VitruvioComponent : BatchedComponents)
-		{
-			BatchSubsystem->Generate(VitruvioComponent);
 		}
 	});
 	// clang-format on
