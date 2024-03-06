@@ -482,6 +482,7 @@ private:
 	UPROPERTY(VisibleAnywhere, DisplayName = "Reports", Category = "Vitruvio")
 	TMap<FString, FReport> Reports;
 
+	/** Generate several VitruvioComponents together in batches which can improve generate as well as rendering performance. */
 	UPROPERTY(EditAnywhere, DisplayName = "Batch Generate", Category = "Vitruvio")
 	bool bBatchGenerate = false;
 
