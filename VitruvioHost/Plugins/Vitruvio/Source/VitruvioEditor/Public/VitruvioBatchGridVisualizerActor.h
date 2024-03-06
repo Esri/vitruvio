@@ -18,7 +18,7 @@
 #include "VitruvioBatchGridVisualizerActor.generated.h"
 
 UCLASS(NotBlueprintable, NotPlaceable, Transient)
-class AVitruvioBatchGridVisualizerActor : public AActor
+class AVitruvioBatchGridVisualizerActor : public AInfo
 {
 	GENERATED_BODY()
 	
