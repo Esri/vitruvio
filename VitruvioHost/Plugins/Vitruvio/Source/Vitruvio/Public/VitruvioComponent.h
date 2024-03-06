@@ -153,10 +153,6 @@ public:
 	UPROPERTY(Transient, TextExportTransient, DuplicateTransient)
 	USceneComponent* InitialShapeSceneComponent;
 
-	UPROPERTY(EditAnywhere, Category = "Vitruvio", meta = (DisplayName = "Generate Collision Mesh"),
-		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
-	bool GenerateCollision = true;
-
 	/** The material replacement asset which defines how materials are replaced after generating a model. */
 	UPROPERTY(EditAnywhere, Category = "Vitruvio Replacmeents", Setter = SetMaterialReplacementAsset,
 		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
