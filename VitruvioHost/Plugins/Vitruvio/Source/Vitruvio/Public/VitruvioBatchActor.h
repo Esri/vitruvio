@@ -150,6 +150,7 @@ public:
 	FIntPoint GetPosition(const UVitruvioComponent* VitruvioComponent) const;
 	
 #if WITH_EDITOR
+	virtual bool CanDeleteSelectedActor(FText& OutReason) const override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 

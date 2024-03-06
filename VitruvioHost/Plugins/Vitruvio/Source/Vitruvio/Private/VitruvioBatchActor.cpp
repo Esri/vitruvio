@@ -450,6 +450,11 @@ void AVitruvioBatchActor::SetInstanceReplacementAsset(UInstanceReplacementAsset*
 }
 
 #if WITH_EDITOR
+bool AVitruvioBatchActor::CanDeleteSelectedActor(FText& OutReason) const
+{
+	return false;
+}
+
 void AVitruvioBatchActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
