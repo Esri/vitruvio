@@ -141,7 +141,7 @@ The *Attributes Evaluated* execution path is used since we need to wait until th
 
 Batch generation allows for the simultaneous generation of several models in batches, enhancing performance.
 
-![vitruvio_batch_generate.jpg](C:\dev\git\vitruvio\doc\img\vitruvio_batch_generate.jpg)
+<img title="" src="img/vitruvio_batch_generate.jpg" alt="" width="800">
 
 Batch generation can be controlled per Vitruvio Actor using the *Batch Generate* option. It is recommended to use this feature if your scene contains many Vitruvio Actors.
 
