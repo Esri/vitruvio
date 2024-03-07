@@ -1,14 +1,14 @@
 # Vitruvio Installation
 
-This page describes how to install the Vitruvio Plugin for Unreal Engine.
+This page describes how to install and setup the Vitruvio Plugin for Unreal Engine.
 
-## Download
+## Download and Install
 
-* Download the [latest Vitruvio](https://github.com/Esri/vitruvio/releases/latest) version. **Note** that the zip file contains libraries which are used by Vitruvio and your browser might warn you not to download them. This warning can be ignored.
+* Download the MSI installer of the [latest Vitruvio](https://github.com/Esri/vitruvio/releases/latest) version (alternatively the plugin can also be downloaded as a zip file and extracted directly into your Unreal Engine project). **Note** that the installer contains libraries which are used by Vitruvio and your browser might warn you not to download them. This warning can be ignored.
 
-* Unzip the downloaded file and copy the extracted Vitruvio folder to `<Path to Unreal Engine>\Engine\Plugins\Marketplace`  (for example `C:\dev\Epic Games\UE_5.0\Engine\Plugins\Marketplace`). The Marketplace folder should now contain the Vitruvio Plugin folder.
+* Follow the instructions of the installer.
 
-## Installation
+## Plugin Activation
 
 * Create a new Unreal Engine project from the Epic Games launcher or open an existing project.
 
