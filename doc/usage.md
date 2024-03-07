@@ -148,3 +148,11 @@ Batch generation can be controlled per Vitruvio Actor using the *Batch Generate*
 The advantages include improved generation as well as rendering performance. However, if a Vitruvio Actor's attributes are changed at runtime (for example, via user input), it is recommended not to allow batch generation since every attribute change requires regenerating the entire batch.
 
 For advanced use cases the *Grid Dimension* (which controls the batch size) on the *Vitruvio Batch Actor* can be changed.
+
+### Asset Replacements
+
+Vitruvio Actors support automated asset (Materials and Instances) replacements using Data Tables.
+
+![](img/vitruvio_replacements.jpg)
+
+To begin the replacement workflow, select either *Replace Materials* or *Replace Instances* on the Vitruvio Actor. This action will prompt a dialogue where you can first select (or create) a Data Asset where the replacements are stored. **Note** that this Data Asset can also be applied to other Vitruvio Actors to implement the same replacements. Once selected, you can define the actual replacements and apply them. These replacements will now take effect after every model regeneration.
