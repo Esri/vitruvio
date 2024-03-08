@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,22 @@
 #pragma once
 
 #include "AttributeMap.h"
-#include "GenerateCompletedCallbackProxy.h"
 #include "InitialShape.h"
 #include "MeshCache.h"
-#include "MeshDescription.h"
 #include "PRTTypes.h"
 #include "Report.h"
-#include "RuleAttributes.h"
 #include "RulePackage.h"
 
 #include "prt/Object.h"
 
 #include "Engine/StaticMesh.h"
 #include "HAL/ThreadSafeCounter.h"
+#include "HAL/ThreadSafeBool.h"
 #include "Modules/ModuleManager.h"
 
 #include "UnrealLogHandler.h"
 #include "VitruvioTypes.h"
 
-#include <map>
 #include <memory>
 #include <string>
 
@@ -42,10 +39,15 @@ DECLARE_LOG_CATEGORY_EXTERN(LogUnrealPrt, Log, All);
 
 struct FGenerateResultDescription
 {
+	TSharedPtr<FVitruvioMesh> GeneratedModel;
+	
 	Vitruvio::FInstanceMap Instances;
-	TMap<int32, TSharedPtr<FVitruvioMesh>> Meshes;
+	TMap<FString, TSharedPtr<FVitruvioMesh>> InstanceMeshes;
+	TMap<FString, FString> InstanceNames;
+	
 	TMap<FString, FReport> Reports;
-	TMap<int32, FString> Names;
+
+	TArray<FAttributeMapPtr> EvaluatedAttributes;
 };
 
 class FInvalidationToken
@@ -94,7 +96,17 @@ public:
 	FTokenPtr Token;
 };
 
+struct FInitialShape
+{
+	FVector Offset;
+	FInitialShapePolygon Polygon;
+	AttributeMapUPtr Attributes;
+	int32 RandomSeed = 0;
+	URulePackage* RulePackage = nullptr;
+};
+
 using FGenerateResult = TResult<FGenerateResultDescription, FGenerateToken>;
+using FBatchGenerateResult = TResult<FGenerateResultDescription, FGenerateToken>;
 using FAttributeMapResult = TResult<FAttributeMapPtr, FEvalAttributesToken>;
 
 class VitruvioModule final : public IModuleInterface, public FGCObject
@@ -111,40 +123,45 @@ public:
 	VITRUVIO_API Vitruvio::FTextureData DecodeTexture(UObject* Outer, const FString& Path, const FString& Key) const;
 
 	/**
+	 * \brief Asynchronously evaluates the attributes and generates the models for all given InitialShapes.
+	 *
+	 * \param InitialShapes
+	 * \return the generated UStaticMesh.
+	 */
+	VITRUVIO_API FBatchGenerateResult BatchGenerateAsync(TArray<FInitialShape> InitialShapes) const;
+
+	/**
+	 * \brief Generate the models with the given InitialShapes.
+	 *
+	 * \param InitialShapes
+	 * \return the generated UStaticMesh.
+	 */
+	VITRUVIO_API FGenerateResultDescription BatchGenerate(TArray<FInitialShape> InitialShapes) const;
+
+	/**
 	 * \brief Asynchronously generate the models with the given InitialShape, RulePackage and Attributes.
 	 *
 	 * \param InitialShape
-	 * \param RulePackage
-	 * \param Attributes
-	 * \param RandomSeed
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API FGenerateResult GenerateAsync(const FInitialShapePolygon& InitialShape, URulePackage* RulePackage, AttributeMapUPtr Attributes,
-											   const int32 RandomSeed) const;
+	VITRUVIO_API FGenerateResult GenerateAsync(FInitialShape InitialShape) const;
+
 
 	/**
 	 * \brief Generate the models with the given InitialShape, RulePackage and Attributes.
 	 *
 	 * \param InitialShape
-	 * \param RulePackage
-	 * \param Attributes
-	 * \param RandomSeed
 	 * \return the generated UStaticMesh.
 	 */
-	VITRUVIO_API FGenerateResultDescription Generate(const FInitialShapePolygon& InitialShape, URulePackage* RulePackage, AttributeMapUPtr Attributes,
-													 const int32 RandomSeed) const;
+	VITRUVIO_API FGenerateResultDescription Generate(const FInitialShape& InitialShape) const;
 
 	/**
 	 * \brief Asynchronously evaluates attributes for the given initial shape and rule package.
 	 *
 	 * \param InitialShape
-	 * \param RulePackage
-	 * \param Attributes
-	 * \param RandomSeed
 	 * \return
 	 */
-	VITRUVIO_API FAttributeMapResult EvaluateRuleAttributesAsync(const FInitialShapePolygon& InitialShape, URulePackage* RulePackage,
-																 AttributeMapUPtr Attributes, const int32 RandomSeed) const;
+	VITRUVIO_API FAttributeMapResult EvaluateRuleAttributesAsync(FInitialShape InitialShape) const;
 
 	/**
 	 * \return whether PRT is initialized meaning installed and ready to use. Before initialization generation is not possible and will
@@ -274,6 +291,8 @@ private:
 
 	FCriticalSection RegisterMeshLock;
 	TSet<UStaticMesh*> RegisteredMeshes;
+
+	void NotifyGenerateCompleted() const;
 
 	TFuture<ResolveMapSPtr> LoadResolveMapAsync(URulePackage* RulePackage) const;
 	void InitializePrt();

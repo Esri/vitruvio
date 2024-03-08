@@ -1,4 +1,4 @@
-﻿/* Copyright 2023 Esri
+﻿/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogMaterialConversion, Log, All);
 
 namespace Vitruvio
 {
-UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, const FName& Name, UMaterialInterface* OpaqueParent,
+UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, const FString& Name, UMaterialInterface* OpaqueParent,
 															UMaterialInterface* MaskedParent, UMaterialInterface* TranslucentParent,
 															const FMaterialAttributeContainer& MaterialAttributes,
 															TMap<FString, FTextureData>& TextureCache);

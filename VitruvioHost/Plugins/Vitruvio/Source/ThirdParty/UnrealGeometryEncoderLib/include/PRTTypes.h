@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +47,7 @@ using AttributeMapBuilderUPtr = std::unique_ptr<prt::AttributeMapBuilder, PRTDes
 using AttributeMapBuilderVector = std::vector<AttributeMapBuilderUPtr>;
 using InitialShapePtr = std::shared_ptr<const prt::InitialShape>;
 using InitialShapeUPtr = std::unique_ptr<const prt::InitialShape, PRTDestroyer>;
+using InitialShapeUPtrVector = std::vector<InitialShapeUPtr>;
 using InitialShapeBuilderPtr = std::shared_ptr<const prt::InitialShapeBuilder>;
 using InitialShapeBuilderUPtr = std::unique_ptr<prt::InitialShapeBuilder, PRTDestroyer>;
 using InitialShapeBuilderVector = std::vector<InitialShapeBuilderUPtr>;
@@ -55,3 +56,9 @@ using RuleFileInfoUPtr = std::unique_ptr<const prt::RuleFileInfo, PRTDestroyer>;
 using EncoderInfoUPtr = std::unique_ptr<const prt::EncoderInfo, PRTDestroyer>;
 using OcclusionSetUPtr = std::unique_ptr<prt::OcclusionSet, PRTDestroyer>;
 using ResolveMapSPtr = std::shared_ptr<prt::ResolveMap const>;
+
+template <typename T>
+std::shared_ptr<T> prt_make_shared(T* ptr)
+{
+	return std::shared_ptr<T>(ptr, PRTDestroyer {});
+}

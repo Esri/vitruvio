@@ -136,3 +136,23 @@ We can now access the reports and print them as follows:
 <img title="" src="img/print_reports.jpg" alt="" width="800">
 
 The *Attributes Evaluated* execution path is used since we need to wait until the new attributes have been evaluated before we can access the new report values.
+
+### Batch Generation
+
+Batch generation allows for the simultaneous generation of several models in batches, enhancing performance.
+
+<img title="" src="img/vitruvio_batch_generate.jpg" alt="" width="800">
+
+Batch generation can be controlled per Vitruvio Actor using the *Batch Generate* option. It is recommended to use this feature if your scene contains many Vitruvio Actors.
+
+The advantages include improved generation as well as rendering performance. However, if a Vitruvio Actor's attributes are changed at runtime (for example, via user input), it is recommended not to allow batch generation since every attribute change requires regenerating the entire batch.
+
+For advanced use cases the *Grid Dimension* (which controls the batch size) on the *Vitruvio Batch Actor* can be changed.
+
+### Asset Replacements
+
+Vitruvio Actors support automated asset (Materials and Instances) replacements using Data Tables.
+
+<img title="" src="img/vitruvio_replacements.jpg" alt="" width="800">
+
+To begin the replacement workflow, select either *Replace Materials* or *Replace Instances* on the Vitruvio Actor. This action will prompt a dialogue where you can first select (or create) a Data Asset where the replacements are stored. **Note** that this Data Asset can also be applied to other Vitruvio Actors to implement the same replacements. Once selected, you can define the actual replacements and apply them. These replacements will now take effect after every model regeneration.

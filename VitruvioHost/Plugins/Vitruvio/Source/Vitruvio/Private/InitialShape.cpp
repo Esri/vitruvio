@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,9 +27,9 @@
 namespace
 {
 template <typename T>
-T* AttachComponent(AActor* Owner, const FString& Name, bool bAttachToRoot = true)
+T* AttachComponent(AActor* Owner, const FString& Name, bool bAttachToRoot = true, EObjectFlags Flags = RF_DuplicateTransient | RF_Transient | RF_TextExportTransient)
 {
-	T* Component = NewObject<T>(Owner, *Name, RF_DuplicateTransient | RF_Transient | RF_TextExportTransient);
+	T* Component = NewObject<T>(Owner, *Name, Flags);
 	Component->Mobility = EComponentMobility::Movable;
 	Owner->AddOwnedComponent(Component);
 	Component->CreationMethod = EComponentCreationMethod::Instance;
@@ -56,10 +56,10 @@ FMeshDescription CreateMeshDescription(const FInitialShapePolygon& InPolygon)
 	const auto VertexPositions = Attributes.GetVertexPositions();
 	const FPolygonGroupID PolygonGroupId = Description.CreatePolygonGroup();
 
-	for (const FVector3f& Vertex : InPolygon.Vertices)
+	for (const FVector& Vertex : InPolygon.Vertices)
 	{
 		const FVertexID VertexID = Description.CreateVertex();
-		VertexPositions[VertexID] = Vertex;
+		VertexPositions[VertexID] = FVector3f(Vertex);
 	}
 
 	for (const FInitialShapeFace& Face : InPolygon.Faces)
@@ -127,7 +127,7 @@ FInitialShapePolygon CreateInitialPolygonFromStaticMesh(const UStaticMesh* Stati
 		return {};
 	}
 
-	TArray<FVector3f> MeshVertices;
+	TArray<FVector> MeshVertices;
 	TArray<int32> MeshIndices;
 	TArray<FTextureCoordinateSet> MeshTextureCoordinateSets;
 	MeshTextureCoordinateSets.AddDefaulted(8);
@@ -141,9 +141,9 @@ FInitialShapePolygon CreateInitialPolygonFromStaticMesh(const UStaticMesh* Stati
 		{
 			for (uint32 VertexIndex = 0; VertexIndex < LOD.VertexBuffers.PositionVertexBuffer.GetNumVertices(); ++VertexIndex)
 			{
-				FVector3f Vertex = LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(VertexIndex);
+				FVector Vertex = FVector(LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(VertexIndex));
 
-				auto VertexFindPredicate = [Vertex](const FVector3f& In) {
+				auto VertexFindPredicate = [Vertex](const FVector& In) {
 					return Vertex.Equals(In);
 				};
 				int32 MappedVertexIndex = MeshVertices.IndexOfByPredicate(VertexFindPredicate);
@@ -187,7 +187,7 @@ FInitialShapePolygon CreateInitialPolygonFromStaticMesh(const UStaticMesh* Stati
 
 FInitialShapePolygon CreateInitialShapePolygonFromSpline(const USplineComponent* SplineComponent, const uint32 SplineApproximationPoints)
 {
-	TArray<FVector3f> Vertices;
+	TArray<FVector> Vertices;
 	TArray<int> Indices;
 	const int32 NumPoints = SplineComponent->GetNumberOfSplinePoints();
 	for (int32 SplinePointIndex = 0; SplinePointIndex < NumPoints; ++SplinePointIndex)
@@ -196,7 +196,7 @@ FInitialShapePolygon CreateInitialShapePolygonFromSpline(const USplineComponent*
 		if (SplineType == ESplinePointType::Linear)
 		{
 			Indices.Add(Vertices.Num());
-			Vertices.Add(FVector3f(SplineComponent->GetLocationAtSplinePoint(SplinePointIndex, ESplineCoordinateSpace::Local)));
+			Vertices.Add(FVector(SplineComponent->GetLocationAtSplinePoint(SplinePointIndex, ESplineCoordinateSpace::Local)));
 		}
 		else
 		{
@@ -208,7 +208,7 @@ FInitialShapePolygon CreateInitialShapePolygonFromSpline(const USplineComponent*
 			while (Position < EndDistance)
 			{
 				Indices.Add(Vertices.Num());
-				Vertices.Add(FVector3f(SplineComponent->GetLocationAtDistanceAlongSpline(Position, ESplineCoordinateSpace::Local)));
+				Vertices.Add(FVector(SplineComponent->GetLocationAtDistanceAlongSpline(Position, ESplineCoordinateSpace::Local)));
 				Position += Distance;
 			}
 		}
@@ -221,7 +221,7 @@ FInitialShapePolygon CreateInitialShapePolygonFromSpline(const USplineComponent*
 FInitialShapePolygon CreateDefaultInitialShapePolygon()
 {
 	FInitialShapePolygon Polygon;
-	Polygon.Vertices = {FVector3f(1000, -1000, 0), FVector3f(-1000, -1000, 0), FVector3f(-1000, 1000, 0), FVector3f(1000, 1000, 0)};
+	Polygon.Vertices = {FVector(1000, -1000, 0), FVector(-1000, -1000, 0), FVector(-1000, 1000, 0), FVector(1000, 1000, 0)};
 	FInitialShapeFace InitialShapeFace;
 	InitialShapeFace.Indices = {0, 1, 2, 3};
 	Polygon.Faces.Add(InitialShapeFace);
@@ -233,7 +233,7 @@ bool IsDefaultInitialShape(const FInitialShapePolygon& InitialShapePolygon)
 {
 	const FInitialShapePolygon DefaultInitialShapePolygon = CreateDefaultInitialShapePolygon();
 	check(DefaultInitialShapePolygon.Faces.Num() == 1);
-	const TArray<FVector3f>& DefaultVertices = DefaultInitialShapePolygon.Vertices;
+	const TArray<FVector>& DefaultVertices = DefaultInitialShapePolygon.Vertices;
 	const TArray<int32>& DefaultIndices = DefaultInitialShapePolygon.Faces[0].Indices;
 	check(DefaultVertices.Num() == 4);
 
@@ -241,7 +241,7 @@ bool IsDefaultInitialShape(const FInitialShapePolygon& InitialShapePolygon)
 	{
 		return false;
 	}
-	const TArray<FVector3f>& Vertices = InitialShapePolygon.Vertices;
+	const TArray<FVector>& Vertices = InitialShapePolygon.Vertices;
 	const TArray<int32>& Indices = InitialShapePolygon.Faces[0].Indices;
 
 	if (Vertices.Num() != DefaultVertices.Num() || Indices.Num() != DefaultIndices.Num())
@@ -249,7 +249,7 @@ bool IsDefaultInitialShape(const FInitialShapePolygon& InitialShapePolygon)
 		return false;
 	}
 
-	const FVector3f FirstVertex = DefaultVertices[Indices[0]];
+	const FVector FirstVertex = DefaultVertices[Indices[0]];
 	int32 InitialIndexOffset;
 	if (Vertices.Find(FirstVertex, InitialIndexOffset))
 	{
@@ -416,7 +416,7 @@ void UInitialShape::SetPolygon(const FInitialShapePolygon& NewPolygon)
 	bIsPolygonValid = HasValidGeometry(Polygon);
 }
 
-const TArray<FVector3f>& UInitialShape::GetVertices() const
+const TArray<FVector>& UInitialShape::GetVertices() const
 {
 	return Polygon.Vertices;
 }
@@ -511,8 +511,10 @@ bool UStaticMeshInitialShape::CanConstructFrom(AActor* Owner) const
 {
 	if (Owner)
 	{
-		UStaticMeshComponent* StaticMeshComponent = Owner->FindComponentByClass<UStaticMeshComponent>();
-		return StaticMeshComponent != nullptr && StaticMeshComponent->GetStaticMesh() != nullptr;
+		const UStaticMeshComponent* StaticMeshComponent = Owner->FindComponentByClass<UStaticMeshComponent>();
+	
+		return StaticMeshComponent != nullptr && StaticMeshComponent->GetStaticMesh() != nullptr &&
+			StaticMeshComponent->GetAttachChildren().Num() == 0;
 	}
 	return false;
 }
@@ -520,14 +522,12 @@ bool UStaticMeshInitialShape::CanConstructFrom(AActor* Owner) const
 USceneComponent* UStaticMeshInitialShape::CopySceneComponent(AActor* OldActor, AActor* NewActor) const
 {
 	const UStaticMeshComponent* OldStaticMeshComponent = OldActor->FindComponentByClass<UStaticMeshComponent>();
-	USceneComponent* RootComponent = AttachComponent<USceneComponent>(NewActor, TEXT("RootComponent"), false);
-	NewActor->SetRootComponent(RootComponent);
 
-	UStaticMeshComponent* NewStaticMeshComponent = AttachComponent<UStaticMeshComponent>(NewActor, TEXT("InitialShapeStaticMesh"), true);
+	UStaticMeshComponent* NewStaticMeshComponent = AttachComponent<UStaticMeshComponent>(NewActor, TEXT("InitialShapeStaticMesh"), true, RF_Public);
 	if (OldStaticMeshComponent)
 	{
 		NewStaticMeshComponent->SetStaticMesh(OldStaticMeshComponent->GetStaticMesh());
-		RootComponent->SetWorldTransform(OldStaticMeshComponent->GetComponentTransform());
+		NewActor->GetRootComponent()->SetWorldTransform(OldStaticMeshComponent->GetComponentTransform());
 	}
 
 	return NewStaticMeshComponent;
@@ -537,8 +537,9 @@ bool USplineInitialShape::CanConstructFrom(AActor* Owner) const
 {
 	if (Owner)
 	{
-		USplineComponent* SplineComponent = Owner->FindComponentByClass<USplineComponent>();
-		return SplineComponent != nullptr && SplineComponent->GetNumberOfSplinePoints() > 0;
+		const USplineComponent* SplineComponent = Owner->FindComponentByClass<USplineComponent>();
+		return SplineComponent != nullptr && SplineComponent->GetNumberOfSplinePoints() > 0 &&
+			SplineComponent->GetAttachChildren().Num() == 0;
 	}
 	return false;
 }
@@ -546,15 +547,13 @@ bool USplineInitialShape::CanConstructFrom(AActor* Owner) const
 USceneComponent* USplineInitialShape::CopySceneComponent(AActor* OldActor, AActor* NewActor) const
 {
 	const USplineComponent* OldSplineComponent = OldActor->FindComponentByClass<USplineComponent>();
-	USceneComponent* RootComponent = AttachComponent<USceneComponent>(NewActor, TEXT("RootComponent"), false);
-	NewActor->SetRootComponent(RootComponent);
 
-	USplineComponent* NewSplineComponent = AttachComponent<USplineComponent>(NewActor, TEXT("InitialShapeSpline"), true);
+	USplineComponent* NewSplineComponent = AttachComponent<USplineComponent>(NewActor, TEXT("InitialShapeSpline"), true, RF_Public);
 	NewSplineComponent->SetClosedLoop(true);
 	if (OldSplineComponent)
 	{
 		NewSplineComponent->SplineCurves = OldSplineComponent->SplineCurves;
-		RootComponent->SetWorldTransform(OldSplineComponent->GetComponentTransform());
+		NewActor->GetRootComponent()->SetWorldTransform(OldSplineComponent->GetComponentTransform());
 	}
 	return NewSplineComponent;
 }
@@ -565,8 +564,8 @@ bool USplineInitialShape::IsRelevantProperty(UObject* Object, const FPropertyCha
 	if (Object)
 	{
 		FProperty* Property = PropertyChangedEvent.Property;
-		return Property && (Property->GetFName() == TEXT("SplineCurves") || (Property->GetFName() == TEXT("SplineApproximationPoints") &&
-																			 PropertyChangedEvent.ChangeType == EPropertyChangeType::ValueSet));
+		return Property && (Property->GetFName() == TEXT("SplineCurves") && PropertyChangedEvent.ChangeType != EPropertyChangeType::Interactive) ||
+						   (Property->GetFName() == TEXT("SplineApproximationPoints") && PropertyChangedEvent.ChangeType == EPropertyChangeType::ValueSet);
 	}
 	return false;
 }

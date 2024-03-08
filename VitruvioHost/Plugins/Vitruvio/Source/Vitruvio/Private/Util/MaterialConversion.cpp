@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 #pragma once
 
 #include "MaterialConversion.h"
-#include "Engine/Public/TextureResource.h"
+#include "Runtime/Engine/Public/TextureResource.h"
 #include "Engine/Texture2D.h"
 #include "HAL/PlatformFileManager.h"
-#include "ImageCore/Public/ImageCore.h"
+#include "Runtime/ImageCore/Public/ImageCore.h"
 #include "VitruvioModule.h"
 #include "VitruvioTypes.h"
 
@@ -28,12 +28,12 @@ DEFINE_LOG_CATEGORY(LogMaterialConversion);
 namespace
 {
 
-constexpr double BLACK_COLOR_THRESHOLD = 0.02;
-constexpr double WHITE_COLOR_THRESHOLD = 1.0 - BLACK_COLOR_THRESHOLD;
-constexpr double OPACITY_THRESHOLD = 0.98;
+constexpr double BlackColorThreshold = 0.02;
+constexpr double WhiteColorThreshold = 1.0 - BlackColorThreshold;
+constexpr double OpacityThreshold = 0.98;
 
-const FString CE_DEFAULT_SHADER_NAME = TEXT("CityEngineShader");
-const FString CE_PBR_SHADER_NAME = TEXT("CityEnginePBRShader");
+const FString CityEngineDefaultShaderName("CityEngineShader");
+const FString CityEnginePBRShaderName("CityEnginePBRShader");
 
 template <typename T, typename F>
 void CountOpacityMapPixels(const T* SrcColors, int32 SizeX, int32 SizeY, uint32& BlackPixels, uint32& WhitePixels, F Accessor)
@@ -46,11 +46,11 @@ void CountOpacityMapPixels(const T* SrcColors, int32 SizeX, int32 SizeY, uint32&
 	{
 		const float Value = Accessor(SrcColors);
 
-		if (Value < BLACK_COLOR_THRESHOLD)
+		if (Value < BlackColorThreshold)
 		{
 			BlackPixels++;
 		}
-		else if (Value > WHITE_COLOR_THRESHOLD)
+		else if (Value > WhiteColorThreshold)
 		{
 			WhitePixels++;
 		}
@@ -108,11 +108,11 @@ EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMa
 	OpacityMap->GetPlatformData()->Mips[0].BulkData.Unlock();
 
 	const uint32 TotalPixels = OpacityMap->GetSizeX() * OpacityMap->GetSizeY();
-	if (WhitePixels >= TotalPixels * OPACITY_THRESHOLD)
+	if (WhitePixels >= TotalPixels * OpacityThreshold)
 	{
 		return BLEND_Opaque;
 	}
-	if (WhitePixels + BlackPixels >= TotalPixels * OPACITY_THRESHOLD)
+	if (WhitePixels + BlackPixels >= TotalPixels * OpacityThreshold)
 	{
 		return BLEND_Masked;
 	}
@@ -121,7 +121,7 @@ EBlendMode ChooseBlendModeFromOpacityMap(const Vitruvio::FTextureData& OpacityMa
 
 EBlendMode ChooseBlendMode(const Vitruvio::FTextureData& OpacityMapData, double Opacity, EBlendMode BlendMode, bool UseAlphaAsOpacity)
 {
-	if (Opacity < OPACITY_THRESHOLD)
+	if (Opacity < OpacityThreshold)
 	{
 		return BLEND_Translucent;
 	}
@@ -224,7 +224,7 @@ public:
 
 namespace Vitruvio
 {
-UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, const FName& Name, UMaterialInterface* OpaqueParent,
+UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, const FString& Name, UMaterialInterface* OpaqueParent,
 															UMaterialInterface* MaskedParent, UMaterialInterface* TranslucentParent,
 															const FMaterialAttributeContainer& MaterialContainer,
 															TMap<FString, FTextureData>& TextureCache)
@@ -304,7 +304,7 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, cons
 
 	UMaterialInterface* Parent = nullptr;
 
-	if (!Shader.IsEmpty() && Shader != CE_DEFAULT_SHADER_NAME && Shader != CE_PBR_SHADER_NAME)
+	if (!Shader.IsEmpty() && Shader != CityEngineDefaultShaderName && Shader != CityEnginePBRShaderName)
 	{
 		const FString FileName = FPaths::GetBaseFilename(Shader);
 		const FString ParentMaterialPath = Shader + TEXT(".") + FileName;
@@ -315,7 +315,10 @@ UMaterialInstanceDynamic* GameThread_CreateMaterialInstance(UObject* Outer, cons
 		Parent = GetMaterialByBlendMode(ChosenBlendMode, OpaqueParent, MaskedParent, TranslucentParent);
 	}
 
-	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, GetTransientPackage(), Name);
+	// Note that we do not want to use MakeUniqueObjectName here because it would add increasing numbers as a postfix to each material name which is
+	// not necessary. In case two materials would have the same name (eg from different VitruvioActor which use the same texture/material name)
+	// UMaterialInstanceDynamic::Create will make the names unique instead.
+	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(Parent, GetTransientPackage(), *Name);
 	MaterialInstance->SetFlags(RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
 
 	MaterialInstance->SetScalarParameterValue(FName(TEXT("opacitySource")), UseAlphaAsOpacity);

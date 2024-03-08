@@ -1,4 +1,4 @@
-﻿/* Copyright 2023 Esri
+﻿/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,6 @@ namespace Vitruvio
  * @param InVertices	Input triangle vertices
  * @param InIndices		Input triangle indices
  */
-FInitialShapePolygon GetPolygon(const TArray<FVector3f>& InVertices, const TArray<int32>& InIndices);
+FInitialShapePolygon GetPolygon(const TArray<FVector>& InVertices, const TArray<int32>& InIndices);
 
 } // namespace Vitruvio

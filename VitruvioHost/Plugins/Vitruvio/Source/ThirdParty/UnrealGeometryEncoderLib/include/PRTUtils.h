@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ namespace prtu
 
 constexpr const wchar_t* ANNOT_START_RULE = L"@StartRule";
 
-inline std::wstring detectStartRule(const RuleFileInfoUPtr& ruleFileInfo)
+inline std::wstring detectStartRule(const RuleFileInfoPtr& ruleFileInfo)
 {
 	for (size_t r = 0; r < ruleFileInfo->getNumRules(); r++)
 	{

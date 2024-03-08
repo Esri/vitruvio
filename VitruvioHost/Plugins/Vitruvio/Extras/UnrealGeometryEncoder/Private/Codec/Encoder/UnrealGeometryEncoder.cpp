@@ -1,4 +1,4 @@
-/* Copyright 2020 Esri
+/* Copyright 2023 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -148,14 +148,20 @@ uint32_t scanValidTextures(const prtx::MaterialPtr& mat)
 		return highestUVSet + 1;
 }
 
-// use shape name by default for the actor and if the instance originates from a file we use the file name for better readability
-std::wstring createInstanceName(const prtx::EncodePreparator::FinalizedInstance& fi)
+struct InstanceIdentifier
+{
+	std::wstring name;
+	std::wstring meshId;
+};
+
+// use shape name by default and if the instance originates from a file we use the file name for better readability
+InstanceIdentifier createInstanceIdentifier(const prtx::EncodePreparator::FinalizedInstance& fi)
 {
 	const auto geometry = fi.getGeometry();
 	const auto uri = geometry->getURI();
 
-	if (uri->isFilePath())
-		return uri->getBaseName();
+	if (!uri->getExtension().empty())
+		return { uri->getBaseName(), uri->getPath() };
 
 	std::wstring meshName = fi.getShapeName();
 
@@ -163,7 +169,7 @@ std::wstring createInstanceName(const prtx::EncodePreparator::FinalizedInstance&
 	if (!meshName.empty() && meshName.back() == '.')
 		meshName = meshName.substr(0, meshName.length() - 1);
 
-	return meshName;
+	return { meshName, uri->getPath() + L"/" + meshName};
 }
 
 std::wstring uriToPath(const prtx::TexturePtr& t)
@@ -514,7 +520,7 @@ SerializedGeometry serializeGeometry(const prtx::GeometryPtrVector& geometries, 
 	return sg;
 }
 
-void encodeMesh(IUnrealCallbacks* cb, const SerializedGeometry& sg, wchar_t const* name, int32_t prototypeIndex, const std::wstring& uri,
+void encodeMesh(IUnrealCallbacks* cb, const SerializedGeometry& sg, wchar_t const* name, wchar_t const* meshId, int32_t prototypeIndex, const std::wstring& uri,
 				prtx::GeometryPtrVector geometries, std::vector<prtx::MaterialPtrVector> materials)
 {
 	auto puvs = toPtrVec(sg.uvs);
@@ -543,7 +549,7 @@ void encodeMesh(IUnrealCallbacks* cb, const SerializedGeometry& sg, wchar_t cons
 		++matIt;
 	}
 
-	cb->addMesh(name, prototypeIndex, uri.c_str(), sg.coords.data(), sg.coords.size(), sg.normals.data(), sg.normals.size(),
+	cb->addMesh(name, meshId, prototypeIndex, uri.c_str(), sg.coords.data(), sg.coords.size(), sg.normals.data(), sg.normals.size(),
 				sg.faceVertexCounts.data(), sg.faceVertexCounts.size(), sg.vertexIndices.data(), sg.vertexIndices.size(), sg.normalIndices.data(),
 				sg.normalIndices.size(),
 
@@ -574,9 +580,16 @@ UnrealGeometryEncoder::UnrealGeometryEncoder(const std::wstring& id, const prt::
 
 void UnrealGeometryEncoder::init(prtx::GenerateContext&)
 {
+	mNsMesh = mNamePrep.newNamespace();
+	mNsMaterial = mNamePrep.newNamespace();
+	
+	mEncPrep = prtx::EncodePreparator::create(true, mNamePrep, mNsMesh, mNsMaterial);
+
 	auto* callbacks = dynamic_cast<IUnrealCallbacks*>(getCallbacks());
 	if (callbacks == nullptr)
 		throw prtx::StatusException(prt::STATUS_ILLEGAL_CALLBACK_OBJECT);
+
+	callbacks->init();
 }
 
 void UnrealGeometryEncoder::encode(prtx::GenerateContext& context, size_t initialShapeIndex)
@@ -585,39 +598,17 @@ void UnrealGeometryEncoder::encode(prtx::GenerateContext& context, size_t initia
 
 	IUnrealCallbacks* cb = static_cast<IUnrealCallbacks*>(getCallbacks());
 
-	const bool emitAttrs = getOptions()->getBool(EO_EMIT_ATTRIBUTES);
-
-	prtx::DefaultNamePreparator namePrep;
-	prtx::NamePreparator::NamespacePtr nsMesh = namePrep.newNamespace();
-	prtx::NamePreparator::NamespacePtr nsMaterial = namePrep.newNamespace();
-	prtx::EncodePreparatorPtr encPrep = prtx::EncodePreparator::create(true, namePrep, nsMesh, nsMaterial);
-
-	// generate geometry
-	prtx::ReportsAccumulatorPtr reportsAccumulator{prtx::SummarizingReportsAccumulator::create()};
-	prtx::ReportingStrategyPtr reportsCollector{prtx::AllShapesReportingStrategy::create(context, initialShapeIndex, reportsAccumulator)};
 	prtx::LeafIteratorPtr li = prtx::LeafIterator::create(context, initialShapeIndex);
 	for (prtx::ShapePtr shape = li->getNext(); shape; shape = li->getNext())
 	{
-		encPrep->add(context.getCache(), shape, initialShape.getAttributeMap());
+		mEncPrep->add(context.getCache(), shape, initialShape.getAttributeMap());
 	}
 
-	const prtx::EncodePreparator::PreparationFlags PREP_FLAGS =
-		prtx::EncodePreparator::PreparationFlags()
-			.instancing(true)
-			.meshMerging(prtx::MeshMerging::ALL_OF_SAME_MATERIAL_AND_TYPE)
-			.triangulate(false)
-			.processHoles(prtx::HoleProcessor::TRIANGULATE_FACES_WITH_HOLES)
-			.mergeVertices(true)
-			.cleanupVertexNormals(true)
-			.cleanupUVs(true)
-			.processVertexNormals(prtx::VertexNormalProcessor::SET_MISSING_TO_FACE_NORMALS)
-			.indexSharing(prtx::EncodePreparator::PreparationFlags::INDICES_SEPARATE_FOR_ALL_VERTEX_ATTRIBUTES);
-
-	prtx::EncodePreparator::InstanceVector instances;
-	encPrep->fetchFinalizedInstances(instances, PREP_FLAGS);
-	convertGeometry(initialShape, instances, cb);
-
+	const bool emitAttrs = getOptions()->getBool(EO_EMIT_ATTRIBUTES);
 	if (emitAttrs) {
+		prtx::ReportsAccumulatorPtr reportsAccumulator{prtx::SummarizingReportsAccumulator::create()};
+		prtx::ReportingStrategyPtr reportsCollector{prtx::AllShapesReportingStrategy::create(context, initialShapeIndex, reportsAccumulator)};
+
 		const prtx::ReportsPtr& reports = reportsCollector->getReports();
 		if (reports) {
 			prtx::PRTUtils::AttributeMapPtr reportMap = convertReportToAttributeMap(reports);
@@ -626,32 +617,28 @@ void UnrealGeometryEncoder::encode(prtx::GenerateContext& context, size_t initia
 	}
 }
 
-void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialShape, const prtx::EncodePreparator::InstanceVector& instances,
-											IUnrealCallbacks* cb) const
+void UnrealGeometryEncoder::convertGeometry(const prtx::EncodePreparator::InstanceVector& instances, IUnrealCallbacks* cb)
 {
-	std::set<int> serializedPrototypes;
-
 	prtx::GeometryPtrVector geometries;
 	std::vector<prtx::MaterialPtrVector> materials;
 	prtx::PRTUtils::AttributeMapBuilderPtr instanceMatAmb(prt::AttributeMapBuilder::create());
 	for (const auto& inst : instances)
 	{
-		if (inst.getPrototypeIndex() != -1)
+		if (inst.getPrototypeIndex() != prtx::EncodePreparator::FinalizedInstance::NO_PROTOTYPE_INDEX)
 		{
 			const prtx::MaterialPtrVector& instMaterials = inst.getMaterials();
 			const prtx::GeometryPtr& instGeom = inst.getGeometry();
 
 			AttributeMapNOPtrVectorOwner instMaterialsAttributeMap;
 
-			if (serializedPrototypes.find(inst.getPrototypeIndex()) == serializedPrototypes.end())
+			InstanceIdentifier identifier = createInstanceIdentifier(inst);
+			
+			if (serializedPrototypes.find(identifier.meshId) == serializedPrototypes.end())
 			{
 				const std::wstring uri = instGeom->getURI()->wstring();
 				const SerializedGeometry sg = serializeGeometry({instGeom}, {instMaterials});
-				const std::wstring instName = createInstanceName(inst);
-
-				encodeMesh(cb, sg, instName.c_str(), inst.getPrototypeIndex(), uri, {instGeom}, {instMaterials});
-
-				serializedPrototypes.insert(inst.getPrototypeIndex());
+				encodeMesh(cb, sg, identifier.name.c_str(), identifier.meshId.c_str(), inst.getPrototypeIndex(), uri, {instGeom}, {instMaterials});
+				serializedPrototypes.insert(identifier.meshId);
 			}
 
 			const prtx::MeshPtrVector& meshes = instGeom->getMeshes();
@@ -663,7 +650,7 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialSha
 				instMaterialsAttributeMap.v.push_back(instanceMatAmb->createAttributeMapAndReset());
 			}
 
-			cb->addInstance(inst.getPrototypeIndex(), inst.getTransformation().data(), instMaterialsAttributeMap.v.data(),
+			cb->addInstance(inst.getPrototypeIndex(), identifier.meshId.c_str(), inst.getTransformation().data(), instMaterialsAttributeMap.v.data(),
 							instMaterialsAttributeMap.v.size());
 		}
 		else
@@ -676,14 +663,36 @@ void UnrealGeometryEncoder::convertGeometry(const prtx::InitialShape& initialSha
 	if (geometries.size() > 0)
 	{
 		const SerializedGeometry sg = serializeGeometry(geometries, materials);
-		encodeMesh(cb, sg, initialShape.getName(), -1, L"", geometries, materials);
+		encodeMesh(cb, sg, L"", L"", prtx::EncodePreparator::FinalizedInstance::NO_PROTOTYPE_INDEX, L"", geometries, materials);
 	}
 
 	if (DBG)
 		log_debug(L"UnrealGeometryEncoder::convertGeometry: end");
 }
 
-void UnrealGeometryEncoder::finish(prtx::GenerateContext& /*context*/) {}
+void UnrealGeometryEncoder::finish(prtx::GenerateContext& /*context*/)
+{
+	IUnrealCallbacks* cb = static_cast<IUnrealCallbacks*>(getCallbacks());
+
+	const prtx::EncodePreparator::PreparationFlags PREP_FLAGS =
+		prtx::EncodePreparator::PreparationFlags()
+			.instancing(true)
+			.meshMerging(prtx::MeshMerging::ALL_OF_SAME_MATERIAL_AND_TYPE)
+			.triangulate(false)
+			.processHoles(prtx::HoleProcessor::TRIANGULATE_FACES_WITH_HOLES)
+			.mergeVertices(true)
+			.cleanupVertexNormals(true)
+			.cleanupUVs(true)
+			.processVertexNormals(prtx::VertexNormalProcessor::SET_MISSING_TO_FACE_NORMALS)
+			.indexSharing(prtx::EncodePreparator::PreparationFlags::INDICES_SEPARATE_FOR_ALL_VERTEX_ATTRIBUTES);
+	
+	prtx::EncodePreparator::InstanceVector instances;
+	mEncPrep->fetchFinalizedInstances(instances, PREP_FLAGS);
+	
+	convertGeometry(instances, cb);
+	
+	cb->finish();
+}
 
 UnrealGeometryEncoderFactory* UnrealGeometryEncoderFactory::createInstance()
 {

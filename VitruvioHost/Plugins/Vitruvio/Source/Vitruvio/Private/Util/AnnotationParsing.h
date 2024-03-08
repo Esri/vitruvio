@@ -1,4 +1,4 @@
-﻿/* Copyright 2023 Esri
+﻿/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,5 +22,5 @@ namespace Vitruvio
 {
 void ParseAttributeAnnotations(const prt::RuleFileInfo::Entry* AttributeInfo, URuleAttribute& InAttribute, UObject* const Outer);
 
-TMap<FString, int> ParseImportOrderMap(const RuleFileInfoUPtr& RuleFileInfo);
+TMap<FString, int> ParseImportOrderMap(const RuleFileInfoPtr& RuleFileInfo);
 } // namespace Vitruvio

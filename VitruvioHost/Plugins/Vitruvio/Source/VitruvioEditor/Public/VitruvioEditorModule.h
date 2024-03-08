@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,12 @@ class VitruvioEditorModule final : public IModuleInterface
 public:
 	void StartupModule() override;
 	void ShutdownModule() override;
+	void BlockUntilGenerated() const;
+
+	static VitruvioEditorModule& Get()
+	{
+		return FModuleManager::LoadModuleChecked<VitruvioEditorModule>("VitruvioEditor");
+	}
 
 private:
 	void OnPostEngineInit();

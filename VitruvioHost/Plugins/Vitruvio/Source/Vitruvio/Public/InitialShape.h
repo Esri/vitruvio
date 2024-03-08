@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,7 +90,7 @@ struct VITRUVIO_API FInitialShapePolygon
 	TArray<FInitialShapeFace> Faces;
 
 	UPROPERTY()
-	TArray<FVector3f> Vertices;
+	TArray<FVector> Vertices;
 
 	UPROPERTY()
 	TArray<FTextureCoordinateSet> TextureCoordinateSets;
@@ -127,7 +127,7 @@ public:
 
 	void SetPolygon(const FInitialShapePolygon& NewPolygon);
 
-	const TArray<FVector3f>& GetVertices() const;
+	const TArray<FVector>& GetVertices() const;
 	bool IsValid() const;
 	void Initialize();
 

@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
 
 #include "VitruvioTypes.h"
 
-#include "Core/Public/Containers/UnrealString.h"
-#include "Core/Public/Templates/TypeHash.h"
+#include "Runtime/Core/Public/Containers/UnrealString.h"
+#include "Runtime/Core/Public/Templates/TypeHash.h"
 
 namespace
 {
@@ -92,35 +92,6 @@ FLinearColor GetLinearColor(const prt::AttributeMap* MaterialAttributes, wchar_t
 }
 
 } // namespace
-
-/**
- * Hash function for TMap. Requires that the Key K and Value V support GetTypeHash.
- */
-template <typename K, typename V>
-uint32 GetMapHash(const TMap<K, V>& In)
-{
-	uint32 CombinedHash = 0;
-	for (const auto& Entry : In)
-	{
-		const uint32 EntryHash = HashCombine(GetTypeHash(Entry.Key), GetTypeHash(Entry.Value));
-		CombinedHash += EntryHash;
-	}
-	return CombinedHash;
-}
-
-/**
- * Hash function for TArray. Requires that the Value V supports GetTypeHash.
- */
-template <typename V>
-uint32 GetArrayHash(const TArray<V>& In)
-{
-	uint32 CombinedHash = 0;
-	for (const auto& Entry : In)
-	{
-		CombinedHash += GetTypeHash(Entry);
-	}
-	return CombinedHash;
-}
 
 namespace Vitruvio
 {
@@ -202,7 +173,7 @@ uint32 GetTypeHash(const FMaterialAttributeContainer& Object)
 
 uint32 GetTypeHash(const FInstanceCacheKey& Object)
 {
-	return HashCombine(Object.PrototypeId, GetArrayHash(Object.MaterialOverrides));
+	return HashCombine(GetTypeHash(Object.MeshId), GetArrayHash(Object.MaterialOverrides));
 }
 
 } // namespace Vitruvio

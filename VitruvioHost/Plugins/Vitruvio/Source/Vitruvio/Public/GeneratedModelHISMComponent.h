@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,44 +15,28 @@
 
 #pragma once
 
+#include "CustomCollisionProvider.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Interfaces/Interface_CollisionDataProvider.h"
-#include "VitruvioMesh.h"
 
 #include "GeneratedModelHISMComponent.generated.h"
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
-class VITRUVIO_API UGeneratedModelHISMComponent : public UHierarchicalInstancedStaticMeshComponent, public IInterface_CollisionDataProvider
+class VITRUVIO_API UGeneratedModelHISMComponent : public UHierarchicalInstancedStaticMeshComponent, public FCustomCollisionDataProvider
 {
 	GENERATED_BODY()
-
-	virtual bool GetPhysicsTriMeshData(FTriMeshCollisionData* TriCollisionData, bool InUseAllTriData) override
-	{
-		if (!CollisionData.IsValid())
-		{
-			return false;
-		}
-
-		TriCollisionData->Indices = CollisionData.Indices;
-		TArray<uint16> MaterialIndices;
-		MaterialIndices.SetNumZeroed(CollisionData.Indices.Num());
-		TriCollisionData->MaterialIndices = MaterialIndices;
-		TriCollisionData->Vertices = CollisionData.Vertices;
-		TriCollisionData->bFlipNormals = true;
-		return true;
-	}
-
-	virtual bool ContainsPhysicsTriMeshData(bool InUseAllTriData) const override
-	{
-		return CollisionData.IsValid();
-	}
-
+	
 public:
-	void SetCollisionData(const FCollisionData& InCollisionData)
+	const FString& GetMeshIdentifier() const
 	{
-		CollisionData = InCollisionData;
+		return MeshIdentifier;
+	}
+
+	void SetMeshIdentifier(const FString& NewMeshIdentifier)
+	{
+		MeshIdentifier = NewMeshIdentifier;
 	}
 
 private:
-	FCollisionData CollisionData;
+	FString MeshIdentifier;
 };

@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,8 @@ public class PRT : ModuleRules
 	
 	// PRT version and toolchain (needs to be correct for download URL)
 	private const int PrtMajor = 3;
-	private const int PrtMinor = 0;
-	private const int PrtBuild = 8905;
+	private const int PrtMinor = 1;
+	private const int PrtBuild = 9666;
 
 	private const string PrtCoreDllName = "com.esri.prt.core.dll";
 

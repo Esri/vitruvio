@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 
 #include "VitruvioComponentDetails.h"
 
+#include "GenerateCompletedCallbackProxy.h"
 #include "VitruvioComponent.h"
 
 #include "Algo/Transform.h"
@@ -24,7 +25,11 @@
 #include "IDetailTreeNode.h"
 #include "IPropertyRowGenerator.h"
 #include "ISinglePropertyView.h"
+#include "InstanceReplacementDialog.h"
 #include "LevelEditor.h"
+#include "MaterialReplacementDialog.h"
+#include "Misc/ScopedSlowTask.h"
+#include "VitruvioEditorModule.h"
 #include "Widgets/Colors/SColorBlock.h"
 #include "Widgets/Colors/SColorPicker.h"
 #include "Widgets/Input/SCheckBox.h"
@@ -36,6 +41,9 @@
 
 namespace
 {
+
+bool ReplacementDialogOpen = false;
+
 FString ValueToString(const TSharedPtr<FString>& In)
 {
 	return *In;
@@ -197,8 +205,18 @@ TSharedPtr<SCheckBox> CreateBoolInputWidget(TSharedPtr<IPropertyHandle> Property
 
 TSharedPtr<SHorizontalBox> CreateTextInputWidget(TSharedPtr<IPropertyHandle> StringProperty)
 {
-	auto OnTextChanged = [StringProperty](const FText& Text, ETextCommit::Type) -> void {
-		StringProperty->SetValue(Text.ToString());
+	auto OnTextChanged = [StringProperty](const FText& Text, ETextCommit::Type) {
+
+		if (StringProperty.IsValid())
+		{
+			FString OldValue;
+			StringProperty->GetValue(OldValue);
+
+			if (OldValue != Text.ToString())
+			{
+				StringProperty->SetValue(Text.ToString());
+			}
+		}
 	};
 
 	// clang-format off
@@ -231,11 +249,17 @@ TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(Attr* Attribute, TSharedPt
 	auto Annotation = Attribute->GetRangeAnnotation();
 
 	auto OnValueCommit = [FloatProperty](double Value, ETextCommit::Type Type) {
-		if (FloatProperty->GetPropertyNode().IsValid())
+		if (FloatProperty->IsValidHandle())
 		{
-			FloatProperty->SetValue(Value);
+			double OldValue = 0.0f;
+			FloatProperty->GetValue(OldValue);
+
+			if (!FMath::IsNearlyEqual(OldValue, Value, UE_DOUBLE_KINDA_SMALL_NUMBER))
+			{
+				FloatProperty->SetValue(Value);
+			}
 		}
-	};
+	};	
 
 	// clang-format off
 	auto ValueWidget = SNew(SSpinBox<double>)
@@ -446,12 +470,14 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 	TArray<TSharedRef<IDetailTreeNode>> ArrayRoots;
 	DetailTreeNodes[0]->GetChildren(ArrayRoots);
 
-	for (const auto& ArrayRoot : ArrayRoots)
+	const TSharedRef<IDetailTreeNode>* ValuesArrayRoot = ArrayRoots.FindByPredicate([](const TSharedRef<IDetailTreeNode>& TreeNode)
 	{
-		if (ArrayRoot->GetNodeType() != EDetailNodeType::Item)
-		{
-			continue;
-		}
+		return TreeNode->GetRow()->GetPropertyHandle()->GetProperty()->GetName() == TEXT("Values");
+	});
+
+	if (ValuesArrayRoot)
+	{
+		const TSharedRef<IDetailTreeNode> ArrayRoot = *ValuesArrayRoot;
 
 		// Header Row
 		const TSharedPtr<IDetailPropertyRow> HeaderPropertyRow = ArrayRoot->GetRow();
@@ -531,6 +557,93 @@ void AddGenerateButton(IDetailCategoryBuilder& RootCategory, UVitruvioComponent*
 	// clang-format on
 }
 
+template <typename TInstanceDialogType>
+void OpenReplacementDialog(UVitruvioComponent* VitruvioComponent, bool bNeedsRegenerate)
+{
+	if (!VitruvioComponent->GetRpk())
+	{
+		return;
+	}
+	
+	auto OnDialogClosed = [](const TSharedRef<SWindow>&) {
+		ReplacementDialogOpen = false;
+	};
+
+	ReplacementDialogOpen = true;
+
+	if (bNeedsRegenerate)
+	{
+		UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
+		Proxy->OnGenerateCompleted.AddLambda(
+			[VitruvioComponent, OnDialogClosed]() { TInstanceDialogType::OpenDialog(VitruvioComponent, OnDialogClosed, true); });
+		VitruvioComponent->Generate(Proxy, {true, true});
+	}
+	else
+	{
+		TInstanceDialogType::OpenDialog(VitruvioComponent, OnDialogClosed, false);
+	}
+
+	VitruvioEditorModule::Get().BlockUntilGenerated();
+}
+
+void AddReplacementButtons(IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioComponent)
+{
+	bool bHasReplacement = VitruvioComponent->InstanceReplacement != nullptr || VitruvioComponent->MaterialReplacement != nullptr;
+
+	// clang-format off
+	RootCategory.AddCustomRow(FText::FromString(TEXT("Replacements")), false)
+	.WholeRowContent()
+	.VAlign(VAlign_Center)
+	.HAlign(HAlign_Center)
+	[
+		SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot()
+		.VAlign(VAlign_Fill)
+		.Padding(4)
+		[
+			SNew(SButton)
+			.OnClicked_Lambda([VitruvioComponent, bHasReplacement]()
+			{
+				OpenReplacementDialog<FMaterialReplacementDialog>(VitruvioComponent, bHasReplacement);
+				return FReply::Handled();
+			})
+			.IsEnabled(TAttribute<bool>::CreateLambda([]()
+			{
+				return !ReplacementDialogOpen;
+			}))
+			.Content()
+			[
+				SNew(STextBlock)
+				.Text(FText::FromString(FString(TEXT("Replace Materials"))))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
+		]
+
+		+ SHorizontalBox::Slot()
+		.VAlign(VAlign_Fill)
+		.Padding(0, 4, 4, 4)
+		[
+			SNew(SButton)
+			.OnClicked_Lambda([VitruvioComponent, bHasReplacement]()
+			{
+				OpenReplacementDialog<FInstanceReplacementDialog>(VitruvioComponent, bHasReplacement);
+				return FReply::Handled();
+			})
+			.IsEnabled(TAttribute<bool>::CreateLambda([]()
+			{
+				return !ReplacementDialogOpen;
+			}))
+			.Content()
+			[
+				SNew(STextBlock)
+				.Text(FText::FromString(FString(TEXT("Replace Instances"))))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
+		]
+	];
+	// clang-format on
+}
+
 } // namespace
 
 template <typename T>
@@ -544,7 +657,7 @@ void SPropertyComboBox<T>::Construct(const FArguments& InArgs)
 		.Content()
 		[
 			SNew(STextBlock)
-			.Text_Lambda([=]
+			.Text_Lambda([this]
 			{
 				auto SelectedItem = SComboBox<TSharedPtr<T>>::GetSelectedItem();
 				return SelectedItem ? FText::FromString(ValueToString(SelectedItem)) : FText::FromString("");
@@ -742,6 +855,12 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	GenerateAutomaticallyProperty->SetOnPropertyValueChanged(
 		FSimpleDelegate::CreateSP(this, &FVitruvioComponentDetails::OnGenerateAutomaticallyChanged));
 
+	const TSharedRef<IPropertyHandle> BatchGenerateHandle = DetailBuilder.GetProperty(TEXT("bBatchGenerate"));
+	BatchGenerateHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder]()
+	{
+		DetailBuilder.ForceRefreshDetails();
+	}));
+	
 	ObjectsBeingCustomized.Empty();
 	DetailBuilder.GetObjectsBeingCustomized(ObjectsBeingCustomized);
 
@@ -770,6 +889,11 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		if (!VitruvioComponent->GenerateAutomatically)
 		{
 			AddGenerateButton(RootCategory, VitruvioComponent);
+		}
+
+		if (!VitruvioComponent->IsBatchGenerated())
+		{
+			AddReplacementButtons(RootCategory, VitruvioComponent);
 		}
 
 		if (VitruvioComponent->InitialShape && VitruvioComponent->CanChangeInitialShapeType())

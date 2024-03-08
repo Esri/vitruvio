@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,38 @@
 #pragma once
 
 #include "Materials/MaterialInstanceDynamic.h"
-#include "MeshDescription.h"
-#include "PhysicsCore/Public/Interface_CollisionDataProviderCore.h"
+#include "Misc/Paths.h"
 
 #include "prt/AttributeMap.h"
+
+/**
+ * Hash function for TMap. Requires that the Key K and Value V support GetTypeHash.
+ */
+template <typename K, typename V>
+uint32 GetMapHash(const TMap<K, V>& In)
+{
+	uint32 CombinedHash = 0;
+	for (const auto& Entry : In)
+	{
+		const uint32 EntryHash = HashCombine(GetTypeHash(Entry.Key), GetTypeHash(Entry.Value));
+		CombinedHash += EntryHash;
+	}
+	return CombinedHash;
+}
+
+/**
+ * Hash function for TArray. Requires that the Value V supports GetTypeHash.
+ */
+template <typename V>
+uint32 GetArrayHash(const TArray<V>& In)
+{
+	uint32 CombinedHash = 0;
+	for (const auto& Entry : In)
+	{
+		CombinedHash += GetTypeHash(Entry);
+	}
+	return CombinedHash;
+}
 
 namespace Vitruvio
 {
@@ -51,6 +79,8 @@ enum class EPrtUvSetType : int32
 	MetallicMap = 9
 };
 
+const FString CityEngineDefaultMaterialName("CityEngineMaterial");
+
 struct FMaterialAttributeContainer
 {
 	TMap<FString, FString> TextureProperties;
@@ -80,18 +110,31 @@ struct FMaterialAttributeContainer
 	}
 
 	friend uint32 GetTypeHash(const FMaterialAttributeContainer& Object);
+
+	FString GetMaterialName() const
+	{
+		if (Name.StartsWith(CityEngineDefaultMaterialName))
+		{
+			if (const FString* ColorMapKey = TextureProperties.Find("colorMap"))
+			{
+				return FPaths::GetBaseFilename(*ColorMapKey);
+			}
+		}
+
+		return Name;
+	}
 };
 
 struct FInstanceCacheKey
 {
-	int32 PrototypeId;
+	FString MeshId;
 	TArray<Vitruvio::FMaterialAttributeContainer> MaterialOverrides;
 
 	friend uint32 GetTypeHash(const FInstanceCacheKey& Object);
 
 	friend bool operator==(const FInstanceCacheKey& Lhs, const FInstanceCacheKey& RHS)
 	{
-		return Lhs.PrototypeId == RHS.PrototypeId && Lhs.MaterialOverrides == RHS.MaterialOverrides;
+		return Lhs.MeshId == RHS.MeshId && Lhs.MaterialOverrides == RHS.MaterialOverrides;
 	}
 
 	friend bool operator!=(const FInstanceCacheKey& Lhs, const FInstanceCacheKey& RHS)
@@ -103,8 +146,6 @@ using FInstanceMap = TMap<FInstanceCacheKey, TArray<FTransform>>;
 
 struct FTextureData
 {
-	FTextureData() = default;
-
 	UTexture2D* Texture = nullptr;
 	uint32 NumChannels = 0;
 	FDateTime LoadTime;

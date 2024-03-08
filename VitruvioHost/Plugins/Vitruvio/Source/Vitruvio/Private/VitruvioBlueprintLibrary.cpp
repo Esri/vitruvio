@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,32 @@
 
 #include "Engine/StaticMeshActor.h"
 #include "VitruvioActor.h"
+#include "VitruvioBatchActor.h"
 
-TArray<AActor*> UVitruvioBlueprintLibrary::GetViableVitruvioActorsInHierarchy(AActor* Root)
+TArray<AActor*> UVitruvioBlueprintLibrary::GetVitruvioActorsInHierarchy(AActor* Root)
+{
+	if (!Root)
+	{
+		return {};
+	}
+
+	TArray<AActor*> VitruvioActors;
+	if (Cast<AVitruvioActor>(Root) || Root->FindComponentByClass<UVitruvioComponent>())
+	{
+		VitruvioActors.Add(Root);
+	}
+
+	TArray<AActor*> ChildActors;
+	Root->GetAttachedActors(ChildActors);
+	for (AActor* Child : ChildActors)
+	{
+		VitruvioActors.Append(GetVitruvioActorsInHierarchy(Child));
+	}
+
+	return VitruvioActors;
+}
+
+TArray<AActor*> UVitruvioBlueprintLibrary::GetInitialShapesInHierarchy(AActor* Root)
 {
 	if (!Root)
 	{
@@ -39,7 +63,7 @@ TArray<AActor*> UVitruvioBlueprintLibrary::GetViableVitruvioActorsInHierarchy(AA
 
 		for (AActor* Child : ChildActors)
 		{
-			ViableActors.Append(GetViableVitruvioActorsInHierarchy(Child));
+			ViableActors.Append(GetInitialShapesInHierarchy(Child));
 		}
 	}
 
@@ -48,19 +72,14 @@ TArray<AActor*> UVitruvioBlueprintLibrary::GetViableVitruvioActorsInHierarchy(AA
 
 bool UVitruvioBlueprintLibrary::CanConvertToVitruvioActor(AActor* Actor)
 {
-	if (!Actor || Cast<AVitruvioActor>(Actor))
-	{
-		return false;
-	}
-
-	if (Actor->GetComponentByClass(UVitruvioComponent::StaticClass()))
+	if (!Actor || Cast<AVitruvioActor>(Actor) || Cast<AVitruvioBatchActor>(Actor) || Actor->GetComponentByClass(UVitruvioComponent::StaticClass()))
 	{
 		return false;
 	}
 
 	for (const auto& InitialShapeClasses : UVitruvioComponent::GetInitialShapesClasses())
 	{
-		UInitialShape* DefaultInitialShape = Cast<UInitialShape>(InitialShapeClasses->GetDefaultObject());
+		const UInitialShape* DefaultInitialShape = Cast<UInitialShape>(InitialShapeClasses->GetDefaultObject());
 		if (DefaultInitialShape && DefaultInitialShape->CanConstructFrom(Actor))
 		{
 			return true;

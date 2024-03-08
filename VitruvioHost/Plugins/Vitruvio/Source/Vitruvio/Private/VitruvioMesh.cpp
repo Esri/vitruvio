@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,24 +18,63 @@
 #include "Materials/Material.h"
 #include "StaticMeshAttributes.h"
 #include "VitruvioModule.h"
+#include "PhysicsEngine/BodySetup.h"
+#include "Engine/CollisionProfile.h"
+#include "UObject/Package.h"
+
+namespace
+{
+FString MakeUniqueMaterialName(FString Name, TMap<FString, int32>& UniqueMaterialNames)
+{
+	if (UniqueMaterialNames.Contains(Name))
+	{
+		const int32 Index = UniqueMaterialNames[Name]++;
+		Name += FString::FromInt(Index);
+	}
+	else
+	{
+		UniqueMaterialNames.Add(Name, 1);
+	}
+
+	return Name;
+}
+
+void InitializeBodySetup(UBodySetup* BodySetup)
+{
+	BodySetup->DefaultInstance.SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
+	BodySetup->CollisionTraceFlag = ECollisionTraceFlag::CTF_UseComplexAsSimple;
+	BodySetup->bDoubleSidedGeometry = true;
+	BodySetup->bMeshCollideAll = true;
+	BodySetup->InvalidatePhysicsData();
+	BodySetup->CreatePhysicsMeshes();
+}
+
+} // namespace
 
 UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
 										TMap<FString, Vitruvio::FTextureData>& TextureCache,
 										TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-										const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, UObject* Outer)
+										const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, TMap<FString, int32>& UniqueMaterialNames,
+										TMap<UMaterialInterface*, FString>& MaterialIdentifiers, UObject* Outer)
 {
 	check(IsInGameThread());
 
-	const auto Result = MaterialCache.Find(MaterialAttributes);
-	if (Result)
+	const FString MaterialIdentifier = MaterialAttributes.GetMaterialName();
+
+	if (UMaterialInstanceDynamic** Result = MaterialCache.Find(MaterialAttributes))
 	{
-		return *Result;
+		UMaterialInstanceDynamic* Material = *Result;
+		MaterialIdentifiers.Add(Material, MaterialIdentifier);
+		return Material;
 	}
 
-	const FName UniqueMaterialName(MaterialAttributes.Name);
-	UMaterialInstanceDynamic* Material = Vitruvio::GameThread_CreateMaterialInstance(Outer, UniqueMaterialName, OpaqueParent, MaskedParent,
-																					 TranslucentParent, MaterialAttributes, TextureCache);
+	const FString UniqueMaterialIdentifier = MakeUniqueMaterialName(MaterialIdentifier, UniqueMaterialNames);
+	UMaterialInstanceDynamic* Material = GameThread_CreateMaterialInstance(Outer, UniqueMaterialIdentifier, OpaqueParent, MaskedParent,
+																		   TranslucentParent, MaterialAttributes, TextureCache);
+
 	MaterialCache.Add(MaterialAttributes, Material);
+	MaterialIdentifiers.Add(Material, MaterialIdentifier);
+
 	return Material;
 }
 
@@ -53,8 +92,8 @@ FVitruvioMesh::~FVitruvioMesh()
 }
 
 void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-						  TMap<FString, Vitruvio::FTextureData>& TextureCache, UMaterial* OpaqueParent, UMaterial* MaskedParent,
-						  UMaterial* TranslucentParent)
+						  TMap<FString, Vitruvio::FTextureData>& TextureCache, TMap<UMaterialInterface*, FString>& UniqueMaterialIdentifiers,
+						  TMap<FString, int32>& UniqueMaterialNames, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent)
 {
 	check(IsInGameThread());
 
@@ -82,10 +121,11 @@ void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttribute
 	TArray<FTriIndices> Indices;
 	const auto PolygonGroups = MeshDescription.PolygonGroups();
 	size_t MaterialIndex = 0;
+
 	for (const auto& PolygonGroupId : PolygonGroups.GetElementIDs())
 	{
-		UMaterialInstanceDynamic* Material =
-			CacheMaterial(OpaqueParent, MaskedParent, TranslucentParent, TextureCache, MaterialCache, Materials[MaterialIndex], StaticMesh);
+		UMaterialInstanceDynamic* Material = CacheMaterial(OpaqueParent, MaskedParent, TranslucentParent, TextureCache, MaterialCache,
+														   Materials[MaterialIndex], UniqueMaterialNames, UniqueMaterialIdentifiers, StaticMesh);
 
 		const FName SlotName = StaticMesh->AddMaterial(Material);
 		MeshAttributes.GetPolygonGroupMaterialSlotNames()[PolygonGroupId] = SlotName;
@@ -117,7 +157,13 @@ void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttribute
 	MeshDescriptionPtrs.Emplace(&MeshDescription);
 
 	UStaticMesh::FBuildMeshDescriptionsParams Params;
+	Params.bCommitMeshDescription = true;
 	Params.bFastBuild = true;
+	Params.bAllowCpuAccess = true;
 	StaticMesh->BuildFromMeshDescriptions(MeshDescriptionPtrs, Params);
 	CollisionData = {Indices, Vertices};
+	
+	UBodySetup* BodySetup = NewObject<UBodySetup>(StaticMesh, NAME_None, RF_Transient | RF_DuplicateTransient | RF_TextExportTransient | RF_Transactional);
+	InitializeBodySetup(BodySetup);
+	StaticMesh->SetBodySetup(BodySetup);
 }

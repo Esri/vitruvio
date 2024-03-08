@@ -2,10 +2,17 @@ name: build-vitruvio
 
 on: 
   push:
+    # Careful! No fall-through for the filters.
     branches:
       - main
       - develop
-      - 'arisona/workflows'
+      
+  pull_request:
+    # Careful! No fall-through for the filters.
+    branches:
+      - main
+      - develop
+      - workflow_integration
 
 jobs:
   package-host-main:
@@ -16,7 +23,9 @@ jobs:
       - uses: actions/checkout@v2
       - run: |
           C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package_shipping
-
+      - run: |
+          C:\dev\git\zrh-xr-devops\scripts\ue_run_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package_shipping
+  
   build-plugin-main:
     runs-on: [self-hosted, zrh-unreal]
     name: Build plugin on main branch
@@ -29,16 +38,18 @@ jobs:
   package-host-develop:
     runs-on: [self-hosted, zrh-unreal]
     name: Package host project (debug) on develop branch
-    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/arisona/workflows'
+    if: github.ref != 'refs/heads/main'
     steps:
       - uses: actions/checkout@v2
       - run: |
           C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package_debug
-
+      - run: |
+          C:\dev\git\zrh-xr-devops\scripts\ue_run_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package_debug
+  
   build-plugin-develop:
     runs-on: [self-hosted, zrh-unreal]
     name: Build plugin on develop branch
-    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/arisona/workflows'
+    if: github.ref != 'refs/heads/main'
     steps:
       - uses: actions/checkout@v2
       - run: |

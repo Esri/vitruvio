@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,33 @@
 #include "Components/SplineComponent.h"
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintAsyncActionBase.h"
+#include "VitruvioComponent.h"
 
 #include "GenerateCompletedCallbackProxy.generated.h"
 
 class AVitruvioActor;
 class URulePackage;
-class UVitruvioComponent;
+
+struct FExecuteAfterCountdown
+{
+	FCriticalSection CountDownLock;
+	int32 Count;
+	TFunction<void()> Fun;
+
+	FExecuteAfterCountdown(int32 Count, TFunction<void()> Fun) : Count(Count), Fun(Fun) {}
+
+	FExecuteAfterCountdown(const FExecuteAfterCountdown& Other) : Count(Other.Count), Fun(Other.Fun) {}
+
+	void operator()()
+	{
+		FScopeLock Lock(&CountDownLock);
+		Count--;
+		if (Count <= 0)
+		{
+			Fun();
+		}
+	}
+};
 
 UCLASS()
 class VITRUVIO_API UGenerateCompletedCallbackProxy final : public UBlueprintAsyncActionBase
@@ -63,7 +84,7 @@ public:
 	 * no Initial Shape or Rule Package is set, this method will do nothing.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true), Category = "Vitruvio")
-	static UGenerateCompletedCallbackProxy* Generate(UVitruvioComponent* VitruvioComponent);
+	static UGenerateCompletedCallbackProxy* Generate(UVitruvioComponent* VitruvioComponent, FGenerateOptions GenerateOptions);
 
 	/**
 	 * Sets the float attribute with the given Name to the given value. Regenerates the model if bGenerateModel is set to true.
@@ -145,9 +166,8 @@ public:
 
 	/**
 	 * Sets the given attributes. If a key from the NewAttributes is not found in the current attributes, the key-value pair will be ignored.
-	 * Regenerates the model if bGenerateModel is set to true. The type of the attribute will be deduced from its
-	 * string representation: <br> "1.0" for the float 1.0 <br> "hello" for the string "hello" and <br> "true" for the bool true <br>
-	 * array values are separated via a comma eg: "1.3,4.5,0" for a float array with the values 1.3, 4.5 and 0.
+	 * Regenerates the model if bGenerateModel is set to true. Arrays are surrounded with [] and their values separated by commas
+	 * eg: "[1.3,4.5,0]" for a float array with the values 1.3, 4.5 and 0.
 	 *
 	 * @param VitruvioComponent The VitruvioComponent where the attribute is set.
 	 * @param NewAttributes The attributes to be set.
@@ -191,10 +211,11 @@ public:
 	 * @param OutVitruvioActors The converted VitruvioActors.
 	 * @param Rpk The optional RulePackage.
 	 * @param bGenerateModels Whether a model should be generated after the conversion. Only applicable if the RulePackage has been set.
+	 * @param bBatchGeneration Whether the newly created VitruvioActors should be batch generated.
 	 * @return The converted VitruvioActors.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = true, WorldContext = "WorldContextObject"), Category = "Vitruvio")
 	static UGenerateCompletedCallbackProxy* ConvertToVitruvioActor(UObject* WorldContextObject, const TArray<AActor*>& Actors,
 																   TArray<AVitruvioActor*>& OutVitruvioActors, URulePackage* Rpk = nullptr,
-																   bool bGenerateModels = true);
+																   bool bGenerateModels = true, bool bBatchGeneration = false);
 };

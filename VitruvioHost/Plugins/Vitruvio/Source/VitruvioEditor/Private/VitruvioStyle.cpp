@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,6 +55,11 @@ void FVitruvioStyle::Initialize()
 	StyleSet->Set("ClassThumbnail.VitruvioActor", new FSlateVectorImageBrush(ImagePath, Icon64x64));
 	StyleSet->Set("ClassIcon.VitruvioComponent", new FSlateVectorImageBrush(ImagePath, Icon16x16));
 	StyleSet->Set("ClassThumbnail.VitruvioComponent", new FSlateVectorImageBrush(ImagePath, Icon64x64));
+
+	StyleSet->Set("ClassIcon.VitruvioBatchActor", new FSlateVectorImageBrush(ImagePath, Icon16x16));
+	StyleSet->Set("ClassThumbnail.VitruvioBatchActor", new FSlateVectorImageBrush(ImagePath, Icon64x64));
+	StyleSet->Set("ClassIcon.VitruvioBatchGridVisualizerActor", new FSlateVectorImageBrush(ImagePath, Icon16x16));
+	StyleSet->Set("ClassThumbnail.VitruvioBatchGridVisualizerActor", new FSlateVectorImageBrush(ImagePath, Icon64x64));
 
 	FSlateStyleRegistry::RegisterSlateStyle(*StyleSet.Get());
 };

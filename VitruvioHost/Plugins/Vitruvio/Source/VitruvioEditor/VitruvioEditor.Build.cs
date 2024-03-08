@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ public class VitruvioEditor : ModuleRules
 				"InputCore",
 				"UnrealEd",
 				"EditorStyle",
-				"PropertyEditor"
+				"PropertyEditor",
 			}
 		);
 		
@@ -54,6 +54,7 @@ public class VitruvioEditor : ModuleRules
 				"SlateCore",
 				"Slate",
 				"AppFramework",
+				"UMGEditor",
 				"Vitruvio",
 			}
 		);

@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,13 +30,22 @@ class UVitruvioBlueprintLibrary : public UBlueprintFunctionLibrary
 
 public:
 	/**
-	 * Returns all Actors attached to the given Actor which are viable to be converted to VitruvioActors.
+	 * Returns all Actors attached to the given root Actor which are viable initial shapes for Vitruvio Actors.
 	 *
-	 * @param Root the root actor whose children are checked if they are viable Vitruvio Actors.
-	 * @return all Actors attached to the given Actor which are viable to be converted to VitruvioActors.
+	 * @param Root the root Actor whose children are checked if they are viable initial shapes.
+	 * @return all Actors attached to the given root Actor which are viable initial shapes.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
-	static VITRUVIO_API TArray<AActor*> GetViableVitruvioActorsInHierarchy(AActor* Root);
+	static VITRUVIO_API TArray<AActor*> GetInitialShapesInHierarchy(AActor* Root);
+
+	/**
+	 * Returns all Actors attached to the given root Actor which are VitruvioActors or contain a VitruvioComponent.
+	 *
+	 * @param Root the root Actor whose children are checked if they are VitruvioActors or contain a VitruvioComponent.
+	 * @return all Actors attached to the given root Actor which are VitruvioActors or contain a VitruvioComponent.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	static VITRUVIO_API TArray<AActor*> GetVitruvioActorsInHierarchy(AActor* Root);
 
 	/**
 	 * Returns whether the given Actor can be converted to a VitruvioActor (see also ConvertToVitruvioActor). Converting an Actor to a VitruvioActor

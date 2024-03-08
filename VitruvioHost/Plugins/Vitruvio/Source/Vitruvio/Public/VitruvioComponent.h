@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,27 +20,28 @@
 #include "VitruvioModule.h"
 
 #include "CoreMinimal.h"
-#include "GenerateCompletedCallbackProxy.h"
+#include "GeneratedModelHISMComponent.h"
+#include "GeneratedModelStaticMeshComponent.h"
 #include "InitialShape.h"
+#include "InstanceReplacement.h"
+#include "MaterialReplacement.h"
 #include "VitruvioTypes.h"
 
 #include "VitruvioComponent.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogVitruvioComponent, Log, All);
 
-struct FInstance
-{
-	FString Name;
-	TSharedPtr<FVitruvioMesh> InstanceMesh;
-	TArray<UMaterialInstanceDynamic*> OverrideMaterials;
-	TArray<FTransform> Transforms;
-};
+class UGenerateCompletedCallbackProxy;
 
-struct FConvertedGenerateResult
+USTRUCT(BlueprintType)
+struct FGenerateOptions
 {
-	TSharedPtr<FVitruvioMesh> ShapeMesh;
-	TArray<FInstance> Instances;
-	TMap<FString, FReport> Reports;
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vitruvio")
+	bool bIgnoreMaterialReplacements = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vitruvio")
+	bool bIgnoreInstanceReplacements = false;
 };
 
 struct FAttributesEvaluationQueueItem
@@ -53,8 +54,54 @@ struct FAttributesEvaluationQueueItem
 struct FGenerateQueueItem
 {
 	FGenerateResultDescription GenerateResultDescription;
+	FGenerateOptions GenerateOptions;
 	UGenerateCompletedCallbackProxy* CallbackProxy;
 };
+
+struct FInstance
+{
+	FString Name;
+	TSharedPtr<FVitruvioMesh> InstanceMesh;
+	TArray<UMaterialInstanceDynamic*> OverrideMaterials;
+	TArray<FTransform> Transforms;
+
+	friend FORCEINLINE uint32 GetTypeHash(const FInstance& Request)
+	{
+		return GetTypeHash(Request.InstanceMesh->GetIdentifier());
+	}
+
+	friend bool operator==(const FInstance& Lhs, const FInstance& Rhs)
+	{
+		return Lhs.InstanceMesh && Rhs.InstanceMesh ? Lhs.InstanceMesh->GetIdentifier() == Rhs.InstanceMesh->GetIdentifier() : false;
+	}
+
+	friend bool operator!=(const FInstance& Lhs, const FInstance& Rhs)
+	{
+		return !(Lhs == Rhs);
+	}
+};
+
+struct FConvertedGenerateResult
+{
+	TSharedPtr<FVitruvioMesh> ShapeMesh;
+	TArray<FInstance> Instances;
+	TMap<FString, FReport> Reports;
+};
+
+FConvertedGenerateResult BuildGenerateResult(const FGenerateResultDescription& GenerateResult,
+									 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+									 TMap<FString, Vitruvio::FTextureData>& TextureCache,
+									 TMap<UMaterialInterface*, FString>& MaterialIdentifiers,
+									 TMap<FString, int32>& UniqueMaterialIdentifiers,
+									 UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent);
+
+FString UniqueComponentName(const FString& Name, TMap<FString, int32>& UsedNames);
+
+void ApplyMaterialReplacements(UStaticMeshComponent* StaticMeshComponent, const TMap<UMaterialInterface*, FString>& MaterialIdentifiers,
+							   UMaterialReplacementAsset* Replacement);
+
+TSet<FInstance> ApplyInstanceReplacements(UGeneratedModelStaticMeshComponent* GeneratedModelComponent, 
+											  const TArray<FInstance>& Instances, UInstanceReplacementAsset* Replacement, TMap<FString, int32>& NameMap);
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class VITRUVIO_API UVitruvioComponent : public UActorComponent
@@ -68,6 +115,7 @@ class VITRUVIO_API UVitruvioComponent : public UActorComponent
 	bool bAttributesReady = false;
 
 	bool bIsGenerating = false;
+	bool bHasGeneratedModel = false;
 
 	bool bNotifyAttributeChange = false;
 
@@ -75,23 +123,28 @@ public:
 	UVitruvioComponent();
 
 	/** Automatically generate after changing attributes or properties. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Generate Automatically", Category = "Vitruvio")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Generate Automatically", Category = "Vitruvio",
+		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
 	bool GenerateAutomatically = true;
 
 	/** Automatically hide initial shape after generation. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Hide Initial Shape after Generation", Category = "Vitruvio")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, DisplayName = "Hide Initial Shape after Generation", Category = "Vitruvio",
+		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
 	bool HideAfterGeneration = false;
 
 	/** Default parent material for opaque geometry. */
-	UPROPERTY(EditAnywhere, DisplayName = "Opaque Parent", Category = "Vitruvio Default Materials")
+	UPROPERTY(EditAnywhere, DisplayName = "Opaque Parent", Category = "Vitruvio Default Materials",
+		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
 	UMaterial* OpaqueParent;
 
 	/** Default parent material for masked geometry. */
-	UPROPERTY(EditAnywhere, DisplayName = "Masked Parent", Category = "Vitruvio Default Materials")
+	UPROPERTY(EditAnywhere, DisplayName = "Masked Parent", Category = "Vitruvio Default Materials",
+		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
 	UMaterial* MaskedParent;
 
 	/** Default parent material for translucent geometry. */
-	UPROPERTY(EditAnywhere, DisplayName = "Translucent Parent", Category = "Vitruvio Default Materials")
+	UPROPERTY(EditAnywhere, DisplayName = "Translucent Parent", Category = "Vitruvio Default Materials",
+		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
 	UMaterial* TranslucentParent;
 
 	UPROPERTY(VisibleAnywhere, Instanced, Category = "Vitruvio")
@@ -100,19 +153,50 @@ public:
 	UPROPERTY(Transient, TextExportTransient, DuplicateTransient)
 	USceneComponent* InitialShapeSceneComponent;
 
-	UPROPERTY(EditAnywhere, Category = "Vitruvio", meta = (DisplayName = "Generate Collision Mesh"))
-	bool GenerateCollision = true;
+	/** The material replacement asset which defines how materials are replaced after generating a model. */
+	UPROPERTY(EditAnywhere, Category = "Vitruvio Replacmeents", Setter = SetMaterialReplacementAsset,
+		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
+	UMaterialReplacementAsset* MaterialReplacement;
+
+	/** The instance replacement asset which defines how instances are replaced after generating a model. */
+	UPROPERTY(EditAnywhere, Category = "Vitruvio Replacmeents", Setter = SetInstanceReplacementAsset,
+		meta = (EditCondition = "!bBatchGenerate", EditConditionHides))
+	UInstanceReplacementAsset* InstanceReplacement;
+
+	/**
+	 * Enables or disables batch generation.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	void SetBatchGenerated(bool bBatchGeneration);
+
+	/**
+	 * Returns whether batch generation is enabled.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	bool IsBatchGenerated() const;
+	
+	/**
+	 * Sets the material replacement Asset and regenerates the model.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio Replacmeents")
+	void SetMaterialReplacementAsset(UMaterialReplacementAsset* MaterialReplacementAsset);
+
+	/**
+	 * Sets the instance replacement Asset and regenerates the model.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio Replacmeents")
+	void SetInstanceReplacementAsset(UInstanceReplacementAsset* InstanceReplacementAsset);
 
 	/**
 	 * Generates a model using the current Rule Package and initial shape. If the attributes are not yet available, they will first be evaluated. If
 	 * no Initial Shape or Rule Package is set, this method will do nothing.
 	 */
-	void Generate(UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void Generate(UGenerateCompletedCallbackProxy* CallbackProxy = nullptr, const FGenerateOptions& GenerateOptions = {});
 
 	/**
 	 * Sets the given Rule Package. This will reevaluate the attributes and if bGenerateModel is set to true, also generates the model.
 	 */
-	void SetRpk(URulePackage* RulePackage, bool bGenerateModel = true, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
+	void SetRpk(URulePackage* RulePackage, bool bEvaluateAttributes = true, bool bGenerateModel = true, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
 	/** Returns true if the component has valid input data (initial shape and Rule Package). */
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
@@ -299,10 +383,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
 	void SetInitialShapeVisible(bool bVisible);
 
-	/* Sets the random seed used for generation. This will reevaluate the attributes and if bGenerateModel is set to true, also generates the model.
+	/**
+	 * Sets the random seed used for generation. This will reevaluate the attributes and if bGenerateModel is set to true, also generates the model.
 	 */
 	void SetRandomSeed(int32 NewRandomSeed, bool bGenerateModel = true, UGenerateCompletedCallbackProxy* CallbackProxy = nullptr);
 
+	UFUNCTION(BlueprintCallable, Category = "Vitruvio")
+	/** Returns the random seed used for generation. */
+	int32 GetRandomSeed();
+	
 	/* Initialize the VitruvioComponent. Only needs to be called if the Component is natively attached. */
 	void Initialize();
 
@@ -310,7 +399,19 @@ public:
 	void RemoveGeneratedMeshes();
 
 	/* Returns whether the attributes are ready. */
-	bool GetAttributesReady();
+	bool GetAttributesReady() const;
+
+	/* Returns whether this component has a generated model */
+	bool HasGeneratedModel() const;
+
+	/* Returns the generated model component */
+	UGeneratedModelStaticMeshComponent* GetGeneratedModelComponent() const;
+
+	/* Returns the generated model HISM components */
+	TArray<UGeneratedModelHISMComponent*> GetGeneratedModelHISMComponents() const;
+
+	/* Returns the material identifier of the given material for replacements. */
+	FString GetMaterialIdentifier(const UMaterialInterface* SourceMaterial) const;
 
 	/**
 	 * Evaluate rule attributes.
@@ -381,6 +482,10 @@ private:
 	UPROPERTY(VisibleAnywhere, DisplayName = "Reports", Category = "Vitruvio")
 	TMap<FString, FReport> Reports;
 
+	/** Generate several VitruvioComponents together in batches which can improve generate as well as rendering performance. */
+	UPROPERTY(EditAnywhere, DisplayName = "Batch Generate", Category = "Vitruvio")
+	bool bBatchGenerate = false;
+
 	UPROPERTY(Transient)
 	bool bInitialized = false;
 
@@ -394,6 +499,11 @@ private:
 
 	bool HasGeneratedMesh = false;
 
+	// Note that these are only unique per VitruvioComponent
+	UPROPERTY()
+	TMap<UMaterialInterface*, FString> MaterialIdentifiers;
+	TMap<FString, int32> UniqueMaterialIdentifiers;
+
 	void CalculateRandomSeed();
 
 	void NotifyAttributesChanged();
@@ -401,11 +511,9 @@ private:
 	void ProcessGenerateQueue();
 	void ProcessAttributesEvaluationQueue();
 
-	FConvertedGenerateResult BuildResult(FGenerateResultDescription& GenerateResult,
-										 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
-										 TMap<FString, Vitruvio::FTextureData>& TextureCache);
-
 #if WITH_EDITOR
 	FDelegateHandle PropertyChangeDelegate;
 #endif
+
+	friend class AVitruvioBatchActor;
 };

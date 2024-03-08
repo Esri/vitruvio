@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 
 #include "VitruvioEditorModule.h"
 
-#include "ChooseRulePackageDialog.h"
+#include "ConvertToVitruvioActorDialog.h"
 #include "RulePackageAssetTypeActions.h"
 #include "VitruvioActor.h"
 #include "VitruvioComponentDetails.h"
@@ -28,7 +28,12 @@
 #include "Editor/Transactor.h"
 #include "EngineUtils.h"
 #include "Framework/Notifications/NotificationManager.h"
+#include "GenerateCompletedCallbackProxy.h"
 #include "IAssetTools.h"
+#include "ReplacementDialog.h"
+#include "VitruvioBatchActorDetails.h"
+#include "VitruvioBatchGridVisualizerActor.h"
+#include "VitruvioBatchSubsystem.h"
 #include "Modules/ModuleManager.h"
 #include "VitruvioBlueprintLibrary.h"
 #include "VitruvioStyle.h"
@@ -39,41 +44,56 @@
 namespace
 {
 
-bool HasAnyViableVitruvioActor(TArray<AActor*> Actors)
+bool HasAnyViableVitruvioActor(const TArray<AActor*>& Actors)
 {
 	return Algo::AllOf(Actors, [](AActor* In) { return UVitruvioBlueprintLibrary::CanConvertToVitruvioActor(In); });
 }
 
-bool HasAnyVitruvioActor(TArray<AActor*> Actors)
+bool HasAnyVitruvioActor(const TArray<AActor*>& Actors)
 {
 	return Algo::AnyOf(Actors, [](AActor* In) {
-		UVitruvioComponent* VitruvioComponent = In->FindComponentByClass<UVitruvioComponent>();
-		return VitruvioComponent != nullptr;
+		const UVitruvioComponent* VitruvioComponent = In->FindComponentByClass<UVitruvioComponent>();
+		const AVitruvioBatchActor* VitruvioBatchActor = Cast<AVitruvioBatchActor>(In);
+		return VitruvioComponent || VitruvioBatchActor;
 	});
 }
 
-void AssignRulePackage(TArray<AActor*> Actors)
+void ConvertToVitruvioActor(TArray<AActor*> Actors)
 {
 	if (Actors.Num() == 0)
 	{
 		return;
 	}
 
-	TOptional<URulePackage*> SelectedRpk = FChooseRulePackageDialog::OpenDialog();
+	TOptional<UConvertOptions*> Options = FConvertToVitruvioActorDialog::OpenDialog();
 
-	if (SelectedRpk.IsSet())
+	if (Options.IsSet())
 	{
 		TArray<AVitruvioActor*> ConvertedActors;
-		UGenerateCompletedCallbackProxy::ConvertToVitruvioActor(Actors[0], Actors, ConvertedActors, SelectedRpk.GetValue());
+		UGenerateCompletedCallbackProxy::ConvertToVitruvioActor(Actors[0], Actors, ConvertedActors, Options.GetValue()->RulePackage, true, Options.GetValue()->bBatchGenerate);
 	}
 }
 
-void SelectAllViableVitruvioActors(TArray<AActor*> Actors)
+void SelectAllInitialShapes(TArray<AActor*> Actors)
 {
 	GEditor->SelectNone(false, true, false);
 	for (AActor* SelectedActor : Actors)
 	{
-		TArray<AActor*> NewSelection = UVitruvioBlueprintLibrary::GetViableVitruvioActorsInHierarchy(SelectedActor);
+		TArray<AActor*> NewSelection = UVitruvioBlueprintLibrary::GetInitialShapesInHierarchy(SelectedActor);
+		for (AActor* ActorToSelect : NewSelection)
+		{
+			GEditor->SelectActor(ActorToSelect, true, false);
+		}
+	}
+	GEditor->NoteSelectionChange();
+}
+
+void SelectAllVitruvioActors(TArray<AActor*> Actors)
+{
+	GEditor->SelectNone(false, true, false);
+	for (AActor* SelectedActor : Actors)
+	{
+		TArray<AActor*> NewSelection = UVitruvioBlueprintLibrary::GetVitruvioActorsInHierarchy(SelectedActor);
 		for (AActor* ActorToSelect : NewSelection)
 		{
 			GEditor->SelectActor(ActorToSelect, true, false);
@@ -93,7 +113,7 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 
 			if (HasAnyViableVitruvioActor(SelectedActors))
 			{
-				const FUIAction AddVitruvioComponentAction(FExecuteAction::CreateStatic(AssignRulePackage, SelectedActors));
+				const FUIAction AddVitruvioComponentAction(FExecuteAction::CreateStatic(ConvertToVitruvioActor, SelectedActors));
 
 				MenuBuilder.AddMenuEntry(
 					FText::FromString("Convert to Vitruvio Actor"),
@@ -110,10 +130,15 @@ TSharedRef<FExtender> ExtendLevelViewportContextMenuForVitruvioComponents(const 
 										 CookVitruvioActorsAction);
 			}
 
-			const FUIAction SelectAllViableVitruvioActorsAction(FExecuteAction::CreateStatic(SelectAllViableVitruvioActors, SelectedActors));
-			MenuBuilder.AddMenuEntry(FText::FromString("Select All Viable Initial Shapes In Hierarchy"),
-									 FText::FromString("Selects all Actors which are viable initial shapes in hierarchy."), FSlateIcon(),
+			const FUIAction SelectAllViableVitruvioActorsAction(FExecuteAction::CreateStatic(SelectAllInitialShapes, SelectedActors));
+			MenuBuilder.AddMenuEntry(FText::FromString("Select Initial Shapes"),
+									 FText::FromString("Select all attached Actors which are viable initial shapes."), FSlateIcon(),
 									 SelectAllViableVitruvioActorsAction);
+
+			const FUIAction SelectAllVitruvioActorsAction(FExecuteAction::CreateStatic(SelectAllVitruvioActors, SelectedActors));
+			MenuBuilder.AddMenuEntry(FText::FromString("Select Vitruvio Actors"),
+						 FText::FromString("Selects all attached Vitruvio Actors."), FSlateIcon(),
+						 SelectAllVitruvioActorsAction);
 
 			MenuBuilder.EndSection();
 		}));
@@ -162,6 +187,9 @@ void VitruvioEditorModule::StartupModule()
 	PropertyModule.RegisterCustomClassLayout(UVitruvioComponent::StaticClass()->GetFName(),
 											 FOnGetDetailCustomizationInstance::CreateStatic(&FVitruvioComponentDetails::MakeInstance));
 
+	PropertyModule.RegisterCustomClassLayout(AVitruvioBatchActor::StaticClass()->GetFName(),
+										 FOnGetDetailCustomizationInstance::CreateStatic(&FVitruvioBatchActorDetails::MakeInstance));
+
 	LevelViewportContextMenuVitruvioExtender =
 		FLevelEditorModule::FLevelViewportMenuExtender_SelectedActors::CreateStatic(&ExtendLevelViewportContextMenuForVitruvioComponents);
 	FLevelEditorModule& LevelEditorModule = FModuleManager::Get().LoadModuleChecked<FLevelEditorModule>("LevelEditor");
@@ -185,7 +213,8 @@ void VitruvioEditorModule::ShutdownModule()
 
 	FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	PropertyModule.UnregisterCustomClassLayout(UVitruvioComponent::StaticClass()->GetFName());
-
+	PropertyModule.UnregisterCustomClassLayout(AVitruvioBatchActor::StaticClass()->GetFName());
+	
 	FLevelEditorModule& LevelEditorModule = FModuleManager::LoadModuleChecked<FLevelEditorModule>("LevelEditor");
 	LevelEditorModule.GetAllLevelViewportContextMenuExtenders().RemoveAll(
 		[&](const FLevelEditorModule::FLevelViewportMenuExtender_SelectedActors& Delegate) {
@@ -205,6 +234,21 @@ void VitruvioEditorModule::ShutdownModule()
 	FEditorDelegates::PostUndoRedo.Remove(PostUndoRedoDelegate);
 }
 
+void VitruvioEditorModule::BlockUntilGenerated() const
+{
+	// Wait until all async generate calls to PRT are finished. We want to block the UI and show a modal progress bar.
+	int32 TotalGenerateCalls = VitruvioModule::Get().GetNumGenerateCalls();
+	FScopedSlowTask PRTGenerateCallsTasks(TotalGenerateCalls, FText::FromString("Generating models..."));
+	PRTGenerateCallsTasks.MakeDialog();
+	while (VitruvioModule::Get().IsGenerating() || VitruvioModule::Get().IsLoadingRpks())
+	{
+		FPlatformProcess::Sleep(0); // SwitchToThread
+		int32 CurrentNumGenerateCalls = VitruvioModule::Get().GetNumGenerateCalls();
+		PRTGenerateCallsTasks.EnterProgressFrame(TotalGenerateCalls - CurrentNumGenerateCalls);
+		TotalGenerateCalls = CurrentNumGenerateCalls;
+	}
+}
+
 void VitruvioEditorModule::OnPostEngineInit()
 {
 	// clang-format off
@@ -218,14 +262,22 @@ void VitruvioEditorModule::OnPostEngineInit()
 
 		VitruvioModule::Get().EvictFromResolveMapCache(RulePackage);
 
+		UVitruvioBatchSubsystem* BatchSubsystem = GEditor->GetEditorWorldContext().World()->GetSubsystem<UVitruvioBatchSubsystem>();
 		for (FActorIterator It(GEditor->GetEditorWorldContext().World()); It; ++It)
 		{
 			AActor* Actor = *It;
 			UVitruvioComponent* VitruvioComponent = Cast<UVitruvioComponent>(Actor->GetComponentByClass(UVitruvioComponent::StaticClass()));
 			if (VitruvioComponent && VitruvioComponent->GetRpk() == RulePackage)
 			{
-				VitruvioComponent->RemoveGeneratedMeshes();
-				VitruvioComponent->EvaluateRuleAttributes(true);
+				if (!VitruvioComponent->IsBatchGenerated())
+				{
+					VitruvioComponent->RemoveGeneratedMeshes();
+					VitruvioComponent->EvaluateRuleAttributes(true);
+				}
+				else
+				{
+					BatchSubsystem->Generate(VitruvioComponent);
+				}
 			}
 		}
 	});
@@ -249,6 +301,34 @@ void VitruvioEditorModule::OnMapChanged(UWorld* World, EMapChangeType ChangeType
 					AssetEditorSubsystem->CloseAllEditorsForAsset(EditedAsset);
 				}
 			}
+		}
+
+		// Close all open replacement dialogs
+		TArray<TSharedRef<SWindow>> Windows;
+		FSlateApplication::Get().GetAllVisibleWindowsOrdered(Windows);
+		for (const auto& Window :  Windows)
+		{
+			if (Window->GetTag() == "ReplacementDialog")
+			{
+				Window->RequestDestroyWindow();
+			}
+		}
+	}
+	else if (ChangeType == EMapChangeType::LoadMap || ChangeType == EMapChangeType::NewMap)
+	{
+		if (World)
+		{
+			UVitruvioBatchSubsystem* VitruvioBatchSubsystem = World->GetSubsystem<UVitruvioBatchSubsystem>();
+			VitruvioBatchSubsystem->OnComponentRegistered.AddLambda([World]()
+			{
+				const TActorIterator<AVitruvioBatchGridVisualizerActor> BatchGridVisualizerActorIter(World);
+				if (!BatchGridVisualizerActorIter)
+				{
+					FActorSpawnParameters ActorSpawnParameters;
+					ActorSpawnParameters.Name = FName(TEXT("VitruvioBatchGridVisualizerActor"));
+					World->SpawnActor<AVitruvioBatchGridVisualizerActor>(ActorSpawnParameters);
+				}
+			});
 		}
 	}
 }

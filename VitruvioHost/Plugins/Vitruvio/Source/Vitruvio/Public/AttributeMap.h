@@ -1,4 +1,4 @@
-﻿/* Copyright 2023 Esri
+﻿/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,13 +24,12 @@ class VITRUVIO_API FAttributeMap
 public:
 	FAttributeMap() {}
 
-	FAttributeMap(AttributeMapUPtr AttributeMap, RuleFileInfoUPtr RuleInfo) : AttributeMap(std::move(AttributeMap)), RuleInfo(std::move(RuleInfo)) {}
+	FAttributeMap(AttributeMapUPtr AttributeMap, const RuleFileInfoPtr& RuleInfo) : AttributeMap(std::move(AttributeMap)), RuleInfo(RuleInfo) {}
 
 	void UpdateUnrealAttributeMap(TMap<FString, URuleAttribute*>& AttributeMapOut, UObject* const Outer);
 
-private:
 	const AttributeMapUPtr AttributeMap;
-	const RuleFileInfoUPtr RuleInfo;
+	const RuleFileInfoPtr RuleInfo;
 };
 
 using FAttributeMapPtr = TSharedPtr<FAttributeMap>;

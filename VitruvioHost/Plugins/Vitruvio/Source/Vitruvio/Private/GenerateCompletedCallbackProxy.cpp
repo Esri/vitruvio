@@ -1,4 +1,4 @@
-/* Copyright 2023 Esri
+/* Copyright 2024 Esri
  *
  * Licensed under the Apache License Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,10 @@
 
 #include "GenerateCompletedCallbackProxy.h"
 
+#include "VitruvioBatchSubsystem.h"
 #include "Algo/Count.h"
 #include "Engine/World.h"
 #include "VitruvioBlueprintLibrary.h"
-#include "VitruvioComponent.h"
 
 namespace
 {
@@ -31,29 +31,10 @@ void CopyInitialShapeSceneComponent(AActor* OldActor, AActor* NewActor)
 		{
 			DefaultInitialShape->CopySceneComponent(OldActor, NewActor);
 		}
+
+		break;
 	}
 }
-
-struct FExecuteAfterCountdown
-{
-	FCriticalSection CountDownLock;
-	int32 Count;
-	TFunction<void()> Fun;
-
-	FExecuteAfterCountdown(int32 Count, TFunction<void()> Fun) : Count(Count), Fun(Fun) {}
-
-	FExecuteAfterCountdown(const FExecuteAfterCountdown& Other) : Count(Other.Count), Fun(Other.Fun) {}
-
-	void operator()()
-	{
-		FScopeLock Lock(&CountDownLock);
-		Count--;
-		if (Count <= 0)
-		{
-			Fun();
-		}
-	}
-};
 
 template <typename TFun>
 UGenerateCompletedCallbackProxy* ExecuteIfComponentValid(const FString& FunctionName, UVitruvioComponent* VitruvioComponent, TFun&& Function)
@@ -79,7 +60,7 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetRpk(UVitruv
 {
 	return ExecuteIfComponentValid(TEXT("SetRpk"), VitruvioComponent, [RulePackage, bGenerateModel](UGenerateCompletedCallbackProxy* Proxy, UVitruvioComponent* VitruvioComponent)
 	{
-		VitruvioComponent->SetRpk(RulePackage, bGenerateModel, Proxy);
+		VitruvioComponent->SetRpk(RulePackage, true, bGenerateModel, Proxy);
 	});
 }
 
@@ -92,11 +73,11 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetRandomSeed(
 	});
 }
 
-UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::Generate(UVitruvioComponent* VitruvioComponent)
+UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::Generate(UVitruvioComponent* VitruvioComponent, FGenerateOptions GenerateOptions)
 {
-	return ExecuteIfComponentValid(TEXT("Generate"), VitruvioComponent, [](UGenerateCompletedCallbackProxy* Proxy, UVitruvioComponent* VitruvioComponent)
+	return ExecuteIfComponentValid(TEXT("Generate"), VitruvioComponent, [GenerateOptions](UGenerateCompletedCallbackProxy* Proxy, UVitruvioComponent* VitruvioComponent)
 	{
-		VitruvioComponent->Generate(Proxy);
+		VitruvioComponent->Generate(Proxy, GenerateOptions);
 	});
 }
 
@@ -183,22 +164,26 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::SetSplineIniti
 
 UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::ConvertToVitruvioActor(UObject* WorldContextObject, const TArray<AActor*>& Actors,
 																						 TArray<AVitruvioActor*>& OutVitruvioActors,
-																						 URulePackage* Rpk, bool bGenerateModels)
+																						 URulePackage* Rpk, bool bGenerateModels, bool bBatchGeneration)
 {
 	UGenerateCompletedCallbackProxy* Proxy = NewObject<UGenerateCompletedCallbackProxy>();
 	Proxy->RegisterWithGameInstance(WorldContextObject);
-	const int32 TotalActors = Algo::CountIf(Actors, [](AActor* Actor) { return UVitruvioBlueprintLibrary::CanConvertToVitruvioActor(Actor); });
 
-	UGenerateCompletedCallbackProxy* InternalProxy = NewObject<UGenerateCompletedCallbackProxy>();
-	InternalProxy->RegisterWithGameInstance(WorldContextObject);
-	InternalProxy->OnGenerateCompleted.AddLambda(FExecuteAfterCountdown(TotalActors, [Proxy]() {
-		Proxy->OnGenerateCompletedBlueprint.Broadcast();
-		Proxy->OnGenerateCompleted.Broadcast();
-	}));
-	InternalProxy->OnAttributesEvaluated.AddLambda(FExecuteAfterCountdown(TotalActors, [Proxy]() {
-		Proxy->OnAttributesEvaluatedBlueprint.Broadcast();
-		Proxy->OnAttributesEvaluated.Broadcast();
-	}));
+	UGenerateCompletedCallbackProxy* NonBatchedProxy = nullptr;
+	if (!bBatchGeneration)
+	{
+		NonBatchedProxy = NewObject<UGenerateCompletedCallbackProxy>();
+		const int32 TotalActors = Algo::CountIf(Actors, [](AActor* Actor) { return UVitruvioBlueprintLibrary::CanConvertToVitruvioActor(Actor); });
+		NonBatchedProxy->RegisterWithGameInstance(WorldContextObject);
+		NonBatchedProxy->OnGenerateCompleted.AddLambda(FExecuteAfterCountdown(TotalActors, [Proxy]() {
+			Proxy->OnGenerateCompletedBlueprint.Broadcast();
+			Proxy->OnGenerateCompleted.Broadcast();
+		}));
+		NonBatchedProxy->OnAttributesEvaluated.AddLambda(FExecuteAfterCountdown(TotalActors, [Proxy]() {
+			Proxy->OnAttributesEvaluatedBlueprint.Broadcast();
+			Proxy->OnAttributesEvaluated.Broadcast();
+		}));
+	}
 
 	for (AActor* Actor : Actors)
 	{
@@ -210,7 +195,9 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::ConvertToVitru
 			CopyInitialShapeSceneComponent(Actor, VitruvioActor);
 
 			UVitruvioComponent* VitruvioComponent = VitruvioActor->VitruvioComponent;
-			VitruvioComponent->SetRpk(Rpk, bGenerateModels, InternalProxy);
+			VitruvioComponent->SetBatchGenerated(bBatchGeneration);
+
+			VitruvioComponent->SetRpk(Rpk, !bBatchGeneration, bGenerateModels, NonBatchedProxy);
 
 			if (OldAttachParent)
 			{
@@ -222,5 +209,12 @@ UGenerateCompletedCallbackProxy* UGenerateCompletedCallbackProxy::ConvertToVitru
 			OutVitruvioActors.Add(VitruvioActor);
 		}
 	}
+
+	if (bBatchGeneration)
+	{
+		UVitruvioBatchSubsystem* VitruvioBatchSubsystem = WorldContextObject->GetWorld()->GetSubsystem<UVitruvioBatchSubsystem>();
+		VitruvioBatchSubsystem->GenerateAll(Proxy);
+	}
+	
 	return Proxy;
 }
