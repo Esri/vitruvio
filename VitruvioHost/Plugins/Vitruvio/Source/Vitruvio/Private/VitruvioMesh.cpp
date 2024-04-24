@@ -53,7 +53,7 @@ void InitializeBodySetup(UBodySetup* BodySetup)
 
 UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
 										TMap<FString, Vitruvio::FTextureData>& TextureCache,
-										TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+										TMap<Vitruvio::FMaterialAttributeContainer, TObjectPtr<UMaterialInstanceDynamic>>& MaterialCache,
 										const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, TMap<FString, int32>& UniqueMaterialNames,
 										TMap<UMaterialInterface*, FString>& MaterialIdentifiers, UObject* Outer)
 {
@@ -61,9 +61,9 @@ UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* Mask
 
 	const FString MaterialIdentifier = MaterialAttributes.GetMaterialName();
 
-	if (UMaterialInstanceDynamic** Result = MaterialCache.Find(MaterialAttributes))
+	if (const TObjectPtr<UMaterialInstanceDynamic>* Result = MaterialCache.Find(MaterialAttributes))
 	{
-		UMaterialInstanceDynamic* Material = *Result;
+		const TObjectPtr<UMaterialInstanceDynamic> Material = *Result;
 		MaterialIdentifiers.Add(Material, MaterialIdentifier);
 		return Material;
 	}
@@ -91,7 +91,7 @@ FVitruvioMesh::~FVitruvioMesh()
 	}
 }
 
-void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttributeContainer, TObjectPtr<UMaterialInstanceDynamic>>& MaterialCache,
 						  TMap<FString, Vitruvio::FTextureData>& TextureCache, TMap<UMaterialInterface*, FString>& UniqueMaterialIdentifiers,
 						  TMap<FString, int32>& UniqueMaterialNames, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent)
 {

@@ -89,7 +89,7 @@ struct FConvertedGenerateResult
 };
 
 FConvertedGenerateResult BuildGenerateResult(const FGenerateResultDescription& GenerateResult,
-									 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+									 TMap<Vitruvio::FMaterialAttributeContainer, TObjectPtr<UMaterialInstanceDynamic>>& MaterialCache,
 									 TMap<FString, Vitruvio::FTextureData>& TextureCache,
 									 TMap<UMaterialInterface*, FString>& MaterialIdentifiers,
 									 TMap<FString, int32>& UniqueMaterialIdentifiers,

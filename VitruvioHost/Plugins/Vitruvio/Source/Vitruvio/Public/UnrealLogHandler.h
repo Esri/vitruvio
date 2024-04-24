@@ -17,7 +17,9 @@
 
 #include "prt/LogHandler.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(UnrealPrtLog, Log, All);
+#include "Windows/WindowsCriticalSection.h"
+#include "Containers/Array.h"
+#include "Containers/UnrealString.h"
 
 struct FLogMessage
 {

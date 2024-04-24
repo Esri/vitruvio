@@ -31,6 +31,9 @@
 #include "VitruvioBatchSubsystem.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Engine/World.h"
+#include "Materials/Material.h"
+#include "UObject/Package.h"
 
 DEFINE_LOG_CATEGORY(LogVitruvioComponent);
 
@@ -415,7 +418,7 @@ TSet<FInstance> ApplyInstanceReplacements(UGeneratedModelStaticMeshComponent* Ge
 }
 
 FConvertedGenerateResult BuildGenerateResult(const FGenerateResultDescription& GenerateResult,
-									 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+									 TMap<Vitruvio::FMaterialAttributeContainer, TObjectPtr<UMaterialInstanceDynamic>>& MaterialCache,
 									 TMap<FString, Vitruvio::FTextureData>& TextureCache,
 									 TMap<UMaterialInterface*, FString>& MaterialIdentifiers,
 									 TMap<FString, int32>& UniqueMaterialIdentifiers,
