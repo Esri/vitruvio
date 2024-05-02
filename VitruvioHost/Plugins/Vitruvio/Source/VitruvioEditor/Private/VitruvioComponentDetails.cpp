@@ -39,6 +39,8 @@
 #include "Widgets/Layout/SSeparator.h"
 #include "Widgets/Text/STextBlock.h"
 
+#define LOCTEXT_NAMESPACE "VitruvioComponentDetails"
+
 namespace
 {
 
@@ -94,6 +96,23 @@ bool IsVitruvioComponentSelected(const TArray<TWeakObjectPtr<UObject>>& ObjectsB
 		}
 	}
 	return false;
+}
+
+void GetAllVitruvioComponents(const TArray<TWeakObjectPtr<UObject>>& ObjectsBeingCustomized, 
+								TArray<UVitruvioComponent*>& OutVitruvioComponents)
+{
+	for (size_t ObjectIndex = 0; ObjectIndex < ObjectsBeingCustomized.Num(); ++ObjectIndex)
+	{
+		const TWeakObjectPtr<UObject>& CurrentObject = ObjectsBeingCustomized[ObjectIndex];
+		if (CurrentObject.IsValid())
+		{
+			UVitruvioComponent* VitruvioComponent = Cast<UVitruvioComponent>(CurrentObject.Get());
+			if (VitruvioComponent)
+			{
+				OutVitruvioComponents.Add(VitruvioComponent);
+			}
+		}
+	}
 }
 
 template <typename V, typename A>
@@ -244,6 +263,87 @@ TSharedPtr<SHorizontalBox> CreateTextInputWidget(TSharedPtr<IPropertyHandle> Str
 }
 
 template <typename Attr>
+TSharedPtr<SHorizontalBox> CreateMultipleValueFloatAttributeWidget(Attr* Attribute, TSharedPtr<IPropertyHandle> Property)
+{
+	auto OnTextChanged = [Property, Attribute](const FText& Text, ETextCommit::Type)
+	{
+		if (Property->IsValidHandle() && Text.IsNumeric())
+		{
+			double Value = FCString::Atof(*Text.ToString());
+
+			auto Annotation = Attribute->GetRangeAnnotation();
+			if (Annotation)
+			{
+				if (Annotation->HasMin && Value < Annotation->Min)
+				{
+					Value = Annotation->Min;
+				}
+
+				if (Annotation->HasMax && Value > Annotation->Max)
+				{
+					Value = Annotation->Max;
+				}
+			}
+
+			Property->SetValue(Value);
+		}
+	};
+
+	// clang-format off
+	auto ValueWidget = SNew(SEditableTextBox)
+		.Font(IDetailLayoutBuilder::GetDetailFont())
+		.IsReadOnly(false)
+		.SelectAllTextWhenFocused(true)
+		.OnTextCommitted_Lambda(OnTextChanged);
+	// clang-format on
+
+	ValueWidget->SetText(LOCTEXT("MultipleValues", "Multiple Values"));
+
+	// clang-format off
+	return SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot()
+		.VAlign(VAlign_Fill)
+		.HAlign(HAlign_Fill)
+		.FillWidth(1)
+		[
+			ValueWidget
+		];
+	// clang-format on
+}
+
+TSharedPtr<SHorizontalBox> CreateMultipleValueStringAttributeWidget(TSharedPtr<IPropertyHandle> Property)
+{
+	auto OnTextChanged = [Property](const FText& Text, ETextCommit::Type)
+	{
+		if (Property.IsValid())
+		{
+			Property->SetValue(Text.ToString());
+		}
+	};
+
+	// clang-format off
+	auto ValueWidget = SNew(SEditableTextBox)
+		.Font(IDetailLayoutBuilder::GetDetailFont())
+		.IsReadOnly(false)
+		.SelectAllTextWhenFocused(true)
+		.OnTextCommitted_Lambda(OnTextChanged);
+	// clang-format on
+
+	ValueWidget->SetText(LOCTEXT("MultipleValues", "Multiple Values"));
+
+	// clang-format off
+	return SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot()
+		.VAlign(VAlign_Fill)
+		.HAlign(HAlign_Fill)
+		.FillWidth(1)
+		[
+			ValueWidget
+		];
+	// clang-format on
+}
+
+template <typename Attr>
 TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(Attr* Attribute, TSharedPtr<IPropertyHandle> FloatProperty)
 {
 	auto Annotation = Attribute->GetRangeAnnotation();
@@ -259,7 +359,7 @@ TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(Attr* Attribute, TSharedPt
 				FloatProperty->SetValue(Value);
 			}
 		}
-	};	
+	}; 
 
 	// clang-format off
 	auto ValueWidget = SNew(SSpinBox<double>)
@@ -372,7 +472,7 @@ void AddSeparator(IDetailCategoryBuilder& RootCategory)
 }
 
 template <typename A>
-TSharedPtr<SWidget> CreateFloatAttributeWidget(A* Attribute, const TSharedPtr<IPropertyHandle>& PropertyHandle)
+TSharedPtr<SWidget> CreateFloatAttributeWidget(A* Attribute, const TSharedPtr<IPropertyHandle>& PropertyHandle, bool MultipleValues)
 {
 	if (Attribute->GetEnumAnnotation() && Attribute->GetEnumAnnotation()->Values.Num() > 0)
 	{
@@ -380,12 +480,19 @@ TSharedPtr<SWidget> CreateFloatAttributeWidget(A* Attribute, const TSharedPtr<IP
 	}
 	else
 	{
-		return CreateNumericInputWidget(Attribute, PropertyHandle).ToSharedRef();
+		if (MultipleValues)
+		{
+			return CreateMultipleValueFloatAttributeWidget(Attribute, PropertyHandle).ToSharedRef();
+		}
+		else
+		{
+			return CreateNumericInputWidget(Attribute, PropertyHandle).ToSharedRef();
+		}
 	}
 }
 
 template <typename A>
-TSharedPtr<SWidget> CreateStringAttributeWidget(A* Attribute, const TSharedPtr<IPropertyHandle>& PropertyHandle)
+TSharedPtr<SWidget> CreateStringAttributeWidget(A* Attribute, const TSharedPtr<IPropertyHandle>& PropertyHandle, bool MultipleValues)
 {
 	if (Attribute->GetEnumAnnotation() && Attribute->GetEnumAnnotation()->Values.Num() > 0)
 	{
@@ -397,7 +504,14 @@ TSharedPtr<SWidget> CreateStringAttributeWidget(A* Attribute, const TSharedPtr<I
 	}
 	else
 	{
-		return CreateTextInputWidget(PropertyHandle);
+		if (MultipleValues)
+		{
+			return CreateMultipleValueStringAttributeWidget(PropertyHandle);
+		}
+		else
+		{
+			return CreateTextInputWidget(PropertyHandle);
+		}
 	}
 }
 
@@ -416,7 +530,7 @@ void AddCopyNameToClipboardAction(FDetailWidgetRow& Row, URuleAttribute* Attribu
 }
 
 void AddScalarWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, IDetailGroup& Group, URuleAttribute* Attribute,
-					 UVitruvioComponent* VitruvioActor)
+					 UVitruvioComponent* VitruvioActor, bool MultipleValuesSelected)
 {
 	if (DetailTreeNodes.Num() == 0 || DetailTreeNodes[0]->GetNodeType() != EDetailNodeType::Category)
 	{
@@ -442,11 +556,11 @@ void AddScalarWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, 
 
 	if (UFloatAttribute* FloatAttribute = Cast<UFloatAttribute>(Attribute))
 	{
-		ValueWidget = CreateFloatAttributeWidget(FloatAttribute, PropertyHandle);
+		ValueWidget = CreateFloatAttributeWidget(FloatAttribute, PropertyHandle, MultipleValuesSelected);
 	}
 	else if (UStringAttribute* StringAttribute = Cast<UStringAttribute>(Attribute))
 	{
-		ValueWidget = CreateStringAttributeWidget(StringAttribute, PropertyHandle);
+		ValueWidget = CreateStringAttributeWidget(StringAttribute, PropertyHandle, MultipleValuesSelected);
 	}
 	else if (Cast<UBoolAttribute>(Attribute))
 	{
@@ -459,8 +573,25 @@ void AddScalarWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, 
 	}
 }
 
+bool DifferentValuesSelected(URuleAttribute* Attribute, FString AttributeKey, TArray<UVitruvioComponent*> VitruvioComponents)
+{
+	FString AttributeValue = Attribute->GetValueAsString();
+	for (size_t Component = 0; Component < VitruvioComponents.Num(); ++Component)
+	{
+		auto ComponentAttributes = VitruvioComponents[Component]->GetAttributes();
+		URuleAttribute* ComponentAttr = ComponentAttributes[AttributeKey];
+		FString CompareValue = ComponentAttr->GetValueAsString();
+		if (AttributeValue != CompareValue)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, IDetailGroup& Group, URuleAttribute* Attribute,
-					UVitruvioComponent* VitruvioActor)
+					UVitruvioComponent* VitruvioActor, bool MultipleValuesSelected)
 {
 	if (DetailTreeNodes.Num() == 0 || DetailTreeNodes[0]->GetNodeType() != EDetailNodeType::Category)
 	{
@@ -471,8 +602,8 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 	DetailTreeNodes[0]->GetChildren(ArrayRoots);
 
 	const TSharedRef<IDetailTreeNode>* ValuesArrayRoot = ArrayRoots.FindByPredicate([](const TSharedRef<IDetailTreeNode>& TreeNode)
-	{
-		return TreeNode->GetRow()->GetPropertyHandle()->GetProperty()->GetName() == TEXT("Values");
+	{ 
+		return TreeNode->GetRow()->GetPropertyHandle()->GetProperty()->GetName() == TEXT("Values"); 
 	});
 
 	if (ValuesArrayRoot)
@@ -516,11 +647,11 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 
 			if (UFloatArrayAttribute* FloatArrayAttribute = Cast<UFloatArrayAttribute>(Attribute))
 			{
-				ValueWidget = CreateFloatAttributeWidget(FloatArrayAttribute, PropertyHandle);
+				ValueWidget = CreateFloatAttributeWidget(FloatArrayAttribute, PropertyHandle, MultipleValuesSelected);
 			}
 			else if (UStringArrayAttribute* StringArrayAttribute = Cast<UStringArrayAttribute>(Attribute))
 			{
-				ValueWidget = CreateStringAttributeWidget(StringArrayAttribute, PropertyHandle);
+				ValueWidget = CreateStringAttributeWidget(StringArrayAttribute, PropertyHandle, MultipleValuesSelected);
 			}
 			else if (Cast<UBoolArrayAttribute>(Attribute))
 			{
@@ -564,7 +695,7 @@ void OpenReplacementDialog(UVitruvioComponent* VitruvioComponent, bool bNeedsReg
 	{
 		return;
 	}
-	
+
 	auto OnDialogClosed = [](const TSharedRef<SWindow>&) {
 		ReplacementDialogOpen = false;
 	};
@@ -721,7 +852,7 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailLayoutBuilder& Detai
 	IDetailPropertyRow& HeaderProperty = RootGroup.HeaderProperty(AttributesHandle.ToSharedRef());
 	HeaderProperty.ShowPropertyButtons(false);
 
-	FResetToDefaultOverride ResetAllToDefaultOverride =
+	FResetToDefaultOverride ResetAllToDefaultOverride = 
 		FResetToDefaultOverride::Create(FResetToDefaultHandler::CreateLambda([VitruvioActor](TSharedPtr<IPropertyHandle> Property) {
 			for (const auto& AttributeEntry : VitruvioActor->GetAttributes())
 			{
@@ -752,6 +883,7 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailLayoutBuilder& Detai
 	for (const auto& AttributeEntry : VitruvioActor->GetAttributes())
 	{
 		URuleAttribute* Attribute = AttributeEntry.Value;
+		FString AttributeKey = AttributeEntry.Key;
 
 		IDetailGroup* Group = GetOrCreateGroups(RootGroup, Attribute, GroupCache);
 
@@ -760,30 +892,46 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailLayoutBuilder& Detai
 		TArray<UObject*> Objects;
 		Objects.Add(Attribute);
 		Generator->SetObjects(Objects);
-		Generator->OnFinishedChangingProperties().AddLambda([this, VitruvioActor, Attribute](FPropertyChangedEvent Event) {
-			if (Event.ChangeType == EPropertyChangeType::ArrayAdd)
-			{
-				if (UArrayAttribute* ArrayAttribute = Cast<UArrayAttribute>(Attribute))
+		Generator->OnFinishedChangingProperties().AddLambda([this, VitruvioActor, Attribute, AttributeKey](FPropertyChangedEvent Event) {
+				if (Event.ChangeType == EPropertyChangeType::ArrayAdd)
 				{
-					Event.ObjectIteratorIndex = 0;
-					const int ArrayIndex = Event.GetArrayIndex(Event.Property->GetFName().ToString());
-					ArrayAttribute->InitializeDefaultArrayValue(ArrayIndex);
+					if (UArrayAttribute* ArrayAttribute = Cast<UArrayAttribute>(Attribute))
+					{
+						Event.ObjectIteratorIndex = 0;
+						const int ArrayIndex = Event.GetArrayIndex(Event.Property->GetFName().ToString());
+						ArrayAttribute->InitializeDefaultArrayValue(ArrayIndex);
+					}
 				}
-			}
-			Attribute->bUserSet = true;
-			VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
-		});
+				Attribute->bUserSet = true;
+				VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
+
+				// Apply attribute changes to all selected vitruvio actors (if more than 1)
+				// Issue: Undo doesn't undo the change in attributes on all vitruvio actors
+				TMap<FString, FString> ChangedAttributes;
+				ChangedAttributes.Add(AttributeKey, Attribute->GetValueAsString());
+				for (size_t i = 0; i < VitruvioComponentsSelected.Num(); ++i)
+				{
+					VitruvioComponentsSelected[i]->SetAttributes(ChangedAttributes);
+					VitruvioComponentsSelected[i]->EvaluateRuleAttributes(VitruvioComponentsSelected[i]->GenerateAutomatically);
+				}
+			});
 		const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes = Generator->GetRootTreeNodes();
 
 		Generators.Add(Generator);
 
+		bool MultipleValuesSelected = false;
+		if (VitruvioComponentsSelected.Num() > 1)
+		{
+			MultipleValuesSelected = DifferentValuesSelected(Attribute, AttributeKey, VitruvioComponentsSelected);
+		}
+
 		if (Cast<UStringArrayAttribute>(Attribute) || Cast<UFloatArrayAttribute>(Attribute) || Cast<UBoolArrayAttribute>(Attribute))
 		{
-			AddArrayWidget(DetailTreeNodes, *Group, Attribute, VitruvioActor);
+			AddArrayWidget(DetailTreeNodes, *Group, Attribute, VitruvioActor, MultipleValuesSelected);
 		}
 		else
 		{
-			AddScalarWidget(DetailTreeNodes, *Group, Attribute, VitruvioActor);
+			AddScalarWidget(DetailTreeNodes, *Group, Attribute, VitruvioActor, MultipleValuesSelected);
 		}
 	}
 }
@@ -856,26 +1004,39 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		FSimpleDelegate::CreateSP(this, &FVitruvioComponentDetails::OnGenerateAutomaticallyChanged));
 
 	const TSharedRef<IPropertyHandle> BatchGenerateHandle = DetailBuilder.GetProperty(TEXT("bBatchGenerate"));
-	BatchGenerateHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder]()
-	{
-		DetailBuilder.ForceRefreshDetails();
+	BatchGenerateHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder]() 
+	{ 
+		DetailBuilder.ForceRefreshDetails(); 
 	}));
-	
+
 	ObjectsBeingCustomized.Empty();
 	DetailBuilder.GetObjectsBeingCustomized(ObjectsBeingCustomized);
 
-	// If there are more than one selected items we only hide the attributes and return
-	// No support for editing attributes on multiple initial shapes simultaneous
+	// If there are more than one items selected
+	// store all the vitruvio components and check if they have the same rpk
+	// If the rpk's differ between the vitruvio components, act as before - just return
+	// Otherwise same rpk, build attributes for one, apply to all selected
+	VitruvioComponentsSelected.Empty();
+	GetAllVitruvioComponents(ObjectsBeingCustomized, VitruvioComponentsSelected);
 	if (ObjectsBeingCustomized.Num() > 1)
 	{
 		DetailBuilder.GetProperty(FName(TEXT("Attributes")))->MarkHiddenByCustomization();
-		return;
+
+		URulePackage* ComponentRPK = VitruvioComponentsSelected[0]->GetRpk();
+		for (size_t ComponentIndex = 0; ComponentIndex < VitruvioComponentsSelected.Num(); ++ComponentIndex)
+		{
+			if (ComponentRPK != VitruvioComponentsSelected[ComponentIndex]->GetRpk())
+			{
+				return;
+			}
+		}
 	}
 
 	UVitruvioComponent* VitruvioComponent = nullptr;
 
-	if (IsVitruvioComponentSelected(ObjectsBeingCustomized, VitruvioComponent))
+	if (VitruvioComponentsSelected.Num() > 0)
 	{
+		VitruvioComponent = VitruvioComponentsSelected[0];
 		DetailBuilder.GetProperty(FName(TEXT("Attributes")))->MarkHiddenByCustomization();
 
 		if (!VitruvioComponent->InitialShape)
