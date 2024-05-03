@@ -383,6 +383,7 @@ TSet<FInstance> ApplyInstanceReplacements(UGeneratedModelStaticMeshComponent* Ge
 				return FVector{RandX, RandY, RandZ};
 			};
 
+			TMap<int, TArray<FTransform>>  ModifiedTransforms;
 			for (const FTransform& Transform : Instance.Transforms)
 			{
 				const float RandomProbability = FMath::RandRange(0.0f, CumulativeProbability);
@@ -408,7 +409,13 @@ TSet<FInstance> ApplyInstanceReplacements(UGeneratedModelStaticMeshComponent* Ge
 					ModifiedTransform.SetRotation(FQuat::MakeFromEuler(RandomVector(ReplacementOption.MinRotation, ReplacementOption.MaxRotation)));
 				}
 
-				InstancedComponents[ComponentIndex]->AddInstance(ModifiedTransform);
+				ModifiedTransforms.FindOrAdd(ComponentIndex).Add(ModifiedTransform);
+				
+			}
+
+			for (const auto& [ComponentIndex, Transforms] : ModifiedTransforms)
+			{
+				InstancedComponents[ComponentIndex]->AddInstances(Transforms, false);
 			}
 
 			Replaced.Add(Instance);
