@@ -22,6 +22,8 @@
 #include "Runtime/ImageCore/Public/ImageCore.h"
 #include "VitruvioModule.h"
 #include "VitruvioTypes.h"
+#include "Async/Async.h"
+#include "UObject/Package.h"
 
 DEFINE_LOG_CATEGORY(LogMaterialConversion);
 

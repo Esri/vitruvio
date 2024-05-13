@@ -31,6 +31,9 @@
 #include "VitruvioBatchSubsystem.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Engine/World.h"
+#include "Materials/Material.h"
+#include "UObject/Package.h"
 
 DEFINE_LOG_CATEGORY(LogVitruvioComponent);
 
@@ -380,6 +383,7 @@ TSet<FInstance> ApplyInstanceReplacements(UGeneratedModelStaticMeshComponent* Ge
 				return FVector{RandX, RandY, RandZ};
 			};
 
+			TMap<int, TArray<FTransform>>  ModifiedTransforms;
 			for (const FTransform& Transform : Instance.Transforms)
 			{
 				const float RandomProbability = FMath::RandRange(0.0f, CumulativeProbability);
@@ -405,7 +409,13 @@ TSet<FInstance> ApplyInstanceReplacements(UGeneratedModelStaticMeshComponent* Ge
 					ModifiedTransform.SetRotation(FQuat::MakeFromEuler(RandomVector(ReplacementOption.MinRotation, ReplacementOption.MaxRotation)));
 				}
 
-				InstancedComponents[ComponentIndex]->AddInstance(ModifiedTransform);
+				ModifiedTransforms.FindOrAdd(ComponentIndex).Add(ModifiedTransform);
+				
+			}
+
+			for (const auto& [ComponentIndex, Transforms] : ModifiedTransforms)
+			{
+				InstancedComponents[ComponentIndex]->AddInstances(Transforms, false);
 			}
 
 			Replaced.Add(Instance);
@@ -415,7 +425,7 @@ TSet<FInstance> ApplyInstanceReplacements(UGeneratedModelStaticMeshComponent* Ge
 }
 
 FConvertedGenerateResult BuildGenerateResult(const FGenerateResultDescription& GenerateResult,
-									 TMap<Vitruvio::FMaterialAttributeContainer, UMaterialInstanceDynamic*>& MaterialCache,
+									 TMap<Vitruvio::FMaterialAttributeContainer, TObjectPtr<UMaterialInstanceDynamic>>& MaterialCache,
 									 TMap<FString, Vitruvio::FTextureData>& TextureCache,
 									 TMap<UMaterialInterface*, FString>& MaterialIdentifiers,
 									 TMap<FString, int32>& UniqueMaterialIdentifiers,

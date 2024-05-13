@@ -45,7 +45,7 @@ public:
 
 class SMaterialReplacementDialogWidget : public SReplacementDialogWidget
 {
-	UMaterialReplacementDialogOptions* ReplacementDialogOptions = nullptr;
+	TObjectPtr<UMaterialReplacementDialogOptions> ReplacementDialogOptions = nullptr;
 
 	TArray<TSharedPtr<SCheckBox>> IsolateCheckboxes;
 	TSharedPtr<SCheckBox> IncludeInstancesCheckBox;
