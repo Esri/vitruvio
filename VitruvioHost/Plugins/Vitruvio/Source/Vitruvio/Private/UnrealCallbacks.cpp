@@ -374,7 +374,7 @@ void UnrealCallbacks::addInstance(int32_t prototypeId, const wchar_t* meshId, co
 
 	if (!InstanceMeshes.Contains(meshId))
 	{
-		UE_LOG(LogUnrealCallbacks, Warning, TEXT("No mesh found for meshId %s"), *meshId);
+		UE_LOG(LogUnrealCallbacks, Warning, TEXT("No mesh found for meshId %s"), meshId);
 		return;
 	}
 

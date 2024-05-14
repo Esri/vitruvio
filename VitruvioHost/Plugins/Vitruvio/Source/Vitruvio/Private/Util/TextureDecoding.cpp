@@ -14,7 +14,11 @@
  */
 
 #include "TextureDecoding.h"
+#include "Engine/TextureDefines.h"
 #include "HAL/PlatformFileManager.h"
+#include "Engine/Texture2D.h"
+#include "Runtime/Engine/Public/TextureResource.h"
+#include "UObject/Package.h"
 
 #include <string>
 

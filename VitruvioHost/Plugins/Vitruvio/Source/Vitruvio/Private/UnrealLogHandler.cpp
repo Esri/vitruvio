@@ -14,8 +14,10 @@
  */
 
 #include "UnrealLogHandler.h"
+#include "Logging/LogMacros.h"
+#include "Misc/ScopeLock.h"
 
-DEFINE_LOG_CATEGORY(UnrealPrtLog)
+DEFINE_LOG_CATEGORY_STATIC(UnrealPrtLog, Log, All);
 
 TArray<FLogMessage> UnrealLogHandler::PopMessages()
 {

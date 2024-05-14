@@ -41,7 +41,7 @@ public:
 
 class SInstanceReplacementDialogWidget : public SReplacementDialogWidget
 {
-	UInstanceReplacementDialogOptions* ReplacementDialogOptions = nullptr;
+	TObjectPtr<UInstanceReplacementDialogOptions> ReplacementDialogOptions = nullptr;
 
 	TArray<TSharedPtr<SCheckBox>> IsolateCheckboxes;
 	TSharedPtr<SCheckBox> ApplyToAllVitruvioActorsCheckBox;

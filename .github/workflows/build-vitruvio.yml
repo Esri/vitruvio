@@ -12,45 +12,27 @@ on:
     branches:
       - main
       - develop
-      - workflow_integration
+
+env:
+  CONFIG: ${{github.ref == 'refs/heads/main' && '--build-config=Shipping' || '--build-config=Development'}}
 
 jobs:
-  package-host-main:
+  package-host:
     runs-on: [self-hosted, zrh-unreal]
-    name: Package host project (shipping) on main branch
-    if: github.ref == 'refs/heads/main'
+    name: Package host project
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      - run: git -C C:\dev\git\zrh-xr-devops\ pull
       - run: |
-          C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package_shipping
+          C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package ${{env.CONFIG}}
       - run: |
-          C:\dev\git\zrh-xr-devops\scripts\ue_run_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package_shipping
+          C:\dev\git\zrh-xr-devops\scripts\ue_run_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package
   
-  build-plugin-main:
+  build-plugin:
     runs-on: [self-hosted, zrh-unreal]
-    name: Build plugin on main branch
-    if: github.ref == 'refs/heads/main'
+    name: Build plugin
     steps:
-      - uses: actions/checkout@v2
-      - run: |
-          C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_plugin_build
-
-  package-host-develop:
-    runs-on: [self-hosted, zrh-unreal]
-    name: Package host project (debug) on develop branch
-    if: github.ref != 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v2
-      - run: |
-          C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package_debug
-      - run: |
-          C:\dev\git\zrh-xr-devops\scripts\ue_run_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package_debug
-  
-  build-plugin-develop:
-    runs-on: [self-hosted, zrh-unreal]
-    name: Build plugin on develop branch
-    if: github.ref != 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      - run: git -C C:\dev\git\zrh-xr-devops\ pull
       - run: |
           C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_plugin_build
