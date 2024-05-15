@@ -33,6 +33,6 @@ jobs:
     name: Build plugin
     steps:
       - uses: actions/checkout@v4
-      - run: git -C C:\dev\git\zrh-xr-devops\ pull
+      - run: git -C C:\dev\git\zrh-xr-devops\ pull -q
       - run: |
           C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_plugin_build
