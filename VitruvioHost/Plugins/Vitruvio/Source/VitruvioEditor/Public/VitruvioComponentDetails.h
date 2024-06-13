@@ -45,6 +45,7 @@ private:
 	void BuildAttributeEditor(IDetailLayoutBuilder& DetailBuilder, IDetailCategoryBuilder& RootCategory, UVitruvioComponent* VitruvioActor);
 
 	TArray<TWeakObjectPtr<UObject>> ObjectsBeingCustomized;
+	TArray<UVitruvioComponent*> VitruvioComponentsSelected;
 	TWeakPtr<IDetailLayoutBuilder> CachedDetailBuilder;
 	TSharedPtr<SWidget> ColorPickerParentWidget;
 	TSharedPtr<STextComboBox> ChangeInitialShapeCombo;
