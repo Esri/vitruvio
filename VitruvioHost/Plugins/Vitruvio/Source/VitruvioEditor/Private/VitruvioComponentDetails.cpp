@@ -79,31 +79,11 @@ void UpdateAttributeValue(UVitruvioComponent* VitruvioActor, A* Attribute, const
 	VitruvioActor->EvaluateRuleAttributes(VitruvioActor->GenerateAutomatically);
 }
 
-bool IsVitruvioComponentSelected(const TArray<TWeakObjectPtr<UObject>>& ObjectsBeingCustomized, UVitruvioComponent*& OutComponent)
+TArray<UVitruvioComponent*> GetAllVitruvioComponents(const TArray<TWeakObjectPtr<UObject>>& ObjectsBeingCustomized)
 {
-	OutComponent = nullptr;
-	for (size_t ObjectIndex = 0; ObjectIndex < ObjectsBeingCustomized.Num(); ++ObjectIndex)
+	TArray<UVitruvioComponent*> OutVitruvioComponents;
+	for (const TWeakObjectPtr<UObject>& CurrentObject : ObjectsBeingCustomized)
 	{
-		const TWeakObjectPtr<UObject>& CurrentObject = ObjectsBeingCustomized[ObjectIndex];
-		if (CurrentObject.IsValid())
-		{
-			UVitruvioComponent* VitruvioComponent = Cast<UVitruvioComponent>(CurrentObject.Get());
-			if (VitruvioComponent)
-			{
-				OutComponent = VitruvioComponent;
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
-void GetAllVitruvioComponents(const TArray<TWeakObjectPtr<UObject>>& ObjectsBeingCustomized, 
-								TArray<UVitruvioComponent*>& OutVitruvioComponents)
-{
-	for (size_t ObjectIndex = 0; ObjectIndex < ObjectsBeingCustomized.Num(); ++ObjectIndex)
-	{
-		const TWeakObjectPtr<UObject>& CurrentObject = ObjectsBeingCustomized[ObjectIndex];
 		if (CurrentObject.IsValid())
 		{
 			UVitruvioComponent* VitruvioComponent = Cast<UVitruvioComponent>(CurrentObject.Get());
@@ -113,6 +93,8 @@ void GetAllVitruvioComponents(const TArray<TWeakObjectPtr<UObject>>& ObjectsBein
 			}
 		}
 	}
+
+	return OutVitruvioComponents;
 }
 
 template <typename V, typename A>
@@ -263,7 +245,7 @@ TSharedPtr<SHorizontalBox> CreateTextInputWidget(TSharedPtr<IPropertyHandle> Str
 }
 
 template <typename Attr>
-TSharedPtr<SHorizontalBox> CreateMultipleValueFloatAttributeWidget(Attr* Attribute, TSharedPtr<IPropertyHandle> Property)
+TSharedPtr<SHorizontalBox> CreateMultipleValueFloatAttributeWidget(Attr* Attribute, const TSharedPtr<IPropertyHandle> Property)
 {
 	auto OnTextChanged = [Property, Attribute](const FText& Text, ETextCommit::Type)
 	{
@@ -311,7 +293,7 @@ TSharedPtr<SHorizontalBox> CreateMultipleValueFloatAttributeWidget(Attr* Attribu
 	// clang-format on
 }
 
-TSharedPtr<SHorizontalBox> CreateMultipleValueStringAttributeWidget(TSharedPtr<IPropertyHandle> Property)
+TSharedPtr<SHorizontalBox> CreateMultipleValueStringAttributeWidget(const TSharedPtr<IPropertyHandle> Property)
 {
 	auto OnTextChanged = [Property](const FText& Text, ETextCommit::Type)
 	{
@@ -573,17 +555,20 @@ void AddScalarWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, 
 	}
 }
 
-bool DifferentValuesSelected(URuleAttribute* Attribute, FString AttributeKey, TArray<UVitruvioComponent*> VitruvioComponents)
+bool AreValuesDifferent(URuleAttribute* Attribute, const FString AttributeKey, const TArray<UVitruvioComponent*> VitruvioComponents)
 {
-	FString AttributeValue = Attribute->GetValueAsString();
-	for (size_t Component = 0; Component < VitruvioComponents.Num(); ++Component)
+	if (VitruvioComponents.Num() > 1)
 	{
-		auto ComponentAttributes = VitruvioComponents[Component]->GetAttributes();
-		URuleAttribute* ComponentAttr = ComponentAttributes[AttributeKey];
-		FString CompareValue = ComponentAttr->GetValueAsString();
-		if (AttributeValue != CompareValue)
+		FString AttributeValue = Attribute->GetValueAsString();
+		for (const auto& Component : VitruvioComponents)
 		{
-			return true;
+			auto ComponentAttributes = Component->GetAttributes();
+			URuleAttribute* ComponentAttr = ComponentAttributes[AttributeKey];
+			FString CompareValue = ComponentAttr->GetValueAsString();
+			if (AttributeValue != CompareValue)
+			{
+				return true;
+			}
 		}
 	}
 
@@ -909,21 +894,19 @@ void FVitruvioComponentDetails::BuildAttributeEditor(IDetailLayoutBuilder& Detai
 				// Issue: Undo doesn't undo the change in attributes on all vitruvio actors
 				TMap<FString, FString> ChangedAttributes;
 				ChangedAttributes.Add(AttributeKey, Attribute->GetValueAsString());
-				for (size_t i = 0; i < VitruvioComponentsSelected.Num(); ++i)
+				for (UVitruvioComponent* Component : SelectedVitruvioComponents)
 				{
-					VitruvioComponentsSelected[i]->SetAttributes(ChangedAttributes);
-					VitruvioComponentsSelected[i]->EvaluateRuleAttributes(VitruvioComponentsSelected[i]->GenerateAutomatically);
+					if (Component != VitruvioActor)
+					{
+						Component->SetAttribute(AttributeKey, Attribute->GetValueAsString());
+					}
 				}
 			});
 		const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes = Generator->GetRootTreeNodes();
 
 		Generators.Add(Generator);
 
-		bool MultipleValuesSelected = false;
-		if (VitruvioComponentsSelected.Num() > 1)
-		{
-			MultipleValuesSelected = DifferentValuesSelected(Attribute, AttributeKey, VitruvioComponentsSelected);
-		}
+		bool MultipleValuesSelected = AreValuesDifferent(Attribute, AttributeKey, SelectedVitruvioComponents);
 
 		if (Cast<UStringArrayAttribute>(Attribute) || Cast<UFloatArrayAttribute>(Attribute) || Cast<UBoolArrayAttribute>(Attribute))
 		{
@@ -1016,16 +999,16 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	// store all the vitruvio components and check if they have the same rpk
 	// If the rpk's differ between the vitruvio components, act as before - just return
 	// Otherwise same rpk, build attributes for one, apply to all selected
-	VitruvioComponentsSelected.Empty();
-	GetAllVitruvioComponents(ObjectsBeingCustomized, VitruvioComponentsSelected);
+	SelectedVitruvioComponents.Empty();
+	SelectedVitruvioComponents = GetAllVitruvioComponents(ObjectsBeingCustomized);
 	if (ObjectsBeingCustomized.Num() > 1)
 	{
 		DetailBuilder.GetProperty(FName(TEXT("Attributes")))->MarkHiddenByCustomization();
 
-		URulePackage* ComponentRPK = VitruvioComponentsSelected[0]->GetRpk();
-		for (size_t ComponentIndex = 0; ComponentIndex < VitruvioComponentsSelected.Num(); ++ComponentIndex)
+		URulePackage* ComponentRPK = SelectedVitruvioComponents[0]->GetRpk();
+		for (UVitruvioComponent* VitruvioComponentSelected : SelectedVitruvioComponents)
 		{
-			if (ComponentRPK != VitruvioComponentsSelected[ComponentIndex]->GetRpk())
+			if (ComponentRPK != VitruvioComponentSelected->GetRpk())
 			{
 				return;
 			}
@@ -1034,9 +1017,9 @@ void FVitruvioComponentDetails::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 
 	UVitruvioComponent* VitruvioComponent = nullptr;
 
-	if (VitruvioComponentsSelected.Num() > 0)
+	if (SelectedVitruvioComponents.Num() > 0)
 	{
-		VitruvioComponent = VitruvioComponentsSelected[0];
+		VitruvioComponent = SelectedVitruvioComponents[0];
 		DetailBuilder.GetProperty(FName(TEXT("Attributes")))->MarkHiddenByCustomization();
 
 		if (!VitruvioComponent->InitialShape)
