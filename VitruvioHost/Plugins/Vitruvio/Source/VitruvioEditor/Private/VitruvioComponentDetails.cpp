@@ -98,7 +98,7 @@ TArray<UVitruvioComponent*> GetAllVitruvioComponents(const TArray<TWeakObjectPtr
 }
 
 template <typename V, typename A>
-TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Annotation, TSharedPtr<IPropertyHandle> PropertyHandle)
+TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Annotation, const TSharedPtr<IPropertyHandle>& PropertyHandle, bool MultipleValues)
 {
 	check(Annotation->Values.Num() > 0);
 
@@ -128,7 +128,8 @@ TSharedPtr<SPropertyComboBox<V>> CreateEnumWidget(A* Annotation, TSharedPtr<IPro
 	auto ValueWidget = SNew(SPropertyComboBox<V>)
 		.ComboItemList(SharedPtrValues)
 		.OnSelectionChanged_Lambda(OnSelectionChanged)
-		.InitialValue(InitialSelectedValue);
+		.InitialValue(InitialSelectedValue)
+		.HasMultipleValues(MultipleValues);
 	// clang-format on
 
 	return ValueWidget;
@@ -150,7 +151,7 @@ void CreateColorPicker(const FLinearColor& InitialColor, C OnCommit)
 	OpenColorPicker(PickerArgs);
 }
 
-TSharedPtr<SHorizontalBox> CreateColorInputWidget(TSharedPtr<IPropertyHandle> ColorStringProperty)
+TSharedPtr<SHorizontalBox> CreateColorInputWidget(const TSharedPtr<IPropertyHandle>& ColorStringProperty)
 {
 	auto ColorCommitted = [ColorStringProperty](FLinearColor NewColor) {
 		ColorStringProperty->SetValue(TEXT("#") + NewColor.ToFColor(true).ToHex());
@@ -189,7 +190,7 @@ TSharedPtr<SHorizontalBox> CreateColorInputWidget(TSharedPtr<IPropertyHandle> Co
 	// clang-format on
 }
 
-TSharedPtr<SCheckBox> CreateBoolInputWidget(TSharedPtr<IPropertyHandle> Property)
+TSharedPtr<SCheckBox> CreateBoolInputWidget(const TSharedPtr<IPropertyHandle>& Property, bool MultipleValues)
 {
 	auto OnCheckStateChanged = [Property](ECheckBoxState CheckBoxState) -> void {
 		Property->SetValue(CheckBoxState == ECheckBoxState::Checked);
@@ -197,14 +198,21 @@ TSharedPtr<SCheckBox> CreateBoolInputWidget(TSharedPtr<IPropertyHandle> Property
 
 	auto ValueWidget = SNew(SCheckBox).OnCheckStateChanged_Lambda(OnCheckStateChanged);
 
-	bool CurrentValue = false;
-	Property->GetValue(CurrentValue);
-	ValueWidget->SetIsChecked(CurrentValue);
+	if (MultipleValues)
+	{
+		ValueWidget->SetIsChecked(ECheckBoxState::Undetermined);
+	}
+	else
+	{
+		bool CurrentValue = false;
+		Property->GetValue(CurrentValue);
+		ValueWidget->SetIsChecked(CurrentValue);
+	}
 
 	return ValueWidget;
 }
 
-TSharedPtr<SHorizontalBox> CreateTextInputWidget(TSharedPtr<IPropertyHandle> StringProperty)
+TSharedPtr<SHorizontalBox> CreateTextInputWidget(const TSharedPtr<IPropertyHandle>& StringProperty, bool MultipleValues)
 {
 	auto OnTextChanged = [StringProperty](const FText& Text, ETextCommit::Type) {
 
@@ -228,9 +236,16 @@ TSharedPtr<SHorizontalBox> CreateTextInputWidget(TSharedPtr<IPropertyHandle> Str
 		.OnTextCommitted_Lambda(OnTextChanged);
 	// clang-format on
 
-	FString Initial;
-	StringProperty->GetValue(Initial);
-	ValueWidget->SetText(FText::FromString(Initial));
+	if (MultipleValues)
+	{
+		ValueWidget->SetText(LOCTEXT("MultipleValues", "Multiple Values"));
+	}
+	else
+	{
+		FString Initial;
+		StringProperty->GetValue(Initial);
+		ValueWidget->SetText(FText::FromString(Initial));
+	}
 
 	// clang-format off
 	return SNew(SHorizontalBox)
@@ -245,7 +260,7 @@ TSharedPtr<SHorizontalBox> CreateTextInputWidget(TSharedPtr<IPropertyHandle> Str
 }
 
 template <typename Attr>
-TSharedPtr<SHorizontalBox> CreateMultipleValueFloatAttributeWidget(Attr* Attribute, const TSharedPtr<IPropertyHandle> Property)
+TSharedPtr<SHorizontalBox> CreateMultipleValueFloatAttributeWidget(Attr* Attribute, const TSharedPtr<IPropertyHandle>& Property)
 {
 	auto OnTextChanged = [Property, Attribute](const FText& Text, ETextCommit::Type)
 	{
@@ -293,40 +308,8 @@ TSharedPtr<SHorizontalBox> CreateMultipleValueFloatAttributeWidget(Attr* Attribu
 	// clang-format on
 }
 
-TSharedPtr<SHorizontalBox> CreateMultipleValueStringAttributeWidget(const TSharedPtr<IPropertyHandle> Property)
-{
-	auto OnTextChanged = [Property](const FText& Text, ETextCommit::Type)
-	{
-		if (Property.IsValid())
-		{
-			Property->SetValue(Text.ToString());
-		}
-	};
-
-	// clang-format off
-	auto ValueWidget = SNew(SEditableTextBox)
-		.Font(IDetailLayoutBuilder::GetDetailFont())
-		.IsReadOnly(false)
-		.SelectAllTextWhenFocused(true)
-		.OnTextCommitted_Lambda(OnTextChanged);
-	// clang-format on
-
-	ValueWidget->SetText(LOCTEXT("MultipleValues", "Multiple Values"));
-
-	// clang-format off
-	return SNew(SHorizontalBox)
-		+ SHorizontalBox::Slot()
-		.VAlign(VAlign_Fill)
-		.HAlign(HAlign_Fill)
-		.FillWidth(1)
-		[
-			ValueWidget
-		];
-	// clang-format on
-}
-
 template <typename Attr>
-TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(Attr* Attribute, TSharedPtr<IPropertyHandle> FloatProperty)
+TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(Attr* Attribute, const TSharedPtr<IPropertyHandle>& FloatProperty)
 {
 	auto Annotation = Attribute->GetRangeAnnotation();
 
@@ -341,7 +324,7 @@ TSharedPtr<SSpinBox<double>> CreateNumericInputWidget(Attr* Attribute, TSharedPt
 				FloatProperty->SetValue(Value);
 			}
 		}
-	}; 
+	};
 
 	// clang-format off
 	auto ValueWidget = SNew(SSpinBox<double>)
@@ -458,7 +441,7 @@ TSharedPtr<SWidget> CreateFloatAttributeWidget(A* Attribute, const TSharedPtr<IP
 {
 	if (Attribute->GetEnumAnnotation() && Attribute->GetEnumAnnotation()->Values.Num() > 0)
 	{
-		return CreateEnumWidget<double, UFloatEnumAnnotation>(Attribute->GetEnumAnnotation(), PropertyHandle).ToSharedRef();
+		return CreateEnumWidget<double, UFloatEnumAnnotation>(Attribute->GetEnumAnnotation(), PropertyHandle, MultipleValues).ToSharedRef();
 	}
 	else
 	{
@@ -478,7 +461,7 @@ TSharedPtr<SWidget> CreateStringAttributeWidget(A* Attribute, const TSharedPtr<I
 {
 	if (Attribute->GetEnumAnnotation() && Attribute->GetEnumAnnotation()->Values.Num() > 0)
 	{
-		return CreateEnumWidget<FString, UStringEnumAnnotation>(Attribute->GetEnumAnnotation(), PropertyHandle);
+		return CreateEnumWidget<FString, UStringEnumAnnotation>(Attribute->GetEnumAnnotation(), PropertyHandle, MultipleValues);
 	}
 	else if (Attribute->GetColorAnnotation())
 	{
@@ -486,14 +469,7 @@ TSharedPtr<SWidget> CreateStringAttributeWidget(A* Attribute, const TSharedPtr<I
 	}
 	else
 	{
-		if (MultipleValues)
-		{
-			return CreateMultipleValueStringAttributeWidget(PropertyHandle);
-		}
-		else
-		{
-			return CreateTextInputWidget(PropertyHandle);
-		}
+		return CreateTextInputWidget(PropertyHandle, MultipleValues);
 	}
 }
 
@@ -546,7 +522,7 @@ void AddScalarWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, 
 	}
 	else if (Cast<UBoolAttribute>(Attribute))
 	{
-		ValueWidget = CreateBoolInputWidget(PropertyHandle);
+		ValueWidget = CreateBoolInputWidget(PropertyHandle, MultipleValuesSelected);
 	}
 
 	if (ValueWidget)
@@ -619,7 +595,7 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 		for (const auto& ChildNode : ArrayTreeNodes)
 		{
 			const TSharedPtr<IDetailPropertyRow> DetailPropertyRow = ChildNode->GetRow();
-			TSharedPtr<IPropertyHandle> PropertyHandle = DetailPropertyRow->GetPropertyHandle();
+			const TSharedPtr<IPropertyHandle> PropertyHandle = DetailPropertyRow->GetPropertyHandle();
 
 			FDetailWidgetRow& ValueRow = ArrayHeader.AddWidgetRow();
 
@@ -640,7 +616,7 @@ void AddArrayWidget(const TArray<TSharedRef<IDetailTreeNode>> DetailTreeNodes, I
 			}
 			else if (Cast<UBoolArrayAttribute>(Attribute))
 			{
-				ValueWidget = CreateBoolInputWidget(PropertyHandle);
+				ValueWidget = CreateBoolInputWidget(PropertyHandle, MultipleValuesSelected);
 			}
 
 			ValueRow.ValueContent()[ValueWidget.ToSharedRef()];
@@ -766,17 +742,24 @@ template <typename T>
 void SPropertyComboBox<T>::Construct(const FArguments& InArgs)
 {
 	ComboItemList = InArgs._ComboItemList.Get();
+	HasMultipleValues = InArgs._HasMultipleValues.Get();
+	auto InitialItem = HasMultipleValues ? NULL : InArgs._InitialValue.Get();
 
 	// clang-format off
 	SComboBox<TSharedPtr<T>>::Construct(typename SComboBox<TSharedPtr<T>>::FArguments()
-		.InitiallySelectedItem(InArgs._InitialValue.Get())
+		.InitiallySelectedItem(InitialItem)
 		.Content()
 		[
 			SNew(STextBlock)
 			.Text_Lambda([this]
 			{
 				auto SelectedItem = SComboBox<TSharedPtr<T>>::GetSelectedItem();
-				return SelectedItem ? FText::FromString(ValueToString(SelectedItem)) : FText::FromString("");
+				if (HasMultipleValues) {
+					return SelectedItem ? FText::FromString(ValueToString(SelectedItem)) : FText::FromString("Multiple Values");
+				}
+				else {
+					return SelectedItem ? FText::FromString(ValueToString(SelectedItem)) : FText::FromString("");
+				}
 			})
 			.Font(IDetailLayoutBuilder::GetDetailFont())
 		]
