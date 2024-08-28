@@ -1,6 +1,7 @@
 name: build-vitruvio
 
 on: 
+  workflow_dispatch:
   push:
     # Careful! No fall-through for the filters.
     branches:
