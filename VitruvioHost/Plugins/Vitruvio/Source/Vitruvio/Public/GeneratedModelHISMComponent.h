@@ -15,14 +15,13 @@
 
 #pragma once
 
-#include "CustomCollisionProvider.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Interfaces/Interface_CollisionDataProvider.h"
 
 #include "GeneratedModelHISMComponent.generated.h"
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
-class VITRUVIO_API UGeneratedModelHISMComponent : public UHierarchicalInstancedStaticMeshComponent, public FCustomCollisionDataProvider
+class VITRUVIO_API UGeneratedModelHISMComponent : public UHierarchicalInstancedStaticMeshComponent
 {
 	GENERATED_BODY()
 	

@@ -15,14 +15,14 @@
 
 #pragma once
 
-#include "CustomCollisionProvider.h"
 #include "Components/StaticMeshComponent.h"
 #include "Interfaces/Interface_CollisionDataProvider.h"
 
 #include "GeneratedModelStaticMeshComponent.generated.h"
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
-class VITRUVIO_API UGeneratedModelStaticMeshComponent : public UStaticMeshComponent, public FCustomCollisionDataProvider
+class VITRUVIO_API UGeneratedModelStaticMeshComponent : public UStaticMeshComponent
 {
 	GENERATED_BODY()
+	
 };

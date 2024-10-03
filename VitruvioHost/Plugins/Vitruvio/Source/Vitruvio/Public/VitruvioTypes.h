@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "Interface_CollisionDataProviderCore.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Misc/Paths.h"
 
@@ -158,6 +159,17 @@ struct FTextureData
 	friend bool operator!=(const FTextureData& Lhs, const FTextureData& RHS)
 	{
 		return !(Lhs == RHS);
+	}
+};
+
+struct FCollisionData
+{
+	TArray<FTriIndices> Indices;
+	TArray<FVector3f> Vertices;
+
+	bool IsValid() const
+	{
+		return Indices.Num() > 0 && Vertices.Num() > 0;
 	}
 };
 

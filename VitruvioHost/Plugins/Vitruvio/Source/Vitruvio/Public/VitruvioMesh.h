@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "CustomCollisionProvider.h"
 #include "MeshDescription.h"
 #include "VitruvioTypes.h"
 #include "Runtime/PhysicsCore/Public/Interface_CollisionDataProviderCore.h"
@@ -26,17 +27,6 @@ UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* Mask
 										const Vitruvio::FMaterialAttributeContainer& MaterialAttributes, TMap<FString, int32>& UniqueMaterialNames,
 										TMap<UMaterialInterface*, FString>& MaterialIdentifiers, UObject* Outer);
 
-struct FCollisionData
-{
-	TArray<FTriIndices> Indices;
-	TArray<FVector3f> Vertices;
-
-	bool IsValid() const
-	{
-		return Indices.Num() > 0 && Vertices.Num() > 0;
-	}
-};
-
 class FVitruvioMesh
 {
 	FString Identifier;
@@ -45,12 +35,12 @@ class FVitruvioMesh
 	TArray<Vitruvio::FMaterialAttributeContainer> Materials;
 
 	UStaticMesh* StaticMesh;
-	FCollisionData CollisionData;
+	UCustomCollisionDataProvider* CollisionDataProvider;
 
 public:
 	FVitruvioMesh(const FString& Identifier, const FMeshDescription& MeshDescription,
 				  const TArray<Vitruvio::FMaterialAttributeContainer>& Materials)
-		: Identifier(Identifier), MeshDescription(MeshDescription), Materials(Materials), StaticMesh(nullptr)
+		: Identifier(Identifier), MeshDescription(MeshDescription), Materials(Materials), StaticMesh(nullptr), CollisionDataProvider(nullptr)
 	{
 	}
 
@@ -71,12 +61,8 @@ public:
 		return StaticMesh;
 	}
 
-	const FCollisionData& GetCollisionData() const
-	{
-		return CollisionData;
-	}
-
 	void Build(const FString& Name, TMap<Vitruvio::FMaterialAttributeContainer, TObjectPtr<UMaterialInstanceDynamic>>& MaterialCache,
 			   TMap<FString, Vitruvio::FTextureData>& TextureCache, TMap<UMaterialInterface*, FString>& MaterialIdentifiers,
-			   TMap<FString, int32>& UniqueMaterialNames, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent);
+			   TMap<FString, int32>& UniqueMaterialNames, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
+			   UWorld* World);
 };

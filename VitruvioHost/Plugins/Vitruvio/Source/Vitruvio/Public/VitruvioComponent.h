@@ -93,7 +93,8 @@ FConvertedGenerateResult BuildGenerateResult(const FGenerateResultDescription& G
 									 TMap<FString, Vitruvio::FTextureData>& TextureCache,
 									 TMap<UMaterialInterface*, FString>& MaterialIdentifiers,
 									 TMap<FString, int32>& UniqueMaterialIdentifiers,
-									 UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent);
+									 UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
+									 UWorld* World);
 
 FString UniqueComponentName(const FString& Name, TMap<FString, int32>& UsedNames);
 
@@ -102,6 +103,8 @@ void ApplyMaterialReplacements(UStaticMeshComponent* StaticMeshComponent, const 
 
 TSet<FInstance> ApplyInstanceReplacements(UGeneratedModelStaticMeshComponent* GeneratedModelComponent, 
 											  const TArray<FInstance>& Instances, UInstanceReplacementAsset* Replacement, TMap<FString, int32>& NameMap);
+
+void InitializeBodySetup(UBodySetup* BodySetup);
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class VITRUVIO_API UVitruvioComponent : public UActorComponent
