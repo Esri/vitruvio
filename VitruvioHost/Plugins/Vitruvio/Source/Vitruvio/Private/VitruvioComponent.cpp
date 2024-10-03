@@ -429,7 +429,8 @@ FConvertedGenerateResult BuildGenerateResult(const FGenerateResultDescription& G
 									 TMap<FString, Vitruvio::FTextureData>& TextureCache,
 									 TMap<UMaterialInterface*, FString>& MaterialIdentifiers,
 									 TMap<FString, int32>& UniqueMaterialIdentifiers,
-									 UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent)
+									 UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
+									 UWorld* World)
 {
 	MaterialIdentifiers.Empty();
 	UniqueMaterialIdentifiers.Empty();
@@ -437,14 +438,15 @@ FConvertedGenerateResult BuildGenerateResult(const FGenerateResultDescription& G
 	// Build all meshes
 	if (GenerateResult.GeneratedModel)
 	{
-		GenerateResult.GeneratedModel->Build(TEXT("GeneratedModel"), MaterialCache, TextureCache, MaterialIdentifiers, UniqueMaterialIdentifiers, OpaqueParent, MaskedParent, TranslucentParent);
+		GenerateResult.GeneratedModel->Build(TEXT("GeneratedModel"), MaterialCache, TextureCache, MaterialIdentifiers, UniqueMaterialIdentifiers,
+			OpaqueParent, MaskedParent, TranslucentParent, World);
 	}
 
 	for (const auto& IdAndMesh : GenerateResult.InstanceMeshes)
 	{
 		FString Name = GenerateResult.InstanceNames[IdAndMesh.Key];
-		IdAndMesh.Value->Build(Name, MaterialCache, TextureCache, MaterialIdentifiers, UniqueMaterialIdentifiers, OpaqueParent, MaskedParent,
-							   TranslucentParent);
+		IdAndMesh.Value->Build(Name, MaterialCache, TextureCache, MaterialIdentifiers, UniqueMaterialIdentifiers,
+			OpaqueParent, MaskedParent, TranslucentParent, World);
 	}
 
 	// Convert instances
@@ -788,7 +790,7 @@ void UVitruvioComponent::ProcessGenerateQueue()
 
 	FConvertedGenerateResult ConvertedResult = BuildGenerateResult(Result.GenerateResultDescription,
 VitruvioModule::Get().GetMaterialCache(), VitruvioModule::Get().GetTextureCache(),
-			MaterialIdentifiers, UniqueMaterialIdentifiers, OpaqueParent, MaskedParent, TranslucentParent);
+			MaterialIdentifiers, UniqueMaterialIdentifiers, OpaqueParent, MaskedParent, TranslucentParent, GetWorld());
 
 	Reports = ConvertedResult.Reports;
 
@@ -832,8 +834,8 @@ VitruvioModule::Get().GetMaterialCache(), VitruvioModule::Get().GetTextureCache(
 	if (ConvertedResult.ShapeMesh)
 	{
 		VitruvioModelComponent->SetStaticMesh(ConvertedResult.ShapeMesh->GetStaticMesh());
-		VitruvioModelComponent->SetCollisionData(ConvertedResult.ShapeMesh->GetCollisionData());
-
+		VitruvioModelComponent->RecreatePhysicsState();
+		
 		// Reset Material replacements
 		for (int32 MaterialIndex = 0; MaterialIndex < VitruvioModelComponent->GetNumMaterials(); ++MaterialIndex)
 		{
@@ -848,7 +850,6 @@ VitruvioModule::Get().GetMaterialCache(), VitruvioModule::Get().GetTextureCache(
 	else
 	{
 		VitruvioModelComponent->SetStaticMesh(nullptr);
-		VitruvioModelComponent->SetCollisionData({});
 	}
 
 	TMap<FString, int32> NameMap;
@@ -869,12 +870,14 @@ VitruvioModule::Get().GetMaterialCache(), VitruvioModule::Get().GetTextureCache(
 		FString UniqueName = UniqueComponentName(Instance.Name, NameMap);
 		auto InstancedComponent = NewObject<UGeneratedModelHISMComponent>(VitruvioModelComponent, FName(UniqueName),
 																		  RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
-		const TArray<FTransform>& Transforms = Instance.Transforms;
-		InstancedComponent->SetStaticMesh(Instance.InstanceMesh->GetStaticMesh());
-		InstancedComponent->SetCollisionData(Instance.InstanceMesh->GetCollisionData());
+		
+		UStaticMesh* StaticMesh = Instance.InstanceMesh->GetStaticMesh();
+		InstancedComponent->SetStaticMesh(StaticMesh);
 		InstancedComponent->SetMeshIdentifier(Instance.InstanceMesh->GetIdentifier());
+		InstancedComponent->RecreatePhysicsState();
 
 		// Add all instance transforms
+		const TArray<FTransform>& Transforms = Instance.Transforms;
 		for (const FTransform& Transform : Transforms)
 		{
 			InstancedComponent->AddInstance(Transform);
