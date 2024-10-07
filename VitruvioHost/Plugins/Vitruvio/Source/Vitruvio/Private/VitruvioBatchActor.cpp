@@ -19,6 +19,7 @@
 #include "Materials/Material.h"
 #include "Runtime/CoreUObject/Public/UObject/ConstructorHelpers.h"
 #include "GenerateCompletedCallbackProxy.h"
+#include "PhysicsEngine/BodySetup.h"
 
 void UTile::MarkForGenerate(UVitruvioComponent* VitruvioComponent, UGenerateCompletedCallbackProxy* CallbackProxy)
 {
@@ -303,12 +304,11 @@ void AVitruvioBatchActor::ProcessGenerateQueue()
 
 		const FConvertedGenerateResult ConvertedResult = BuildGenerateResult(Item.GenerateResultDescription,
 	VitruvioModule::Get().GetMaterialCache(), VitruvioModule::Get().GetTextureCache(),
-				MaterialIdentifiers, UniqueMaterialIdentifiers, OpaqueParent, MaskedParent, TranslucentParent);
+				MaterialIdentifiers, UniqueMaterialIdentifiers, OpaqueParent, MaskedParent, TranslucentParent, GetWorld());
 
 		if (ConvertedResult.ShapeMesh)
 		{
 			VitruvioModelComponent->SetStaticMesh(ConvertedResult.ShapeMesh->GetStaticMesh());
-			VitruvioModelComponent->SetCollisionData(ConvertedResult.ShapeMesh->GetCollisionData());
 			
 			// Reset Material replacements
 			for (int32 MaterialIndex = 0; MaterialIndex < VitruvioModelComponent->GetNumMaterials(); ++MaterialIndex)
@@ -341,7 +341,6 @@ void AVitruvioBatchActor::ProcessGenerateQueue()
 																			  RF_Transient | RF_TextExportTransient | RF_DuplicateTransient);
 			const TArray<FTransform>& Transforms = Instance.Transforms;
 			InstancedComponent->SetStaticMesh(Instance.InstanceMesh->GetStaticMesh());
-			InstancedComponent->SetCollisionData(Instance.InstanceMesh->GetCollisionData());
 			InstancedComponent->SetMeshIdentifier(Instance.InstanceMesh->GetIdentifier());
 			
 			// Add all instance transforms
