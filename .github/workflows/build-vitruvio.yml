@@ -14,7 +14,8 @@ on:
       - develop
 
 env:
-  CONFIG: ${{github.ref == 'refs/heads/main' && '--build-config=Shipping' || '--build-config=Development'}}
+  # CONFIG: ${{github.ref == 'refs/heads/main' && '--build-config=Shipping' || '--build-config=Development'}}
+  CONFIG: ${{'--build-config=Shipping'}}
 
 jobs:
   package-host:
