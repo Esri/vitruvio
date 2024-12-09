@@ -1,10 +1,10 @@
-# Vitruvio - CityEngine Plugin for Unreal Engine 5
+# ArcGIS CityEngine for Unreal
 
-Vitruvio is an [Unreal Engine 5](https://www.unrealengine.com/en-US/unreal-engine-5) (UE5) plugin which enables the use of ArcGIS CityEngine shape grammar rules in UE5 for the generation of procedural buildings. With Vitruvio, game designers or artists do not have to leave UE5 to make use of CityEngine’s procedural modeling power. The buildings stay procedural all time and artists can change the height, style and appearance of buildings easily with a parametric interface. In addition, buildings can also be generated at runtime.
+ArcGIS CityEngine for Unreal is an [Unreal Engine 5](https://www.unrealengine.com/en-US/unreal-engine-5) (UE5) plugin which enables the use of ArcGIS CityEngine shape grammar rules in UE5 for the generation of procedural buildings. Therefore, game designers or artists do not have to leave UE5 to make use of CityEngine’s procedural modeling power. The buildings stay procedural all time and artists can change the height, style and appearance of buildings easily with a parametric interface. In addition, buildings can also be generated at runtime.
 
-As input Vitruvio requires rule packages (RPK) which are authored in CityEngine. An RPK includes assets and a CGA rule file which encodes an architectural style. The download section below provides links to the several RPKs which can be used out-of-the-box in Vitruvio.
+As input the plugin requires rule packages (RPK) which are authored in CityEngine. An RPK includes assets and a CGA rule file which encodes an architectural style. The download section below provides links to the several RPKs which can be used out-of-the-box in Vitruvio.
 
-The latest release is available in the [downloads section on GitHub](https://github.com/Esri/vitruvio/releases/latest). Please refer to the [installation guide](doc/installation.md) for installation instructions. Examples can be downloaded from [Vitruvio Plugin page](https://esri.github.io/cityengine/vitruvio#examples).
+The latest release is available in the [downloads section on GitHub](https://github.com/Esri/vitruvio/releases/latest). Please refer to the [installation guide](doc/installation.md) for installation instructions. Examples can be downloaded from [ArcGIS CityEngine for Unreal Plugin page](https://esri.github.io/cityengine/vitruvio#examples).
 
 ![City generated using Vitruvio](doc/img/vitruvio_paris.jpg)
 
@@ -37,10 +37,8 @@ Esri welcomes contributions from anyone and everyone. Please see our [guidelines
 
 ## Licensing Information
 
-Vitruvio is free for personal, educational, and non-commercial use. Commercial use requires at least one commercial license of the latest CityEngine version installed in the organization. Redistribution or web service offerings are not allowed unless expressly permitted.
+CityEngine for Unreal is free for personal, educational, and non-commercial use. Commercial use requires at least one commercial license of the latest CityEngine version installed in the organization. Redistribution or web service offerings are not allowed unless expressly permitted.
 
-Vitruvio is under the same license as the included [CityEngine SDK](https://github.com/Esri/esri-cityengine-sdk#licensing). An exception is the Vitruvio source code (without CityEngine SDK, binaries, or object code), which is licensed under the Apache License, Version 2.0 (the “License”); you may not use this work except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
-
-All content in the "Examples" directory/section is licensed under the APACHE 2.0 license as well.
+CityEngine for Unreal is under the same license as the included [CityEngine SDK](https://github.com/Esri/esri-cityengine-sdk#licensing). An exception is the CityEngine for Unreal source code (without CityEngine SDK, binaries, or object code), which is licensed under the Apache License, Version 2.0 (the “License”); you may not use this work except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
 
 For questions or enquiries, please contact the Esri CityEngine team (cityengine-info@esri.com).
