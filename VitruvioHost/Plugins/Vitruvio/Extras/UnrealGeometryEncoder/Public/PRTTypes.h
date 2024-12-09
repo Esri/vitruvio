@@ -56,3 +56,9 @@ using RuleFileInfoUPtr = std::unique_ptr<const prt::RuleFileInfo, PRTDestroyer>;
 using EncoderInfoUPtr = std::unique_ptr<const prt::EncoderInfo, PRTDestroyer>;
 using OcclusionSetUPtr = std::unique_ptr<prt::OcclusionSet, PRTDestroyer>;
 using ResolveMapSPtr = std::shared_ptr<prt::ResolveMap const>;
+
+template <typename T>
+std::shared_ptr<T> prt_make_shared(T* ptr)
+{
+	return std::shared_ptr<T>(ptr, PRTDestroyer {});
+}
