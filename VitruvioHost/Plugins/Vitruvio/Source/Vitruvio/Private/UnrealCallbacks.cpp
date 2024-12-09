@@ -217,7 +217,8 @@ TSharedPtr<FVitruvioMesh> CreateVitruvioMesh(const FString& Identifier, FMeshDes
 {
 	bool bHasInvalidNormals;
 	bool bHasInvalidTangents;
-	FStaticMeshOperations::AreNormalsAndTangentsValid(Description, bHasInvalidNormals, bHasInvalidTangents);
+
+	FStaticMeshOperations::HasInvalidVertexInstanceNormalsOrTangents(Description, bHasInvalidNormals, bHasInvalidTangents);
 
 	// If normals are invalid, compute normals and tangents at polygon level then vertex level
 	if (bHasInvalidNormals)
