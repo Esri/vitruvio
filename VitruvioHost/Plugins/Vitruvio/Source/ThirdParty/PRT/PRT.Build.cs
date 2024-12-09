@@ -143,6 +143,10 @@ public class PRT : ModuleRules
 		// Add include search path
 		if (Debug) Console.WriteLine("Adding include search path " + IncludeDir);
 		PublicSystemIncludePaths.Add(IncludeDir);
+		
+		// Add prt version defines
+		PublicDefinitions.Add($"PRT_VERSION_MAJOR={PrtMajor}");
+		PublicDefinitions.Add($"PRT_VERSION_MINOR={PrtMinor}");
 	}
 
 	void Copy(string SrcDir, string DstDir, List<string> Filter = null)
