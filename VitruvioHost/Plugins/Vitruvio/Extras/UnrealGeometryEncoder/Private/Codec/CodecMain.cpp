@@ -19,13 +19,6 @@
 
 #include "prtx/ExtensionManager.h"
 
-// TODO get version when we automatically download PRT from github and set in build script
-namespace
-{
-const int VERSION_MAJOR = 3;
-const int VERSION_MINOR = 1;
-} // namespace
-
 extern "C"
 {
 	CODEC_EXPORTS_API void registerExtensionFactories(prtx::ExtensionManager* manager)
@@ -37,11 +30,11 @@ extern "C"
 
 	CODEC_EXPORTS_API int getVersionMajor()
 	{
-		return VERSION_MAJOR;
+		return PRT_VERSION_MAJOR;
 	}
 
 	CODEC_EXPORTS_API int getVersionMinor()
 	{
-		return VERSION_MINOR;
+		return PRT_VERSION_MINOR;
 	}
 }
