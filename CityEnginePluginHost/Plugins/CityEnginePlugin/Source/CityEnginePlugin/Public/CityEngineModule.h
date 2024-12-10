@@ -1,0 +1,301 @@
+/* Copyright 2024 Esri
+ *
+ * Licensed under the Apache License Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#pragma once
+
+#include "AttributeMap.h"
+#include "InitialShape.h"
+#include "MeshCache.h"
+#include "PRTTypes.h"
+#include "Report.h"
+#include "RulePackage.h"
+
+#include "prt/Object.h"
+
+#include "Engine/StaticMesh.h"
+#include "HAL/ThreadSafeCounter.h"
+#include "HAL/ThreadSafeBool.h"
+#include "Modules/ModuleManager.h"
+
+#include "UnrealLogHandler.h"
+#include "CityEngineTypes.h"
+
+#include <memory>
+#include <string>
+
+DECLARE_LOG_CATEGORY_EXTERN(LogUnrealPrt, Log, All);
+
+struct FGenerateResultDescription
+{
+	TSharedPtr<FCityEngineMesh> GeneratedModel;
+	
+	CityEngine::FInstanceMap Instances;
+	TMap<FString, TSharedPtr<FCityEngineMesh>> InstanceMeshes;
+	TMap<FString, FString> InstanceNames;
+	
+	TMap<FString, FReport> Reports;
+
+	TArray<FAttributeMapPtr> EvaluatedAttributes;
+};
+
+class FInvalidationToken
+{
+public:
+	mutable FCriticalSection Lock;
+
+	void Invalidate()
+	{
+		FScopeLock InvalidationLock(&Lock);
+		bIsInvalid = true;
+	}
+
+	bool IsInvalid() const
+	{
+		return bIsInvalid;
+	}
+
+private:
+	FThreadSafeBool bIsInvalid = false;
+};
+
+class FEvalAttributesToken : public FInvalidationToken
+{
+};
+
+class FGenerateToken : public FInvalidationToken
+{
+};
+
+template <typename R, typename T>
+class TResult
+{
+public:
+	using FTokenConstPtr = TSharedPtr<const T>;
+	using FTokenPtr = TSharedPtr<T>;
+
+	struct ResultType
+	{
+		FTokenConstPtr Token;
+		R Value;
+	};
+	using FFutureType = TFuture<ResultType>;
+
+	FFutureType Result;
+	FTokenPtr Token;
+};
+
+struct FInitialShape
+{
+	FVector Offset;
+	FInitialShapePolygon Polygon;
+	AttributeMapUPtr Attributes;
+	int32 RandomSeed = 0;
+	URulePackage* RulePackage = nullptr;
+};
+
+using FGenerateResult = TResult<FGenerateResultDescription, FGenerateToken>;
+using FBatchGenerateResult = TResult<FGenerateResultDescription, FGenerateToken>;
+using FAttributeMapResult = TResult<FAttributeMapPtr, FEvalAttributesToken>;
+
+class FCityEngineModule final : public IModuleInterface, public FGCObject
+{
+	friend class FCityEngineEditorModule;
+
+public:
+	virtual void StartupModule() override;
+	virtual void ShutdownModule() override;
+
+	/**
+	 * \brief Decodes the given texture.
+	 */
+	CITYENGINEPLUGIN_API CityEngine::FTextureData DecodeTexture(UObject* Outer, const FString& Path, const FString& Key) const;
+
+	/**
+	 * \brief Asynchronously evaluates the attributes and generates the models for all given InitialShapes.
+	 *
+	 * \param InitialShapes
+	 * \return the generated UStaticMesh.
+	 */
+	CITYENGINEPLUGIN_API FBatchGenerateResult BatchGenerateAsync(TArray<FInitialShape> InitialShapes) const;
+
+	/**
+	 * \brief Generate the models with the given InitialShapes.
+	 *
+	 * \param InitialShapes
+	 * \return the generated UStaticMesh.
+	 */
+	CITYENGINEPLUGIN_API FGenerateResultDescription BatchGenerate(TArray<FInitialShape> InitialShapes) const;
+
+	/**
+	 * \brief Asynchronously generate the models with the given InitialShape, RulePackage and Attributes.
+	 *
+	 * \param InitialShape
+	 * \return the generated UStaticMesh.
+	 */
+	CITYENGINEPLUGIN_API FGenerateResult GenerateAsync(FInitialShape InitialShape) const;
+
+
+	/**
+	 * \brief Generate the models with the given InitialShape, RulePackage and Attributes.
+	 *
+	 * \param InitialShape
+	 * \return the generated UStaticMesh.
+	 */
+	CITYENGINEPLUGIN_API FGenerateResultDescription Generate(const FInitialShape& InitialShape) const;
+
+	/**
+	 * \brief Asynchronously evaluates attributes for the given initial shape and rule package.
+	 *
+	 * \param InitialShape
+	 * \return
+	 */
+	CITYENGINEPLUGIN_API FAttributeMapResult EvaluateRuleAttributesAsync(FInitialShape InitialShape) const;
+
+	/**
+	 * \return whether PRT is initialized meaning installed and ready to use. Before initialization generation is not possible and will
+	 * immediately return without results.
+	 */
+	CITYENGINEPLUGIN_API bool IsInitialized() const
+	{
+		return Initialized;
+	}
+
+	/**
+	 * \return true if currently at least one generate call ongoing.
+	 */
+	CITYENGINEPLUGIN_API bool IsGenerating() const
+	{
+		return GenerateCallsCounter.GetValue() > 0;
+	}
+
+	/**
+	 * \return the number of active generate calls.
+	 */
+	CITYENGINEPLUGIN_API int32 GetNumGenerateCalls() const
+	{
+		return GenerateCallsCounter.GetValue();
+	}
+
+	/**
+	 * \return true if currently at least one RPK is being loaded.
+	 */
+	CITYENGINEPLUGIN_API bool IsLoadingRpks() const
+	{
+		return RpkLoadingTasksCounter.GetValue() > 0;
+	}
+
+	/**
+	 * \returns the cache used for materials generated by PRT.
+	 */
+	CITYENGINEPLUGIN_API TMap<CityEngine::FMaterialAttributeContainer, TObjectPtr<UMaterialInstanceDynamic>>& GetMaterialCache()
+	{
+		return MaterialCache;
+	}
+
+	/**
+	 * \returns the cache used for instanced meshes by PRT.
+	 */
+	CITYENGINEPLUGIN_API FMeshCache& GetMeshCache()
+	{
+		return MeshCache;
+	}
+
+	/**
+	 * \returns the cache used for materials generated by PRT.
+	 */
+	CITYENGINEPLUGIN_API TMap<FString, CityEngine::FTextureData>& GetTextureCache()
+	{
+		return TextureCache;
+	}
+
+	/**
+	 * Registers a generated mesh to keep it from being garbage collected.
+	 */
+	CITYENGINEPLUGIN_API void RegisterMesh(UStaticMesh* StaticMesh);
+
+	/**
+	 * Unregisters a generated mesh and therefore allows the garbage collector to delete it if it not referenced anywhere else.
+	 */
+	CITYENGINEPLUGIN_API void UnregisterMesh(UStaticMesh* StaticMesh);
+
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnGenerateCompleted, int);
+
+	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnAllGenerateCompleted, int, int);
+
+	/**
+	 * Delegate which is called after a generate call has completed.
+	 */
+	FOnGenerateCompleted OnGenerateCompleted;
+
+	/**
+	 * Delegate which is called after all generate calls have completed.
+	 */
+	FOnAllGenerateCompleted OnAllGenerateCompleted;
+
+	void AddReferencedObjects(FReferenceCollector& Collector) override
+	{
+		Collector.AddReferencedObjects(MaterialCache);
+		Collector.AddReferencedObjects(RegisteredMeshes);
+	}
+
+	FString GetReferencerName() const override
+	{
+		return TEXT("CityEngine");
+	}
+
+	static FCityEngineModule& Get()
+	{
+		return FModuleManager::LoadModuleChecked<FCityEngineModule>("CityEnginePlugin");
+	}
+
+	static FCityEngineModule* GetUnchecked()
+	{
+		return FModuleManager::LoadModulePtr<FCityEngineModule>("CityEnginePlugin");
+	}
+
+private:
+	void* PrtDllHandle = nullptr;
+	prt::Object const* PrtLibrary = nullptr;
+	CacheObjectUPtr PrtCache;
+
+	TUniquePtr<UnrealLogHandler> LogHandler;
+
+	TAtomic<bool> Initialized = false;
+
+	mutable TMap<TLazyObjectPtr<URulePackage>, ResolveMapSPtr> ResolveMapCache;
+	mutable TMap<TLazyObjectPtr<URulePackage>, FGraphEventRef> ResolveMapEventGraphRefCache;
+
+	mutable FCriticalSection LoadResolveMapLock;
+
+	mutable FThreadSafeCounter GenerateCallsCounter;
+	mutable FThreadSafeCounter RpkLoadingTasksCounter;
+	mutable FThreadSafeCounter LoadAttributesCounter;
+
+	FString RpkFolder;
+
+	TMap<CityEngine::FMaterialAttributeContainer, TObjectPtr<UMaterialInstanceDynamic>> MaterialCache;
+	TMap<FString, CityEngine::FTextureData> TextureCache;
+	FMeshCache MeshCache;
+
+	FCriticalSection RegisterMeshLock;
+	TSet<TObjectPtr<UStaticMesh>> RegisteredMeshes;
+
+	void NotifyGenerateCompleted() const;
+
+	TFuture<ResolveMapSPtr> LoadResolveMapAsync(URulePackage* RulePackage) const;
+	void InitializePrt();
+
+	CITYENGINEPLUGIN_API void EvictFromResolveMapCache(URulePackage* RulePackage);
+};
