@@ -1,10 +1,16 @@
 # Usage
 
-Vitruvio leverages CityEngine's Procedural Runtime (PRT) to generate buildings. As input it takes a *rule package (RPK)*, an *initial shape* and a *set of attributes*. The generation process starts with the initial shape as start shape, from which shape grammar rules are expanded. The attributes are parameters that control shape generation.
+The CityEngine Plugin for Unreal leverages CityEngine's Procedural Runtime (PRT) to generate buildings. As input it takes a *rule package (RPK)*, an *initial shape* and a *set of attributes*. The generation process starts with the initial shape as start shape, from which shape grammar rules are expanded. The attributes are parameters that control shape generation.
+
+
+
+**Note** that the internal name of the Plugin is *Vitruvio* and therefore all Actors, Components and Functions are referenced by this name.
+
+**Note** that the plugin contains a demo folder with a simple levels. First, enable *Show Engine Content* and *Show Plugin Content* in the View Options (bottom right) of the Content Browser. The demo content can now be found in the *Vitruvio Content/Demo/* folder.
+
+
 
 This section describes how to use the Vitruvio Actor in Unreal Engine 5 (UE5), export rule packages from CityEngine and how to import or create initial shapes.
-
-**Note** that the plugin contains a demo folder with a simple level to try out Vitruvio. First, enable *Show Engine Content* and *Show Plugin Content* in the View Options (bottom right) of the Content Browser. The demo content can now be found in the *Vitruvio Content/Demo/* folder.
 
 ## Vitruvio Actor and Component
 
@@ -145,7 +151,7 @@ Batch generation allows for the simultaneous generation of several models in bat
 
 Batch generation can be controlled per Vitruvio Actor using the *Batch Generate* option. It is recommended to use this feature if your scene contains many Vitruvio Actors.
 
-The advantages include improved generation as well as rendering performance. However, if a Vitruvio Actor's attributes are changed at runtime (for example, via user input), it is recommended not to allow batch generation since every attribute change requires regenerating the entire batch.
+The advantages include shorter generation times as well as improved rendering performance. However, if a Vitruvio Actor's attributes are changed at runtime (for example, via user input), it is recommended not to allow batch generation since every attribute change requires regenerating the entire batch.
 
 For advanced use cases the *Grid Dimension* (which controls the batch size) on the *Vitruvio Batch Actor* can be changed.
 
