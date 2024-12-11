@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
 	"Version": 6,
-	"VersionName": "2.2 - 2023.1 (CE SDK v3.1.9666)",
+	"VersionName": "2.2 - 2023.1 (CE SDK v3.2.10650)",
 	"FriendlyName": "ArcGIS CityEngine Plugin",
 	"Description": "ArcGIS CityEngine Plugin (Vitruvio) adds support for CityEngine's procedural runtime (PRT).",
 	"Category": "Misc",
