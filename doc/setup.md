@@ -1,6 +1,6 @@
 ## Development Setup
 
-This page describes how to setup development for ArcGIS CityEngine for Unreal. This requires [setting up Visual Studio for Unreal Engine](https://docs.unrealengine.com/en-US/ProductionPipelines/DevelopmentSetup/VisualStudioSetup/index.html) and [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+This page describes how to setup development for ArcGIS CityEngine for Unreal Engine. This requires [setting up Visual Studio for Unreal Engine](https://docs.unrealengine.com/en-US/ProductionPipelines/DevelopmentSetup/VisualStudioSetup/index.html) and [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
 
 **Note** that the Plugin is called _Vitruvio_ internally.
 

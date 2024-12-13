@@ -1,10 +1,10 @@
 # Installation
 
-This page describes how to install and setup the ArcGIS CityEngine for Unreal.
+This page describes how to install and setup ArcGIS CityEngine for Unreal Engine.
 
 ## Download and Install
 
--   Download the MSI installer of the [latest ArcGIS CityEngine for Unreal](https://github.com/Esri/vitruvio/releases/latest) version (alternatively the plugin can also be downloaded as a zip file and extracted directly into your Unreal Engine project). **Note** that the installer contains libraries which are used by the plugin and your browser might warn you not to download them. This warning can be ignored.
+-   Download the MSI installer of the [latest ArcGIS CityEngine for Unreal Engine](https://github.com/Esri/vitruvio/releases/latest) version (alternatively the plugin can also be downloaded as a zip file and extracted directly into your Unreal Engine project). **Note** that the installer contains libraries which are used by the plugin and your browser might warn you not to download them. This warning can be ignored.
 
 -   Follow the instructions of the installer.
 

@@ -1,6 +1,6 @@
 # Usage
 
-ArcGIS CityEngine for Unreal leverages CityEngine's Procedural Runtime (PRT) to generate buildings. As input it takes a _rule package (RPK)_, an _initial shape_ and a _set of attributes_. The generation process starts with the initial shape as start shape, from which shape grammar rules are expanded. The attributes are parameters that control shape generation.
+ArcGIS CityEngine for Unreal Engine leverages CityEngine's Procedural Runtime (PRT) to generate buildings. As input it takes a _rule package (RPK)_, an _initial shape_ and a _set of attributes_. The generation process starts with the initial shape as start shape, from which shape grammar rules are expanded. The attributes are parameters that control shape generation.
 
 **Note** that the internal name of the Plugin is _Vitruvio_ and therefore all Actors, Components and Functions are referenced by this name.
 
