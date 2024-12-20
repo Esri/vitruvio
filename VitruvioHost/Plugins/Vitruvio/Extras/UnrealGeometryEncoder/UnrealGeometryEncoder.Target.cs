@@ -44,7 +44,7 @@ public sealed class UnrealGeometryEncoderTarget : TargetRules
 		bCompileAgainstApplicationCore = false;
 		bCompileICU = false;
 		bUsesSlate = false;
-		bDisableDebugInfo = false;
+		DebugInfo = DebugInfoMode.Full;
 		bUsePDBFiles = true;
 		bHasExports = true;
 		bIsBuildingConsoleApplication = true;

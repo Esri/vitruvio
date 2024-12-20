@@ -499,6 +499,7 @@ FGenerateResultDescription VitruvioModule::BatchGenerate(TArray<FInitialShape> I
 
 		if (GenerateStatus != prt::STATUS_OK)
 		{
+			GenerateCallsCounter.Subtract(InitialShapes.Num());
 			UE_LOG(LogUnrealPrt, Error, TEXT("PRT generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
 			return {};
 		}
@@ -547,6 +548,7 @@ FGenerateResultDescription VitruvioModule::BatchGenerate(TArray<FInitialShape> I
 
 		if (GenerateStatus != prt::STATUS_OK)
 	    {
+			GenerateCallsCounter.Subtract(InitialShapes.Num());
     		UE_LOG(LogUnrealPrt, Error, TEXT("PRT generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
     		return {};
 	    }
@@ -612,6 +614,7 @@ FGenerateResultDescription VitruvioModule::Generate(const FInitialShape& Initial
 	const prt::Status GenerateStatus = prt::generate(Shapes.data(), Shapes.size(), nullptr, EncoderIds.data(), EncoderIds.size(),
 													 EncoderOptions.data(), OutputHandler.Get(), PrtCache.get(), nullptr);
 
+	GenerateCallsCounter.Decrement();
 	if (GenerateStatus != prt::STATUS_OK)
 	{
 		UE_LOG(LogUnrealPrt, Error, TEXT("PRT generate failed: %hs"), prt::getStatusDescription(GenerateStatus))
@@ -620,7 +623,6 @@ FGenerateResultDescription VitruvioModule::Generate(const FInitialShape& Initial
 
 	CHECK_PRT_INITIALIZED()
 	
-	GenerateCallsCounter.Decrement();
 	NotifyGenerateCompleted();
 
 	return FGenerateResultDescription{ OutputHandler->GetGeneratedModel(), OutputHandler->GetInstances(), OutputHandler->GetInstanceMeshes(),

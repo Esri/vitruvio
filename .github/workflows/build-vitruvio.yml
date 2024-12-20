@@ -1,6 +1,7 @@
 name: build-vitruvio
 
 on: 
+  workflow_dispatch:
   push:
     # Careful! No fall-through for the filters.
     branches:
@@ -22,7 +23,7 @@ jobs:
     name: Package host project
     steps:
       - uses: actions/checkout@v4
-      - run: git -C C:\dev\git\zrh-xr-devops\ pull
+      - run: git -C C:\dev\git\zrh-xr-devops\ pull -q
       - run: |
           C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_host_package ${{env.CONFIG}}
       - run: |
@@ -33,6 +34,6 @@ jobs:
     name: Build plugin
     steps:
       - uses: actions/checkout@v4
-      - run: git -C C:\dev\git\zrh-xr-devops\ pull
+      - run: git -C C:\dev\git\zrh-xr-devops\ pull -q
       - run: |
           C:\dev\git\zrh-xr-devops\scripts\ue_build_action.py ${{github.workspace}} ${{github.ref_name}} vitruvio_plugin_build

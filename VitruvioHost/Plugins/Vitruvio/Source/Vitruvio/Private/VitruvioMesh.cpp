@@ -21,6 +21,7 @@
 #include "PhysicsEngine/BodySetup.h"
 #include "Engine/CollisionProfile.h"
 #include "UObject/Package.h"
+#include "Engine/World.h"
 
 namespace
 {
@@ -37,16 +38,6 @@ FString MakeUniqueMaterialName(FString Name, TMap<FString, int32>& UniqueMateria
 	}
 
 	return Name;
-}
-
-void InitializeBodySetup(UBodySetup* BodySetup)
-{
-	BodySetup->DefaultInstance.SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
-	BodySetup->CollisionTraceFlag = ECollisionTraceFlag::CTF_UseComplexAsSimple;
-	BodySetup->bDoubleSidedGeometry = true;
-	BodySetup->bMeshCollideAll = true;
-	BodySetup->InvalidatePhysicsData();
-	BodySetup->CreatePhysicsMeshes();
 }
 
 } // namespace
@@ -78,12 +69,23 @@ UMaterialInstanceDynamic* CacheMaterial(UMaterial* OpaqueParent, UMaterial* Mask
 	return Material;
 }
 
+void InitializeBodySetup(UBodySetup* BodySetup)
+{
+	BodySetup->DefaultInstance.SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
+	BodySetup->CollisionTraceFlag = ECollisionTraceFlag::CTF_UseComplexAsSimple;
+	BodySetup->bDoubleSidedGeometry = true;
+	BodySetup->bMeshCollideAll = true;
+	BodySetup->InvalidatePhysicsData();
+	BodySetup->CreatePhysicsMeshes();
+}
+
 FVitruvioMesh::~FVitruvioMesh()
 {
 	if (IsEngineExitRequested())
 	{
 		return;
 	}
+	
 	VitruvioModule* VitruvioModule = VitruvioModule::GetUnchecked();
 	if (StaticMesh && VitruvioModule)
 	{
@@ -93,7 +95,8 @@ FVitruvioMesh::~FVitruvioMesh()
 
 void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttributeContainer, TObjectPtr<UMaterialInstanceDynamic>>& MaterialCache,
 						  TMap<FString, Vitruvio::FTextureData>& TextureCache, TMap<UMaterialInterface*, FString>& UniqueMaterialIdentifiers,
-						  TMap<FString, int32>& UniqueMaterialNames, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent)
+						  TMap<FString, int32>& UniqueMaterialNames, UMaterial* OpaqueParent, UMaterial* MaskedParent, UMaterial* TranslucentParent,
+						  UWorld* World)
 {
 	check(IsInGameThread());
 
@@ -105,6 +108,8 @@ void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttribute
 	FString MeshName = Name.Replace(TEXT("."), TEXT(""));
 	const FName StaticMeshName = MakeUniqueObjectName(nullptr, UStaticMesh::StaticClass(), FName(MeshName));
 	StaticMesh = NewObject<UStaticMesh>(GetTransientPackage(), StaticMeshName, RF_Transient | RF_DuplicateTransient | RF_TextExportTransient);
+	CollisionDataProvider = NewObject<UCustomCollisionDataProvider>(World, NAME_None, RF_Transient | RF_DuplicateTransient | RF_TextExportTransient);
+	
 	VitruvioModule::Get().RegisterMesh(StaticMesh);
 
 	TMap<UMaterialInstanceDynamic*, FName> MaterialSlots;
@@ -159,11 +164,12 @@ void FVitruvioMesh::Build(const FString& Name, TMap<Vitruvio::FMaterialAttribute
 	UStaticMesh::FBuildMeshDescriptionsParams Params;
 	Params.bCommitMeshDescription = true;
 	Params.bFastBuild = true;
-	Params.bAllowCpuAccess = true;
 	StaticMesh->BuildFromMeshDescriptions(MeshDescriptionPtrs, Params);
-	CollisionData = {Indices, Vertices};
 	
-	UBodySetup* BodySetup = NewObject<UBodySetup>(StaticMesh, NAME_None, RF_Transient | RF_DuplicateTransient | RF_TextExportTransient | RF_Transactional);
+	Vitruvio::FCollisionData CollisionData = {Indices, Vertices};
+	CollisionDataProvider->SetCollisionData(CollisionData);
+
+	UBodySetup* BodySetup = NewObject<UBodySetup>(CollisionDataProvider, NAME_None, RF_Transient | RF_DuplicateTransient | RF_TextExportTransient | RF_Transactional);
 	InitializeBodySetup(BodySetup);
 	StaticMesh->SetBodySetup(BodySetup);
 }

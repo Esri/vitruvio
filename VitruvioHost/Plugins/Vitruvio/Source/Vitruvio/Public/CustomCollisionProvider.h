@@ -1,12 +1,18 @@
 #pragma once
 
-#include "VitruvioMesh.h"
-
+#include "VitruvioTypes.h"
 #include "Interfaces/Interface_CollisionDataProvider.h"
+#include "CustomCollisionProvider.generated.h"
 
-class VITRUVIO_API FCustomCollisionDataProvider : public IInterface_CollisionDataProvider
+UCLASS()
+class VITRUVIO_API UCustomCollisionDataProvider : public UObject, public IInterface_CollisionDataProvider
 {
-	virtual bool GetPhysicsTriMeshData(FTriMeshCollisionData* TriCollisionData, bool InUseAllTriData) override
+	GENERATED_BODY()
+
+protected:
+	Vitruvio::FCollisionData CollisionData;
+	
+	bool UpdateTrieMeshCollisionData(FTriMeshCollisionData* TriCollisionData) const
 	{
 		if (!CollisionData.IsValid())
 		{
@@ -21,18 +27,26 @@ class VITRUVIO_API FCustomCollisionDataProvider : public IInterface_CollisionDat
 		TriCollisionData->bFlipNormals = true;
 		return true;
 	}
+	
+public:
+
+	void SetCollisionData(const Vitruvio::FCollisionData& InCollisionData)
+	{
+		CollisionData = InCollisionData;
+	}
+
+	void ClearCollisionData()
+	{
+		CollisionData = {};
+	}
+
+	virtual bool GetPhysicsTriMeshData(FTriMeshCollisionData* TriCollisionData, bool InUseAllTriData) override
+	{
+		return UpdateTrieMeshCollisionData(TriCollisionData);
+	}
 
 	virtual bool ContainsPhysicsTriMeshData(bool InUseAllTriData) const override
 	{
 		return CollisionData.IsValid();
 	}
-
-public:
-	void SetCollisionData(const FCollisionData& InCollisionData)
-	{
-		CollisionData = InCollisionData;
-	}
-
-private:
-	FCollisionData CollisionData;
 };

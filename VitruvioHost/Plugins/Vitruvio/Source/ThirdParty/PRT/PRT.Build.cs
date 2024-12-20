@@ -28,8 +28,9 @@ public class PRT : ModuleRules
 	
 	// PRT version and toolchain (needs to be correct for download URL)
 	private const int PrtMajor = 3;
-	private const int PrtMinor = 1;
-	private const int PrtBuild = 9666;
+	private const int PrtMinor = 2;
+	private const int PrtBuild = 10650;
+	private const string PrtToolchain = "win10-vc1437-x86_64-rel-opt";
 
 	private const string PrtCoreDllName = "com.esri.prt.core.dll";
 
@@ -71,7 +72,7 @@ public class PRT : ModuleRules
 			string PrtUrl = "https://github.com/Esri/esri-cityengine-sdk/releases/download";
 			string PrtVersion = string.Format("{0}.{1}.{2}", PrtMajor, PrtMinor, PrtBuild);
 
-			string PrtLibName = string.Format("esri_ce_sdk-{0}-{1}", PrtVersion, Platform.PrtPlatform);
+			string PrtLibName = string.Format("esri_ce_sdk-{0}-{1}", PrtVersion, PrtToolchain);
 			string PrtLibZipFile = PrtLibName + ".zip";
 			string PrtDownloadUrl = Path.Combine(PrtUrl, PrtVersion, PrtLibZipFile);
 
@@ -142,6 +143,10 @@ public class PRT : ModuleRules
 		// Add include search path
 		if (Debug) Console.WriteLine("Adding include search path " + IncludeDir);
 		PublicSystemIncludePaths.Add(IncludeDir);
+		
+		// Add prt version defines
+		PublicDefinitions.Add($"PRT_VERSION_MAJOR={PrtMajor}");
+		PublicDefinitions.Add($"PRT_VERSION_MINOR={PrtMinor}");
 	}
 
 	void Copy(string SrcDir, string DstDir, List<string> Filter = null)
@@ -225,7 +230,6 @@ public class PRT : ModuleRules
 		public abstract AbstractZipExtractor ZipExtractor { get; }
 
 		public abstract string Name { get; }
-		public abstract string PrtPlatform { get; }
 		public abstract string DynamicLibExtension { get; }
 
 		protected bool Debug;
@@ -266,7 +270,6 @@ public class PRT : ModuleRules
 		public override AbstractZipExtractor ZipExtractor { get { return new WindowsZipExtractor(); } }
 
 		public override string Name { get { return "Win64"; } }
-		public override string PrtPlatform { get { return "win10-vc1427-x86_64-rel-opt"; } }
 		public override string DynamicLibExtension { get { return ".dll"; } }
 		
 		public WindowsPlatform(bool Debug) : base(Debug)

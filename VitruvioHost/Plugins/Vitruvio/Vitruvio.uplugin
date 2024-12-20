@@ -1,15 +1,14 @@
 {
 	"FileVersion": 3,
-	"Version": 5,
-	"VersionName": "2.1 - 2023.1 (CE SDK v3.1.9666)",
-	"FriendlyName": "Vitruvio",
-	"Description": "Vitruvio adds support for CityEngine's procedural runtime (PRT)",
+	"Version": 6,
+	"VersionName": "2.2 - 2023.1 (CE SDK v3.2.10650)",
+	"FriendlyName": "ArcGIS CityEngine for Unreal Engine",
+	"Description": "ArcGIS CityEngine for Unreal Engine adds support for CityEngine's procedural runtime (PRT).",
 	"Category": "Misc",
 	"CreatedBy": "Esri",
 	"CreatedByURL": "https://www.esri.com/en-us/home",
 	"DocsURL": "https://github.com/Esri/vitruvio/blob/master/doc/usage.md",
-	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/9bf931969c174491bd9a7ca517a40653",
-	"EngineVersion": "5.4",
+	"EngineVersion": "5.5",
 	"CanContainContent": true,
 	"IsBetaVersion": false,
 	"IsExperimentalVersion": false,
@@ -19,7 +18,7 @@
 			"Name": "Vitruvio",
 			"Type": "Runtime",
 			"LoadingPhase": "PostDefault",
-			"WhitelistPlatforms": [
+			"PlatformAllowList": [
 				"Win64"
 			]
 		},
@@ -27,7 +26,7 @@
 			"Name": "VitruvioEditor",
 			"Type": "Editor",
 			"LoadingPhase": "Default",
-			"WhitelistPlatforms": [
+			"PlatformAllowList": [
 				"Win64"
 			]
 		}
